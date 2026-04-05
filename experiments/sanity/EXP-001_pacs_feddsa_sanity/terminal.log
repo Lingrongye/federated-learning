@@ -1,0 +1,271 @@
+[Tee] 日志同步写入: /home/lry/code/federated-learning/experiments/sanity/EXP-001_pacs_feddsa_sanity/terminal.log
+==================================================
+Start time: 2026-04-05 08:48:18
+goal = test
+device = cuda
+device_id = 1
+dataset = PACS
+num_classes = 7
+model = ResNet18
+batch_size = 32
+local_learning_rate = 0.01
+learning_rate_decay = False
+learning_rate_decay_gamma = 0.99
+global_rounds = 10
+top_cnt = 100
+local_epochs = 5
+algorithm = FedDSA
+join_ratio = 1.0
+random_join_ratio = False
+num_clients = 4
+prev = 0
+times = 1
+eval_gap = 2
+save_folder_name = items
+auto_break = False
+dlg_eval = False
+dlg_gap = 100
+batch_num_per_client = 2
+num_new_clients = 0
+fine_tuning_epoch_new = 0
+feature_dim = 512
+vocab_size = 80
+max_len = 200
+few_shot = 0
+client_drop_rate = 0.0
+train_slow_rate = 0.0
+send_slow_rate = 0.0
+time_select = False
+time_threthold = 10000
+beta = 0.0
+lamda = 1.0
+mu = 0.0
+K = 5
+p_learning_rate = 0.01
+M = 5
+itk = 4000
+alphaK = 1.0
+sigma = 1.0
+alpha = 1.0
+plocal_epochs = 1
+tau = 0.1
+fine_tuning_epochs = 10
+dr_learning_rate = 0.0
+L = 1.0
+noise_dim = 512
+generator_learning_rate = 0.005
+hidden_dim = 512
+server_epochs = 1000
+localize_feature_extractor = False
+server_learning_rate = 1.0
+eta = 1.0
+rand_percent = 80
+layer_idx = 2
+mentee_learning_rate = 0.005
+T_start = 0.95
+T_end = 0.98
+momentum = 0.1
+kl_weight = 0.0
+first_stage_bound = 0
+fedcross_alpha = 0.99
+collaberative_model_select_strategy = 1
+feat_dim = 512
+proj_dim = 128
+lambda_orth = 1.0
+lambda_hsic = 0.1
+lambda_sem = 1.0
+warmup_rounds = 5
+style_dispatch_num = 5
+style_dedup = 0.95
+style_bank_max = 50
+exp_dir = /home/lry/code/federated-learning/experiments/sanity/EXP-001_pacs_feddsa_sanity
+==================================================
+
+============= Running time: 0th =============
+Creating server and clients ...
+ResNet(
+  (conv1): Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+  (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu): ReLU(inplace=True)
+  (maxpool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+  (layer1): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+    (1): BasicBlock(
+      (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (layer2): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (downsample): Sequential(
+        (0): Conv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (layer3): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(128, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (downsample): Sequential(
+        (0): Conv2d(128, 256, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (layer4): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(256, 512, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (downsample): Sequential(
+        (0): Conv2d(256, 512, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (avgpool): AdaptiveAvgPool2d(output_size=(1, 1))
+  (fc): Linear(in_features=512, out_features=7, bias=True)
+)
+
+==================================================
+FedDSA: Decouple-Share-Align
+Join ratio / total clients: 1.0 / 4
+Style bank max size: 50
+Style dispatch per client: 5
+Warmup rounds: 5
+==================================================
+
+
+--- Round 0 ---
+Style bank size: 0
+  Train Loss: 2.1890 | Avg Acc: 0.1997 | Std: 0.0291
+    [art_painting] 0.2090
+    [cartoon] 0.1826
+    [photo] 0.2536
+    [sketch] 0.1821
+  Round 0 time: 112.6s
+  Round 1 time: 87.7s
+
+--- Round 2 ---
+Style bank size: 1
+  Train Loss: 2.1405 | Avg Acc: 0.1000 | Std: 0.0595
+    [art_painting] 0.1523
+    [cartoon] 0.1689
+    [photo] 0.1340
+    [sketch] 0.0173
+  Round 2 time: 102.5s
+  Round 3 time: 76.4s
+
+--- Round 4 ---
+Style bank size: 1
+  Train Loss: 2.0639 | Avg Acc: 0.1200 | Std: 0.0520
+    [art_painting] 0.1523
+    [cartoon] 0.1911
+    [photo] 0.1459
+    [sketch] 0.0498
+  Round 4 time: 123.2s
+  Round 5 time: 85.9s
+
+--- Round 6 ---
+Style bank size: 1
+  Train Loss: 2.0508 | Avg Acc: 0.1481 | Std: 0.1004
+    [art_painting] 0.2949
+    [cartoon] 0.2167
+    [photo] 0.1746
+    [sketch] 0.0193
+  Round 6 time: 104.0s
+  Round 7 time: 78.6s
+
+--- Round 8 ---
+Style bank size: 1
+  Train Loss: 2.0538 | Avg Acc: 0.1981 | Std: 0.0660
+    [art_painting] 0.1055
+    [cartoon] 0.2918
+    [photo] 0.1986
+    [sketch] 0.1902
+  Round 8 time: 138.8s
+  Round 9 time: 70.4s
+
+--- Round 10 ---
+Style bank size: 1
+  Train Loss: 2.0421 | Avg Acc: 0.2121 | Std: 0.0506
+    [art_painting] 0.1426
+    [cartoon] 0.2850
+    [photo] 0.2010
+    [sketch] 0.2096
+  Round 10 time: 105.2s
+
+==================================================
+[RESULT] Best Avg Accuracy: 0.2121 (eval #5)
+[RESULT] Final Avg Accuracy: 0.2121
+[RESULT]   art_painting: 0.1426
+[RESULT]   cartoon: 0.2850
+[RESULT]   photo: 0.2010
+[RESULT]   sketch: 0.2096
+[RESULT] Domain Std: 0.0506
+[RESULT] Avg time/round: 97.3s
+[RESULT] Total time: 1085.1s
+==================================================
+File path: ../results/PACS_FedDSA_test_0.h5
+[Metrics] 结构化指标已保存: /home/lry/code/federated-learning/experiments/sanity/EXP-001_pacs_feddsa_sanity/results/metrics.json
+
+Average time cost: 1108.3s.
+Length:  6
+std for best accuracy: 0.0
+mean for best accuracy: 0.21208483393357344
+All done!
+
+Storage on cuda:0
+-------------------------------------------------------------------------------
+Total Tensors: 203900562 	Used Memory: 604.88M
+The allocated memory on cuda:0: 643.06M
+Memory differs due to the matrix alignment or invisible gradient buffer tensors
+-------------------------------------------------------------------------------
+
+Storage on cpu
+-------------------------------------------------------------------------------
+Total Tensors: 13184 	Used Memory: 51.50K
+-------------------------------------------------------------------------------
+
+Total time cost: 1108.45s.

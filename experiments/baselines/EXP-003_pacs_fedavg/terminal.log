@@ -1,0 +1,346 @@
+[Tee] 日志同步写入: /root/autodl-tmp/federated-learning/experiments/baselines/EXP-003_pacs_fedavg/terminal.log
+==================================================
+Start time: 2026-04-06 02:08:54
+goal = test
+device = cuda
+device_id = 0
+dataset = PACS
+num_classes = 7
+model = ResNet18
+batch_size = 32
+local_learning_rate = 0.005
+learning_rate_decay = False
+learning_rate_decay_gamma = 0.99
+global_rounds = 50
+top_cnt = 100
+local_epochs = 5
+algorithm = FedAvg
+join_ratio = 1.0
+random_join_ratio = False
+num_clients = 4
+prev = 0
+times = 1
+eval_gap = 5
+save_folder_name = items
+auto_break = False
+dlg_eval = False
+dlg_gap = 100
+batch_num_per_client = 2
+num_new_clients = 0
+fine_tuning_epoch_new = 0
+feature_dim = 512
+vocab_size = 80
+max_len = 200
+few_shot = 0
+client_drop_rate = 0.0
+train_slow_rate = 0.0
+send_slow_rate = 0.0
+time_select = False
+time_threthold = 10000
+beta = 0.0
+lamda = 1.0
+mu = 0.0
+K = 5
+p_learning_rate = 0.01
+M = 5
+itk = 4000
+alphaK = 1.0
+sigma = 1.0
+alpha = 1.0
+plocal_epochs = 1
+tau = 1.0
+fine_tuning_epochs = 10
+dr_learning_rate = 0.0
+L = 1.0
+noise_dim = 512
+generator_learning_rate = 0.005
+hidden_dim = 512
+server_epochs = 1000
+localize_feature_extractor = False
+server_learning_rate = 1.0
+eta = 1.0
+rand_percent = 80
+layer_idx = 2
+mentee_learning_rate = 0.005
+T_start = 0.95
+T_end = 0.98
+momentum = 0.1
+kl_weight = 0.0
+first_stage_bound = 0
+fedcross_alpha = 0.99
+collaberative_model_select_strategy = 1
+feat_dim = 512
+proj_dim = 128
+lambda_orth = 1.0
+lambda_hsic = 0.1
+lambda_sem = 1.0
+warmup_rounds = 10
+style_dispatch_num = 5
+style_dedup = 0.95
+style_bank_max = 50
+exp_dir = /root/autodl-tmp/federated-learning/experiments/baselines/EXP-003_pacs_fedavg
+pretrained = True
+==================================================
+
+============= Running time: 0th =============
+Creating server and clients ...
+[Model] ResNet18 pretrained=True, fc replaced: 512 -> 7
+ResNet(
+  (conv1): Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+  (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu): ReLU(inplace=True)
+  (maxpool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+  (layer1): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+    (1): BasicBlock(
+      (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (layer2): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (downsample): Sequential(
+        (0): Conv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (layer3): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(128, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (downsample): Sequential(
+        (0): Conv2d(128, 256, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (layer4): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(256, 512, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (downsample): Sequential(
+        (0): Conv2d(256, 512, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (avgpool): AdaptiveAvgPool2d(output_size=(1, 1))
+  (fc): Linear(in_features=512, out_features=7, bias=True)
+)
+
+Join ratio / total clients: 1.0 / 4
+Finished creating server and clients.
+
+-------------Round number: 0-------------
+
+Evaluate global model
+Averaged Train Loss: 2.1259
+Averaged Test Accuracy: 0.1537
+Averaged Test AUC: 0.4918
+Std Test Accuracy: 0.0140
+Std Test AUC: 0.0377
+------------------------- time cost ------------------------- 716.842616558075
+------------------------- time cost ------------------------- 450.7488934993744
+------------------------- time cost ------------------------- 377.31779742240906
+------------------------- time cost ------------------------- 290.1148512363434
+------------------------- time cost ------------------------- 253.4761049747467
+
+-------------Round number: 5-------------
+
+Evaluate global model
+Averaged Train Loss: 0.1208
+Averaged Test Accuracy: 0.8896
+Averaged Test AUC: 0.9808
+Std Test Accuracy: 0.0467
+Std Test AUC: 0.0098
+------------------------- time cost ------------------------- 378.4356424808502
+------------------------- time cost ------------------------- 224.33502340316772
+------------------------- time cost ------------------------- 323.57469940185547
+------------------------- time cost ------------------------- 225.69476795196533
+------------------------- time cost ------------------------- 317.5107276439667
+
+-------------Round number: 10-------------
+
+Evaluate global model
+Averaged Train Loss: 0.0227
+Averaged Test Accuracy: 0.9144
+Averaged Test AUC: 0.9857
+Std Test Accuracy: 0.0336
+Std Test AUC: 0.0072
+------------------------- time cost ------------------------- 319.00958728790283
+------------------------- time cost ------------------------- 220.14346623420715
+------------------------- time cost ------------------------- 245.08354258537292
+------------------------- time cost ------------------------- 220.83206629753113
+------------------------- time cost ------------------------- 187.07262635231018
+
+-------------Round number: 15-------------
+
+Evaluate global model
+Averaged Train Loss: 0.0060
+Averaged Test Accuracy: 0.9200
+Averaged Test AUC: 0.9874
+Std Test Accuracy: 0.0299
+Std Test AUC: 0.0068
+------------------------- time cost ------------------------- 325.0826327800751
+------------------------- time cost ------------------------- 269.8687446117401
+------------------------- time cost ------------------------- 177.35625576972961
+------------------------- time cost ------------------------- 404.2737452983856
+------------------------- time cost ------------------------- 240.01033234596252
+
+-------------Round number: 20-------------
+
+Evaluate global model
+Averaged Train Loss: 0.0021
+Averaged Test Accuracy: 0.9264
+Averaged Test AUC: 0.9881
+Std Test Accuracy: 0.0272
+Std Test AUC: 0.0065
+------------------------- time cost ------------------------- 302.76177430152893
+------------------------- time cost ------------------------- 283.9113233089447
+------------------------- time cost ------------------------- 314.58016085624695
+------------------------- time cost ------------------------- 208.26067423820496
+------------------------- time cost ------------------------- 246.44805455207825
+
+-------------Round number: 25-------------
+
+Evaluate global model
+Averaged Train Loss: 0.0011
+Averaged Test Accuracy: 0.9268
+Averaged Test AUC: 0.9887
+Std Test Accuracy: 0.0234
+Std Test AUC: 0.0064
+------------------------- time cost ------------------------- 340.88611102104187
+------------------------- time cost ------------------------- 262.9041016101837
+------------------------- time cost ------------------------- 284.622435092926
+------------------------- time cost ------------------------- 303.193439245224
+------------------------- time cost ------------------------- 208.0664563179016
+
+-------------Round number: 30-------------
+
+Evaluate global model
+Averaged Train Loss: 0.0008
+Averaged Test Accuracy: 0.9268
+Averaged Test AUC: 0.9889
+Std Test Accuracy: 0.0243
+Std Test AUC: 0.0061
+------------------------- time cost ------------------------- 446.6666386127472
+------------------------- time cost ------------------------- 269.2556035518646
+------------------------- time cost ------------------------- 296.153439283371
+------------------------- time cost ------------------------- 215.87157320976257
+------------------------- time cost ------------------------- 211.073881149292
+
+-------------Round number: 35-------------
+
+Evaluate global model
+Averaged Train Loss: 0.0005
+Averaged Test Accuracy: 0.9292
+Averaged Test AUC: 0.9893
+Std Test Accuracy: 0.0262
+Std Test AUC: 0.0063
+------------------------- time cost ------------------------- 224.32118010520935
+------------------------- time cost ------------------------- 162.08095526695251
+------------------------- time cost ------------------------- 290.5950243473053
+------------------------- time cost ------------------------- 233.30223727226257
+------------------------- time cost ------------------------- 263.0066831111908
+
+-------------Round number: 40-------------
+
+Evaluate global model
+Averaged Train Loss: 0.0004
+Averaged Test Accuracy: 0.9284
+Averaged Test AUC: 0.9893
+Std Test Accuracy: 0.0237
+Std Test AUC: 0.0060
+------------------------- time cost ------------------------- 342.6785616874695
+------------------------- time cost ------------------------- 315.8065583705902
+------------------------- time cost ------------------------- 212.3071711063385
+------------------------- time cost ------------------------- 231.75076389312744
+------------------------- time cost ------------------------- 321.2723116874695
+
+-------------Round number: 45-------------
+
+Evaluate global model
+Averaged Train Loss: 0.0002
+Averaged Test Accuracy: 0.9316
+Averaged Test AUC: 0.9899
+Std Test Accuracy: 0.0232
+Std Test AUC: 0.0061
+------------------------- time cost ------------------------- 314.28624296188354
+------------------------- time cost ------------------------- 273.6376962661743
+------------------------- time cost ------------------------- 389.2759714126587
+------------------------- time cost ------------------------- 286.1912441253662
+------------------------- time cost ------------------------- 468.9727256298065
+
+-------------Round number: 50-------------
+
+Evaluate global model
+Averaged Train Loss: 0.0002
+Averaged Test Accuracy: 0.9332
+Averaged Test AUC: 0.9898
+Std Test Accuracy: 0.0217
+Std Test AUC: 0.0058
+------------------------- time cost ------------------------- 420.01934242248535
+
+Best accuracy.
+0.933173269307723
+
+Average time cost per round.
+287.8820368719101
+File path: ../results/PACS_FedAvg_test_0.h5
+
+Average time cost: 15141.61s.
+Length:  11
+std for best accuracy: 0.0
+mean for best accuracy: 0.933173269307723
+All done!
+
+Storage on cuda:0
+-------------------------------------------------------------------------------
+Total Tensors: 156579162 	Used Memory: 426.81M
+The allocated memory on cuda:0: 459.19M
+Memory differs due to the matrix alignment or invisible gradient buffer tensors
+-------------------------------------------------------------------------------
+
+Total time cost: 15142.08s.
