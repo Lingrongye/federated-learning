@@ -652,73 +652,153 @@ Windows 本地 (D:\桌面文件\联邦学习\)
   ├── Claude Code / Cursor 编辑代码
   ├── Git 仓库 → https://github.com/Lingrongye/federated-learning
   └── WSL (Ubuntu 20.04)
-       └── rr (Road Runner) → rsync + SSH 同步执行
+       └── rr CLI: /home/lingrongye/go/bin/rr
+       └── SSH: Host lab-lry (密钥 ~/.ssh/id_ed25519)
                 ↓
 服务器 (lab-lry: 222.201.145.9:22, user lry)
   ├── GPU: 双卡 RTX 3090 (各24GB)
-  ├── 项目目录: /home/lry/code/federated-learning
+  ├── 项目目录: /home/lry/code/federated-learning (同一个Git仓库)
+  ├── Conda环境: /home/lry/conda/envs/pfllib/bin/python
   └── 共享服务器（其他用户: wjc, syy, tfs）
 ```
 
-### 17.2 rr 配置
+### 17.2 代码同步方式：Git 双向同步
 
-- **全局配置**: WSL `~/.rr/config.yaml`
-- **项目配置**: `.rr.yaml`（定义 host、remote_dir、exclude 规则）
-- **SSH 配置**: WSL `~/.ssh/config` → Host lab-lry, 密钥 `~/.ssh/id_ed25519`
+**唯一同步方式是 Git commit + push/pull，不再使用 rr sync 同步代码。**
 
-### 17.3 日常工作流命令（WSL 终端执行）
+本地和服务器都是同一个 Git 仓库的克隆，通过 GitHub 中转同步。
+
+#### 本地 → 服务器（推送代码修改）
 
 ```bash
-cd "/mnt/d/桌面文件/联邦学习"
+# 1. 本地: commit 并 push
+git add <files>
+git commit -m "描述"
+git push origin main
 
-# 推送代码到服务器并执行命令
-rr run "cd PFLlib/system && CUDA_VISIBLE_DEVICES=1 python main.py -algo FedDSA -data PACS ..."
-
-# 只推送文件不执行
-rr sync
-
-# 只执行命令不推送
-rr exec "nvidia-smi"
-
-# 执行并拉回结果文件
-rr run "cd PFLlib/system && python main.py ..." --pull experiments/results/metrics.json
-
-# 从服务器拉文件到本地（排除数据集等大文件）
-bash sync_pull.sh
-
-# 拉之前预览
-bash sync_pull.sh --dry-run
+# 2. 服务器: pull 获取更新（通过 rr exec 远程执行）
+rr exec "cd /home/lry/code/federated-learning && git pull origin main"
 ```
 
-### 17.4 同步排除规则
+**注意**：如果服务器有未提交的本地修改，pull 会冲突。需要先处理：
+```bash
+# 丢弃服务器本地修改（确认不需要保留时）
+rr exec "cd /home/lry/code/federated-learning && git checkout -- . && git pull origin main"
 
-以下目录/文件在 `.rr.yaml`、`sync_pull.sh`、`.gitignore` 三处保持一致排除：
+# 如果有 untracked 文件冲突
+rr exec "cd /home/lry/code/federated-learning && git checkout -- . && git clean -fd <冲突目录> && git pull origin main"
+```
+
+#### 服务器 → 本地（拉取实验结果）
+
+实验在服务器上产生的文件（terminal.log、metrics.json 等），在服务器端 commit 后 push，本地 pull：
+
+```bash
+# 1. 服务器: commit 实验结果并 push
+rr exec "cd /home/lry/code/federated-learning && git add experiments/ && git commit -m '实验结果: EXP-XXX' && git push origin main"
+
+# 2. 本地: pull 获取结果
+git pull origin main
+```
+
+#### 同步流程图
+
+```
+[本地编辑代码] → git commit → git push → GitHub
+                                            ↓
+[服务器] ← git pull ← ← ← ← ← ← ← ← ← ←┘
+    ↓
+[服务器跑实验，产生结果]
+    ↓
+[服务器] → git add → git commit → git push → GitHub
+                                                ↓
+[本地] ← git pull ← ← ← ← ← ← ← ← ← ← ← ←┘
+```
+
+### 17.3 在服务器上执行命令
+
+Claude Code 通过 WSL 中的 rr CLI 远程执行服务器命令。
+
+**rr 路径**：`/home/lingrongye/go/bin/rr`
+
+**Claude Code 执行方式**：
+```bash
+wsl bash -lc 'cd "/mnt/d/桌面文件/联邦学习" && /home/lingrongye/go/bin/rr exec "<服务器命令>"'
+```
+
+**常用命令模板**：
+
+```bash
+# 查看 GPU 状态
+rr exec "nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv,noheader"
+
+# 查看服务器 Git 状态
+rr exec "cd /home/lry/code/federated-learning && git status"
+
+# 服务器 Git pull
+rr exec "cd /home/lry/code/federated-learning && git pull origin main"
+
+# 服务器 commit + push 实验结果
+rr exec "cd /home/lry/code/federated-learning && git add experiments/ && git commit -m '结果: EXP-XXX' && git push origin main"
+
+# 跑实验（指定GPU）
+rr exec "cd /home/lry/code/federated-learning/PFLlib/system && CUDA_VISIBLE_DEVICES=1 nohup /home/lry/conda/envs/pfllib/bin/python main.py -algo FedDSA -data PACS ... > /dev/null 2>&1 &"
+
+# 查看后台进程
+rr exec "ps aux | grep main.py | grep -v grep"
+
+# 查看实时日志
+rr exec "tail -20 /home/lry/code/federated-learning/experiments/sanity/EXP-001_pacs_feddsa_sanity/terminal.log"
+```
+
+**注意**：rr exec 不同步文件，仅远程执行命令。代码同步统一走 Git。
+
+### 17.4 跑实验完整流程
+
+```
+1. 本地修改代码 → git commit → git push
+2. rr exec "git pull"  拉取代码到服务器
+3. rr exec "nvidia-smi" 检查GPU空闲
+4. rr exec "nohup python main.py ... &" 后台启动实验
+5. rr exec "tail -20 <log>"  查看进度
+6. 实验结束后: rr exec "git add && git commit && git push"  提交结果
+7. 本地 git pull 拉取结果分析
+```
+
+### 17.5 .gitignore 与大文件排除
+
+**原则：只排除真正的大文件，日志和实验产物都入Git以便双向同步。**
+
+排除（不入Git）：
 
 | 排除项 | 原因 |
 |--------|------|
-| `.git` | 避免 git 仓库冲突 |
 | `无关文件/` | 周报、文档等无关内容 |
 | `Qwen3-VL-4B-mlc/`, `mlc-qwen3-vl/` | 模型权重（2.4GB） |
 | `papers/` | PDF论文（193MB） |
-| `PFLlib/dataset/MNIST/`, `PFLlib/dataset/utils/LEAF/` | 数据集原始数据 |
 | `PFLlib/dataset/*/rawdata,train,test` | 各数据集生成的数据文件 |
 | `RethinkFL/data/` | RethinkFL数据（244MB） |
 | `PARDON-FedDG/style_stats/` | 风格统计缓存 |
 | `__pycache__/`, `*.pyc` | Python 缓存 |
-| `wandb/` | 实验追踪日志 |
+| `wandb/` | 实验追踪日志（文件量大） |
+| `*.pth`, `*.pt`, `*.ckpt` | 模型检查点文件（单个数百MB） |
 
-**注意：以下目录需要同步，不排除：**
-- `*.log` — 训练日志
-- `checkpoints/` — 模型检查点
-- `runs/` — TensorBoard 运行记录
-- `experiments/` — 实验记录
+需要入Git（可同步）：
 
-### 17.5 换行符规则
+| 入Git项 | 原因 |
+|---------|------|
+| `experiments/` | 实验配置、笔记、metrics.json、terminal.log |
+| `*.log` | 训练日志，需要读取分析 |
+| `runs/` | TensorBoard记录 |
+| `checkpoints/`目录结构 | 保留目录，模型文件被*.pth排除 |
 
-`.gitattributes` 统一所有文本文件为 LF（`* text=auto eol=lf`），避免 Windows CRLF 与 Linux LF 差异导致 rsync 同步后产生假修改。
+### 17.6 换行符规则
 
-### 17.6 GPU 使用注意
+`.gitattributes` 统一所有文本文件为 LF（`* text=auto eol=lf`），避免 Windows CRLF 与 Linux LF 差异导致 Git 产生假修改。
+
+### 17.7 GPU 使用注意
 
 - 共享服务器，先用 `rr exec "nvidia-smi"` 检查 GPU 占用
 - 指定空闲卡：`CUDA_VISIBLE_DEVICES=0` 或 `CUDA_VISIBLE_DEVICES=1`
 - 小实验 batch_size 调小防止 OOM
+- 长时间实验用 `nohup ... &` 后台运行，避免SSH断连中断

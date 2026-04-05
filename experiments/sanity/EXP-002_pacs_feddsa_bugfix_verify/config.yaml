@@ -1,0 +1,50 @@
+experiment:
+  id: "EXP-002"
+  name: "FedDSA Bug Fix Verify (pretrained + style bank fix)"
+  date: "2026-04-05"
+  purpose: "验证EXP-001发现的4个bug修复后效果：风格仓库正常增长、train_loss正确、辅助损失warmup、预训练backbone"
+
+dataset:
+  name: "PACS"
+  num_clients: 4
+  num_classes: 7
+  split: "每个域=1个客户端"
+  domains: ["art_painting", "cartoon", "photo", "sketch"]
+
+model:
+  backbone: "ResNet18"
+  pretrained: true
+  feat_dim: 512
+  proj_dim: 128
+
+training:
+  global_rounds: 50
+  local_epochs: 5
+  batch_size: 32
+  lr: 0.005
+  optimizer: "SGD"
+  momentum: 0.9
+  weight_decay: 1.0e-5
+  seeds: [0]
+  eval_gap: 5
+
+method:
+  name: "FedDSA"
+  lambda_orth: 1.0
+  lambda_hsic: 0.1
+  lambda_sem: 1.0
+  tau: 0.1
+  warmup_rounds: 10
+  style_dispatch_num: 5
+  style_dedup: 0.95
+  style_bank_max: 50
+
+changes_from_exp001:
+  - "pretrained=True (新增-pt参数)"
+  - "lr: 0.01 -> 0.005 (预训练backbone用更小学习率)"
+  - "global_rounds: 10 -> 50 (观察收敛趋势)"
+  - "warmup_rounds: 5 -> 10 (配合辅助损失warmup)"
+  - "eval_gap: 2 -> 5 (减少评估开销)"
+  - "风格仓库改为per-client slot管理"
+  - "新增train_metrics()正确路径"
+  - "辅助损失线性warmup"

@@ -58,8 +58,10 @@ venv/
 *.swp
 *.swo
 
-# 日志和输出
-*.log
+# 实验追踪（wandb太大，不入Git）
 wandb/
-runs/
-checkpoints/
+
+# 大模型检查点文件（单个可达数百MB）
+*.pth
+*.pt
+*.ckpt
