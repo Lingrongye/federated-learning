@@ -1,0 +1,2218 @@
+Mitigating Domain Shift in Federated Learning via Intra- and Inter-Domain
+Prototypes
+Huy Q. Le1, Ye Lin Tun1, Yu Qiao1, Minh N. H. Nguyen2, Keon Oh Kim1, Choong Seon Hong1
+1Kyung Hee University
+2Vietnam-Korea University of Information and Communication Technology
+1{quanghuy69, yelintun, qiaoyu, keonoh, cshong}@khu.ac.kr
+2nhnminh@vku.udn.vn
+Abstract
+Federated Learning (FL) has emerged as a decentralized
+machine learning technique, allowing clients to train a
+global model collaboratively without sharing private data.
+However, most FL studies ignore the crucial challenge of
+heterogeneous domains where each client has a distinct fea-
+ture distribution, which is popular in real-world scenarios.
+Prototype learning, which leverages the mean feature vec-
+tors within the same classes, has become a prominent so-
+lution for federated learning under domain shift. However,
+existing federated prototype learning methods focus soley
+on inter-domain prototypes and neglect intra-domain per-
+spectives.
+In this work, we introduce a novel federated
+prototype learning method, namely I2PFL, which incorpo-
+rates Intra-domain and Inter-domain Prototypes, to miti-
+gate domain shift from both perspectives and learn a gen-
+eralized global model across multiple domains in federated
+learning. To construct intra-domain prototypes, we propose
+feature alignment with MixUp-based augmented prototypes
+to capture the diversity within local domains and enhance
+the generalization of local features. Additionally, we in-
+troduce a reweighting mechanism for inter-domain proto-
+types to generate generalized prototypes that reduce domain
+shift while providing inter-domain knowledge across multi-
+ple clients. Extensive experiments on the Digits, Office-10,
+and PACS datasets illustrate the superior performance of
+our method compared to other baselines.
+1. Introduction
+Federated Learning (FL) has emerged as a prominent dis-
+tributed machine learning framework, enabling multiple
+clients to collaboratively train a model without leaking pri-
+vate data [19, 21, 25]. The widely used FL approach, Fe-
+dAvg [25], ensures user privacy by sharing only model pa-
+rameters with a central server.
+In recent years, FL has
+gained considerable attention and demonstrated promis-
+ing results across various domains [2, 12, 24, 31].
+De-
+Client 1 (Photo)
+Client m (Cartoon)
+Inter-domain level
+…
+…
+Intra-domain level
+…
+Figure 1. Illustration of domain shift challenge in Federated
+Learning (FL). We address the domain shift challenge in FL from
+two key perspectives: inter-domain level, which refers to vari-
+ations in data distributions across different domains, and intra-
+domain level, which focuses on internal variations within the same
+domain, such as differences in background, lighting.
+spite its potential, FL faces a critical challenge: data het-
+erogeneity [20, 21, 26].
+As such, the data distributions
+across clients are non-independently and identically dis-
+tributed, i.e., non-iid, leading to the degradation of learn-
+ing performance and fluctuations in the convergence of the
+global model performance. To address this challenge, re-
+cent FL methods have focused on enhancing local training
+through regularization techniques [13, 21] or novel aggre-
+gation schemes [9, 41, 43].
+However, most existing FL methods primarily address
+the label shift, assuming client data is derived from the same
+domain. In real-world scenarios, private data is often col-
+lected from multiple domains. For instance, images of a cat
+and sketches of a cat might share the same label but come
+from different domains, leading to heterogeneous feature
+distributions across clients. Unlike label shift, the impact of
+domain shift on FL has not been extensively explored. Un-
+der domain shift, a domain gap exists across different partic-
+1
+arXiv:2501.08521v2  [cs.LG]  10 Mar 2025
+ipating clients, causing local models to be domain-specific,
+leading to poor generalization of the global model. To over-
+come the challenge above, recent FL works on heteroge-
+neous domain [10, 38] have considered prototypes, repre-
+sented as the mean values of vectors within the same se-
+mantic class as the solution. These studies [37, 38] obtain
+the global prototype by averaging local prototypes, which
+are then used for regularizing the local model to resolve the
+label shift. Regarding domain shift, the authors in [10, 42]
+propose a clustering approach to construct unbiased pro-
+totypes to provide diverse domain knowledge for multiple
+clients. Clustering methods have demonstrated effective-
+ness in addressing domain shifts in scenarios where client
+distributions across domains are non-identical, and it is con-
+sidered SOTA. However, these methods only consider con-
+structing prototypes at the inter-domain level on the server
+and overlook the intra-domain perspective of local clients.
+Unlike existing federated prototype learning methods,
+we aim to tackle domain shifts in FL by considering pro-
+totypes from intra- and inter-domain perspectives, as shown
+in Fig. 1. Domain shift in FL can manifest at two levels:
+inter-domain level, which involves variations between dis-
+tinct domains (e.g, elephants in Photo and Cartoon domains
+share same label but have distinct features, as shown in
+Fig. 1), and intra-domain level, which refers to variation
+within same domain, such as differences in background,
+pose. In particular, previous works [37, 38] consider av-
+eraging the local prototypes that belong to the same class
+space to obtain the global prototypes. However, under the
+domain shift challenge, directly averaging prototypes can
+create biased global prototypes, similar to the problem in
+FedAvg with model parameter averaging. This results in
+poor generalization of the global model across different do-
+mains, as stated in [10].
+Building on the issues identified in prior works, we pro-
+pose a prototype reweighting scheme to refine inter-domain
+prototypes on the server. We first calculate the initial mean
+of prototypes from different clients within the same se-
+mantic class.
+However, domain variance may skew this
+mean toward the dominant domain due to client distribu-
+tion bias. We assert that prototypes further from the ini-
+tial mean need more weight than those closer to the mean.
+Therefore, reweighting scheme assigns more weights to a
+prototype as its distance from the mean increases.
+By
+doing so, we can obtain generalized prototypes that pro-
+vide unbiased inter-domain knowledge for local training,
+consequently improving performance on challenging do-
+mains. It is important to note that our generalized proto-
+type construction maintains privacy through multiple av-
+eraging operations [37]. In addition, to address the inter-
+nal variations at the intra-domain level, we introduce the
+concept of intra-domain prototypes for local clients, en-
+riching the local feature diversity during training. Unlike
+local prototypes that are sent to the server, we define the
+intra-domain prototypes as being stored and utilized locally
+on the client side.
+Specifically, inspired by the MixUp
+augmentation [46] technique, we create intra-domain pro-
+totypes with augmented prototypes for each client.
+By
+learning from augmented prototypes, local clients can ex-
+tract more semantic information from their features, en-
+hancing their generalization capability for subsequent pro-
+totype aggregation. To effectively handle domain shift in
+FL, it is essential to combine prototypes from both intra-
+domain and inter-domain perspectives. Intra-domain pro-
+totypes enhance the diversity within a single domain, im-
+proving local learning, while inter-domain prototypes facil-
+itate knowledge transfer across multiple domains, enhanc-
+ing global generalization. In this paper, we propose Intra
+and Inter-Domain Prototype Federated Learning (I2PFL),
+which consists of two components: Generalized Proto-
+types Contrastive Learning (GPCL) and Augmented Pro-
+totype Alignment (APA). Our proposed I2PFL is illustrated
+in Fig. 2. Our approach simultaneously handles intra- and
+inter-domain prototypes under domain-skewed FL. First,
+Generalized Prototypes Contrastive Learning (GPCL) is
+proposed to guide the local model training with the inter-
+domain knowledge and alleviate the domain shift problem
+in FL. Specifically, we generate the generalized prototypes
+using the reweighting scheme to reduce the bias towards
+dominant domains at the inter-domain level. Inspired by the
+success of contrastive learning [3, 8, 29], GPCL encourages
+the alignment of local features with the generalized proto-
+types of the same semantic class while pushing them away
+from generalized prototypes of different classes. Addition-
+ally, the APA component increases local feature diversity
+and avoids overfitting on domain-specific data at the intra-
+domain level by encouraging alignment between local fea-
+tures and augmented prototypes using MixUp-based feature
+augmentation. By combining prototypes at multiple levels,
+our proposed method enhances the global model’s robust-
+ness and mitigates negative impacts of domain shift. Our
+primary contributions are:
+• We focus on FL under the domain shift challenge, rec-
+ognizing that existing methods primarily address proto-
+type construction at the inter-domain level, overlooking
+the crucial intra-domain variations within local clients.
+Our approach uniquely integrates both inter-domain and
+intra-domain prototypes, offering a more comprehensive
+solution to domain shift and significantly enhancing the
+generalization ability of the global model.
+• To tackle the challenge of domain shift in FL, we in-
+troduce a novel approach, I2PFL. Our method first in-
+troduces prototype learning at the intra-domain level to
+enhance feature diversity using MixUp-based augmented
+prototypes. We further construct generalized prototypes
+with a novel prototype reweighting scheme at the inter-
+2
+MixUp
+Client 
+MixUp
+Client 
+Prototype
+Reweighting
+Weight
+Aggregation
+EMA
+Prototype
+Bank
+Global Model
+Feature Extractor
+Classifier
+Different classes
+Figure 2. Illustration of I2PFL. Clients first upload their local prototypes based on Eq. 2 to the server. We introduce the prototype
+reweighting scheme to generate the Generalized Prototypes Gt+1 based on Eq. 4 and update them with Gt from the previous round using
+the Exponential Moving Average from Eq. 5. We provide inter-domain knowledge from the Generalized Prototypes with LGP CL from
+Eq. 6 and enhance the local feature diversity with LAP A based on Eq. 9 using the Augmented Prototype from Eq. 8.
+domain level to provide inter-domain knowledge, achiev-
+ing generalization performance across different domains.
+• We conduct extensive experiments on the Digits, Office-
+10, and PACS datasets. We demonstrate the superiority
+of our method over other baselines and validate the effec-
+tiveness of each component through ablation studies.
+2. Related Work
+2.1. Federated Learning
+FedAvg faces performance degradation when dealing with
+data heterogeneity. To address the non-iid challenge, some
+studies incorporate regularization terms to focus on improv-
+ing the local training, such as FedProx [21] with a prox-
+imal term calculated by the distance between global and
+local models and SCAFFOLD [13] with control variates.
+Other methods, such as FedDyn [1] and pFedMe [36], also
+enhance local training through various regularization tech-
+niques.
+Another direction is to improve the aggregation
+phase.
+FedMA [41] utilizes a Bayesian non-parametric
+method to average model parameters in a layer-wise man-
+ner, while FedAvgM [9] incorporates a momentum-based
+global update at the server. However, these methods pri-
+marily consider scenarios with single domain data and la-
+bel skew, overlooking the domain skew challenge in FL.
+Recently, methods like FedBN [22] and FPL [10] have
+been developed to address domain skew. Specifically, FPL
+proposes clustering prototypes to achieve unbiased proto-
+types, resulting in state-of-the-art performance. COPA [44],
+FedGA [47], FedDG [23], and gPerXAN [14] address the
+problem of domain generalization, aiming to improve the
+global model’s ability to generalize to unseen domains, i.e.,
+data domains not included in the training process. In con-
+trast, our work tackles a different challenge, focusing on en-
+abling the global model to handle distribution shifts across
+multiple clients. In this work, we introduce Intra- and Inter-
+Domain Prototype Federated Learning (I2PFL), which con-
+structs intra- and inter-domain prototypes. Our focus is on
+enhancing the generalization of the global model under do-
+main shift by utilizing generalized and local augmented pro-
+totypes in federated learning.
+2.2. Prototype Learning
+Prototypes [35] have achieved success in various applica-
+tions, including few-shot learning [39, 45, 48] and unsuper-
+vised learning [4, 5, 17]. In FL, the concept of prototypes
+has been extended to address the data heterogeneity chal-
+lenge [10, 30, 38]. FedProto [37] was among the first to
+introduce the use of prototypes in FL, proposing a commu-
+nication method that exchange prototypes between clients
+and the server instead of model parameters.
+Recently,
+FPL [10] introduced a cluster-based prototype method to
+generate unbiased global prototypes, addressing the chal-
+lenges in FL where the client distributions vary across do-
+mains. In addition to FPL, the authors in [42] proposed Fed-
+PLVM, which incorporates a dual-level prototype cluster-
+ing approach and an α-sparsity prototype loss to tackle the
+challenges of learning under domain shift. However, these
+3
+aforementioned methods primarily focus on constructing
+the prototypes at the global server, overlooking the intra-
+domain characteristics of the local clients. In contrast, our
+approach constructs intra-domain prototypes to increase lo-
+cal feature diversity and introduce a reweighting scheme to
+inter-domain prototypes, producing the unbiased general-
+ized prototypes. The integration of intra- and inter-domain
+prototypes enables the model to leverage both components
+effectively: intra-domain prototypes enhance the local gen-
+eralization within each domain, while inter-domain proto-
+types provide the shared knowledge across different do-
+mains, thus effectively aiding in the generalization of the
+global model.
+3. Methodology
+3.1. Overview
+In this paper, we assume there are M clients (indexed by
+m), each with private data Dm = {xm
+i , ym
+i }, where xm
+i
+represents samples and ym
+i
+denotes the corresponding la-
+bels. Under the domain shift, each client has private data
+with different feature distributions Pm(x), but the label dis-
+tributions Pm(y) remain the same across multiple clients.
+Client models share the same architecture, consisting of
+two modules: feature extractor f and classifier g. The fea-
+ture extractor takes the input sample xm
+i and encodes it into
+a d-dimensional feature vector h = f(x) ∈Rd. The clas-
+sifier g then maps the feature vector h to the logits output
+zcls = g(h) ∈RI. Given the model parameters for the
+entire backbone network as θ, and D = SM
+m=1 Dm rep-
+resenting the sum of samples of all clients, the global ob-
+jective is formulated, similar to the popular FL framework,
+FedAvg [25], as follows:
+argmin
+θ
+L(θ) =
+M
+X
+m=1
+|Dm|
+|D| Lm(θm, Dm),
+(1)
+where the loss function Lm is the cross-entropy loss
+LCE(zcls, y) for mth client.
+3.2. Prototype Reweighting Scheme
+Prior research on federated prototype learning [37, 38] typ-
+ically produce global prototypes by simply averaging the
+local prototypes from different clients. This can lead to a
+bias favoring the dominant prototypes and negatively im-
+pact performance in domain-skewed FL scenarios.
+This
+motivates us to rethink the concept of inter-domain pro-
+totypes by designing generalized prototypes that can re-
+duce the bias in prototype averaging and enhance the global
+model’s generalization. We first define the kth class local
+prototypes from client mth as:
+pk
+m =
+1
+|Skm|
+X
+i∈Sk
+m
+hi,
+(2)
+d1
+k
+Prototype 
+Reweighting
+𝑑1
+𝑘
+𝑑𝑘
+𝑝1
+𝑘+ 𝑑2
+𝑘
+𝑑𝑘
+𝑝2
+𝑘+ ⋯+ 𝑑𝑚
+𝑘
+𝑑𝑘
+𝑝𝑚
+𝑘
+Initial prototype mean
+Generalized Prototype
+d2
+k
+dm
+k
+Figure 3. Illustration of Prototype Reweighting scheme. We
+present the prototype reweighting scheme of the prototypes from
+different domains in the same semantic class.
+where Sk
+m is the subset of Dm belonging to class kth. Then,
+we further calculate the initial mean of prototypes from dif-
+ferent clients within the same semantic class kth as:
+µk = 1
+M
+M
+X
+m=1
+pk
+m ∈Rd
+µ = [µ1, µ2, . . . , µK],
+(3)
+where µk denotes the initial mean of prototypes belonging
+to class k ∈K.
+Generalized Prototypes.
+Under conditions of domain
+shift, directly averaging prototypes to obtain an initial mean
+can lead to significant bias, favoring dominant client proto-
+types due to discrepancies in client data distributions. We
+define the distance between the local prototype and the ini-
+tial mean of prototypes within the same semantic class k as
+dk
+m = ∥pk
+m −µk∥2
+2. We assert that prototypes distant from
+the initial mean indicate important yet underrepresented do-
+main characteristics and thus should be emphasized more in
+the aggregation process. To achieve a more balanced repre-
+sentation and to reduce domain-specific bias, we propose
+an adaptive weighting strategy. Specifically, prototypes ex-
+hibiting greater distances from the initial mean are assigned
+higher adaptive weights. This distance-based reweighting
+ensures that our generalized prototypes represent domain
+variability comprehensively and robustly, aligning well with
+variance reduction, as illustrated in Fig. 3.
+We denote
+the generalized prototypes with our proposed reweighting
+scheme as follows:
+gk =
+M
+X
+m=1
+dk
+m
+dk pk
+m ∈Rd
+G = [g1, g2, . . . , gK],
+(4)
+where dk = P dk
+m denotes the sum of distances between
+the local prototype and the initial mean of prototypes from
+different clients, and gk denotes the generalized prototypes
+belonging to class k ∈K. To achieve more stable and
+4
+consistent generalized prototypes, we apply the Exponen-
+tial Moving Average (EMA) update to the generalized pro-
+totypes of the current communication round t + 1 from the
+previous round t. The formulation is as follows:
+Gt+1 = βGt+1 + (1 −β)Gt
+(5)
+where β is the decay rate of the EMA update. By apply-
+ing an EMA update to generalized prototypes and assigning
+greater weight to past prototypes, we can maintain a bal-
+anced representation and mitigate performance fluctuations
+caused by domain shifts. Compared with the conventional
+prototype averaging method, our generalized prototypes G
+achieve fair optimization on multiple domains and avoid
+bias toward the dominant domain, thus ensuring consistent
+guidance for the local training process.
+3.3. Generalized Prototypes Contrastive Learning
+The consistent generalized prototype could enhance the
+robustness of the global model under the domain shift
+and guide the local training with inter-domain knowledge.
+Thus, we apply the contrastive learning between the local
+features and generalized prototypes. We encourage local
+features of data samples to closely align with their corre-
+sponding generalized prototypes within the same seman-
+tic class while pushing away the generalized prototypes
+of different semantic classes. Regarding the data samples
+{xi, yi}, we first employ the feature extractor to gener-
+ate the feature vectors h = f(x) ∈Rn.
+Let g be the
+corresponding generalized prototypes g ∈G, g+ denotes
+the generalized prototypes with the same semantic class
+from the local samples. Subsequently, inspired by InfoNCE
+loss [29], we design the Generalized Prototype Contrastive
+Learning (GPCL) loss as follows:
+LGP CL = −1
+B
+B
+X
+i=1
+log
+exp(s(hi, g+)/τ)
+P
+gk∈G exp(s(hi, gk)/τ),
+(6)
+where s(u, v) = u⊤v/∥u∥∥v∥represents the cosine sim-
+ilarity between the local feature and the generalized pro-
+totypes, B denotes local batch size and τ is the tempera-
+ture parameter. Our target of Eq. 6 is to encourage the lo-
+cal client from different domains to acquire inter-domain
+knowledge from the generalized prototypes, thereby en-
+hancing the generalization and mitigating the domain shift’s
+negative impact.
+3.4. Augmented Prototypes Alignment
+In federated learning, under the domain shift problem, the
+individual clients possess local data that is limited to a spe-
+cific domain, which can lead to overfitting and poor gen-
+eralization. Unlike previous works [10, 27, 37] that con-
+sider only the prototype construction at the inter-domain
+level on the server, we propose constructing the intra-
+domain prototypes at the local clients.
+To address the
+limitation of local training data diversity, we conduct the
+MixUp-based prototype augmentation. Unlike traditional
+input-level MixUp, which introduces variation in raw in-
+put, feature-level MixUp operates on embedding features,
+producing semantically richer, more stable augmented pro-
+totypes that are less domain-specific. We first encode the
+local samples {xi, yi} into the feature vectors hi using the
+feature extractor f. Inspired by MixUp [46] augmentation
+technique, which generates synthetic instances by combin-
+ing the features and labels of samples pairs through linear
+interpolation, we incorporate MixUp strategy to generate
+the augmented feature as follows:
+˜hi = γhi + (1 −γ)hj
+(7)
+where γ ∼Beta(α, α) with α ∈(0, ∞), and hj is the
+feature of random data sample xj from different semantic
+class on Dm. This approach increases the diversity within
+local features and helps prevent overfitting to data specific
+to a particular domain. Similar to Eq. 2, we denote the aug-
+mented prototypes of local client mth as:
+˜pk
+m =
+1
+|Skm|
+X
+i∈Sk
+m
+˜hi
+˜pm = [˜p1
+m, ˜p2
+m, . . . , ˜pK
+m],
+(8)
+where ˜pk
+m denotes the augmented prototypes of mth client
+belonging to class k ∈K. By learning from the augmented
+prototypes, we enable the model to capture robust represen-
+tations of intra-domain variations, such as lighting or back-
+ground differences, thereby improving the generalization
+capability of the local features and enhancing the robustness
+of local model training against domain shift. Subsequently,
+we utilize ℓ2 distance and introduce the Augmented Proto-
+type Alignment (APA) as follows:
+LAP A =
+X
+k
+∥hk
+m −˜pk
+m∥2
+2,
+(9)
+where hk
+m is the local features of k semantic class of client
+m. By establishing an alignment between the local rep-
+resentations and the augmented prototypes, we enhance
+the local feature diversity and avoid overfitting on domain-
+specific aspects at the intra-domain level. Moreover, it en-
+hances the generalization of the model parameters and pro-
+totypes when the global model performs the aggregation on
+the server. By integrating the prototypes at intra- and inter-
+domain levels, our proposed scheme enhances the global
+model’s robustness on multiple domains and alleviates the
+domain shift. We define the overall training objective for
+each client as follows:
+L = LCE + λintraLAP A
+|
+{z
+}
+Intra-domain
++ λinterLGP CL
+|
+{z
+}
+Inter-domain
+(10)
+5
+where λintra, λinter are hyper-parameters that control the
+importance of LAP A, LGP CL, respectively. During the lo-
+cal training phase, each client trains the model on their pri-
+vate data using the loss function specified in Eq. 10.
+In the previous works, methods such as FPL [10] and
+FedPLVM [42] utilized the clustering method to gener-
+ate inter-domain prototypes to reduce the bias towards the
+dominant domain.
+In contrast, we propose an adaptive
+distance-based reweighting scheme, which dynamically as-
+signs higher weights to prototypes that are more distant
+from the initial mean prototype. By adaptively emphasizing
+these underrepresented prototypes, our approach generates
+more balanced and generalized inter-domain prototypes, ef-
+fectively mitigating domain bias arising from domain shift,
+as demonstrated by the experimental results in Table 5. Ad-
+ditionally, we incorporate intra-domain prototypes at the lo-
+cal clients to further improve global model generalization
+under domain shift.
+4. Experiment
+4.1. Experimental Setup
+Datasets.
+We conducted experiments using three image
+classification datasets: Digits [11, 15, 28, 33], Office-10 [6]
+and PACS [16]. The Digits dataset comprises four domains:
+MNIST (mt), USPS (up), SVHN (sv), and SYN (syn), each
+presenting 10 categories with digit numbers from 0 to 9.
+The Office-10 includes four domains: Caltech (C), Ama-
+zon (A), Webcam (W), and DSLR (D) of 10 categories.
+The PACS dataset contains images across 7 categories from
+four domains: Photo (P), Art Painting (A), Cartoon (C), and
+Sketch (S).
+In the domain shift setting, which is our primary focus,
+we initialize 20, 10, and 10 clients for Digits, Office-10,
+and PACS, respectively, and assign domains to clients ran-
+domly, following [10], as shown in Table 1. Additionally,
+we evaluate our method in an out-client shift scenario using
+a leave-one-domain-out evaluation approach. Specifically,
+we sequentially select one domain as unseen domain while
+training the model on the remaining domains, treating each
+domain as a client. The trained model is then evaluated on
+the unseen domain. We sampled a specific proportion from
+these domains for each client based on task difficulty and
+dataset size, with sampling rates set at 1%, 20%, and 30%
+for Digits, Office-10, and PACS, respectively. To ensure
+reproducibility, we fixed the seed.
+Model Architecture. For the Digits and Office-10 datasets,
+we used ResNet-10 [7] as the base model architecture, while
+for the PACS dataset, we employed ResNet-18 [7].
+Implementation Details. The communication round is set
+to 100, and the local training epoch is 10 for all datasets. We
+employ the SGD [32] optimizer with a weight decay of 1e−
+5 and a learning rate of 0.01 across all datasets. The training
+batch size is 32 for the Digits and Office-10 datasets, and
+16 for the PACS dataset. The EMA β is set as 0.99 for all
+datasets. Top-1 accuracy is used as the evaluation metric.
+Each experiment is repeated three times, and we report the
+mean values from the last 5 communication rounds. We
+present the ablation studies for various hyperparameters in
+the supplementary material.
+Digits Domains
+mt
+up
+sv
+syn
+Client distribution of Digits
+6
+4
+3
+7
+Office-10 Domains
+C
+A
+W
+D
+Client distribution of Office-10
+3
+2
+1
+4
+PACS Domains
+P
+A
+C
+S
+Client distribution of PACS
+3
+2
+1
+4
+Table 1. Client distribution for different datasets.
+Baselines.
+For evaluation, we compare our I2PFL
+against
+several
+state-of-the
+art
+FL
+methods:
+Fe-
+dAvg (AISTATS’17) [25], FedProx (MLsys’21) [21],
+FedDyn (ICLR’21) [1], MOON (CVPR’21) [18], as well
+as prototype-based FL methods: FedProc (FGCS’23) [27],
+FedProto (AAAI’22) [37] (with parameter averaging),
+FPL (CVPR’23) [10], and FedPLVM (NeurIPS’24) [42].
+For the out-client shift setting, we include SOTA baselines
+from Federated Domain Generalization setting, such as
+COPA (ICCV’21) [44] and FedGA (CVPR’23) [47].
+4.2. Comparison to SOTA methods.
+Table 2 presents the performance comparison of our pro-
+posed I2PFL with other SOTA methods on three datasets.
+As the results show, I2PFL consistently outperforms other
+baselines across multiple domains.
+The average accu-
+racy depicts the effectiveness in achieving better general-
+ization.
+For the Digits dataset, I2PFL demonstrates su-
+perior performance across all domains, with an average
+accuracy improvement of 0.97% compared to the second
+best method FedPLVM. Regarding the Office-10 dataset,
+our method outperforms the state-of-the-art methods FPL
+and FedPLVM by a notable gap, illustrating an improve-
+ment of 4.99%. Specifically, we improve the performance
+on a challenging domain like DSLR, where I2PFL signif-
+icantly outperforms other methods. In the PACS dataset,
+methods incorporating contrastive learning tend to achieve
+higher average accuracy across all domains.
+However,
+I2PFL still outperforms other approaches in most domains,
+with a 1.15% improvement in average accuracy compared
+to MOON. These results highlight our method’s ability to
+achieve better generalization across multiple domains and
+different tasks. By integrating intra- and inter-domain pro-
+totypes, we enhance the generalization across multiple do-
+mains, effectively avoiding the bias toward any specific do-
+main.
+Regarding the out-client shift setting, as shown in Ta-
+ble 3, our proposed method I2PFL achieves average ac-
+6
+Methods
+Digits
+Office-10
+PACS
+mt
+up
+sv
+syn
+Avg
+C
+A
+W
+D
+Avg
+P
+A
+C
+S
+Avg
+FedAvg [25]
+97.85
+90.76
+80.52
+73.30
+85.61
+64.91
+76.32
+42.76
+46.00
+57.50
+81.65
+68.07
+72.84
+87.14
+77.43
+FedProx [21]
+98.10
+90.76
+81.26
+73.05
+85.79
+64.55
+77.16
+54.14
+45.33
+60.30
+80.67
+67.59
+75.41
+88.92
+78.15
+FedDyn [1]
+98.16
+90.72
+81.30
+72.36
+85.64
+63.57
+76.95
+55.52
+42.00
+59.51
+83.27
+67.85
+74.44
+88.36
+78.48
+MOON [18]
+97.77
+91.80
+82.22
+60.77
+83.14
+61.61
+74.11
+48.97
+46.67
+57.84
+84.64
+73.21
+74.70
+91.85
+81.10
+FedProc [27]
+97.83
+90.28
+81.09
+68.10
+84.33
+62.23
+78.00
+44.83
+33.33
+54.62
+83.18
+70.27
+75.23
+94.29
+80.71
+FedProto [37]
+98.10
+91.48
+81.70
+72.95
+86.05
+65.89
+79.16
+58.27
+56.65
+64.99
+89.29
+71.08
+73.59
+87.83
+80.45
+FPL [10]
+98.18
+91.24
+82.37
+72.97
+86.19
+69.02
+79.05
+65.52
+53.33
+66.73
+85.27
+71.40
+74.96
+90.83
+80.62
+FedPLVM [42]
+98.26
+90.98
+82.00
+74.19
+86.36
+68.93
+78.74
+62.41
+61.33
+67.85
+86.70
+73.00
+76.86
+90.64
+81.80
+I2PFL
+98.32
+93.33
+84.65
+73.02
+87.33
+71.52
+81.79
+72.07
+66.00
+72.84
+87.85
+73.29
+75.66
+92.20
+82.25
+Table 2. Comparison of our I2PFL against SOTA methods on Digits, Office-10, and PACS datasets under domain shift. Avg denotes the
+average accuracy (%) across all domains. The best results are marked in bold.
+Methods
+Digits
+Office-10
+PACS
+→mt
+→up
+→sv
+→syn
+Avg
+→C
+→A
+→W
+→D
+Avg
+→P
+→A
+→C
+→S
+Avg
+FL
+FedAvg [25]
+72.02
+82.90
+64.27
+75.89
+73.77
+42.58
+66.62
+61.42
+70.43
+60.26
+72.34
+67.15
+65.63
+73.52
+69.66
+FedProx [21]
+70.36
+83.30
+64.56
+76.98
+73.80
+50.65
+64.42
+61.56
+69.96
+61.65
+69.22
+68.70
+66.36
+74.48
+69.69
+FedDyn [1]
+73.16
+82.25
+65.56
+78.79
+74.94
+49.33
+67.70
+59.48
+70.89
+61.85
+72.47
+68.96
+66.78
+73.46
+70.42
+MOON [18]
+68.72
+76.26
+62.91
+71.89
+69.95
+45.64
+60.43
+58.67
+69.17
+58.48
+69.71
+64.67
+66.09
+72.20
+68.17
+FL + DG
+COPA [44]
+73.00
+82.95
+62.33
+83.25
+75.38
+50.53
+67.95
+62.84
+70.14
+62.87
+71.16
+65.24
+71.62
+75.54
+70.19
+FedGA [47]
+73.85
+83.24
+67.30
+80.37
+76.19
+48.26
+65.83
+63.32
+67.51
+61.23
+71.19
+66.53
+72.25
+74.19
+71.04
+Prototype-based FL
+FedProc [27]
+64.51
+78.89
+52.86
+80.63
+69.22
+46.40
+59.25
+55.64
+69.67
+57.74
+72.24
+72.27
+68.71
+76.54
+72.44
+FedProto [37]
+73.72
+82.42
+67.90
+77.59
+75.41
+51.25
+69.33
+64.48
+71.18
+64.06
+71.47
+69.33
+70.33
+73.96
+71.27
+FPL [10]
+73.87
+83.72
+70.21
+79.56
+76.84
+43.88
+71.19
+62.12
+73.13
+62.58
+73.83
+68.48
+71.26
+75.58
+72.29
+FedPLVM [42]
+76.31
+84.05
+66.40
+81.73
+77.12
+50.85
+70.66
+66.22
+73.00
+65.18
+77.14
+74.26
+65.08
+74.87
+72.84
+I2PFL
+77.25
+84.16
+69.36
+81.86
+78.16
+51.47
+71.62
+65.96
+73.70
+65.69
+78.81
+70.53
+72.74
+74.99
+74.27
+Table 3. Comparison of our I2PFL against SOTA methods on Digits, Office-10, and PACS datasets under out-client shift setting. Avg
+denotes the average accuracy (%) across different unseen domains. The best results are marked in bold.
+curacy across unseen clients of 78.16% on Digit dataset,
+65.69% on the Office-10 dataset and 74.27% on the PACS
+dataset, surpassing the second-best methods by 1.04%,
+0.51% and 1.43%, respectively. These results demonstrate
+the strong generalization capability of our method to un-
+seen domains, outperforming other state-of-the-art tech-
+niques.
+Our approach, I2PFL, incorporates both intra-
+domain and inter-domain prototypes, significantly improv-
+ing the model’s generalization ability to the unseen domain
+during training. By leveraging augmented prototypes and
+prototype reweighting, we ensure that the model can adapt
+more effectively to domain shifts, achieving superior per-
+formance across diverse unseen domains.
+In addition, we analyze the proposed method through
+representation visualization using t-SNE [40], as illustrated
+in Fig. 4. We compare the representations extracted from
+the global model between our proposed method, FPL and
+FedAvg on the PACS dataset, specifically within the Photo
+and Sketch domains. The figure shows that the features gen-
+erated by our method are more well separated compared to
+those from other methods, highlighting its superior ability
+to enhance the generalization of the global model and miti-
+gate domain shift across different domains.
+FedAvg (81.65%)
+FPL (85.27%)
+Ours (87.85%)
+(a) Photo
+FedAvg (87.14%)
+FPL (90.83%)
+Ours (92.20%)
+(b) Sketch
+Figure 4. t-SNE Visualization of features in the PACS dataset.
+4.3. Ablation Study
+Contributions of Key Components. To evaluate the ef-
+fect of each component on I2PFL’s performance, we per-
+form an ablation study by selectively removing individ-
+ual components, as detailed in Table 4. Our results show
+that both GPCL and APA improve performance over the
+baseline, highlighting the value of intra-domain and inter-
+domain prototypes.
+Notably, APA significantly impacts
+performance across all datasets, demonstrating the effec-
+7
+Methods
+Digits
+mt
+up
+sv
+syn
+Avg
+w/o (LGP CL, LAP A)
+97.85
+90.76
+80.52
+73.30
+85.61
+w/o LAP A
+98.17
+91.07
+82.45
+72.75
+86.11
+w/o LGP CL
+98.15
+92.77
+83.15
+73.12
+86.80
+w/o EMA
+97.93
+92.03
+82.27
+72.74
+86.24
+Ours
+98.32
+93.33
+84.65
+73.02
+87.33
+Methods
+Office-10
+C
+A
+W
+D
+Avg
+w/o (LGP CL, LAP A)
+64.91
+76.32
+42.76
+46.00
+57.50
+w/o LAP A
+68.03
+78.10
+44.48
+53.99
+61.15
+w/o LGP CL
+63.75
+79.16
+55.52
+58.00
+64.11
+w/o EMA
+66.16
+80.79
+70.45
+68.00
+71.35
+Ours
+71.52
+81.79
+72.07
+66.00
+72.84
+Methods
+PACS
+P
+A
+C
+S
+Avg
+w/o (LGP CL, LAP A)
+81.65
+68.07
+72.84
+87.14
+77.43
+w/o LAP A
+85.43
+68.49
+75.25
+88.31
+79.37
+w/o LGP CL
+85.33
+71.64
+75.89
+89.87
+80.68
+w/o EMA
+87.00
+69.64
+73.79
+87.53
+79.49
+Ours
+87.85
+73.29
+75.66
+92.20
+82.25
+Table 4. Ablation study on key components of our I2PFL.
+Generalized
+Prototypes
+Digits
+mt
+up
+sv
+syn
+Avg
+Averaging
+98.07
+93.11
+82.48
+71.81
+86.37
+Clustering
+98.04
+91.65
+82.22
+74.17
+86.52
+Reweighting
+98.32
+93.33
+84.65
+73.02
+87.33
+Generalized
+Prototypes
+Office-10
+C
+A
+W
+D
+Avg
+Averaging
+68.12
+79.45
+68.69
+63.66
+69.98
+Clustering
+69.20
+80.21
+69.31
+68.67
+71.84
+Reweighting
+71.52
+81.79
+72.07
+66.00
+72.84
+Generalized
+Prototypes
+PACS
+P
+A
+C
+S
+Avg
+Averaging
+85.69
+71.12
+74.77
+88.02
+79.90
+Clustering
+86.19
+71.84
+73.61
+89.00
+80.16
+Reweighting
+87.85
+73.29
+75.66
+92.20
+82.25
+Table 5. Performance analysis of I2PFL on different inter-domain
+prototypes.
+tiveness of enhancing the feature diversity of our proposed
+intra-domain prototypes on the local side. Additionally, we
+evaluate the impact of using EMA updates for generalized
+prototypes, which improves performance across all datasets
+by smoothing the prototype updates over time and reducing
+fluctuations caused by varying domain distributions. These
+observations highlight the critical importance of leveraging
+both intra- and inter-domain prototypes to improve the gen-
+eralization of the global model under domain shift. Addi-
+tionally, we present the effect of different prototype compo-
+nents in the supplementary material.
+Analysis on inter-domain prototypes. In Table 5, we eval-
+uate the effectiveness of our proposed inter-domain proto-
+types with prototype reweighting scheme against the pro-
+totype averaging method and the FINCH [34] clustering
+Intra-domain
+Prototypes
+Office-10
+C
+A
+W
+D
+Avg
+w/o MixUp
+68.57
+79.16
+68.28
+48.00
+66.00
+MixUp (Input)
+66.62
+79.52
+65.43
+62.67
+68.56
+Ours
+71.52
+81.79
+72.07
+66.00
+72.84
+Intra-domain
+Prototypes
+PACS
+P
+A
+C
+S
+Avg
+w/o MixUp
+85.41
+70.53
+71.85
+91.57
+79.84
+MixUp (Input)
+87.13
+71.67
+73.22
+91.82
+80.96
+Ours
+87.85
+73.29
+75.66
+92.20
+82.25
+Table 6. Ablation study on the effect of MixUp on intra-domain
+prototypes in the Office-10 and PACS datasets.
+method used in FPL [10].
+The results clearly demon-
+strate the superior performance of utilizing our reweight-
+ing approach, showing improvements of 0.81%, 2.86%, and
+2.35% on Digits, Office-10, and PACS datasets, respec-
+tively.
+This finding highlights the ability of our method
+to generate the generalized prototypes at the inter-domain
+level, thereby providing the inter-domain knowledge and
+improving generalization across different domains.
+Effect of MixUp on intra-domain prototypes. In Table 6,
+we evaluate the effect of MixUp on our intra-domain proto-
+types. The results show that by using MixUp at the feature
+level, our method achieves better generalization than other
+intra-domain prototype variations. This finding underscores
+that feature-level MixUp produces richer prototypes, help-
+ing to prevent overfitting to specific domains. Additionally,
+the consistent performance across domains emphasizes the
+robustness of our feature-level MixUp approach in captur-
+ing diverse semantic representations, thereby strengthening
+the overall model performance under domain shift.
+5. Conclusion
+This paper introduces I2PFL, a novel prototype-based FL
+framework designed to mitigate domain shifts in FL. Our
+approach incorporates two key components: intra-domain
+prototypes and inter-domain prototypes. Specifically, we
+introduce the intra-domain prototypes with MixUp-based
+augmented prototypes.
+Moreover, we propose a novel
+prototype reweighting scheme for inter-domain prototypes
+to generate the generalized prototypes.
+We use con-
+trastive learning with generalized prototypes to provide
+inter-domain knowledge and guide local training. Further-
+more, we enhance local feature diversity by encouraging
+alignment between local features and the augmented proto-
+types. By integrating intra- and inter-domain prototypes, we
+significantly improve the generalization of the global model
+and address domain shifts in federated learning. Experi-
+ments on three image classification datasets demonstrate the
+superior performance of I2PFL compared to other state-of-
+the-art methods.
+8
+Mitigating Domain Shift in Federated Learning via Intra- and Inter-Domain
+Prototypes
+Supplementary Material
+6. Pseudo Code for I2PFL
+We provide a detailed algorithm of our proposed method in
+Alg. 1. In each communication round, clients receive the
+generalized prototypes and global model from the server.
+Then, clients conduct the local training process using aug-
+mented and generalized prototypes. After finishing the lo-
+cal training process, the updated local prototypes and local
+models are sent back to the server, which aggregates them
+to update the global model and generalized prototypes.
+7. Additional Results
+7.1. Convergence Analysis
+Fig. 5 depicts the performance curves of our methods and
+SOTA baselines on all datasets under the domain shift set-
+ting.
+We clearly observe that I2PFL not only converges
+faster but also exhibits significantly more stable training be-
+havior and reduced fluctuations compared to other meth-
+ods. This empirical evidence highlights the robustness of
+our proposed method, demonstrating their effectiveness in
+stabilizing model training and convergence in the presence
+of domain shift.
+7.2. Performance comparisonondifferent clientdis-
+tribution
+In this experiment, we compare the performance of our pro-
+posed I2PFL method with other SOTA approaches across
+different client distributions. Specifically, we allocate 20,
+12, and 12 clients for Digits, Office-10, and PACS datasets,
+respectively, and distribute an equal number of clients per
+domain. As shown in Table 7, the performance on Office-10
+and PACS datasets improves compared to the default setting
+due to the increased number of clients. However, the Dig-
+its dataset shows a slight decrease in performance due to
+the smaller number of clients in challenging domains like
+SYN. Overall, I2PFL consistently outperforms other base-
+lines across multiple domains, illustrating the adaptation to
+different client distributions.
+7.3. Visualization
+We illustrate the representations produced by our I2PFL us-
+ing t-SNE [40] on Digits and Office-10 datasets, as shown
+in Fig. 10 and Fig. 11. We compare the representations
+extracted from the global model between our proposed
+method, FPL and FedAvg on Digits dataset with SVHN and
+USPS domains and Office-10 dataset with Amazon and We-
+bcam domains. The figures show that the features generated
+Algorithm 1 I2PFL
+Input:
+communication rounds T, local training epochs
+R, number of clients M, local dataset Dm where m ∈
+[0, M −1], feature extractor f, classifier g.
+Output: Global model θt
+1: Server Execution:
+2: for t = 0, . . . , T −1 do
+3:
+for m = 0, . . . , M −1 do
+3:
+θm
+t , pm ←LocalUpdate(θt, Gt)
+4:
+end for
+/* Initial mean of prototypes */
+µk =
+1
+M
+P
+m∈M pk
+m ∈Rd
+/* Prototype reweighting */
+dk
+m = ∥pk
+m −µk∥2
+2, dk = P dk
+m
+gk = PM
+m=1
+dk
+m
+dk pk
+m ∈Rd, G = [g1, g2, . . . , gK]
+/* EMA update on generalized prototypes */
+Gt+1 = βGt+1 + (1 −β)Gt
+/* Global model update */
+θt+1 ←PM
+m=1
+|Dm|
+|D| θm
+t
+5: end for
+6: Client Execution:
+7: LocalUpdate(θt, Gt):
+8: for r = 0, . . . , R do
+9:
+for each batch ∈Dm = {xm
+i , ym
+i } do
+10:
+hi = f(xi), zcls = g(hi) where i ∈Sk
+m
+11:
+˜hi = γhi + (1 −γ)hj by MixUp augmentation
+12:
+˜pk
+m =
+1
+|Sk
+m|
+P
+i∈Sk
+m ˜hi, ˜pm = [˜p1
+m, ˜p2
+m, . . . , ˜pK
+m],
+13:
+LGP CL ←(hi, Gt) in Eq. 6
+14:
+LAP A ←(hm, ˜pm) in Eq. 9
+15:
+LCE ←(zcls, y)
+16:
+L = LCE + λintraLAP A + λinterLGP CL
+17:
+θm
+t ←θm
+t −η∇L
+18:
+end for
+19: end for
+20: pk
+m =
+1
+|Sk
+m|
+P
+i∈Sk
+m hi
+21: pm = [p1
+m, p2
+m, . . . , pK
+m]
+22: return θm
+t , pm
+by our method are more distinctly separated compared to
+those from other methods, illustrating the better generaliza-
+tion of the global model across different domains.
+7.4. Effect of different prototype components
+We present performance curves in Fig. 9 to illustrate the im-
+pact of different prototype components across all datasets.
+1
+0
+20
+40
+60
+80
+100
+Communication Rounds
+40
+50
+60
+70
+80
+I2PFL
+FedAvg
+FedProx
+FedDyn
+MOON
+FedProto
+FedProc
+FPL
+FedPLVM
+(a) Digits
+0
+20
+40
+60
+80
+100
+Communication Rounds
+10
+20
+30
+40
+50
+60
+70
+I2PFL
+FedAvg
+FedProx
+FedDyn
+MOON
+FedProto
+FedProc
+FPL
+FedPLVM
+(b) Office-10
+0
+20
+40
+60
+80
+100
+Communication Rounds
+40
+50
+60
+70
+80
+I2PFL
+FedAvg
+FedProx
+FedDyn
+MOON
+FedProto
+FedProc
+FPL
+(c) PACS
+Figure 5. Visualization of training curves of average test accuracy on three datasets under the domain shift setting.
+Methods
+Digits
+Office-10
+PACS
+mt
+up
+sv
+syn
+Avg
+C
+A
+W
+D
+Avg
+P
+A
+C
+S
+Avg
+FedAvg
+97.26
+91.28
+85.82
+60.35
+83.68
+68.21
+80.63
+72.07
+52.00
+68.22
+87.53
+82.72
+94.49
+90.02
+88.69
+FedProx
+97.23
+91.64
+85.88
+56.99
+82.93
+64.38
+82.74
+67.93
+54.00
+67.26
+83.59
+82.40
+93.81
+89.64
+87.36
+FedDyn
+97.21
+92.06
+85.55
+56.47
+82.82
+65.18
+79.58
+69.31
+56.00
+67.52
+82.11
+82.29
+94.28
+90.28
+87.24
+MOON
+96.95
+90.66
+84.09
+43.22
+78.73
+62.59
+79.05
+57.93
+52.67
+63.06
+86.18
+85.68
+93.98
+91.67
+89.38
+FedProc
+96.90
+91.05
+86.29
+51.42
+81.42
+63.57
+76.00
+64.48
+49.33
+63.35
+87.10
+85.24
+94.01
+91.25
+89.40
+FedProto
+97.20
+92.83
+86.38
+60.91
+84.33
+64.91
+81.16
+76.21
+61.33
+70.90
+89.68
+82.84
+94.25
+90.97
+89.43
+FPL
+97.44
+93.06
+86.94
+60.16
+84.40
+67.32
+82.42
+71.72
+65.33
+71.70
+85.46
+81.58
+94.76
+91.32
+88.28
+FedPLVM
+97.93
+92.85
+87.71
+58.94
+84.36
+69.02
+81.37
+73.10
+66.67
+72.54
+86.69
+81.97
+95.13
+92.37
+89.04
+I2PFL
+97.78
+93.64
+87.68
+61.10
+85.05
+69.64
+83.58
+75.17
+64.00
+73.10
+89.47
+85.60
+95.21
+92.81
+90.77
+Table 7. Comparison of our I2PFL against SOTA methods on Digits, Office-10, and PACS datasets on equal client distribution. Avg
+denotes the average accuracy (%) across all domains. The best results are marked in bold.
+0.02
+0.04
+0.07
+0.1
+20
+30
+40
+50
+60
+70
+80
+90
+Digits
+Office-10
+PACS
+(a) Temperature τ
+0.2
+0.4
+0.6
+0.8
+1.0
+70.0
+72.5
+75.0
+77.5
+80.0
+82.5
+85.0
+87.5
+Digits
+Office-10
+PACS
+(b) α
+Figure 6. Analysis of I2PFL’s performance across all datasets with
+varying values of temperature τ and α parameters for the Beta
+distribution.
+1
+2
+5
+10
+70.0
+72.5
+75.0
+77.5
+80.0
+82.5
+85.0
+87.5
+Digits
+Office-10
+PACS
+(a) λintra
+1
+2
+5
+10
+60
+65
+70
+75
+80
+85
+Digits
+Office-10
+PACS
+(b) λinter
+Figure 7. Analysis of I2PFL’s performance across all datasets with
+varying values of λintra and λinter.
+0.95
+0.99
+0.999
+70.0
+72.5
+75.0
+77.5
+80.0
+82.5
+85.0
+87.5
+Digits
+Office-10
+PACS
+Figure 8. Analysis of I2PFL’s performance across all datasets with
+varying values of EMA parameter β.
+The results show that intra- and inter-domain prototypes
+contribute to the convergence of I2PFL, underscoring the
+effectiveness of combining these prototype types. Notably,
+intra-domain prototypes substantially impact performance
+across all datasets, highlighting the benefits of leveraging
+augmented prototypes locally. These observations confirm
+the importance of integrating intra- and inter-domain proto-
+2
+0
+20
+40
+60
+80
+100
+Communication Rounds
+40
+50
+60
+70
+80
+Ours
+Ours w/o intra-domain prototypes
+Ours w/o inter-domain prototypes
+(a) Digits
+0
+20
+40
+60
+80
+100
+Communication Rounds
+30
+35
+40
+45
+50
+55
+60
+65
+70
+75
+Ours
+Ours w/o intra-domain prototypes
+Ours w/o inter-domain prototypes
+(b) Office-10
+0
+20
+40
+60
+80
+100
+Communication Rounds
+40
+50
+60
+70
+80
+Ours
+Ours w/o intra-domain prototypes
+Ours w/o inter-domain prototypes
+(c) PACS
+Figure 9. Effect of different prototype components across three datasets.
+FedAvg (80.52%)
+FPL (82.37%)
+Ours (84.65%)
+(a) SVHN
+FedAvg (90.76%)
+FPL (91.24%)
+Ours (93.33%)
+(b) USPS
+Figure 10. t-SNE Visualization of features in the Digits dataset.
+FedAvg (76.32%)
+FPL (79.05%)
+Ours (81.79%)
+(a) Amazon
+FedAvg (42.76%)
+FPL (65.52%)
+Ours (72.07%)
+(b) Webcam
+Figure 11. t-SNE Visualization of features in the Office-10 dataset.
+types for optimal performance.
+7.5. Ablation study on various hyper-parameters
+Temperature τ and α parameter. We illustrate the per-
+formance impact by temperature parameter τ and α used
+for Beta distribution in Fig. 6. For the Digits dataset, opti-
+mal performance is achieved with τ = 0.07 and α = 0.4.
+In the Office-10 dataset, the best results are obtained with
+τ = 0.02 and α = 0.4. In the PACS dataset, optimal per-
+formance occurs with τ = 0.04 and α = 0.2. These hyper-
+parameters are used by default in all experiments.
+EMA parameter β.
+We illustrate the performance im-
+pact by EMA parameter β in Fig. 8. As the figure shows,
+the optimal performance on all datasets is achieved with
+β = 0.99. The EMA parameter β is used by default in
+all experiments.
+Hyper-parameters λintra and λinter.
+We demonstrate
+the performance impact of the hyperparameters λintra and
+λinter in Fig. 7.
+As shown in the figure, for the Digits
+and Office-10 datasets, the optimal performance is achieved
+when λintra = 10 and λinter = 1. In contrast, for the
+PACS dataset, the best performance occurs with λintra = 2
+and λinter = 1. These results highlight that increasing the
+hyperparameter for the intra-domain prototype component
+(λintra) enhances performance, demonstrating the impor-
+tance of intra-domain prototype alignment in our method.
+This further emphasizes the effectiveness of our proposed
+approach, which leverages both intra- and inter-domain pro-
+totypes for better generalization and robustness across dif-
+ferent datasets.
+References
+[1] Durmus Alp Emre Acar, Yue Zhao, Ramon Matas, Matthew
+Mattina, Paul Whatmough, and Venkatesh Saligrama. Fed-
+erated learning based on dynamic regularization. In Interna-
+tional Conference on Learning Representations, 2021. 3, 6,
+7
+[2] Jiayi Chen, Benteng Ma, Hengfei Cui, and Yong Xia. Think
+twice before selection: Federated evidential active learning
+for medical image analysis with domain shifts. In Proceed-
+ings of the IEEE/CVF Conference on Computer Vision and
+Pattern Recognition, pages 11439–11449, 2024. 1
+[3] Ting Chen, Simon Kornblith, Mohammad Norouzi, and Ge-
+offrey Hinton. A simple framework for contrastive learning
+of visual representations. In International conference on ma-
+chine learning, pages 1597–1607. PMLR, 2020. 2
+[4] Hui Cui, Lihai Zhao, Fengling Li, Lei Zhu, Xiaohui Han,
+and Jingjing Li.
+Effective comparative prototype hashing
+for unsupervised domain adaptation.
+In Proceedings of
+3
+the AAAI Conference on Artificial Intelligence, pages 8329–
+8337, 2024. 3
+[5] Kuiliang Gao, Anzhu Yu, Xiong You, Chunping Qiu, and
+Bing Liu. Prototype and context-enhanced learning for un-
+supervised domain adaptation semantic segmentation of re-
+mote sensing images. IEEE Transactions on Geoscience and
+Remote Sensing, 61:1–16, 2023. 3
+[6] Boqing Gong, Yuan Shi, Fei Sha, and Kristen Grauman.
+Geodesic flow kernel for unsupervised domain adaptation.
+In 2012 IEEE conference on computer vision and pattern
+recognition, pages 2066–2073. IEEE, 2012. 6
+[7] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun.
+Deep residual learning for image recognition. In Proceed-
+ings of the IEEE conference on computer vision and pattern
+recognition, pages 770–778, 2016. 6
+[8] Kaiming He, Haoqi Fan, Yuxin Wu, Saining Xie, and Ross
+Girshick. Momentum contrast for unsupervised visual rep-
+resentation learning. In Proceedings of the IEEE/CVF con-
+ference on computer vision and pattern recognition, pages
+9729–9738, 2020. 2
+[9] Tzu-Ming Harry Hsu, Hang Qi, and Matthew Brown. Mea-
+suring the effects of non-identical data distribution for feder-
+ated visual classification. arXiv preprint arXiv:1909.06335,
+2019. 1, 3
+[10] Wenke Huang, Mang Ye, Zekun Shi, He Li, and Bo Du.
+Rethinking federated learning with domain shift: A proto-
+type view. In 2023 IEEE/CVF Conference on Computer Vi-
+sion and Pattern Recognition (CVPR), pages 16312–16322.
+IEEE, 2023. 2, 3, 5, 6, 7, 8
+[11] Jonathan J. Hull. A database for handwritten text recogni-
+tion research. IEEE Transactions on pattern analysis and
+machine intelligence, 16(5):550–554, 1994. 6
+[12] Peter Kairouz, H Brendan McMahan, Brendan Avent,
+Aur´elien Bellet, Mehdi Bennis, Arjun Nitin Bhagoji, Kallista
+Bonawitz, Zachary Charles, Graham Cormode, Rachel Cum-
+mings, et al. Advances and open problems in federated learn-
+ing. Foundations and trends® in machine learning, 14(1–2):
+1–210, 2021. 1
+[13] Sai Praneeth Karimireddy, Satyen Kale, Mehryar Mohri,
+Sashank Reddi, Sebastian Stich, and Ananda Theertha
+Suresh.
+SCAFFOLD: Stochastic controlled averaging for
+federated learning. In Proceedings of the 37th International
+Conference on Machine Learning, pages 5132–5143. PMLR,
+2020. 1, 3
+[14] Khiem Le, Long Ho, Cuong Do, Danh Le-Phuoc, and Kok-
+Seng Wong. Efficiently assemble normalization layers and
+regularization for federated domain generalization. In Pro-
+ceedings of the IEEE/CVF Conference on Computer Vision
+and Pattern Recognition, pages 6027–6036, 2024. 3
+[15] Yann LeCun, L´eon Bottou, Yoshua Bengio, and Patrick
+Haffner. Gradient-based learning applied to document recog-
+nition. Proceedings of the IEEE, 86(11):2278–2324, 1998.
+6
+[16] Da Li, Yongxin Yang, Yi-Zhe Song, and Timothy M
+Hospedales. Deeper, broader and artier domain generaliza-
+tion. In Proceedings of the IEEE international conference on
+computer vision, pages 5542–5550, 2017. 6
+[17] Junnan Li, Pan Zhou, Caiming Xiong, and Steven Hoi. Pro-
+totypical contrastive learning of unsupervised representa-
+tions. In International Conference on Learning Represen-
+tations, 2021. 3
+[18] Qinbin Li, Bingsheng He, and Dawn Song.
+Model-
+contrastive federated learning.
+In Proceedings of the
+IEEE/CVF conference on computer vision and pattern
+recognition, pages 10713–10722, 2021. 6, 7
+[19] Qinbin Li, Zeyi Wen, Zhaomin Wu, Sixu Hu, Naibo Wang,
+Yuan Li, Xu Liu, and Bingsheng He. A survey on federated
+learning systems: Vision, hype and reality for data privacy
+and protection. IEEE Transactions on Knowledge and Data
+Engineering, 35(4):3347–3366, 2021. 1
+[20] Qinbin Li, Yiqun Diao, Quan Chen, and Bingsheng He. Fed-
+erated learning on non-iid data silos: An experimental study.
+In 2022 IEEE 38th international conference on data engi-
+neering (ICDE), pages 965–978. IEEE, 2022. 1
+[21] Tian Li, Anit Kumar Sahu, Manzil Zaheer, Maziar Sanjabi,
+Ameet Talwalkar, and Virginia Smith. Federated optimiza-
+tion in heterogeneous networks.
+Proceedings of Machine
+learning and systems, 2:429–450, 2020. 1, 3, 6, 7
+[22] Xiaoxiao Li, Meirui JIANG, Xiaofei Zhang, Michael Kamp,
+and Qi Dou. FedBN: Federated learning on non-IID features
+via local batch normalization. In International Conference
+on Learning Representations, 2021. 3
+[23] Quande Liu, Cheng Chen, Jing Qin, Qi Dou, and Pheng-Ann
+Heng. Feddg: Federated domain generalization on medical
+image segmentation via episodic learning in continuous fre-
+quency space. In Proceedings of the IEEE/CVF conference
+on computer vision and pattern recognition, pages 1013–
+1023, 2021. 3
+[24] Yang Liu, Yan Kang, Tianyuan Zou, Yanhong Pu, Yuanqin
+He, Xiaozhou Ye, Ye Ouyang, Ya-Qin Zhang, and Qiang
+Yang. Vertical federated learning: Concepts, advances, and
+challenges. IEEE Transactions on Knowledge and Data En-
+gineering, 2024. 1
+[25] Brendan McMahan, Eider Moore, Daniel Ramage, Seth
+Hampson, and Blaise Aguera y Arcas.
+Communication-
+efficient learning of deep networks from decentralized data.
+In Artificial intelligence and statistics, pages 1273–1282.
+PMLR, 2017. 1, 4, 6, 7
+[26] Matias Mendieta, Taojiannan Yang, Pu Wang, Minwoo Lee,
+Zhengming Ding, and Chen Chen. Local learning matters:
+Rethinking data heterogeneity in federated learning. In Pro-
+ceedings of the IEEE/CVF Conference on Computer Vision
+and Pattern Recognition, pages 8397–8406, 2022. 1
+[27] Xutong Mu, Yulong Shen, Ke Cheng, Xueli Geng, Jiaxuan
+Fu, Tao Zhang, and Zhiwei Zhang. Fedproc: Prototypical
+contrastive federated learning on non-iid data. Future Gen-
+eration Computer Systems, 143:93–104, 2023. 5, 6, 7
+[28] Yuval Netzer, Tao Wang, Adam Coates, Alessandro Bis-
+sacco, Baolin Wu, Andrew Y Ng, et al. Reading digits in
+natural images with unsupervised feature learning. In NIPS
+workshop on deep learning and unsupervised feature learn-
+ing, page 4. Granada, 2011. 6
+[29] Aaron van den Oord, Yazhe Li, and Oriol Vinyals. Repre-
+sentation learning with contrastive predictive coding. arXiv
+preprint arXiv:1807.03748, 2018. 2, 5
+4
+[30] Yu Qiao, Md Shirajum Munir, Apurba Adhikary, Huy Q Le,
+Avi Deb Raha, Chaoning Zhang, and Choong Seon Hong.
+Mp-fedcl: Multi-prototype federated contrastive learning for
+edge intelligence. IEEE Internet of Things journal, 2023. 3
+[31] Nicola Rieke, Jonny Hancox, Wenqi Li, Fausto Milletari,
+Holger R Roth, Shadi Albarqouni, Spyridon Bakas, Math-
+ieu N Galtier, Bennett A Landman, Klaus Maier-Hein, et al.
+The future of digital health with federated learning. NPJ dig-
+ital medicine, 3(1):1–7, 2020. 1
+[32] Herbert Robbins and Sutton Monro. A stochastic approxi-
+mation method. The annals of mathematical statistics, pages
+400–407, 1951. 6
+[33] Prasun Roy, Subhankar Ghosh, Saumik Bhattacharya, and
+Umapada Pal. Effects of degradations on deep neural net-
+work architectures. arXiv preprint arXiv:1807.10108, 2018.
+6
+[34] Saquib Sarfraz, Vivek Sharma, and Rainer Stiefelhagen. Effi-
+cient parameter-free clustering using first neighbor relations.
+In Proceedings of the IEEE/CVF conference on computer vi-
+sion and pattern recognition, pages 8934–8943, 2019. 8
+[35] Jake Snell, Kevin Swersky, and Richard Zemel. Prototypical
+networks for few-shot learning. Advances in neural informa-
+tion processing systems, 30, 2017. 3
+[36] Canh T Dinh, Nguyen Tran, and Josh Nguyen. Personalized
+federated learning with moreau envelopes. Advances in neu-
+ral information processing systems, 33:21394–21405, 2020.
+3
+[37] Yue Tan, Guodong Long, Lu Liu, Tianyi Zhou, Qinghua Lu,
+Jing Jiang, and Chengqi Zhang. Fedproto: Federated proto-
+type learning across heterogeneous clients. In Proceedings of
+the AAAI Conference on Artificial Intelligence, pages 8432–
+8440, 2022. 2, 3, 4, 5, 6, 7
+[38] Yue Tan, Guodong Long, Jie Ma, Lu Liu, Tianyi Zhou, and
+Jing Jiang. Federated learning from pre-trained models: A
+contrastive learning approach. Advances in neural informa-
+tion processing systems, 35:19332–19344, 2022. 2, 3, 4
+[39] Yonglong Tian, Yue Wang, Dilip Krishnan, Joshua B Tenen-
+baum, and Phillip Isola. Rethinking few-shot image classi-
+fication: a good embedding is all you need?
+In Computer
+Vision–ECCV 2020: 16th European Conference, Glasgow,
+UK, August 23–28, 2020, Proceedings, Part XIV 16, pages
+266–282. Springer, 2020. 3
+[40] Laurens Van der Maaten and Geoffrey Hinton. Visualizing
+data using t-sne. Journal of machine learning research, 9
+(11), 2008. 7, 1
+[41] Hongyi Wang, Mikhail Yurochkin, Yuekai Sun, Dimitris Pa-
+pailiopoulos, and Yasaman Khazaeni.
+Federated learning
+with matched averaging.
+In International Conference on
+Learning Representations, 2020. 1, 3
+[42] Lei Wang, Jieming Bian, Letian Zhang, Chen Chen, and Jie
+Xu. Taming cross-domain representation variance in feder-
+ated prototype learning with heterogeneous data domains. In
+The Thirty-eighth Annual Conference on Neural Information
+Processing Systems, 2024. 2, 3, 6, 7
+[43] Yuan Wang, Huazhu Fu, Renuga Kanagavelu, Qingsong
+Wei, Yong Liu, and Rick Siow Mong Goh. An aggregation-
+free federated learning for tackling data heterogeneity. In
+Proceedings of the IEEE/CVF Conference on Computer Vi-
+sion and Pattern Recognition, pages 26233–26242, 2024. 1
+[44] Guile Wu and Shaogang Gong. Collaborative optimization
+and aggregation for decentralized domain generalization and
+adaptation. In Proceedings of the IEEE/CVF international
+conference on computer vision, pages 6484–6493, 2021. 3,
+6, 7
+[45] Baoquan Zhang, Xutao Li, Yunming Ye, and Shanshan Feng.
+Prototype completion for few-shot learning. IEEE Transac-
+tions on Pattern Analysis and Machine Intelligence, 45(10):
+12250–12268, 2023. 3
+[46] Hongyi Zhang, Moustapha Cisse, Yann N Dauphin, and
+David Lopez-Paz. mixup: Beyond empirical risk minimiza-
+tion. In International Conference on Learning Representa-
+tions, 2018. 2, 5
+[47] Ruipeng Zhang, Qinwei Xu, Jiangchao Yao, Ya Zhang,
+Qi Tian, and Yanfeng Wang.
+Federated domain general-
+ization with generalization adjustment.
+In Proceedings of
+the IEEE/CVF Conference on Computer Vision and Pattern
+Recognition, pages 3954–3963, 2023. 3, 6, 7
+[48] Hao Zhu and Piotr Koniusz. Transductive few-shot learn-
+ing with prototype-based label propagation by iterative graph
+refinement.
+In Proceedings of the IEEE/CVF conference
+on computer vision and pattern recognition, pages 23996–
+24006, 2023. 3
+5

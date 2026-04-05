@@ -1,0 +1,118 @@
+一、课题背景及意义（含国内外研究现状综述）
+1.1 联邦学习的演进与跨域挑战
+随着物联网设备与边缘计算的普及，海量数据分散在各个孤岛中。联邦学习（Federated Learning, FL）作为一种隐私保护计算范式，允许各客户端在不共享原始数据的前提下协同训练全局模型。
+然而，联邦学习在实际落地中面临着严峻的非独立同分布挑战。现有的研究多聚焦于“标签倾斜”，即不同客户端拥有的类别分布不同（例如，医院A主要拥有感冒病例，医院B主要拥有骨折病例）。但在更复杂的跨设备或场景中，域偏移（Domain Shift）或称特征倾斜（Feature Skew）成为了制约模型性能的瓶颈。
+域偏移指的是数据特征分布 P(x) 或条件分布 P(x|y)在不同客户端之间存在显著差异。例如，在自动驾驶场景中，不同城市的车辆采集的道路图像受光照、天气、植被影响，尽管都在识别“行人”这一类别（y 相同），但其图像特征（x）却大相径庭；又如在手写数字识别中，不同用户的笔迹风格、书写介质（纸张、平板）导致同一数字“5”的特征表达千差万别。
+在域偏移场景下，传统的参数聚合方法（如 FedAvg[1]）面临严重的负迁移问题。由于各客户端在本地数据上训练得到的模型参数试图拟合各自独特的特征分布，这些参数所在的优化空间可能大相径庭。简单地对这些参数进行欧氏空间的平均，往往会导致全局模型收敛到一个不好的解，既无法适配域A的特征，也无法适配域B的特征，最终导致全局模型在所有域上的泛化性能大幅下降。
+1.2 联邦原型学习的现状与瓶颈
+为了应对异构性，联邦原型学习应运而生。它通过传输类原型（即类特征均值）来代替梯度通信，具有通信高效、支持异构模型等优势。然而，现有的联邦原型方法（如 FedProto[3], FPL[4]）在处理强跨域数据时仍存在本质局限：
+特征纠缠导致的语义模糊：现有方法通常直接对特征提取器的输出进行均值聚合。但在跨域数据中，特征往往是“语义内容”与“领域风格”的混合体。直接平均不同风格的特征（如将“素描”与“照片”强行平均），会产生物理意义不明的模糊原型，破坏了特征的判别力。
+风格信息的浪费：现有方法多致力于“消除”或“压制”风格差异（如 FedBN[2], FDSE），将风格视为噪声。然而，风格本质上是数据的分布特征，若能被合理利用，可作为一种强大的数据增强资源来提升模型的泛化能力。
+1.3 研究意义
+本课题拟提出一种基于显式几何正交的双头解耦与全局风格仓库的新型联邦学习框架。通过构建独特的“双原型”表达，强制分离语义与风格；建立全局风格仓库，实现风格资源的跨域共享与增值；利用语义软对齐策略解决几何错位问题，最终实现
+1.4 国内外研究现状综述
+近年来，学术界围绕跨域联邦学习中的特征异构问题展开了深入探索，主要集中在原型修正、特征解耦与域适应三个维度。
+在原型学习的基础架构方面，FedProto 率先提出了利用类原型进行通信的框架，有效降低了通信开销并支持异构模型，但其简单的欧氏平均策略在强跨域场景下容易导致语义漂移。针对单一原型的局限性，FPL引入了聚类原型和无偏原型的概念，试图通过多中心聚类来捕捉数据的多模态分布；MP-FedCL[10] 和 FedPLVM[11] 进一步发展了这一思路，通过本地与全局的双层聚类机制及稀疏性约束，增强了模型对复杂分布的适应能力。然而，这些方法大多仍基于混合特征进行聚类，未能从根本上解决语义与风格的纠缠问题，导致全局模型在面对未知域时泛化能力有限。
+在特征解耦与风格处理方面，研究者们尝试将特征分离为“域不变”与“域特定”两部分。FedFSL-CFRD [6]在少样本场景下，利用协同重构机制隐式地分离特征；FDSE (Domain Shift Eraser)[7] 则采用了一种“提取-擦除”的迭代架构，试图通过专门的模块消除域偏差。FedSTAR[12] 提出了一种结构与风格分离的 Transformer 架构，利用 StyleFiLM 技术在本地融合风格，这与本课题的思路较为接近。但 FedSTAR 将风格严格限制在本地，仅仅作为一种辅助校准手段，忽略了风格作为一种数据资产在跨域增强中的巨大潜力。此外，FedPall[8] 尝试引入对抗学习来对齐特征空间，虽然在一定程度上缓解了漂移，但对抗训练在联邦环境下的不稳定性及潜在的隐私风险限制了其应用。
+在对齐与正则化策略方面，I2PFL[9] 探索了域内与域间原型的结合，并利用 MixUp 进行增强；FedLSA[5] 则引入了可学习的语义锚点与超球面对比损失，试图在更紧凑的几何空间内实现特征对齐。这些工作为本研究提供了宝贵的思路，即单纯的硬性对齐（如 MSE 损失）可能会破坏本地流形，而基于对比学习的软性约束可能更适合异构场景。
+综上所述，现有研究虽然在一定程度上缓解了异构性挑战，但仍存在解耦不彻底（依赖隐式重构或复杂对抗）、风格资源利用不充分（风格仅本地私有）等问题。本课题将在上述研究基础上，通过显式几何约束和风格资产化机制，探索一条更为高效、鲁棒的解决路径。
+
+二、课题研究主要内容及研究基础
+本研究将构建一个新的面向跨域联邦学习的解耦原型学习框架，核心内容包括以下三个方面：
+2.1基于正交约束的显式双原型解耦表征
+针对现有方法特征定义模糊、解耦不彻底的问题，本研究创造性地提出双原型表征机制。双原型定义：我们将传统的单一原型拆解为两组独立的原型向量：
+内容原型 (Content Prototype)：负责捕获跨域不变的类别语义信息。
+风格原型 (Style Prototype)：负责捕获特定域的纹理、光照与分布特征。
+为了保证双原型的纯净度，我们引入显式的几何正交约束。在特征空间中，强制内容向量与风格向量的余弦相似度趋近于零，使其在几何上保持垂直。这种硬性约束迫使网络将与分类无关的变异信息剥离到风格空间，从而获得高纯度的语义表征。
+
+2.2 风格原型的资产化与跨域交换
+针对 FedSTAR 等方法将风格视为私有噪声的问题，本研究提出“风格资产化”理念，构建全局风格仓库（Global Style Bank）。
+具体来说服务器端维护一个动态更新的风格原型库，存储来自不同域（如照片、素描、油画）的代表性风格原型。并且在本地训练阶段进行跨域风格交换：客户端随机从全局风格仓库中采样非本地的风格原型，并将其注入到本地的语义特征中，生成“虚拟”的跨域样本特征。这相当于在特征层面进行了一种隐式的数据增强，让本地模型“看到”未见过的域风格，从而显著提升泛化能力。
+2.3. 基于对比学习的语义软对齐
+针对直接平均聚合导致的几何失真问题，本研究采用语义软对齐策略。我们放弃强制本地特征逼近全局均值的做法，转而利用全局内容原型作为“锚点（Anchor）”。然后通过对比损失函数这种软性约束的方式，拉近本地语义特征与同类全局锚点的距离，同时推开异类锚点。这种“软对齐”允许本地特征在全局锚点周围保留一定的分布方差（即保留必要的本地个性化信息），实现了全局一致性与本地特异性的平衡。
+
+三、研究（或调研）方案和思路（技术路线）
+3.1 系统架构与定义
+本系统构建于由中央服务器与 N 个客户端组成的联邦学习框架之上。服务器端核心维护一个全局风格仓库（Global Style Bank, ℬ），即 ℬ={Psty1,Psty2,…,PstyK}，旨在存储并管理全网多样化的风格原型资产。
+模型设计上采用双头解耦架构：骨干网络（F，如 ResNet-18）作为特征提取器，严格遵循 FedBN 原则，将其包含的所有 Batch Normalization (BN) 层参数永久冻结在本地，不参与上传与聚合，以有效保留各客户端的本地统计特征；骨干网络之后分为两个独立的分支，即语义头 (Hsem) 与 风格头 (Hsty)，分别用于映射并提取语义内容特征 zsem 与风格特征 zsty，实现特征空间的解耦。
+3.2 完整算法流程
+算法的具体实施分为服务器初始化、客户端本地训练与服务器聚合三个阶段。
+首先是服务器初始化阶段。 服务器初始化不含 BN 层的全局模型参数 θglobal、全局内容原型 Pconglobal 以及空的风格仓库 ℬ←∅。随后，服务器向各客户端广播全局参数与内容原型，并从风格仓库中采样一组风格原型{Sother} 下发，为客户端提供异构风格来源。
+其次是客户端本地训练阶段。 客户端k 接收参数后，对输入图像 x 执行双头几何正交解耦，通过骨干与双头结构分别获取内容特征 zcon 与风格特征 zsty。为保证解耦的纯粹性，引入正交约束损失ℒorth，强制两组特征在几何空间上垂直：
+
+ℒorth=zcon⋅zsty‖zcon‖2⋅‖zsty‖22
+
+在此基础上，客户端利用下发的外部风格原型 sext 合成虚拟特征 zaug=zcon+λ⋅sext，实现保留本地内容，但是风格进行了转换的跨域风格交换增强。
+训练过程采用多目标优化策略，总损失函数定义为：
+ℒtotal=ℒtask+λ1ℒorth+λ2ℒsem_con+λ3ℒsty_con
+其中，ℒtask 确保分类器对原始及增强特征均具有鲁棒性；ℒsem_con 通过对比学习将本地内容特征与全局内容原型软对齐；ℒsty_con 则拉近风格特征与本地风格中心并推开外来风格，迫使风格头专注于提取域特有信息。训练结束后，客户端计算并上传更新后的模型参数（不含 BN）及更新后的本地内容原型 Pconk 和风格原型 Pstyk。
+最后是服务器聚合与资产管理阶段。服务器接收数据后执行差异化参数聚合：仅对骨干网络卷积层和语义头参数执行 FedAvg 聚合，而保持风格头参数私有以维护域特异性。同时，服务器通过平均各方上传的 Pconk 来更新全局内容原型 Pconglobal，并对收集到的风格原型 Pstyk 进行余弦相似度去重（例如阈值 > 0.95），将独特的风格存入风格仓库 ℬ，完成资产库的迭代丰富。
+
+四、论文框架结构
+
+第一章 绪论
+1.1 研究背景：联邦学习的发展与数据孤岛问题
+1.2 问题陈述：跨域场景下的特征耦合与风格利用瓶颈
+1.3 研究意义与目标
+1.4 论文组织结构
+第二章 相关工作综述
+2.1 联邦学习基础与异构性挑战（FedAvg, FedProx, FedBN）
+2.2 联邦原型学习研究现状（FedProto, FPL, FedPLVM）
+2.3 特征解耦与域适应技术（FedSTAR, FedFSL-CFRD, FDSE）
+2.4 现有方法的局限性分析
+第三章 基于正交约束的显式双原型解耦表征
+3.1 问题定义：跨域特征的纠缠现象
+3.2 双头模型架构设计：语义头与风格头
+3.3 双原型定义：内容原型与风格原型的数学表达
+3.4 显式几何正交约束的构建与优化
+3.5 双原型的有效性验证与可视化分析
+第四章 全局风格仓库与跨域风格交换机制
+4.1 风格原型的资产化管理与隐私保护
+4.2 跨域风格交换增强算法
+4.3 风格多样性对模型泛化能力的贡献分析
+第五章 基于对比学习的语义软对齐聚合
+5.1 语义对比损失函数设计与软对齐策略
+5.2 完整的算法流程
+第六章 实验设计与结果分析
+6.1 实验设置（数据集：Digit-5, Office-Caltech, PACS；基线模型）
+6.2 跨域分类精度对比分析
+6.3 消融实验：双原型解耦、风格仓库、软对齐模块的有效性
+6.4 参数敏感性与通信开销分析
+第七章 总结与展望
+
+五、参考文献
+[1].McMahan, B., Moore, E., Ramage, D., Hampson, S., & y Arcas, B. A. (2017, April). Communication-efficient learning of deep networks from decentralized data. In Artificial intelligence and statistics (pp. 1273-1282). PMLR.
+[2].Li, X., Jiang, M., Zhang, X., Kamp, M., & Dou, Q. (2021). Fedbn: Federated learning on non-iid features via local batch normalization. arXiv preprint arXiv:2102.07623.
+[3].Tan, Y., Long, G., Liu, L., Zhou, T., Lu, Q., Jiang, J., & Zhang, C. (2022, June). Fedproto: Federated prototype learning across heterogeneous clients. In Proceedings of the AAAI conference on artificial intelligence (Vol. 36, No. 8, pp. 8432-8440).
+[4].Huang, Wenke, et al. "Rethinking federated learning with domain shift: A prototype view. In 2023 IEEE." CVF Conference on Computer Vision and Pattern Recognition (CVPR).
+[5].Fu, L., Huang, S., Lai, Y., Liao, T., Zhang, C., & Chen, C. (2025, April). Beyond federated prototype learning: Learnable semantic anchors with hyperspherical contrast for domain-skewed data. In Proceedings of the AAAI Conference on Artificial Intelligence (Vol. 39, No. 16, pp. 16648-16656).
+[6].Wang, S., Li, J., Liu, Z., Zhang, Y., & Gong, M. (2025, April). FedFSL-CFRD: Personalized Federated Few-Shot Learning with Collaborative Feature Representation Disentanglement. In Proceedings of the AAAI Conference on Artificial Intelligence (Vol. 39, No. 20, pp. 21243-21251).
+[7].Wang, Zheng, et al. "Federated Learning with Domain Shift Eraser." Proceedings of the Computer Vision and Pattern Recognition Conference. 2025.
+[8].Zhang, Y., Liang, F., Yuan, G., Yang, M., Li, C., & Hu, X. (2025). FedPall: Prototype-based Adversarial and Collaborative Learning for Federated Learning with Feature Drift. In Proceedings of the IEEE/CVF International Conference on Computer Vision (pp. 3111-3120).
+[9].Le, H. Q., Tun, Y. L., Qiao, Y., Nguyen, M. N., Kim, K. O., Huh, E. N., & Hong, C. S. (2025). Mitigating domain shift in federated learning via intra-and inter-domain prototypes. arXiv preprint arXiv:2501.08521.
+[10].Qiao, Y., Munir, M. S., Adhikary, A., Le, H. Q., Raha, A. D., Zhang, C., & Hong, C. S. (2023). Mp-fedcl: Multiprototype federated contrastive learning for edge intelligence. IEEE Internet of Things journal, 11(5), 8604-8623.
+[11].Wang, L., Bian, J., Zhang, L., Chen, C., & Xu, J. (2024). Taming cross-domain representation variance in federated prototype learning with heterogeneous data domains. Advances in Neural Information Processing Systems, 37, 88348-88372.
+[12].Jeon, M., & Huh, E. (2025). Federated style aware transformer aggregation of representations. arXiv preprint arXiv:2511.18841.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+六、工作进度安排
+序号	设计（论文）各阶段任务	时间安排
+1	算法框架理论优化、demo验证	1月
+2	系统框架搭建与模块开发	2月至3月上旬
+3	基线算法的复现与实验	3月中旬至4月上旬
+4	整理代码实验结果，进行论文撰写	4月下旬
+		
+		
+		

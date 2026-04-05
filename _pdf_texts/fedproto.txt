@@ -1,0 +1,2008 @@
+FedProto: Federated Prototype Learning across Heterogeneous Clients
+Yue Tan1, Guodong Long1, Lu Liu1, Tianyi Zhou2,3, Qinghua Lu4, Jing Jiang1, Chengqi Zhang 1
+1 Australian Artiﬁcial Intelligence Institute, FEIT, University of Technology Sydney
+2 University of Washington, 3 University of Maryland, 4 Data61, CSIRO
+yue.tan@student.uts.edu.au, {guodong.long, jing.jiang, chengqi.zhang}@uts.edu.au,
+lu.liu.cs@icloud.com, tianyizh@uw.edu, qinghua.lu@data61.csiro.au
+Abstract
+Heterogeneity across clients in federated learning (FL) usu-
+ally hinders the optimization convergence and generalization
+performance when the aggregation of clients’ knowledge oc-
+curs in the gradient space. For example, clients may differ
+in terms of data distribution, network latency, input/output
+space, and/or model architecture, which can easily lead to the
+misalignment of their local gradients. To improve the toler-
+ance to heterogeneity, we propose a novel federated proto-
+type learning (FedProto) framework in which the clients
+and server communicate the abstract class prototypes instead
+of the gradients. FedProto aggregates the local prototypes
+collected from different clients, and then sends the global pro-
+totypes back to all clients to regularize the training of local
+models. The training on each client aims to minimize the clas-
+siﬁcation error on the local data while keeping the resulting
+local prototypes sufﬁciently close to the corresponding global
+ones. Moreover, we provide a theoretical analysis to the con-
+vergence rate of FedProto under non-convex objectives. In
+experiments, we propose a benchmark setting tailored for het-
+erogeneous FL, with FedProto outperforming several re-
+cent FL approaches on multiple datasets.
+Introduction
+Federated learning (FL) is widely used in multiple appli-
+cations to enable collaborative learning across a variety of
+clients without sharing private data. It aims at training a
+global model on a centralized server while all data are dis-
+tributed over many local clients and cannot be freely trans-
+mitted for privacy or communication concerns (McMahan
+et al. 2017). The iterative process of FL has two steps:
+(1) each local client is synchronized by the global model
+and then trained using its local data; and (2) the server up-
+dates the global model by aggregating all the local models.
+Considering that the model aggregation occurs in the gradi-
+ent space, traditional FL still has some practical challenges
+caused by the heterogeneity of data and model (Kairouz
+et al. 2019). Efﬁcient algorithms suitable to overcome both
+these two challenges have not yet been fully developed or
+systematically examined.
+To tackle the statistical heterogeneity of data distribu-
+tions, one straightforward solution is to maintain multi-
+ple global models for different local distributions, e.g., the
+Copyright © 2022, Association for the Advancement of Artiﬁcial
+Intelligence (www.aaai.org). All rights reserved.
+works for clustered FL (Sattler, M¨uller, and Samek 2020).
+Another widely studied strategy is personalized FL (Tan
+et al. 2021) where a personalized model is generated for
+each client by leveraging both global and local information.
+Nevertheless, most of these methods depend on gradient-
+based aggregation, resulting in high communication costs
+and heavy reliance on homogeneous local models.
+However, in real-world applications, model heterogene-
+ity is common because of varying hardware and computa-
+tion capabilities across clients (Long et al. 2020). Knowl-
+edge Distillation (KD)-based FL (Lin et al. 2020) addresses
+this challenge by transferring the teacher model’s knowledge
+to student models with different model architectures. How-
+ever, these methods require an extra public dataset to align
+the student and teacher models’ outputs, increasing the com-
+putation costs. Moreover, the performance of KD-based FL
+can signiﬁcantly degrade with the increase in the distribution
+divergence between the public dataset and on-client datasets
+that are usually non-IID.
+Inspired by prototype learning, merging the prototypes
+over heterogeneous datasets can effectively integrate the fea-
+ture representations from diverse data distributions (Snell,
+Swersky, and Zemel 2017; Liu et al. 2020; Dvornik, Schmid,
+and Mairal 2020). On-client intelligent agents in the FL
+system can share knowledge by exchanging information in
+terms of representations, despite statistical and model het-
+erogeneity (Cai et al. 2020; Li et al. 2021). For example,
+when we talk about “dog”, different people will have a
+unique “imagined picture” or “prototype” to represent the
+concept “dog”. Their prototypes may be slightly diverse due
+to different life experience and visual memory. Exchang-
+ing these concept-speciﬁc prototypes across people enables
+them to acquire more knowledge about the concept “dog”.
+Treating each FL client as a human-like intelligent agent,
+the core idea of our method is to exchange prototypes rather
+than share model parameters or raw data, which can natu-
+rally match the knowledge acquisition behavior of humans.
+In this paper, we propose a novel prototype aggregation-
+based FL framework where only prototypes are transmitted
+between the server and clients. The proposed solution does
+not require model parameters or gradients to be aggregated,
+so it has a huge potential to be a robust framework for vari-
+ous heterogeneous FL scenarios. Concretely, each client can
+have different model architectures and input/output spaces,
+arXiv:2105.00243v4  [cs.LG]  5 Mar 2022
+but they can still exchange information by sharing proto-
+types. Each abstract prototype represents a class by the mean
+representations transformed from the observed samples be-
+longing to the same class. Aggregating the prototypes allows
+for efﬁcient communication across heterogeneous clients.
+Our main contributions can be summarized as follows:
+• We propose a benchmark setting tailored for heteroge-
+neous FL that considers a more general heterogeneous
+scenario across local clients.
+• We present a novel FL method that signiﬁcantly im-
+proves the communication efﬁciency in the heteroge-
+neous setting. To the best of our knowledge, we are the
+ﬁrst to propose prototype aggregation-based FL.
+• We theoretically provide a convergence guarantee for our
+method and carefully derive the convergence rate under
+non-convex conditions.
+• Extensive experiments show the superiority of our pro-
+posed method in terms of communication efﬁciency and
+test performance in several benchmark datasets.
+Related Work
+Heterogeneous Federated Learning
+Statistical heterogeneity across clients (also known as the
+non-IID problem) is the most important challenge of FL.
+FedProx (Li et al. 2020) proposed a local regularization
+term to optimize each client’s local model. Some recent
+studies (Arivazhagan et al. 2019; Liang et al. 2020; Deng,
+Kamani, and Mahdavi 2020) train personalized models to
+leverage both globally shared information and the personal-
+ized part (Tan et al. 2021; Jiang, Ji, and Long 2020). The
+third solution is to provide multiple global models by clus-
+tering the local models (Mansour et al. 2020; Ghosh et al.
+2020; Sattler, M¨uller, and Samek 2020) into multiple groups
+or clusters. Recently, self-supervised learning strategies are
+incorporated into the local training phase to handle the het-
+erogeneity challenges (Li, He, and Song 2021; Liu et al.
+2021a; Yang et al. 2021). (Fallah, Mokhtari, and Ozdaglar
+2020) applies meta-training strategy for personalized FL.
+Heterogeneous model architecture is another major chal-
+lenging scenario of FL. The recently proposed KD-based FL
+(Lin et al. 2020; Jeong et al. 2018; Li and Wang 2020; Long
+et al. 2021) can serve as an alternative solution to address
+this challenge. In particular, with the assumption of adding
+a shared toy dataset in the federated setting, these KD-based
+FL methods can distill knowledge from a teacher model to
+student models with different model architectures. Some re-
+cent studies have also attempted to combine the neural ar-
+chitecture search with federated learning (Zhu, Zhang, and
+Jin 2020; He, Annavaram, and Avestimehr 2020; Singh et al.
+2020), which can be applied to discover a customized model
+architecture for each group of clients with different hard-
+ware capabilities and conﬁgurations. A collective learning
+platform is proposed to handle heterogeneous architectures
+without access to the local training data and architectures
+in (Hoang et al. 2019). Moreover, functionality-based neural
+matching across local models (Wang et al. 2020a) can ag-
+gregate neurons with similar functionality regardless of the
+variance of the model architectures.
+However, most of these mentioned FL methods focus on
+only one heterogeneous challenging scenario. All of them
+use gradient-based aggregation methods which will raise
+concerns about communication efﬁciency and gradient-
+based attacks (Zhu, Liu, and Han 2019; Chen et al. 2020;
+Liu et al. 2021b; Zheng et al. 2021).
+Prototype Learning
+The concept of prototypes (the mean of multiple features)
+has been explored in a variety of tasks. In image classiﬁca-
+tion, a prototype can be a proxy of a class and is calculated
+as the mean of the feature vectors within every class (Snell,
+Swersky, and Zemel 2017). In action recognition, the fea-
+tures of a video in different timestamps can be averaged to
+serve as the representation of the video (Simonyan and Zis-
+serman 2014; Xue et al. 2021). Aggregated local features
+can serve as descriptors for image retrieval (Babenko and
+Lempitsky 2015). Averaging word embeddings as the repre-
+sentation of a sentence can achieve competitive performance
+on multiple NLP benchmarks (Wieting et al. 2015). The au-
+thors in (Hoang et al. 2020) use prototypes to represent task-
+agnostic information in distributed machine learning and
+propose a new fusion paradigm to integrate those prototypes
+to generate a new model for a new task. In (Michieli and
+Ozay 2021), prototype margins are used to optimize visual
+feature representations for FL. In our paper, we borrow the
+concept of prototypes to represent one class and apply pro-
+totype aggregation in the setting of heterogeneous FL.
+In general, prototypes are widely used in learning scenar-
+ios with a limited number of training samples (Snell, Swer-
+sky, and Zemel 2017). This learning scenario is consistent
+with the latent assumption of cross-client FL: that each client
+has a limited number of instances to independently train a
+model with the desired performance. The assumption has
+been widely supported by the FL-based benchmark datasets
+(Caldas et al. 2018; He et al. 2020) and in related applica-
+tions, such as healthcare (Rieke et al. 2020; Xu et al. 2020)
+and street image object detection (Luo et al. 2019).
+Problem Setting
+Heterogeneous Federated Learning Setting
+In federated learning, each client owns a local private dataset
+Di drawn from distribution Pi(x, y), where x and y denote
+the input features and corresponding class labels, respec-
+tively. Usually, clients share a model F(ω; x) with the same
+architecture and hyperparameters. This model is parameter-
+ized by learnable weights ω and input features x. The objec-
+tive function of FedAvg (McMahan et al. 2017) is:
+arg min
+ω
+m
+X
+i=1
+|Di|
+N LS(F(ω; x), y),
+(1)
+where ω is the global model’s parameters, m denotes the
+number of clients, N is the total number of instances over all
+clients, F is the shared model, and LS is a general deﬁnition
+of any supervised learning task (e.g., a cross-entropy loss).
+However, in a real-world FL environment, each client may
+represent a mobile phone with a speciﬁc user behavior pat-
+tern or a sensor deployed in a particular location, leading to
+Central Server
+Local Client 1
+̅𝐶!
+𝑓!(𝜙!;%)
+Eq. (3)
+ℎ!
+𝐶!
+𝑥!
+2 3 4
+ℒ"
+ℒ#
+𝑦!
+̅𝐶
+…
+̅𝐶(#) =
+1
+𝒩#
+)
+%∈𝒩$
+|𝐷%,#|
+𝑁#
+𝐶%
+(#)
+-𝑦!
+𝑔!(𝑣!;%)
+𝑒𝑚𝑏𝑒𝑑𝑑𝑖𝑛𝑔
+𝑑𝑒𝑐𝑖𝑠𝑖𝑜𝑛
+Local Client 𝑚
+̅𝐶3
+𝑓%(𝜙%;%)
+Eq. (3)
+ℎ3
+𝐶3
+𝑥3
+ℒ"
+ℒ#
+𝑦3
+-𝑦3
+𝑔%(𝑣%;%)
+𝑒𝑚𝑏𝑒𝑑𝑑𝑖𝑛𝑔
+𝑑𝑒𝑐𝑖𝑠𝑖𝑜𝑛
+4 5
+Prototype
+Aggregation
+label
+label
+Figure 1: An overview of FedProto in the heterogeneous setting. For example, the ﬁrst client is to recognize the digits 2, 3, 4,
+while the m-th client is to recognize the digits 4, 5. First, the clients update their local prototype sets by minimizing the loss
+of classiﬁcation error LS and the distance between global prototypes and local prototypes LR. Then, the clients send their
+prototypes to the central server. The central server generates global prototypes and returns them to all clients to regularize the
+training of local models.
+statistical and/or model heterogeneous environment. In the
+statistical heterogeneity setting, Pi varies across clients, in-
+dicating heterogeneous input/output space for x and y. For
+example, Pi on different clients can be the data distributions
+over different subsets of classes. In the model heterogeneity
+setting, Fi varies across clients, indicating different model
+architectures and hyperparameters. For the i-th client, the
+training procedure is to minimize the loss as deﬁned below:
+arg min
+ω1,ω2,...,ωm
+m
+X
+i=1
+|Di|
+N LS(Fi(ωi; x), y).
+(2)
+Most existing methods cannot well handle the heteroge-
+neous settings above. In particular, the fact that Fi has a dif-
+ferent model architecture would cause ωi to have a different
+format and size. Thus, the global model’s parameter ω can-
+not be optimized by averaging ωi. To tackle this challenge,
+we propose to communicate and aggregate prototypes in FL.
+Prototype-Based Aggregation Setting
+Heterogeneous FL focuses on the robustness to tackle het-
+erogeneous input/output spaces, distributions and model ar-
+chitectures. For example, the datasets Di and Dk on two
+clients i and k may take different statistical distributions of
+labels. This is common for a photo classiﬁcation APP in-
+stalled on mobile clients, where the server needs to recog-
+nize many classes C = {C(1), C(2), . . . }, while each client
+only needs to recognize a few classes that constitute a subset
+of C. The class set can vary across clients, though there are
+overlaps.
+In general, the deep learning-based models comprise two
+parts: (1) representation layers (a.k.a. embedding functions)
+to transform the input from the original feature space to the
+embedding space; and (2) decision layers to make a classiﬁ-
+cation decision for a given learning task.
+Representation layers
+The embedding function of the i-
+th client is fi(φi) parameterized by φi. We denote hi =
+fi(φi; x) as the embeddings of x.
+Decision layers
+Given a supervised learning task, a pre-
+diction for x can be generated by the function gi(νi) pa-
+rameterized by νi. So, the labelling function can be written
+as Fi(φi, νi) = gi(νi) ◦fi(φi), and we use ωi to represent
+(φi, νi) for short.
+Prototype
+We deﬁne a prototype C(j) to represent the j-
+th class in C. For the i-th client, the prototype is the mean
+value of the embedding vectors of instances in class j,
+C(j)
+i
+=
+1
+|Di,j|
+X
+(x,y)∈Di,j
+fi(φi; x),
+(3)
+where Di,j, a subset of the local dataset Di, is comprised of
+training instances belonging to the j-th class.
+Prototype-based model inference
+In the inference stage
+of the learning task, we can simply predict the label ˆy to
+an instance x by measuring the L2 distance between the in-
+stance’s representational vector f(φ; x) and the prototype
+C(j) as follows:
+ˆy = arg min
+j
+||f(φ; x) −C(j)||2.
+(4)
+Methodology
+We propose a solution for heterogeneous FL that uses pro-
+totypes as the key component for exchanging information
+across the server and the clients.
+An overview of the proposed framework is shown in
+Figure 1. The central server receives local prototype sets
+C1, C2, . . . , Cm from m local clients, and then aggregates
+the prototypes by averaging them. In the heterogeneous FL
+setting, these prototype sets overlap but are not the same.
+Taking the MNIST dataset as an example, the ﬁrst client is
+to recognize the digits 2, 3, 4, while another client is to rec-
+ognize the digits 4, 5. These are two different handwritten
+digits set; nonetheless, there is an overlap. The server auto-
+matically aggregates prototypes from the overlapping class
+space across the clients.
+Using prototypes in FL, we do not need to exchange
+gradients or model parameters, which means that the pro-
+posed solution can tackle heterogeneous model architec-
+tures. Moreover, the prototype-based FL does not require
+each client to provide the same classes, meaning the hetero-
+geneous class spaces are well supported. Thus, heterogene-
+ity challenges in FL can be addressed.
+Optimization Objective
+The objective of FedProto is to solve a joint optimiza-
+tion problem on a distributed network. FedProto ap-
+plies prototype-based communication, which allows a local
+model to align its prototypes with other local models while
+minimizing the sum of loss for all clients’ local learning
+tasks. The objective of federated prototype learning across
+heterogeneous clients can be formulated as
+arg min
+{ ¯
+C(j)}
+|C|
+j=1
+m
+X
+i=1
+|Di|
+N LS(Fi(ωi; x), y)+
+λ ·
+|C|
+X
+j=1
+m
+X
+i=1
+|Di,j|
+Nj
+LR( ¯C(j)
+i
+, C(j)
+i
+),
+(5)
+where LS is the loss of supervised learning (as deﬁned in
+Eq. (2)) and LR is a regularization term that measures the
+distance (we use L2 distance) between a local prototype C(j)
+and the corresponding global prototypes ¯C(j). N is the total
+number of instances over all clients, and Nj is the number
+of instances belonging to class j over all clients.
+The optimization problem can be addressed by alternate
+minimization that iterates the following two steps: (1) mini-
+mization w.r.t. each ωi with ¯C(j)
+i
+ﬁxed; and (2) minimization
+w.r.t. ¯C(j)
+i
+with all ωi ﬁxed. In a distributed setting, step (1)
+reduces to conventional supervised learning on each client
+using its local data, while step (2) aggregates local proto-
+types from local clients on the server end. Further details
+concerning these two steps can be seen in Algorithm 1.
+Global Prototype Aggregation
+Given the data and model heterogeneity in the participat-
+ing clients, the optimal model parameters for each client are
+not the same. This means that gradient-based communica-
+tion cannot sufﬁciently provide useful information to each
+client. However, the same label space allows the participat-
+ing clients to share the same embedding space and infor-
+mation can be efﬁciently exchanged across heterogeneous
+clients by aggregating prototypes according to the classes
+they belong to.
+Given a class j, the server receives prototypes from a set
+of clients that have class j. A global prototype ¯C(j) for class
+j is generated after the prototype aggregating operation,
+¯C(j) =
+1
+|Nj|
+X
+i∈Nj
+|Di,j|
+Nj
+C(j)
+i
+,
+(6)
+where C(j)
+i
+denotes the prototype of class j from client i,
+and Nj denotes the set of clients that have class j.
+Local Model Update
+The client needs to update the local model to generate a
+consistent prototype across the clients. To this end, a reg-
+Algorithm 1: FedProto
+Input: Di, ωi, i = 1, · · · , m
+Server executes:
+1: Initialize global prototype set
+ ¯C(j)	
+for all classes.
+2: for each round T = 1, 2, ... do
+3:
+for each client i in parallel do
+4:
+Ci ←LocalUpdate
+ i, ¯Ci
+
+5:
+end for
+6:
+Update global prototype by Eq. 6.
+7:
+Update local prototype set Ci with prototypes in
+{ ¯C(j)}
+8: end for
+LocalUpdate
+ i, ¯Ci
+
+:
+1: for each local epoch do
+2:
+for batch (xi, yi) ∈Di do
+3:
+Compute local prototype by Eq. 3.
+4:
+Compute loss by Eq. 7 using local prototypes.
+5:
+Update local model according to the loss.
+6:
+end for
+7: end for
+8: return C(i)
+ularization term is added to the local loss function, enabling
+the local prototypes C(j)
+i
+to approach global prototypes ¯C(j)
+i
+while minimizing the loss of the classiﬁcation error. In par-
+ticular, the loss function is deﬁned as follows:
+L(Di, ωi) = LS(Fi(ωi; x), y) + λ · LR
+  ¯Ci, Ci
+
+,
+(7)
+where λ is an importance weight, and LR is the regulariza-
+tion term that can be deﬁned as:
+LR =
+X
+j
+d(C(j)
+i
+, ¯C(j)
+i
+),
+(8)
+where d is a distance metric of local generated prototypes
+C(j) and global aggregated prototypes ¯C(j). The distance
+measurement can take a variety of forms, such as L1 dis-
+tance, L2 distance, and earth mover’s distance.
+Convergence Analysis
+We provide insights into the convergence analysis for
+FedProto. We denote the local objective function deﬁned
+in Eq. 7 as L with a subscript indicating the number of itera-
+tions and make the following assumptions similar to existing
+general frameworks (Wang et al. 2020b; Li et al. 2020).
+Assumption 1. (Lipschitz Smooth). Each local objective
+function is L1-Lipschitz smooth, which means that the gra-
+dient of local objective function is L1-Lipschitz continuous,
+∥∇Lt1 −∇Lt2∥2 ≤L1∥ωi,t1 −ωi,t2∥2,
+∀t1, t2 > 0, i ∈{1, 2, . . . , m}.
+(9)
+This also implies the following quadratic bound,
+Lt1 −Lt2 ≤⟨∇Lt2, (ωi,t1 −ωi,t2)⟩+ L1
+2 ∥ωi,t1 −ωi,t2∥2
+2,
+∀t1, t2 > 0,
+i ∈{1, 2, . . . , m}.
+(10)
+Assumption 2. (Unbiased Gradient and Bounded Vari-
+ance). The stochastic gradient gi,t = ∇L(ωt, ξt) is an unbi-
+ased estimator of the local gradient for each client. Suppose
+its expectation
+Eξi∼Di[gi,t] = ∇L(ωi,t) = ∇Lt, ∀i ∈{1, 2, . . . , m},
+(11)
+and its variance is bounded by σ2:
+E[∥gi,t −∇L(ωi,t)∥2
+2] ≤σ2, ∀i ∈{1, 2, . . . , m}, σ2 ≥0. (12)
+Assumption 3. (Bounded Expectation of Euclidean norm of
+Stochastic Gradients).The expectation of the stochastic gra-
+dient is bounded by G:
+E[∥gi,t∥2] ≤G, ∀i ∈{1, 2, . . . , m}.
+(13)
+Assumption 4. (Lipschitz Continuity). Each local embed-
+ding function is L2-Lipschitz continuous, that is,
+∥fi(φi,t1) −fi(φi,t2)∥≤L2∥φi,t1 −φi,t2∥2,
+∀t1, t2 > 0, i ∈{1, 2, . . . , m}.
+(14)
+Based on the above assumptions, we present the theoret-
+ical results for the non-convex problem. The expected de-
+crease per round is given in Theorem 1. We denote e ∈
+{1/2, 1, 2, . . . , E} as the local iteration, and t as the global
+communication round. Moreover, tE represents the time
+step before prototype aggregation, and tE + 1/2 represents
+the time step between prototype aggregation and the ﬁrst it-
+eration of the current round.
+Theorem 1. (One-round deviation). Let Assumption 1 to
+4 hold. For an arbitrary client, after every communication
+round, we have,
+E[L(t+1)E+1/2] ≤LtE+1/2 −
+
+η −L1η2
+2
+ E−1
+X
+e=1/2
+∥∇LtE+e∥2
+2
++ L1Eη2
+2
+σ2 + λL2ηEG.
+(15)
+Theorem 1 indicates the deviation bound of the local ob-
+jective function for an arbitrary client after each communica-
+tion round. Convergence can be guaranteed when there is a
+certain expected one-round decrease, which can be achieved
+by choosing appropriate η and λ.
+Corollary 1. (Non-convex FedProto convergence). The
+loss function L of an arbitrary client monotonously de-
+creases in every communication round when
+ηe′ <
+2(Pe′
+e=1/2 ∥∇LtE+e∥2
+2 −λL2EG)
+L1(Pe′
+e=1/2 ∥∇LtE+e∥2
+2 + Eσ2)
+,
+(16)
+where e′ = 1/2, 1, . . . , E −1, and
+λt < ∥∇LtE+1/2∥2
+2
+L2EG
+.
+(17)
+Thus, the loss function converges.
+Corollary 1 is to ensure the expected deviation of L to
+be negative, so the loss function converges. It can guide the
+choice of appropriate values for the learning rate η and the
+importance weight λ to guarantee the convergence.
+Theorem 2. (Non-convex convergence rate of FedProto).
+Let Assumption 1 to 4 hold and ∆= L0 −L∗where L∗
+refers to the local optimum. For an arbitrary client, given
+any ϵ > 0, after
+T =
+2∆
+Eϵ(2η −L1η2) −Eη(L1ησ2 + 2λL2G)
+(18)
+communication rounds of FedProto, we have
+1
+TE
+T −1
+X
+t=0
+E−1
+X
+e=1/2
+E[∥∇LtE+e∥2
+2] < ϵ,
+(19)
+if
+η < 2(ϵ −λL2G)
+L1(ϵ + σ2) and λ <
+ϵ
+L2G.
+Theorem 2 provides the convergence rate, which can con-
+ﬁne the expected L2-norm of gradients to any bound, de-
+noted as ϵ, after carefully selecting the number of commu-
+nication rounds T and hyperparameters including η and λ.
+The smaller ϵ is, the larger T is, which means that the tighter
+the bound is, more communication rounds is required. A de-
+tailed proof and analysis are given in Appendix B.
+Discussion
+In this section, we discuss the superiority of FedProto
+from three perspectives: model inference, communication
+efﬁciency, and privacy preserving.
+Model Inference
+Unlike many FL methods, the global model in FedProto is
+not a classiﬁer but a set of class prototypes. When a new
+client is added to the network, one can initialize its local
+model with the representation layers of a pre-trained model,
+e.g. a ResNet18 on ImageNet, and random decision layers.
+Then, the local client will download the global prototypes of
+the classes covered in its local dataset and ﬁne-tune the local
+model by minimizing the local objective. This can support
+new clients with novel model architectures and spend less
+time ﬁne-tuning the model on heterogeneous datasets.
+Communication Efﬁciency
+Our proposed method only transmits prototypes between the
+server and clients. In general, the size of the prototypes is
+usually much smaller than the size of the model parameters.
+Taking MNIST as an example, the prototype size is 50 for
+each class, while the number of model parameters is 21,500.
+More details can be found in the experimental section.
+Privacy Preserving
+The proposed FedProto requires the exchange of proto-
+types rather than model parameters between the server and
+the clients. This property brings beneﬁts to FL in terms of
+privacy preserving. First, prototypes naturally protect the
+data privacy, because they are 1D-vectors generated by av-
+eraging the low-dimension representations of samples from
+the same class, which is an irreversible process. Second, at-
+tackers cannot reconstruct raw data from prototypes with-
+out the access to local models. Moreover, FedProto can
+be integrated with various privacy-preserving techniques to
+further enhance the reliability of the system.
+Dataset
+Method
+Stdev
+Test Average Acc
+# of Comm
+Rounds
+# of Comm
+Params (×103)
+n = 3
+n = 4
+n = 5
+MNIST
+Local
+2
+94.05±2.93
+93.35±3.26
+92.92±3.17
+0
+0
+FeSEM (Xie et al. 2020)
+2
+95.26±3.48
+97.06±2.72
+96.31±2.41
+150
+430
+FedProx (Li et al. 2020)
+2
+96.26±2.89
+96.40±3.33
+95.65±3.38
+110
+430
+FedPer (Arivazhagan et al. 2019)
+2
+95.57±2.96
+96.44±2.62
+95.55±3.13
+100
+106
+FedAvg (McMahan et al. 2017)
+2
+95.04±6.48
+94.32±4.89
+93.22±4.39
+150
+430
+FedRep (Collins et al. 2021)
+2
+94.96±2.78
+95.18±3.80
+94.94±2.81
+100
+110
+FedProto
+2
+97.13±0.30
+96.80±0.41
+96.70±0.29
+100
+4
+FedProto-mh
+2
+97.07±0.50
+96.65±0.31
+96.22±0.36
+100
+4
+FEMNIST
+Local
+1
+92.50±10.42
+91.16±5.64
+87.91±8.44
+0
+0
+FeSEM (Xie et al. 2020)
+1
+93.39±6.75
+91.06±6.43
+89.61±7.89
+200
+16,000
+FedProx (Li et al. 2020)
+1
+94.53±5.33
+90.71±6.24
+91.33±7.32
+300
+16,000
+FedPer (Arivazhagan et al. 2019)
+1
+93.47±5.44
+90.22±7.63
+87.73±9.64
+250
+102
+FedAvg (McMahan et al. 2017)
+1
+94.50±5.29
+91.39±5.23
+90.95±7.22
+300
+16,000
+FedRep (Collins et al. 2021)
+1
+93.36±5.34
+91.41±5.89
+89.98±6.88
+200
+102
+FedProto
+1
+96.82±1.75
+94.93±1.61
+93.67±2.23
+120
+4
+FedProto-mh
+1
+97.10±1.63
+94.83±1.60
+93.76±2.30
+120
+4
+CIFAR10
+Local
+1
+79.72±9.45
+67.62±7.15
+58.64±6.57
+0
+0
+FeSEM (Xie et al. 2020)
+1
+80.19±3.31
+76.40±3.23
+74.17±3.51
+120
+235,000
+FedProx (Li et al. 2020)
+1
+83.25±2.44
+79.20±1.31
+76.19±2.23
+150
+235,000
+FedPer (Arivazhagan et al. 2019)
+1
+84.38±4.58
+78.73±4.59
+76.21±4.27
+130
+225,000
+FedAvg (McMahan et al. 2017)
+1
+81.72±2.77
+76.77±2.37
+75.74±2.61
+150
+235,000
+FedRep (Collins et al. 2021)
+1
+81.44±10.48
+76.93±7.46
+73.36±7.04
+110
+225,000
+FedProto
+1
+84.49±1.97
+79.12±2.03
+77.08±1.98
+110
+41
+FedProto-mh
+1
+83.63±1.60
+79.49±1.78
+76.94±1.33
+110
+41
+Table 1: Comparison of FL methods on three benchmark datasets with non-IID split over clients. The best results are in bold. It
+appears that FedProto, compared to baselines, achieves higher accuracy while using much fewer communicated parameters.
+Experiments
+Training Setups
+Datasets and local models
+We implement the typical fed-
+erated setting where each client owns its local data and trans-
+mits/receives information to/from the central server. We use
+three popular benchmark datasets: MNIST (LeCun 1998),
+FEMNIST (Caldas et al. 2018) and CIFAR10 (Krizhevsky,
+Hinton et al. 2009). We consider a multi-layer CNN which
+consists of 2 convolutional layers then 2 fully connected lay-
+ers for both MNIST and FEMNIST, and ResNet18 (He et al.
+2016) for CIFAR10.
+Local tasks
+Each client learns a supervised learning task.
+In particular, to illustrate the local task, we borrow the con-
+cept of n-way k-shot from few-shot learning where n con-
+trols the number of classes and k controls the number of
+training instances per class. To mimic the heterogeneous
+scenario, we randomly change the value of n and k in dif-
+ferent clients. We deﬁne an average value for n and k, and
+then add a random noise to each user’s n as well as k. The
+purpose of the variance of n is to control the heterogeneity
+of the class space, while the purpose of the variance of k is
+to control the imbalance in data size.
+Baselines of FL
+We study the performance of FedProto
+under both the statistical and model heterogeneous set-
+tings (FedProto-mh) and make comparisons with base-
+lines, including Local where an individual model is trained
+for each client without any communication with others,
+FedAvg (McMahan et al. 2017), FedProx (Li et al. 2020),
+FeSEM (Xie et al. 2020), FedPer (Arivazhagan et al.
+2019), and FedRep (Collins et al. 2021).
+Implementation Details
+We implement FedProto and
+the baseline methods in PyTorch. We use 20 clients for all
+datasets and all clients are sampled in each communication
+round. The average size of each class in each client is set
+to be 100. For MNIST and FEMNIST dataset, our initial set
+of hyperparameters was taken directly from the default set
+of hyperparamters in (McMahan et al. 2017). For CIFAR10,
+ResNet18 pre-trained on ImageNet (Krizhevsky, Sutskever,
+and Hinton 2017) is used as the initial model. The initial av-
+erage test accuracy of the pre-trained network on CIFAR10
+is 27.55%. A detailed setup including the choice of hyper-
+parameters is given in Appendix A.
+Performance in Non-IID Federated Setting
+We compare FedProto with other baseline methods that
+are either classical FL methods or FL methods with an em-
+phasis on statistical heterogeneity. All methods are adapted
+to ﬁt this heterogeneous setting.
+Statistical heterogeneity simulations
+In our setting, we
+assume that all clients perform learning tasks with heteroge-
+neous statistical distributions. In order to simulate different
+levels of heterogeneity, we ﬁx the standard deviation to be 1
+or 2, aiming to create heterogeneity in both class spaces and
+data sizes, which is common in real-world scenarios.
+Model heterogeneity simulations
+For the model hetero-
+geneous setting, we consider minor differences in model
+architectures across clients. In MNIST and FEMNIST, the
+number of output channels in the convolutional layers is set
+to either 18, 20 or 22, while in CIFAR10, the stride of con-
+volutional layers is set differently across different clients.
+This kind of model heterogeneity brings about challenges
+for model parameter averaging because the parameters in
+−75
+−50
+−25
+0
+25
+50
+75
+−75
+−50
+−25
+0
+25
+50
+75
+(a) FedProto
+−60
+−40
+−20
+0
+20
+40
+60
+−60
+−40
+−20
+0
+20
+40
+60
+(b) FedAvg
+−60
+−40
+−20
+0
+20
+40
+60
+−75
+−50
+−25
+0
+25
+50
+75
+(c) FeSEM
+−75
+−50
+−25
+0
+25
+50
+−75
+−50
+−25
+0
+25
+50
+75
+(d) FedPer
+Figure 2: t-SNE visualization of the samples and/or prototypes produced by FedProto and other FL methods. We consider
+20 clients for MNIST. The average number of classes per client is n = 3. (a) FedProto: Samples within the same class have
+multiple centers with each center representing local prototype of a client. The global prototype is the central point of the class
+samples. (b) FedAvg: Samples within the same class cluster in the same area. (c) FeSEM: Samples within the same class gather
+in several clusters according to the algorithm parameters. (d) FedPer: Each cluster indicates one class in a speciﬁc client.
+different clients are not always the same size.
+The average test accuracy over all clients is reported in
+Table 1. It can be seen that FedProto achieves the high-
+est accuracy and the least variance in most cases, ensuring
+uniformity among heterogeneous clients.
+Communication efﬁciency
+Communication costs have
+always been posed as a challenge in FL, considering sev-
+eral limitations in existing communication channels. There-
+fore, we also report the number of communication rounds re-
+quired for convergence and the number of parameters com-
+municated per round in Table 1. It can be seen that the num-
+ber of parameters communicated per round in FedProto
+is much lower than in the case of FedAvg. Furthermore,
+FedProto requires the fewest communication rounds for
+the local optimization. This suggests that when the hetero-
+geneity level is high across the clients, sharing more param-
+eters does not always lead to better results. It is more im-
+portant to identify which part to share in order to beneﬁt the
+current system to a great extent. More performance results
+are shown in Appendix A.
+Visualization of prototypes achieved by FedProto
+We
+visualize the samples in MNIST test set by t-SNE (Van der
+Maaten and Hinton 2008). In Figure 2(a), small points in
+different colors represent samples in different classes, with
+large points representing corresponding global prototypes.
+In Figure 2(b), 2(c) and 2(d), the points in different colors
+refer to the representations of samples belonging to different
+classes. Better generalization means that there are more
+samples within the same class cluster in the same area,
+which can be achieved in a centralized setting, while better
+personalization means that it is easier to determine to which
+client the samples belong. It can be seen that samples within
+the same class but from various clients are close but separa-
+ble in FedProto. This indicates that FedProto is more
+successful in achieving the balance between generalization
+and personalization, while other methods lacks either the
+generalization or the personalization ability.
+Scalability of FedProto on varying number of samples
+Figure 3 shows that FedProto can scale to scenarios with
+fewer samples available on clients. The test accuracy consis-
+tently decreases when there are fewer samples for training,
+but FedProto drops more slowly than FedAvg as a result
+of its adaptability and scalability on various data sizes.
+120 100
+80
+60
+40
+30
+20
+15
+10
+5
+k
+0.7
+0.8
+0.9
+Average test acc
+FedProto
+FedAvg
+Figure 3: Average test accuracy of FedProto and FedAvg
+on MNIST with varying number of samples in each class.
+FedProto under varying λ
+Figure 4 shows the varying
+performance under different values of λ in Eq. (5). We tried
+a set of values selected from [0, 4] and reported the average
+test accuracy and proto distance loss with n=3, k=100 in
+FEMNIST dataset. The best value of λ is 1 in this scenario.
+As λ increases, the proto distance loss (regularization term)
+decreases, while the average test accuracy experiences a
+sharp rise from λ=0 to λ=1 before a drop in the number of
+6%, demonstrating the efﬁcacy of prototype aggregation.
+0
+1
+2
+3
+4
+λ
+0.80
+0.85
+0.90
+0.95
+1.00
+Average test accuracy
+-4
+-2
+0
+2
+Proto distance loss
+Average test acc
+Proto distance loss
+Figure 4: Average test accuracy on FEMNIST under varying
+importance weight λ.
+Conclusion
+In this paper, we propose a novel prototype aggregation-
+based FL method to tackle challenging FL scenarios with
+heterogeneous input/output spaces, data distributions, and
+model architectures. The proposed method collaboratively
+trains intelligent models by exchanging prototypes rather
+than gradients, which offers new insights for designing
+prototype-based FL. The effectiveness of the proposed
+method has been comprehensively analyzed from both
+theoretical and experimental perspectives.
+References
+Arivazhagan, M. G.; Aggarwal, V.; Singh, A. K.; and
+Choudhary, S. 2019. Federated learning with personaliza-
+tion layers. arXiv preprint arXiv:1912.00818.
+Babenko, A.; and Lempitsky, V. 2015. Aggregating local
+deep features for image retrieval. In Proceedings of the IEEE
+international conference on computer vision, 1269–1277.
+Cai, T.; Li, J.; Mian, A. S.; Sellis, T.; Yu, J. X.; et al. 2020.
+Target-aware holistic inﬂuence maximization in spatial so-
+cial networks. IEEE Transactions on Knowledge and Data
+Engineering.
+Caldas, S.; Duddu, S. M. K.; Wu, P.; Li, T.; Koneˇcn`y, J.;
+McMahan, H. B.; Smith, V.; and Talwalkar, A. 2018. Leaf:
+A benchmark for federated settings. arXiv: 1812.01097.
+Chen, C.; Zhang, J.; Tung, A. K.; Kankanhalli, M.; and
+Chen, G. 2020. Robust federated recommendation system.
+arXiv preprint arXiv:2006.08259.
+Collins, L.; Hassani, H.; Mokhtari, A.; and Shakkottai, S.
+2021. Exploiting Shared Representations for Personalized
+Federated Learning. International Conference on Machine
+Learning.
+Deng, Y.; Kamani, M. M.; and Mahdavi, M. 2020. Adaptive
+Personalized Federated Learning. arXiv:2003.13461.
+Dvornik, N.; Schmid, C.; and Mairal, J. 2020. Selecting rel-
+evant features from a universal representation for few-shot
+classiﬁcation.
+Fallah, A.; Mokhtari, A.; and Ozdaglar, A. 2020. Person-
+alized Federated Learning with Theoretical Guarantees: A
+Model-Agnostic Meta-Learning Approach. In Advances in
+Neural Information Processing Systems.
+Ghosh, A.; Chung, J.; Yin, D.; and Ramchandran, K. 2020.
+An Efﬁcient Framework for Clustered Federated Learning.
+In Advances in Neural Information Processing Systems.
+He, C.; Annavaram, M.; and Avestimehr, S. 2020. FedNAS:
+Federated Deep Learning via Neural Architecture Search. In
+Proceedings of the IEEE conference on computer vision and
+pattern recognition.
+He, C.; Li, S.; So, J.; Zhang, M.; Wang, H.; Wang, X.;
+Vepakomma, P.; Singh, A.; Qiu, H.; Shen, L.; et al. 2020.
+Fedml: A research library and benchmark for federated ma-
+chine learning. arXiv:2007.13518.
+He, K.; Zhang, X.; Ren, S.; and Sun, J. 2016. Deep resid-
+ual learning for image recognition. In Proceedings of the
+IEEE conference on computer vision and pattern recogni-
+tion, 770–778.
+Hoang, M.; Hoang, N.; Low, B. K. H.; and Kingsford, C.
+2019. Collective model fusion for multiple black-box ex-
+perts. In International Conference on Machine Learning,
+2742–2750. PMLR.
+Hoang, N.; Lam, T.; Low, B. K. H.; and Jaillet, P. 2020.
+Learning Task-Agnostic Embedding of Multiple Black-Box
+Experts for Multi-Task Model Fusion. In International Con-
+ference on Machine Learning, 4282–4292. PMLR.
+Jeong, E.; Oh, S.; Kim, H.; Park, J.; Bennis, M.; and Kim, S.-
+L. 2018. Communication-efﬁcient on-device machine learn-
+ing: Federated distillation and augmentation under non-IID
+private data. In Advances in Neural Information Processing
+Systems.
+Jiang, J.; Ji, S.; and Long, G. 2020. Decentralized knowl-
+edge acquisition for mobile internet applications.
+World
+Wide Web, 1–17.
+Kairouz, P.; McMahan, H. B.; Avent, B.; Bellet, A.; Bennis,
+M.; Bhagoji, A. N.; et al. 2019. Advances and open prob-
+lems in federated learning. arXiv:1912.04977.
+Krizhevsky, A.; Hinton, G.; et al. 2009. Learning multiple
+layers of features from tiny images.
+Krizhevsky, A.; Sutskever, I.; and Hinton, G. E. 2017. Im-
+agenet classiﬁcation with deep convolutional neural net-
+works. Communications of the ACM, 60(6): 84–90.
+LeCun, Y. 1998. The MNIST database of handwritten digits.
+http://yann. lecun. com/exdb/mnist/.
+Li, D.; and Wang, J. 2020. Fedmd: Heterogenous federated
+learning via model distillation. In Advances in Neural Infor-
+mation Processing Systems.
+Li, Q.; He, B.; and Song, D. 2021. Model-Contrastive Feder-
+ated Learning. In Proceedings of the IEEE/CVF Conference
+on Computer Vision and Pattern Recognition, 10713–10722.
+Li, T.; Sahu, A. K.; Zaheer, M.; Sanjabi, M.; Talwalkar, A.;
+and Smith, V. 2020.
+Federated optimization in heteroge-
+neous networks. MLSys.
+Li, Z.; Wang, X.; Li, J.; and Zhang, Q. 2021. Deep attributed
+network representation learning of complex coupling and in-
+teraction. Knowledge-Based Systems, 212: 106618.
+Liang, P. P.; Liu, T.; Ziyin, L.; Salakhutdinov, R.; and
+Morency, L.-P. 2020. Think Locally, Act Globally: Feder-
+ated Learning with Local and Global Representations. Ad-
+vances in Neural Information Processing Systems.
+Lin, T.; Kong, L.; Stich, S. U.; and Jaggi, M. 2020. Ensemble
+Distillation for Robust Model Fusion in Federated Learning.
+In Advances in Neural Information Processing Systems.
+Liu, L.; Hamilton, W. L.; Long, G.; Jiang, J.; and Larochelle,
+H. 2020. A Universal Representation Transformer Layer for
+Few-Shot Image Classiﬁcation. In International Conference
+on Learning Representations.
+Liu, Y.; Pan, S.; Jin, M.; Zhou, C.; Xia, F.; and Yu, P. S.
+2021a.
+Graph self-supervised learning: A survey.
+arXiv
+preprint arXiv:2103.00111.
+Liu, Y.; Pan, S.; Wang, Y. G.; Xiong, F.; Wang, L.; and Lee,
+V. 2021b. Anomaly Detection in Dynamic Graphs via Trans-
+former. IEEE Transactions on Knowledge and Data Engi-
+neering.
+Long, G.; Shen, T.; Tan, Y.; Gerrard, L.; Clarke, A.; and
+Jiang, J. 2021.
+Federated learning for privacy-preserving
+open innovation future on digital health. In Humanity Driven
+AI. Springer.
+Long, G.; Tan, Y.; Jiang, J.; and Zhang, C. 2020. Federated
+Learning for Open Banking. In Federated Learning, 240–
+254. Springer.
+Luo, J.; Wu, X.; Luo, Y.; Huang, A.; Huang, Y.; Liu, Y.;
+and Yang, Q. 2019. Real-world image datasets for federated
+learning. arXiv:1910.11089.
+Mansour, Y.; Mohri, M.; Ro, J.; and Suresh, A. T. 2020.
+Three approaches for personalization with applications to
+federated learning. arXiv:2002.10619.
+McMahan, H. B.; Moore, E.; Ramage, D.; et al. 2017.
+Communication-efﬁcient learning of deep networks from
+decentralized data. AISTATS.
+Michieli, U.; and Ozay, M. 2021. Prototype Guided Fed-
+erated Learning of Visual Feature Representations. arXiv
+preprint arXiv:2105.08982.
+Rieke, N.; Hancox, J.; Li, W.; Milletari, F.; Roth, H. R.; Al-
+barqouni, S.; Bakas, S.; Galtier, M. N.; Landman, B. A.;
+Maier-Hein, K.; et al. 2020. The future of digital health with
+federated learning. NPJ digital medicine, 3(1): 1–7.
+Sattler, F.; M¨uller, K.-R.; and Samek, W. 2020. Clustered
+federated learning: Model-agnostic distributed multitask op-
+timization under privacy constraints. IEEE transactions on
+neural networks and learning systems.
+Simonyan, K.; and Zisserman, A. 2014. Two-Stream Con-
+volutional Networks for Action Recognition in Videos. In
+Advances in Neural Information Processing Systems, 568–
+576.
+Singh, I.; Zhou, H.; Yang, K.; Ding, M.; Lin, B.; and Xie,
+P. 2020. Differentially-private federated neural architecture
+search. In FL-International Conference on Machine Learn-
+ing Workshop.
+Snell, J.; Swersky, K.; and Zemel, R. 2017.
+Prototypical
+Networks for Few-shot Learning. Advances in Neural Infor-
+mation Processing Systems, 30: 4077–4087.
+Tan, A. Z.; Yu, H.; Cui, L.; and Yang, Q. 2021.
+To-
+wards personalized federated learning.
+arXiv preprint
+arXiv:2103.00710.
+Van der Maaten, L.; and Hinton, G. 2008. Visualizing data
+using t-SNE. Journal of machine learning research, 9(11).
+Wang, H.; Yurochkin, M.; Sun, Y.; Papailiopoulos, D.; and
+Khazaeni, Y. 2020a. Federated Learning with Matched Av-
+eraging. In International Conference on Learning Represen-
+tations.
+Wang, J.; Liu, Q.; Liang, H.; Joshi, G.; and Poor, H. V.
+2020b.
+Tackling the Objective Inconsistency Problem in
+Heterogeneous Federated Optimization. Advances in neu-
+ral information processing systems.
+Wieting, J.; Bansal, M.; Gimpel, K.; and Livescu, K.
+2015. Towards universal paraphrastic sentence embeddings.
+arXiv:1511.08198.
+Xie, M.; Long, G.; Shen, T.; Wang, X.; Tianyi, Z.;
+and Jiang, J. 2020.
+Multi-center Federated Learning.
+arXiv:2005.01026.
+Xu, J.; Glicksberg, B. S.; Su, C.; Walker, P.; Bian, J.; and
+Wang, F. 2020. Federated learning for healthcare informat-
+ics. Journal of Healthcare Informatics Research, 1–19.
+Xue, G.; Zhong, M.; Li, J.; Chen, J.; Zhai, C.; and Kong, R.
+2021. Dynamic network embedding survey. arXiv preprint
+arXiv:2103.15447.
+Yang, Y.; Guan, Z.; Li, J.; Zhao, W.; Cui, J.; and Wang, Q.
+2021. Interpretable and efﬁcient heterogeneous graph con-
+volutional network. IEEE Transactions on Knowledge and
+Data Engineering.
+Zheng, Y.; Jin, M.; Liu, Y.; Chi, L.; Phan, K. T.; and Chen,
+Y.-P. P. 2021. Generative and Contrastive Self-Supervised
+Learning for Graph Anomaly Detection. IEEE Transactions
+on Knowledge and Data Engineering.
+Zhu, H.; Zhang, H.; and Jin, Y. 2020. From federated learn-
+ing to federated neural architecture search: a survey. Com-
+plex & Intelligent Systems, 1–19.
+Zhu, L.; Liu, Z.; and Han, S. 2019.
+Deep Leakage from
+Gradients. In Advances in Neural Information Processing
+Systems, 14774–14784.
+We present the related supplements in following sections.
+Experimental Details and Extra Results
+Experimental Details
+Local clients are trained by SGD optimizer, with a learning rate of 0.01 and momentum of 0.5. Regarding the crucial hyper-
+parameter λ, we tune the best λ from a limited candidate set by grid search. The best λ values for MNIST, FEMNIST and
+CIFAR10 are 1, 1 and 0.1, respectively. The number of local epochs and local batch size are set to be 1 and 8, respectively,
+for all datasets. The heterogeneity level of clients is controlled by the standard deviation of n. The higher this is, the more
+heterogeneous the clients are.
+Extra Results
+The complete experimental results show the performance of FedProto and FedProto-mh on three benchmark datasets
+MNIST, FEMNIST, and CIFAR10. Compared with existing FL methods, FedProto yields higher test accuracy while resulting
+in lower communication costs under different heterogeneous settings. Additionally, it can be used in model heterogeneous
+scenarios and achieves performance similar to that in homogeneous scenarios.
+For MNIST, we evaluate local test sets and report the evaluation results in Table 2. It appears that FedProto achieves strong
+performance with low communication cost. The local average test accuracy of FedProto is greater than for the FeSEM,
+FedProx, FedPer and FedAvg algorithms in all the settings.
+For FEMNIST, the evaluation results are reported in Table 3. We consider the standard deviation of n to be 1 and 2. The results
+show that, for FedProto, the variance of the accuracy across clients is much smaller than for other FL methods, thus ensuring
+uniformity among heterogeneous clients. FedProto allows us to better utilize the local FEMNIST dataset distribution while
+using around 0.025% of the total parameters communicated.
+For CIFAR10, as can be seen in Table 4, FedProto converges faster in the presence of heterogeneity in most cases. In
+FedProto and FedProto-mh, the number of parameters communicated per round is much lower than the baseline methods,
+meaning greatly reduced communication costs.
+Dataset
+Method
+Stdev
+of n
+Test Average Acc
+# of Comm
+Rounds
+# of Comm
+Params (×103)
+n = 3
+n = 4
+n = 5
+MNIST
+Local
+2
+94.05±2.93
+93.35±3.26
+92.92±3.17
+0
+0
+3
+93.44±3.57
+94.24±2.49
+93.97±2.97
+FeSEM
+2
+95.26±3.48
+97.06±2.72
+96.31±2.41
+150
+430
+3
+96.40±3.35
+95.82±3.94
+95.98±2.46
+FedProx
+2
+96.26±2.89
+96.40±3.33
+95.65±3.38
+110
+430
+3
+96.65±3.28
+95.25±3.73
+95.34±2.85
+FedPer
+2
+95.57±2.96
+96.44±2.62
+95.55±3.13
+100
+106
+3
+96.57±2.65
+95.93±2.76
+96.07±2.80
+FedAvg
+2
+91.40±6.48
+94.32±4.89
+93.22±4.39
+150
+430
+3
+94.57±4.91
+91.99±6.89
+92.19±3.97
+FedRep
+2
+94.96±2.78
+95.18±3.80
+94.94±2.81
+100
+110
+3
+95.01±3.92
+95.55±2.79
+95.38±2.97
+FedProto
+2
+97.13±0.30
+96.80±0.41
+96.70±0.29
+100
+4
+3
+96.71±0.43
+96.87±0.28
+96.47±0.23
+FedProto-mh
+2
+97.07±0.50
+96.65±0.31
+96.22±0.36
+100
+4
+3
+96.48±0.43
+96.84±0.33
+95.56±0.31
+Table 2: Comparison of FL methods on MNIST with non-IID split over clients. Best results are in bold. It appears that
+FedProto, compared to the baseline methods, achieves higher accuracy while using much less communicated parameters.
+Dataset
+Method
+Stdev
+of n
+Test Average Acc
+# of Comm
+Rounds
+# of Comm
+Params (×103)
+n = 3
+n = 4
+n = 5
+FEMNIST
+Local
+1
+92.50±10.42
+91.16±5.64
+87.91±8.44
+0
+0
+2
+92.11±6.02
+90.34±6.42
+89.70±6.33
+FeSEM
+1
+93.39±6.75
+91.06±6.43
+89.61±7.89
+200
+16,000
+2
+94.19±4.90
+93.52±4.47
+90.77±6.70
+FedProx
+1
+94.53±5.33
+90.71±6.24
+91.33±7.32
+300
+16,000
+2
+93.49±5.30
+93.74±5.02
+89.49±6.74
+FedPer
+1
+93.47±5.44
+90.22±7.63
+87.73±9.64
+250
+102
+2
+92.27±6.16
+91.99±6.33
+87.54±8.14
+FedAvg
+1
+94.50±5.29
+91.39±5.23
+90.95±7.22
+300
+16,000
+2
+94.13±4.92
+93.02±5.77
+89.80±6.94
+FedRep
+1
+93.36±5.34
+91.41±5.89
+89.98±6.88
+200
+102
+2
+92.28±5.40
+91.56±7.02
+88.23±6.97
+FedProto
+1
+96.82±1.75
+94.93±1.61
+93.67±2.23
+120
+4
+2
+94.93±1.29
+94.69±1.50
+93.03±2.50
+FedProto-mh
+1
+97.10±1.63
+94.83±1.60
+93.76±2.30
+120
+4
+2
+95.33±1.30
+94.98±1.69
+92.94±2.34
+Table 3: Comparison of FL methods on FEMNIST with non-IID split over clients. Best results are in bold. It appears that
+FedProto, compared to the baseline methods, achieves higher accuracy while using much fewer communicated parameters.
+Dataset
+Method
+Stdev
+of n
+Test Average Acc
+# of Comm
+Rounds
+# of Comm
+Params (×104)
+n = 3
+n = 4
+n = 5
+CIFAR10
+Local
+1
+79.72±9.45
+67.62±7.15
+58.64±6.57
+0
+0
+2
+68.15±9.88
+61.03±11.83
+58.81±12.90
+FeSEM
+1
+80.19±3.31
+76.40±3.23
+74.17±3.51
+120
+2.35×104
+2
+76.12±4.15
+72.11±3.48
+70.89±3.39
+FedProx
+1
+83.25±2.44
+79.20±1.31
+76.19±2.23
+150
+2.35×104
+2
+79.83±2.35
+72.56±1.90
+71.39±2.36
+FedPer
+1
+84.38±4.58
+78.73±4.59
+76.21±4.27
+130
+2.25×104
+2
+84.51±4.39
+73.31±4.76
+72,43±4.55
+FedAvg
+1
+81.72±2.77
+76.77±2.37
+75.74±2.61
+150
+2.35×104
+2
+78.99±2.34
+72.73±2.58
+70.93±2.82
+FedRep
+1
+81.44±10.48
+76.93±7.46
+73.36±7.04
+110
+2.25×104
+2
+76.70±11.79
+73.54±11.42
+70.30±8.00
+FedProto
+1
+84.49±1.97
+79.12±2.03
+77.08±1.98
+110
+4.10
+2
+81.75±1.39
+74.98±1.61
+71.17±1.29
+FedProto-mh
+1
+83.63±1.60
+79.49±1.78
+76.94±1.33
+110
+4.10
+2
+79.90±1.08
+75.78±1.05
+72.67±1.09
+Table 4: Comparison of FL methods on CIFAR10 with non-IID split over clients. Best results are in bold. It appears that
+FedProto, compared to the baseline methods, achieves higher accuracy while using much fewer communicated parameters.
+Convergence Analysis for FedProto
+Additional Notation
+Here, additional variables are introduced to better represent the process of local model update. Let fi(φi) : Rdx →Rdc
+be the embedding function of the i-th client, which can be different regarding to different clients. dx and dc represent the
+dimension of the input x and the prototype, respectively. They should be the same for all clients. gi(νi) : Rdc →Rdy is the
+decision function for all clients, in which dy represents the dimension of output y. So the labelling function can be written
+as Fi(φi, νi) = gi(νi) ◦fi(φi), and sometimes we use ωi to represent (φi, νi) for short. In the theoretical analysis, we omit
+the label (j) of prototype C(j) for convenience, which does not affect the proof. We also use qi to represent the weight of the
+prototype for i-th client, and pi to represent the weight of the loss function for the i-th client for short.
+Therefore, the local loss function of client i can be written as:
+L(φi, νi; x, y) = LS(Fi(φi, νi; x), y) + λ∥fi(φi; x) −¯C∥2
+2,
+(1)
+in which the global prototype
+¯C =
+m
+X
+i=1
+qiCi
+(2)
+with
+m
+X
+i=1
+qi =
+m
+X
+i=1
+|Di|
+N
+= 1
+(3)
+and
+Ci =
+1
+|Di|
+X
+(x,y)∈Di
+fi(φi; x),
+(4)
+and it is a constant in L, changing L every communication round, which makes the convergence analysis complex.
+As for the iteration notation system, we use t to represent the communication round, e ∈{1/2, 1, 2, . . . , E} to represent the
+local iterations. There are E local iterations in total, so tE + e refers to the e-th local iteration in the communication round
+t + 1. Moreover, tE represents the time step before prototype aggregation at the server, and tE + 1/2 represents the time step
+between prototype aggregation at the server and starting the ﬁrst iteration on the local model.
+Assumptions
+Assumption 1. (Lipschitz Smooth). Each local objective function is L1-Lipschitz smooth, which also means the gradient of
+local objective function is L1-Lipschitz continuous,
+∥∇Lt1 −∇Lt2∥2 ≤L1∥ωi,t1 −ωi,t2∥2,
+∀t1, t2 > 0, i ∈{1, 2, . . . , m},
+(5)
+which implies the following quadratic bound,
+Lt1 −Lt2 ≤⟨∇Lt2, (ωi,t1 −ωi,t2)⟩+ L1
+2 ∥ωi,t1 −ωi,t2∥2
+2,
+∀t1, t2 > 0, i ∈{1, 2, . . . , m}.
+(6)
+Assumption 2. (Unbiased Gradient and Bounded Variance). The stochastic gradient gi,t = ∇L(ωi,t, ξt) is an unbiased esti-
+mator of the local gradient for each client. Suppose its expectation
+Eξi∼Di[gi,t] = ∇L(ωi,t) = ∇Lt,
+∀i ∈1, 2, . . . , m,
+(7)
+and its variance is bounded by σ2:
+E[∥gi,t −∇L(ωi,t)∥2
+2] ≤σ2,
+∀i ∈{1, 2, . . . , m}, σ2 ≥0.
+(8)
+Assumption 3. (Bounded Expectation of Euclidean norm of Stochastic Gradients).The expectation of the stochastic gradient
+is bounded by G:
+E[∥gi,t∥2] ≤G,
+∀i ∈{1, 2, . . . , m}.
+(9)
+Assumption 4. (Lipschitz Continuity). Each local embedding function is L2-Lipschitz continuous, that is,
+∥fi(φi,t1) −fi(φi,t2)∥≤L2∥φi,t1 −φi,t2∥2,
+∀t1, t2 > 0, i ∈{1, 2, . . . , m}.
+(10)
+Assumption 4 is a little strong, but we only use it in a very narrow domain with width of E steps of SGD in Lemma 2.
+Key Lemmas
+Lemma 1. Let Assumption 1 and 2 hold. From the beginning of communication round t + 1 to the last local update step, the
+loss function of an arbitrary client can be bounded as:
+E[L(t+1)E] ≤LtE+1/2 −(η −L1η2
+2
+)
+E−1
+X
+e=1/2
+∥∇LtE+e∥2
+2 + L1Eη2
+2
+σ2.
+(11)
+Proof. Due to the fact that this lemma is for an arbitrary client, so client notation i is omitted. Let ωt+1 = ωt −ηgt, then
+LtE+1
+(a)
+≤LtE+1/2 + ⟨∇LtE+1/2, (ωtE+1 −ωtE+1/2)⟩+ L1
+2 ∥ωtE+1 −ωtE+1/2∥2
+2
+= LtE+1/2 −η⟨∇LtE+1/2, gtE+1/2⟩+ L1
+2 ∥ηgtE+1/2∥2
+2,
+(12)
+where (a) follows from the quadratic L1-Lipschitz smooth bound in Assumption 1. Taking expectation of both sides of the
+above equation on the random variable ξtE+1/2, we have
+E[LtE+1] ≤LtE+1/2 −ηE[⟨∇LtE+1/2, gtE+1/2⟩] + L1η2
+2
+E[∥gtE+1/2∥2
+2]
+(13)
+(b)
+= LtE+1/2 −η∥∇LtE+1/2∥2
+2 + L1η2
+2
+E[∥gi,tE+1/2∥2
+2]
+(14)
+(c)
+≤LtE+1/2 −η∥∇LtE+1/2∥2
+2 + L1η2
+2
+(∥∇LtE+1/2∥2
+2 + V ar(gi,tE+1/2))
+(15)
+= LtE+1/2 −(η −L1η2
+2
+)∥∇LtE+1/2∥2
+2 + L1η2
+2
+V ar(gi,tE+1/2)
+(16)
+(d)
+≤LtE+1/2 −(η −L1η2
+2
+)∥∇LtE+1/2∥2
+2 + L1η2
+2
+σ2,
+(17)
+where (b) follows from Assumption 2, (c) follows from V ar(x) = E[x2] −(E[x])2, (d) follows from Assumption 2. Take
+expectation of ω on both sides. Then, by telescoping of E steps, we have,
+E[L(t+1)E] ≤LtE+1/2 −(η −L1η2
+2
+)
+E−1
+X
+e=1/2
+∥∇LtE+e∥2
+2 + L1Eη2
+2
+σ2.
+(18)
+Lemma 2. Let Assumption 3 and 4 hold. After the prototype aggregation at the server, the loss function of an arbitrary client
+can be bounded as:
+E[L(t+1)E+1/2] ≤L(t+1)E + λL2ηEG
+(19)
+Proof.
+L(t+1)E+1/2 = L(t+1)E + L(t+1)E+1/2 −L(t+1)E
+(20)
+(a)
+= L(t+1)E + λ∥fi(φi,(t+1)E) −¯Ct+2∥2 −λ∥fi(φi,(t+1)E) −¯Ct+1∥2
+(21)
+(b)
+≤L(t+1)E + λ∥¯Ct+2 −¯Ct+1∥2
+(22)
+(c)
+= L(t+1)E + λ∥
+m
+X
+i=1
+qiCi,(t+1)E −
+m
+X
+i=1
+qiCi,tE∥2
+(23)
+= L(t+1)E + λ∥
+m
+X
+i=1
+qi(Ci,(t+1)E −Ci,tE)∥2
+(24)
+(d)
+= L(t+1)E + λ∥
+m
+X
+i=1
+qi
+1
+|Di|
+|Di|
+X
+k=1
+(fi(φi,(t+1)E; xi,k) −fi(φi,tE; xi,k)∥2
+(25)
+(e)
+≤L(t+1)E + λ
+m
+X
+i=1
+qi
+|Di|
+|Di|
+X
+k=1
+∥fi(φi,(t+1)E; xi,k) −fi(φi,tE; xi,k)∥2
+(26)
+(f)
+≤L(t+1)E + λL2
+m
+X
+i=1
+qi∥φi,(t+1)E −φi,tE∥2
+(27)
+(g)
+≤L(t+1)E + λL2
+m
+X
+i=1
+qi∥ωi,(t+1)E −ωi,tE∥2
+(28)
+= L(t+1)E + λL2η
+m
+X
+i=1
+qi∥
+E−1
+X
+e=1/2
+gi,tE+e∥2
+(29)
+(h)
+≤L(t+1)E + λL2η
+m
+X
+i=1
+qi
+E−1
+X
+e=1/2
+∥gi,tE+e∥2
+(30)
+(31)
+Take expectations of random variable ξ on both sides, then
+E[L(t+1)E+1/2]≤L(t+1)E + λL2η
+m
+X
+i=1
+qi
+E−1
+X
+e=1/2
+E[∥gi,tE+e∥2]
+(32)
+(i)
+≤L(t+1)E + λL2ηEG,
+(33)
+where (a) follows from the deﬁnition of local loss function in Eq. 1, (b) follows from ∥a −b∥2 −∥a −c∥2 ≤∥b −c∥2, (c)
+follows from the deﬁnition of global prototype in Eq. 2, (d) follows from the deﬁnition of local prototype in Eq. 4, (e) and (h)
+follow from ∥P ai∥2 ≤P ∥ai∥2, (f) follows from L2-Lipschitz continuity in Assumption 4, (g) follows from the fact that φi
+is a subset of ωi, (i) follows from Assumption 3.
+Theorems
+Theorem 1. (One-round deviation). Let Assumption 1 to 4 hold. For an arbitrary client, after every communication round, we
+have,
+E[L(t+1)E+1/2] ≤LtE+1/2 −(η −L1η2
+2
+)
+E−1
+X
+e=1/2
+∥∇LtE+e∥2
+2 + L1Eη2
+2
+σ2 + λL2ηEG.
+(34)
+Corollary 1. (Non-convex FedProto convergence). The loss function L of arbitrary client monotonously decreases in every
+communication round when
+ηe′ <
+2(Pe′
+e=1/2 ∥∇LtE+e∥2
+2 −λL2EG)
+L1(Pe′
+e=1/2 ∥∇LtE+e∥2
+2 + Eσ2)
+, e′ = 1/2, 1, . . . , E −1
+(35)
+and
+λt < ∥∇LtE+1/2∥2
+2
+L2EG
+.
+(36)
+Thus, the loss function converges.
+Theorem 2. (Non-convex convergence rate of FedProto). Let Assumption 1 to 4 hold and ∆= L0 −L∗. For an arbitrary
+client, given any ϵ > 0, after
+T =
+2∆
+Eϵ(2η −L1η2) −Eη(L1ησ2 + 2λL2G)
+(37)
+communication rounds of FedProto, we have
+1
+TE
+T −1
+X
+t=0
+E−1
+X
+e=1/2
+E[∥∇LtE+e∥2
+2] < ϵ,
+(38)
+if
+η < 2(ϵ −λL2G)
+L1(ϵ + σ2) ,
+(39)
+and
+λ <
+ϵ
+L2G.
+(40)
+Completing the Proof of Theorem 1 and Corollary 1
+Proof. Taking expectation of ω on both sides in Lemma 1 and 2, then sum them, we can easily get
+E[L(t+1)E+1/2] ≤LtE+1/2 −(η −L1η2
+2
+)
+E−1
+X
+e=1/2
+∥∇LtE+e∥2
+2 + L1Eη2
+2
+σ2 + λL2ηEG
+(41)
+Then, to make sure −(η −L1η2
+2
+) PE−1
+e=1/2 ∥∇LtE+e∥2
+2 + L1Eη2
+2
+σ2 + λL2ηEG ≤0, we get
+η <
+2(PE−1
+e=1/2 ∥∇LtE+e∥2
+2 −λL2EG)
+L1(PE−1
+e=1/2 ∥∇LtE+e∥2
+2 + Eσ2)
+,
+(42)
+and
+λ <
+PE−1
+e=1/2 ∥∇LtE+e∥2
+2
+L2EG
+.
+(43)
+In practice, we use
+ηe′ <
+2(Pe′
+e=1/2 ∥∇LtE+e∥2
+2 −λL2EG)
+L1(Pe′
+e=1/2 ∥∇LtE+e∥2
+2 + Eσ2)
+, e′ = 1/2, 1, . . . , E −1
+(44)
+and
+λt < ∥∇LtE+1/2∥2
+2
+L2EG
+.
+(45)
+So, the convergence of L holds.
+Completing the Proof of Theorem 2
+Proof. Take expectation of ω on both sides in Eq. 34, then telescope considering the communication round from t = 0 to
+t = T −1 with the timestep from e = 1/2 to t = E in each communication round, we have
+1
+TE
+T −1
+X
+t=0
+E−1
+X
+e=1/2
+E[∥∇LtE+e∥2
+2] ≤
+1
+T E
+PT −1
+t=0 (LtE+1/2 −E[L(t+1)E+1/2]) + L1η2
+2
+σ2 + λL2ηG
+η −L1η2
+2
+.
+(46)
+Given any ϵ > 0, let
+1
+T E
+PT −1
+t=0 (LtE+1/2 −E[L(t+1)E+1/2]) + L1η2
+2
+σ2 + λL2ηG
+η −L1η2
+2
+< ϵ,
+(47)

@@ -1,0 +1,1969 @@
+1
+Cross-Domain Federated Semantic Communication with Global
+Representation Alignment and Domain-Aware Aggregation
+Loc X. Nguyen, Ji Su Yoon, Huy Q. Le, Yu Qiao, Avi Deb Raha, Eui-Nam Huh Member, IEEE,
+Walid Saad Fellow, IEEE, Dusit Niyato Fellow, IEEE, Zhu Han Fellow, IEEE,
+and Choong Seon Hong Fellow, IEEE
+Abstract—Semantic communication can significantly improve
+bandwidth utilization in wireless systems by exploiting the
+meaning behind raw data. However, the advancements achieved
+through semantic communication are closely dependent on
+the
+development
+of
+deep
+learning
+(DL)
+models
+for
+joint
+source–channel
+coding
+(JSCC)
+encoder/decoder
+techniques,
+which require a large amount of data for training. To address
+this data-intensive nature of DL models, federated learning
+(FL) has been proposed to train a model in a distributed
+manner, where the server broadcasts the DL model to clients
+in the network for training with their local data. However, the
+conventional FL approaches suffer from catastrophic degradation
+when client data are from different domains. In contrast, in
+this paper, a novel FL framework is proposed to address this
+domain shift by constructing the global representation, which
+aligns with the local features of the clients to preserve the
+semantics of different data domains. In addition, the dominance
+problem of client domains with a large number of samples is
+identified and, then, addressed with a domain-aware aggregation
+approach. This work is the first to consider the domain shift
+in training the semantic communication system for the image
+reconstruction task. Finally, simulation results demonstrate that
+the proposed approach outperforms the model-contrastive FL
+(MOON) framework by 0.5 for PSNR values under three domains
+at an SNR of 1 dB, and this gap continues to widen as the channel
+quality improves.
+Index Terms—Cross-domain data in federated learning, se-
+mantic communication, and deep joint source-channel coding.
+I. INTRODUCTION
+T
+HE number of connected devices is growing at an ex-
+ponential pace, and this trend is expected to continue
+at a faster pace due to the increasing demand for seamless
+connectivity among users [1], [2]. This rapid proliferation
+of new devices, coupled with emerging bandwidth-intensive
+wireless services, will strain the capacity of next-generation
+wireless systems. Indeed, under a limited bandwidth, next-
+generation wireless networks must serve a much higher density
+of users with stricter quality-of-service requirements, such
+Loc X. Nguyen, Ji Su Yoon, Huy Q. Le, Yu Qiao, Avi Deb Raha, Eui-Nam
+Huh, and Choong Seon Hong are with the Department of Computer Science
+and Engineering, Kyung Hee University, Yongin-si, Gyeonggi-do 17104, Rep.
+of Korea, e-mail:{xuanloc088, yjs9512, quanghuy69, qiaoyu, avi, jhonhuh,
+cshong}@khu.ac.kr.
+Walid Saad is with the Department of Electrical and Computer Engineering,
+Virginia Tech, Alexandria, VA 22305 USA {e-mail: walids@vt.edu}.
+Dusit Niyato is with the College of Computing and Data Science, Nanyang
+Technological University, Singapore. e-mails:{dniyato@ntu.edu.sg}.
+Zhu Han is with the Department of Electrical and Computer Engineering
+at the University of Houston, Houston, TX 77004 USA, and also with the
+Department of Computer Science and Engineering, Kyung Hee University,
+Seoul, South Korea, 446-701. email:{hanzhu22@gmail.com}.
+as extremely low latency for online gaming and resource-
+intensive communication for augmented reality or digital twin
+applications [3]–[6]. To accommodate these new devices and
+applications, various communication techniques have been
+proposed, including the integration of sensing and communi-
+cation [7], mmWave, intelligent networking with the assistance
+of AI/ML technologies [8]. Despite tremendous efforts to
+improve the communication efficiency of traditional communi-
+cation, its capacity is limited by Shannon’s theory, thus making
+it difficult to cope with the emerging transition. Consequently,
+the research community is shifting toward the concept of
+semantic communication [9], which operates beyond the bit-
+level paradigm.
+Instead of focusing solely on bit reconstruction as done in
+conventional communication systems, semantic communica-
+tions aims to successfully interpret the meaning of the mes-
+sage. Semantic communication was introduced by Shannon
+and Weaver back in the 1950s [10], but it did not achieve
+promising results due to the technology’s limitations. Recently,
+with the rise of deep learning (DL), semantic communica-
+tion has gained significant attention due to the feasibility of
+semantic extraction by DL models. Specifically, researchers
+have deployed the DL models as the joint source-channel
+encoder/decoder in the semantic communication system, re-
+placing traditional communication. The DL-based semantic
+communication has demonstrated outstanding performance in
+reducing the communication bandwidth, while overcoming
+the “cliff effect” problem encountered in traditional systems
+[11]. The “cliff effect” refers to the failure in transmission
+when the channel quality decreases below a threshold. On the
+other hand, the semantic communication performance is robust
+to channel noise and improves as the noise decreases. The
+improvements are the result of DL models being trained on
+an extensive amount of data, which is normally collected and
+gathered at the centralized server. However, data transmission
+to a centralized server can lead to privacy concerns due to
+potential leakage of sensitive information. Therefore, federated
+learning (FL) has been introduced as a distributed learning
+framework without the need for centralizing the data [12].
+In FL, a central server actively and iteratively sends the
+model to be trained to the devices, i.e., the clients, that
+possess the data. The clients train the model using their local
+data and transmit the updated models back to the server,
+which then aggregates them into a global model to achieve
+better generalization performance [13]. Several studies have
+been proposed to enhance the convergence performance of FL
+with scheduling policies [14], device-to-device communication
+arXiv:2512.00711v1  [cs.IT]  30 Nov 2025
+2
+E
+D
+Original images of the 
+trained domains
+Original images from 
+different domains
+Reconstructed images of 
+the trained domains
+Reconstructed images 
+from different domains
+DL-based semantic 
+communication 
+trained by the 
+cartoon domain 
+Fig. 1. The example of domain shift for the DL-based Semantic Communi-
+cation: the model performs well under the trained domain but fails to obtain
+good performance for other domains.
+links [15], or partial model personalization [16], whose efforts
+aim to alleviate the communication resource requirements and
+enable its deployment in the real world. Existing works have
+applied the FL framework to train semantic communication
+models for various tasks, including audio reconstruction [17],
+image reconstruction [18]–[20], classification tasks [21]–[23].
+However, none of these prior studies considered the cross-
+domain problem, where client data are from different domains.
+For example, in the image modality, domains may include
+photos, art paintings, and human sketches. Each domain has
+distinct characteristics, and the clients with heterogeneous do-
+main data make the FL process more challenging to converge.
+This issue may potentially downgrade the system’s perfor-
+mance, specifically in our case, the semantic communication
+model. In Fig. 1, we provide an example of the domain shift
+for DL-based joint source-channel coding (D-JSCC) for the
+reconstruction task. Specifically, we train the semantic model
+using images from the cartoon domains, and then evaluate
+the trained model on images from three domains: photo, art,
+and finally, cartoon. The reconstructed images for the cartoon
+domain achieve high visual quality, whereas the images from
+the other domains exhibit colored noise and low performance.
+Motivated by this research gap, the main contribution of this
+paper is the proposal of a novel cross-domain FL framework to
+train the DL-based joint source-channel encoder/decoder in the
+semantic communication system. To address the performance
+degradation of the cross-domain clients in FL [24], we first
+design a tailored mechanism for the server to achieve a
+generalization performance by aligning the specialized domain
+knowledge of clients with global knowledge. Secondly, due
+to the nature of data domains, some domains have a larger
+number of data samples, while others are more challenging
+to obtain, resulting in extremely heterogeneous data samples
+for clients. This unbalanced data across domains can cause
+the global model to favor the domain with a large number of
+samples, thus resulting in poor performance for the remaining
+domains. Therefore, we tailor an aggregation approach to
+mitigate this degradation in overall performance. Unlike other
+studies that consider a classification task [25], our scenario’s
+objective is to reconstruct the original image by training the
+DL-based semantic communication model. The contributions
+of our study are provided as follows.
+• To the best of our knowledge, we are the first to consider
+the cross-domain clients problem in the FL process for
+the semantic communication system, which significantly
+degrades the communication performance in terms of the
+quality of the reconstructed images.
+• We propose a global representation feature to capture the
+feature generalization of data across the domains. We
+leverage the global representation feature to align with
+the local feature in the training process. The proposed
+alignment approach ensures that each client is aware of
+the feature discrepancy between its own domain and the
+global representation, thereby enhancing overall perfor-
+mance.
+• To address the heterogeneity in the data samples of each
+domain, we propose a simple yet effective mechanism for
+global model aggregation, called domain-aware aggrega-
+tion. Specifically, instead of naively aggregating all client
+models regardless of their data domains, we first cluster
+clients within the same domain to formulate a domain-
+specific model, and then construct a general model across
+multiple domains.
+• Finally, we conduct a series of experiments to demon-
+strate the effectiveness of the aligning mechanism toward
+the global representation and the effects on performance
+when conducting the domain-aware aggregation. We val-
+idate the results under a variety of FL benchmarks and
+channel conditions.
+The rest of the paper is organized as follows. We briefly
+discuss related works in Section II. Then, Section III describes
+a general system model of the semantic communication and
+the federated learning framework. Our proposed solution to
+address the domain shift problem is demonstrated in-depth in
+Section IV. We provide the simulation analysis, image visu-
+alization in Section V. Finally, the conclusions are presented
+in Section VI.
+II. RELATED WORKS
+A. Semantic Communication for Image Reconstruction
+The need for image transmission has never been reduced and
+continues to increase significantly throughout history, which
+motivates extensive research on semantic communication for
+image reconstruction tasks [26]–[29]. The authors in [26] were
+among the first to recognize the potential of the DL model for
+end-to-end joint source-channel coding, and they proposed two
+convolutional neural network models for encoder and decoder.
+Their proposal achieved higher image quality performance
+when the channel had low signal-to-noise ratio (SNR) values.
+However, the paper failed to leverage feedback information
+for the learning process, which motivated the framework in
+[11]. Specifically, they exploited the feedback by analyzing
+the distortion of the transmitted signal, thereby improving the
+encoding ability of the DL-based model and achieving higher
+reconstruction quality. On the other hand, the Attention DL-
+based JSCC (ADJSCC) was proposed to address the dynamics
+of the channel state information by exposing the DL models
+to a wide range of SNR values for parameter optimization
+[27]. With the development of the architecture for the DL
+models, the Swin Transformer [30] was proposed to resolve
+3
+the high computing complexity of the attention mechanism,
+and thus was adopted in [28] for securing a more efficient
+system in both computing and communication resources in
+the semantic communication system. Approaching semantic
+communication from a different perspective, the authors in
+[29] proposed a novel demodulation method to address the
+dynamic output of the encoder/decoder, thereby bridging the
+gaps between semantic communication studies and current
+digital communication systems. However, the aforementioned
+studies assume the availability of data on a central server for
+training and overlook the existence of cross-domain data.
+B. Cross-domain in Semantic Communication
+There is a limited amount of research on semantic communi-
+cation for data from different domains. Specifically, the study
+[31] adopted semantic communication for intelligent machine-
+to-machine applications and proposed a cross-domain inter-
+pretation for human inspection. The cross-domain meaning
+interpretation was obtained by using the Dewey Decimal Clas-
+sification. In the meantime, a multi-domain adaptive semantic
+coding network was proposed in [32] to effectively encode and
+decode data from different sources with the assistance of a star-
+generative adversarial network (Star-GAN) for domain trans-
+formations. On the other hand, authors in [33] proposed multi-
+scale semantic communication for the object detection task
+with the assistance of domain adaptation training, where they
+consider images captured under different lighting or weather
+conditions as cross-domain. Unlike these studies, we consider
+a higher-level cross-domain problem, where the data originates
+from diverse sources, such as photos, sketches, cartoons, or
+art images. These cross-domain data are distributed across
+different semantic communication devices, which presents a
+challenge for training DL-based models.
+C. Federated Learning for Semantic Communication
+There is an increase in the number of studies on training
+semantic communication systems with the FL framework,
+particularly for image transmission [34]–[38]. Specifically, the
+authors in [34] designed a hybrid model combining convolu-
+tion neural network (CNN) and Transformer designs for DL-
+based semantic communication and trained it using FL. To
+actively update the learning model for the system, the authors
+divided the clients into two groups: one for full parameter
+updates and one for aligning feature representation, which
+stabilizes the optimization process [35]. Interestingly, the work
+[36] adopted generative artificial intelligence to assist the FL
+training of semantic communication by distilling knowledge to
+the student model, which ensures a unified update direction for
+the training. In the work [37], the author leveraged cross-modal
+semantic information to achieve a better user experience,
+specifically through hybrid coding for the haptic signal. On
+the other hand, in [38], the authors formulated a problem
+to jointly optimize the energy consumption and model per-
+formance of the federated learning framework by controlling
+the sub-carrier allocation variable, transmission power, and
+computing frequency. However, none of the above studies
+considered the domain drift phenomenon when client data
+differ across domains, which leads to significant degradation
+in the performance of the learning system.
+III. SYSTEM MODEL
+We consider a set M of devices that can perform a se-
+mantic communication process. Before deploying semantic
+communication, we leverage their local data to train the DL-
+based joint source-channel coding for image modality. First,
+we explain the components of the semantic communication
+model for the transmitter and receiver, and then illustrate the
+integration of the distributed learning framework to address the
+data-intensive requirement of our DL-based semantic commu-
+nication system. Finally, we consider the cross-domain in the
+client data and discuss its impact on global convergence.
+A. Semantic Communication Components and Training
+In Fig. 2a, we consider the semantic communication model
+that contains the D-JSCC encoder for the transmitter, a channel
+model for the wireless environment, and finally a D-JSCC
+decoder for decoding the signal at the receiver, similar to other
+semantic studies [11], [27]. With a given image I ∈R3×H×W
+and a set S of SNR values, the encoding process of it can be
+denoted as
+XI = Encα(I, γ), ∀I ∈Rn, ∀γ ∈S,
+(1)
+where the Enc(·)α represents the joint source-channel en-
+coder with its corresponding parameters α, XI ∈Ck is
+the transmitted signal of the image I through the channel.
+The compression ratio between the transmitted signal and the
+original image is the ratio between k and n, where n =
+3×H ×W. The signal is exposed not only to noise but also to
+fading effects caused by obstacles in the wireless environment
+as follows:
+YI = HXI + Nγ, Nγ ∼CN(0, γ),
+(2)
+where YI and H denote the received signal and the channel
+fading coefficient at the receiver site, respectively. Nγ is the
+channel noise, where its elements follow the complex Gaussian
+distribution with zero mean and variance γ. With the received
+signal YI, the semantic communication receiver decodes it
+with the D-JSCC decoder as follows:
+ˆI = Decβ(YI, γ), ∀I ∈Rn, ∀γ ∈S,
+(3)
+where ˆI and Decβ(·) represents the reconstructed image
+and the deep joint source-channel decoder with parameters
+β at the receiver, respectively. However, DL-based models
+are inherently data-hungry, requiring a substantial amount
+of training data to achieve high performance and robustness
+against noise. Therefore, the parameters θ = {α, β} of our
+model must be trained with sufficient data before deployment
+for transmission. Most of the current studies consider a single
+central server for the end-to-end training as follows:
+arg min
+α,β
+[L(I, ˆI)], ∀I ∈Rn,
+(4)
+where L(·, ·) is the training loss, determined by the Mean
+Squared Error (MSE). Centralized training not only consumes
+4
+Channel
+Encoder
+Semantic 
+Encoder
+Wireless 
+Physical Channel 
+H, N
+Channel 
+Decoder
+Semantic 
+Decoder
+DL-based JSCC Encoder
+DL-based JSCC Decoder
+Data-intensive 
+Requirement 
+A) The general framework of the DL-based JSCC and its requirements.
+Client 1
+Client 2
+Client m
+Client m+1
+Train
+Train
+Train
+Train
+Coordinate BS for Broadcasting/Receiving 
+the Semantic Communication Model
+B) The federated learning frameworks for training the DL-based JSCC. 
+Local 
+Data
+Model to 
+be trained
+Fig. 2. A) Provide the general components of the semantic communication system that follow the deep learning-based joint source-channel coding direction.
+B) Present the implementation of a federated learning framework for training the DL-based semantic communication system, which requires training on a
+large amount of data.
+a large amount of communication resources due to the mas-
+sive data transmission, but also raises privacy and sensitivity
+issues regarding the data collected from clients. Therefore, we
+conduct the training with the FL framework.
+B. FL for DL-based Semantic Communication System
+Instead of centralizing the data, each client device actively
+trains the model with its data, and the BS is responsible for
+coordinating the local learning process of each device, i.e., the
+client, by receiving the locally trained model and broadcasting
+the new aggregated model to clients, as illustrated in Fig. 2b.
+Within the study, we focus on image modality; however, we
+can expand the FL framework to train other modalities such
+as audio [17], text [39]. Each client can possess a different
+amount of data, which we denote as Dm, indicating the
+amount of data that client m has. Upon receiving the global
+semantic communication model θg from the BS server at round
+r, client m trains it with the private images as follows:
+θr+1
+m
+= θr
+g −η∇Lm(I, ˆI), ∀I ∈Dm,
+(5)
+where θm is the updated model of client m after the local
+training. Then, the BS server conducts the global model
+aggregation of all the local models with the objective of
+obtaining better generalization capability, i.e.,
+θr+1
+g
+=
+M
+X
+m=1
+Dm
+D · θr+1
+m .
+(6)
+In (6), the contribution of each local client is proportional to
+the amount of its data relative to the total data of all clients D,
+which is the core of FedAvg [12]. We consider the diversity
+of clients’ data, reflected across domains such as real-world
+photos versus cartoon images. The latent space, characteristics,
+and underlying distributions of images from different domains
+are distinct, leading to the creation of derived local models and
+the degradation of the global model.
+IV. GLOBAL REPRESENTATION AND DOMAIN-AWARE
+AGGREGATION FOR CROSS-DOMAIN FL
+We first define u as the source domain of a client, and the
+total possible set of source domains is U = {u1, u2, . . . , un}.
+Under the conventional training process of the FL framework,
+each client trained the received global model with its local data
+without being aware of the existence of other domains’ data.
+Therefore, the clients from different domains will update the
+parameters accordingly to their own data domain regardless of
+the training process of the other clients, as shown in Fig. 3.
+This independent updating results in client parameter drift
+across the network [40]. With each client’s final local parame-
+ters presented by θm, and under the domain heterogeneity, the
+difference between the global and the clients becomes even
+more significant, which is quantified by:
+Varm(θm) = 1
+M
+M
+X
+m=1
+θg −θm
+.
+(7)
+When aggregated at the server, the global model obtained from
+(6) is far from any client’s optimum, increasing the global
+empirical risk and leading to unstable convergence. In prac-
+tice, the resulting model not only underperforms within each
+5
+Set of Clients
+for Domain 
+Photo
+Global
+Model
+Client 1
+Client 2
+Client 3
+Client 1
+Client 2
+Client 3
+Set of Clients
+for Domain 
+Art
+Client 1
+Client 2
+Client 3
+Set of Clients
+for Domain 
+Cartoon
+Distribute the 
+learning model 
+to clients
+Trained 
+Local Models
+for Photo
+Trained 
+Local Models
+for Art
+Trained 
+Local Models
+for Cartoon
+The
+vanilla
+local
+training
+without the aware of
+the
+existence of other domains.
+θ𝑔achieves low results 
+for the domain-specific
+Fig. 3. Visualization of data from the same class but different domains, showing that their latent features and distributions drift significantly. Each domain can
+be regarded as a distinct task; therefore, simply aggregating models trained on different tasks may degrade task-specific performance and hinder generalization.
+domain but also fails to achieve the objective of generalization
+across domains.
+A. Global Representation Feature and Alignment Loss
+To overcome the discrepancy in the updated parameter
+directions across clients’ learning models from different do-
+mains, we construct a global representation feature at the
+server by combining the local feature domains from clients, as
+shown in Fig. 4. Therefore, this representation contains knowl-
+edge about the clients’ domain data and can be integrated into
+local training, thereby preventing the drift of local parameters.
+We demonstrate the construction process as below. Under the
+training process of each client, we extract the local feature
+representation of the client data as follows:
+F S
+m =
+1
+Dm
+Dm
+X
+i=1
+fθ(Ii) ∈RC,
+(8)
+where fθ(·) is the semantic communication model of the client
+m, and F S is the summarization of the model output for all
+images before the reshaping process over the total number
+of client data. The summarization and averaging ensure the
+privacy of the training client, allowing the local feature rep-
+resentation to be transmitted safely to the server. In addition,
+summarizing all client data ensures the local feature captures
+a generalization of the domain data, thereby better illustrating
+the domain’s characteristics. On the server side, we construct
+the global representation by averaging the local features from
+clients, which helps it capture the hidden latent structure of
+local data from different source domains. The mathematical
+equation for the global representation is provided as follows:
+G = 1
+M
+M
+X
+m=1
+F S
+m, G ∈RC.
+(9)
+After the construction of the global representation, we
+deliver it to the client side for the training. Specifically, we
+design a generalization loss LG at the client side as follows:
+LG = MSE(G, F S
+m).
+(10)
+This generalization loss aligns local data features of a specific
+domain Sm with the global representation across all domains.
+Compared to a scenario where the local model is trained
+with a single loss value, the generalization loss provides a
+soft constraint on parameter updates, inspired by device-level
+systems constraint in [41]. To be specific, when the local
+model’s parameters are trained toward the optimal value for
+its own domain data, it loses generalization capacity, the
+generalization loss becomes significantly large, and it will steer
+the learning process toward a more balanced position. Our loss
+is combined with the loss of the image reconstruction task to
+achieve high performance for the general data, regardless of
+the domain as follows:
+Ltot = Lrecon + λ · LG,
+(11)
+where λ represents the contribution weight of the generaliza-
+tion loss into the client learning process.
+B. Domain-aware Aggregation for Global Model
+Secondly, we identify the dominance problem in the global
+model aggregation process of the conventional FL framework,
+where a client with a large amount of data in a specific domain
+pushes the global model toward its own distribution [42]. In
+FedAvg-like algorithms, the global parameters are updated
+as a weighted average of local models, where the weights
+correspond to the data sizes of each client. As a result, clients
+possessing more abundant data dominate the aggregation,
+overshadowing the contribution of others. It is worth noting
+that in real-world scenarios, data from different domains can
+vary greatly in both availability and complexity. For instance,
+an artist may require hours or even months to produce a single
+artwork, while sketch images can be generated within minutes
+and in large quantities. Consequently, the server may overfit
+to the easily generated but less semantically rich domain,
+compromising the generalization of the global model to more
+meaningful yet underrepresented domains. This imbalance in
+data samples across domains underscores the necessity of
+a domain-aware aggregation strategy that accounts semantic
+alignment and domain diversity rather than solely relying on
+data volume. To address this domain dominance, we propose
+a simple yet effective domain-aware mechanism to improve
+the model’s generalization performance. Specifically, on the
+server, we first aggregate the models from clients in the same
+domain to build a specialized model for that domain, utilizing
+domain-specific information that is general and can be shared
+6
+Client 1
+Client 2
+Client 
+m-1
+E
+D
+E
+D
+E
+D
+E
+D
+Local Feature 
+Representations
+Global 
+Representation
+-
+2
+-
+2
+(1) Transmit  local 
+representation to 
+construct the global one
+(2) Provide the 
+global anchor for 
+local training
+E
+D
+E
+D
+E
+D
+E
+D
+Client 1
+Client 2
+Domain 1
+Client 1
+Client 2
+E
+D
+Client 3
+…
+E
+D
+Specialized Model 
+for the Domain
+E
+D
+Specialized Model 
+for the Domain
+E
+D
+Specialized Model 
+for the Domain
+…
+…
+E
+D
+Generalized 
+Model Across 
+Domains
++Lrecon
++Lrecon
+…
+Client m
+Domain n
+Equal 
+Contribution 
+Fig. 4. (LHS) The local feature representation extractions and the construction of global representations; (RHS) The domain-aware aggregation approach to
+overcome the dominance of a subset of clients.
+with the server. We have a total of four domains: photo, art
+painting, cartoon, and finally sketch, as shown in Fig. 4. The
+specialized model for the domain u is presented as follows:
+θr+1
+u,g =
+X
+m∈M,u
+Dm
+Du
+· θr+1
+m ,
+(12)
+where θu,g(·) denotes the global model for the domain u,
+and Du is the total amount of data across clients from the
+corresponding domain u. Then, we aggregate the final models
+from the specialized models across all domains, giving each
+domain equal contributions, which ensures that each domain’s
+data is treated fairly and not favored over any particular one.
+θr+1
+g
+= 1
+n
+n
+X
+u=1
+θr+1
+u,g .
+(13)
+With our proposed aggregation approach, clients with a
+large amount of data can contribute a greater portion of their
+trained weights to the specialized models for their correspond-
+ing domain, which is reasonable because they are trained
+on a large amount of data and thus have more advanced
+models. On the other hand, our approach puts constraints on
+the weighted contribution of clients from one domain toward
+a different domain, which prevents the dominance of a high-
+sample domain in the global aggregation process [43]. This
+ensures the global model is fair to all domains and provides
+the system’s generalization performance, as indicated in V-D.
+The sequential detail of the Cross-domain Federated learning
+framework is given in Algorithm 1. In the first round, we only
+transmit the initial global model.
+C. Convergence Analysis
+1) Assumptions: We follow three standard assumptions
+[41]:
+1)
+Each
+local
+objective
+function
+is
+L1-Lipschitz
+smooth and continuous, 2) the stochastic gradient gm,r =
+∇L(θm,r, ξr) is unbiased and its variance bounded by σ2,
+3) the expected stochastic gradient is bounded by V . On the
+other hand, we consider the fourth assumption for local repre-
+sentation extraction function, being L2-Lipschitz continuous,
+which can be represented as the following equation [44]:
+∥fθm,r1(I)−fθm,r2(I) ≤L2∥θm,r1−θm,r2∥2, ∀r1, r2, m ∈M.
+(14)
+Given the assumptions above, we establish the theoretical
+convergence analysis, with Theorem 1 detailing the expected
+decrease in each round, where e represents the local iteration
+and R represents the global round.
+Theorem 1. For an arbitrary client, after every communication
+round, we have,
+E[L(r+1)E+1/2] ≤LrE+1/2 −
+
+η −L1η2
+2
+ E−1
+X
+e=1/2
+∥∇LrE+e∥2
+2
++ L1Eη2
+2
+σ2 + λL2ηEV,
+(15)
+where rE is the timestep before the global feature representa-
+tion. rE+1/2 is the time step right after the global representa-
+tion and right before its first local step. The theorem indicates
+the deviation bound of the local objective function after each
+communication round, and convergence can be assured if a
+certain expected one-round decrease (with appropriate η and
+λ).
+7
+Algorithm 1 Cross-domain Federated Learning Framework
+for Semantic Communication
+1: Initialize: Global model θ, Global Training Round R,
+number of gateways G.
+2: for one global round r= 1, 2, . . . , R do
+3:
+Broadcast the global model & global feature to clients.
+4:
+for each client device m ∈M in parallel do
+5:
+for each step e ∈E do
+6:
+Feed forward the data batch into the model to
+obtain the reconstruction images and average
+feature representation.
+7:
+F s
+m=F s
+m+
+ fθr,e
+m (IB)
+
+/Dm
+8:
+θr,e+1
+m
+←θr,e
+m −η∇Lr,e
+tot.
+9:
+end for
+10:
+Achieve the final model θr+1
+m
+& the local feature
+representation F r+1
+m
+of clients.
+11:
+end for
+12:
+Sequentially aggregate the domain specialized models
+θr+1
+u,g with (12) and the new global model at the server,
+along with the global representation.
+13: end for
+14: Output: Global Model θ.
+Corollary 1. The loss function L of an arbitrary client
+monotonously decreases in every communication round when
+ηe′ <
+2
+  Pe′
+e=1/2∥LrE+e∥2
+2−λL2EV
+
+L1
+  Pe′
+e=1/2∥∇LrE+e∥2
+2+Eσ2,
+(16)
+where e′ runs from the first iteration step till last batch of
+data, and
+λe = ∥∇LrE+1/2∥2
+2
+L2EV
+.
+(17)
+Thus, the loss function converges. We provide the proofs of
+Theorem 1 and Corollary in [45].
+D. Swin Transformer-based DeepJSCC
+In this section, we provide the details of the DL archi-
+tecture of the semantic communication model. Specifically,
+we implement the Swin Transformer model [30], which has
+high capability in semantic extraction and also exhibits high
+computing efficiency, for the source encoder/decoder. Instead
+of executing a global attention mechanism over all the patches
+within the image, like the conventional Vision Transformer, the
+Swin model partitions the image into non-overlapping local
+windows and applies the attention mechanism to each window.
+Benefiting from this local self-attention, we can significantly
+reduce the computing operation by processing on a smaller
+region. To capture the long-range dependency correlation
+across windows, Swin Transformer proposes a shifted window
+operation to provide connections among windows. With an
+image having h×w patches, and each window contains M×M
+patches, the comparison of computation complexity between
+the global multi-head self-attention (MSA) and the window-
+based is presented according to [30]
+Ω(MSA) = 4hwC2 + 2(hw)2C,
+(18)
+Ω(W-MSA) = 4hwC2 + 2M 2hwC.
+(19)
+The MSA scales quadratically with the number of patches
+hw, and W-MSA only scales linearly with the image size,
+while we can set the size of M. Specifically, our encoder
+model consists of two Swin Transformer stages, where the
+first stage comprises two Transformer blocks, and the sub-
+sequent stage features four blocks. On the other hand, the
+source decoder has a symmetric architecture toward the source
+encoder, where the first stage has four Transformer blocks and
+the second has two. The symmetric architecture between the
+source encoder and decoder enhances the capability for signal
+decoding, thereby improving end-to-end performance. On the
+other hand, we adopt a simple yet effective DL architecture
+[28] for the channel coders to compress and decompress the
+semantic features. Specifically, it consists of a set of fully
+connected layers combined with an SNR fusion mechanism,
+which enables the model to adapt its encoding and decoding
+process according to the current channel condition, thereby
+improving robustness and reconstruction fidelity under varying
+noise levels.
+V. SIMULATION RESULTS AND ANALYSIS
+Within this section, we conduct a comprehensive series of
+simulations to effectively demonstrate the outstanding perfor-
+mance of our frameworks when the client’s data originates
+from various data sources. First, we provide the simulation
+setting for our training framework and also the communi-
+cation environment for the semantic communication system.
+Secondly, we present benchmark schemes for comparison
+analysis, and finally, we evaluate system performance under
+our proposed approaches in comparison to others. As our
+framework addresses domain shift in federated learning, we
+refer to it as FedDoM.
+A. Simulation Configuration for the FL & the Semantic Com-
+munication Model
+1) Datasets, Distributions, and DL-based architecture: We
+adopt the PACS dataset for our training and evaluation process
+due to its diverse image domains, including photo, sketch, art
+painting, and cartoon [46]. Similar to other studies, we sample
+30% of the full-size datasets for each domain, and we divide
+them into 80% for training process and 20% for testing. Then,
+we partition these data samples into a total of ten clients using
+the Dirichlet distribution with α = 1. Specifically, for each
+domain, the data is divided into two or three clients, and each
+client is limited to one type of domain data, which exacerbates
+the heterogeneity in domains. We provide the number of data
+samples of clients and their domains as in Table I.
+Unlike other conventional FL approaches that focus on
+classification tasks, the objective of our semantic communi-
+cation model is image reconstruction, which requires a more
+complex DL architecture. Therefore, we adopt the Swin-
+Transformer model, which has high capability in semantic
+extraction and low computational resource requirements, for
+the implementation of DL-based semantic communication.
+We apply the power normalization operation to the output
+of the DL-based JSCC encoder before transmitting it, as
+8
+100 200 300 400 500
+23
+24
+25
+26
+27
+PSNR
+Photo Domain
+100 200 300 400 500
+23
+24
+25
+26
+Art Domain
+100 200 300 400 500
+23
+24
+25
+26
+27
+Cartoon Domain
+100 200 300 400 500
+28
+29
+30
+31
+32
+33
+34
+Sketch Domain
+100 200 300 400 500
+0.84
+0.86
+0.88
+0.90
+0.92
+MS-SSIM
+100 200 300 400 500
+0.82
+0.84
+0.86
+0.88
+0.90
+100 200 300 400 500
+0.88
+0.90
+0.92
+0.94
+100 200 300 400 500
+0.95
+0.96
+0.97
+0.98
+0.99
+1.00
+Proposed Framework
+MOON
+FedProx
+FedAvg
+Fig. 5. The comprehensive performance of the proposed frameworks against other FL approaches for four kinds of domain data. The comparison performance
+is measured in terms of PSNR and MS-SSIM metrics.
+described in [26]. To simulate the dynamic of channel noise,
+we randomly sample a value from the set of S ∈{1, 3, 5, 7, 9},
+while the transmit power is fixed at 1 for all the experiments.
+The learning rate η of DL models is 1e−3, the training batch
+size is 16, and the total global training rounds are 500.
+2) Benchmarks: To demonstrate the performance gain of
+our proposal framework, we conduct the simulation experi-
+ments against several classical benchmarks as follows:
+• FedAvg: It is a traditional federated learning framework,
+where clients are trained independently of each other, and
+the BS aggregates the global model using the proportion
+of the number of data samples from each client [12].
+• FedProx: It introduces a regularization term to limit the
+deviation of each local model from the global model in
+the local training process, thereby helping to mitigate data
+heterogeneity among clients in the network [41].
+• MOON: It proposes a contrastive loss that encourages
+each client’s model to stay closer to the global model
+and farther from outdated local models, helping align
+representations across clients [47].
+B. Domain Shift in Semantic Communication Model
+1) Performance Convergence: As shown in Fig. 5, we
+present the convergence performance of our training frame-
+work compared to the benchmarks, with an SNR of 5 dB.
+In general, the proposed framework reaches high PSNR and
+MS-SSIM values in fewer rounds than MOON, FedProx,
+and FedAvg, showing both rapid error reduction and early
+capture of salient semantics. Specifically, we achieve higher
+TABLE I
+NUMBER OF TRAINING SAMPLE FOR CLIENTS AND ITS CORRESPONDING
+DOMAINS
+Domain
+Client
+Samples
+Domain
+Client
+Samples
+Photo
+#1
+43
+Art
+#6
+70
+#2
+358
+#7
+303
+Cartoon
+#3
+87
+#8
+119
+#4
+93
+Sketch
+#9
+827
+#5
+383
+#10
+116
+TABLE II
+AVERAGE PERFORMANCE FOR ALL THE DOMAINS
+Frameworks
+Proposal
+MOON
+FedProx
+FedAvg
+PSNR
+28.2413
+28.1862
+27.9640
+27.7421
+MS-SSIM
+0.9452
+0.9375
+0.9339
+0.9327
+results for the Photo, Art, and Cartoon domains, whose data
+structures are more complex than those of the Sketch domain,
+which is relatively simple. Across different domains, our
+curves have fewer sudden jumps and shorter transients than
+the baselines, showing more consistent updates each round.
+Within this section, we focus on the convergence curves of the
+frameworks, and later, we investigate the reason for the less
+impressive performance for sketch data and explain why such
+behavior is desirable. Furthermore, we provide the average
+performance across domains in Table II, where the proposed
+system achieves the highest performance for both metrics.
+This outstanding performance effectively demonstrates the
+generality of the semantic communication system for handling
+9
+TABLE III
+PERFORMANCE OF THE SEMANTIC COMMUNICATION SYSTEM BEING TRAINED UNDER DIFFERENT FL FRAMEWORKS
+AWGN
+Channel
+Condition SNR
+FedAvg
+FedProx
+MOON
+FedDoM (Ours)
+PSNR
+MS-SSIM
+PSNR
+MS-SSIM
+PSNR
+MS-SSIM
+PSNR
+MS-SSIM
+Photo Domain
+1 dB
+23.9898
+0.8395
+24.3577
+0.8430
+24.5203
+0.8530
+25.2305
+0.8703
+4 dB
+25.7241
+0.8949
+26.0667
+0.8971
+26.2694
+0.9045
+26.9768
+0.9170
+7 dB
+26.9677
+0.9280
+27.3434
+0.9301
+27.5417
+0.9346
+28.2844
+0.9437
+10 dB
+27.7098
+0.9446
+28.1969
+0.9480
+28.3099
+0.9510
+29.1573
+0.9580
+Art Domain
+1 dB
+22.9119
+0.8119
+23.2517
+0.8149
+23.3539
+0.8251
+24.0118
+0.8421
+4 dB
+24.7294
+0.8759
+26.3322
+0.8770
+25.1907
+0.8847
+25.8448
+0.8978
+7 dB
+26.0138
+0.9126
+26.3321
+0.9137
+26.4754
+0.9183
+27.1921
+0.9289
+10 dB
+26.8009
+0.9311
+27.2026
+0.9336
+27.3012
+0.9366
+28.0983
+0.9455
+Cartoon Domain
+1 dB
+24.0187
+0.8818
+24.1687
+0.8833
+24.2266
+0.8854
+24.7267
+0.8978
+4 dB
+25.8879
+0.9249
+26.0961
+0.9270
+26.1705
+0.9286
+26.7655
+0.9386
+7 dB
+27.0243
+0.9481
+27.2331
+0.9494
+27.2992
+0.9500
+28.0201
+0.9588
+10 dB
+27.7154
+0.9607
+27.9330
+0.9621
+27.9693
+0.9616
+28.7795
+0.9695
+Sketch Domain
+1 dB
+30.9371
+0.9949
+30.9542
+0.9945
+31.3318
+0.9947
+29.8258
+0.9912
+4 dB
+32.7815
+0.9978
+32.8184
+0.9978
+33.2617
+0.9981
+31.5196
+0.9958
+7 dB
+33.9914
+0.9986
+34.0131
+0.9986
+34.4753
+0.9988
+32.5133
+0.9971
+10 dB
+34.7360
+0.9990
+34.7430
+0.9990
+35.2475
+0.9991
+33.1311
+0.9978
+TABLE IV
+SENSITIVITY ANALYSIS OF THE SCALING COEFFICIENT λ ON PSNR AND MS-SSIM UNDER DIFFERENT DOMAINS AND CHANNEL CONDITIONS
+λ
+Domain
+PSNR (dB)
+MS-SSIM
+1 dB
+4 dB
+7 dB
+10 dB
+1 dB
+4 dB
+7 dB
+10 dB
+1.0
+Art
+24.0118
+25.8448
+27.1921
+28.0983
+0.8421
+0.8978
+0.9289
+0.9455
+Cartoon
+24.7267
+26.7655
+28.0201
+28.7795
+0.8978
+0.9386
+0.9588
+0.9695
+Photo
+25.2305
+26.9768
+28.2844
+29.1573
+0.8703
+0.9170
+0.9437
+0.9580
+Sketch
+29.8258
+31.5196
+32.5133
+33.1311
+0.9912
+0.9958
+0.9971
+0.9978
+1.5
+Art
+24.0083
+25.8606
+27.2360
+28.1643
+0.8415
+0.8979
+0.9295
+0.9466
+Cartoon
+24.7173
+26.7943
+28.0393
+28.8091
+0.8977
+0.9384
+0.9584
+0.9695
+Photo
+25.1902
+26.9673
+28.3059
+29.2009
+0.8687
+0.9165
+0.9439
+0.9588
+Sketch
+29.9034
+31.5663
+32.5568
+33.1539
+0.9919
+0.9961
+0.9973
+0.9979
+2.0
+Art
+23.8546
+25.6333
+26.9086
+27.7467
+0.8395
+0.8950
+0.9262
+0.9426
+Cartoon
+24.6644
+26.6521
+27.8366
+28.5531
+0.8961
+0.9378
+0.9576
+0.9681
+Photo
+25.0641
+26.7486
+27.9537
+28.7487
+0.8682
+0.9150
+0.9417
+0.9559
+Sketch
+30.0704
+31.6931
+32.6668
+33.2482
+0.9921
+0.9963
+0.9973
+0.9978
+data from diverse sources.
+2) Performance under a wide range of Channel Conditions:
+In Table III, we present the PSNR and MS-SSIM metrics in all
+training frameworks for a comprehensive comparison. Overall,
+the FedDoM secures the DL-based semantic communication
+model with the most robust capability, followed by MOON,
+FedProx, and finally FedAvg. For the photo domain, the
+performance gap between the proposed FedDoM and the
+second-best approach, MOON, is 0.701 and 0.017 when the
+channel noise is at 1 dB. In the meantime, our proposal
+outperforms the FedAvg and FedProx up 1.2407 and 0.8728
+for the PSNR metric, 0.034 and 0.027 in terms of MS-SSIM.
+These performance gaps have an increasing trend when the
+quality of the wireless channel improves.
+We also encounter a similar pattern for the performance
+results for the Art and Cartoon domains. Specifically, the
+performance gap is around 0.6579 at the 1 dB and increases
+to 0.7971 at 10 dB, while there is a significant difference in
+MS-SSIM value between training approaches at 1 dB, which
+is around 0.017; however, due to the maximum value of MS-
+SSIM is 1, then the metric performance gap encounters the
+saturation point at 10 dB with the value 0.0089.
+The Sketch domain exhibits a different pattern. Here,
+MOON attains the highest PSNR and MS-SSIM across SNRs,
+while FedDoM is outperformed. We attribute this to the rela-
+tive simplicity and low semantic variability of sketch images:
+sketches contain sparse, high-contrast structure and fewer
+texture cues, so methods that strongly preserve local features
+(e.g., contrast- and edge-preserving objectives used in some
+domain-adaptation training) can produce superior numerical
+fidelity. In contrast, FedDoM’s domain-aware clustering and
+global-alignment mechanisms prioritize generalization across
+diverse, high-variation domains; this design yields superior
+performance on Photo, Art, and Cartoon images but can
+slightly reduce performance on low-variance domain (Sketch),
+where specialized, domain-focused optimization is most ben-
+eficial.
+Taken together, these results confirm two key points. First,
+domain-aware aggregation combined with global representa-
+tion alignment substantially improves cross-domain general-
+ization for complex-image domains and benefits more from
+better channel conditions. Second, there is an inherent trade-
+off between cross-domain generality and per-domain special-
+ization, demonstrating the need for mechanisms that adapt
+10
+Original Images
+FedDoM Images
+FedAvg Images
+FedProx Images
+MOON Images
+Fig. 6. Visualization of the original images and the reconstructed outputs produced by FedDoM, FedAvg, FedProx, and MOON. Notable differences appear
+particularly in the background regions of the Cartoon and Photo samples, where FedDoM yields smoother textures and reduced noise compared with the other
+frameworks.
+aggregation strength based on domain complexity or allow
+hybrid strategies (e.g., per-domain fine-tuning) when domain
+homogeneity is high.
+3) Visual Performance: In Fig. 6, we qualitatively compare
+the reconstructed images obtained by different FL training
+frameworks under the same channel condition. It is evident that
+the proposed FedDoM framework produces reconstructions
+that are closest to the original images in terms of both
+structural integrity and perceptual detail. In particular, Fed-
+DoM effectively preserves fine-grained textures and semantic
+attributes-such as object boundaries, color consistency, and
+spatial coherence-while the baseline approaches (FedAvg, Fed-
+Prox, and MOON) often exhibit blurring, color distortion, or
+loss of semantic content. These degradations are especially no-
+ticeable in the background of the Photo and cartoon domains,
+where our model achieves smoother results compared to the
+remaining benchmarks and also closely resembles the original
+image. In addition, FedDoM maintains consistent reconstruc-
+tion quality across domains, demonstrating the benefit of the
+proposed global representation alignment and domain-aware
+aggregation mechanisms. Overall, this qualitative analysis
+aligns well with the quantitative results in Table III, confirming
+that FedDoM achieves superior cross-domain generalization
+and perceptual fidelity under various channel conditions.
+4) Sensitive analysis for the coefficient value of the global
+representation: So far, we have conducted the experiment with
+the value of λ equal to one, and in Table IV, we present
+the sensitivity analysis of the scaling coefficient λ for the
+generalization alignment loss, evaluated across four domains
+under various SNR levels. Overall, the results indicate that
+the value of λ has a notable influence on the reconstruc-
+tion quality of the semantic communication system. When
+λ = 1, the model achieves high reconstruction performance,
+particularly for the Photo and Cartoon domains, suggesting
+that moderate weighting allows effective alignment between
+the global and local representations. Increasing λ to 1.5
+yields slightly improved performance across most SNR levels,
+showing that a stronger emphasis on alignment encourages
+more stable feature learning and better generalization across
+domains. However, further increasing λ to 2 leads to a mild
+11
+1
+4
+7
+10
+13
+23
+24
+25
+26
+PSNR
+Photo Domain
+1
+4
+7
+10
+13
+22
+23
+24
+25
+Art Domain
+1
+4
+7
+10
+13
+23
+24
+25
+26
+Cartoon Domain
+1
+4
+7
+10
+13
+27
+28
+29
+30
+Sketch Domain
+1
+4
+7
+10
+13
+SNR
+0.82
+0.84
+0.86
+0.88
+0.90
+0.92
+MS-SSIM
+1
+4
+7
+10
+13
+SNR
+0.775
+0.800
+0.825
+0.850
+0.875
+0.900
+1
+4
+7
+10
+13
+SNR
+0.86
+0.88
+0.90
+0.92
+0.94
+1
+4
+7
+10
+13
+SNR
+0.96
+0.97
+0.98
+0.99
+1.00
+Proposed Framework
+MOON
+FedProx
+FedAvg
+Fig. 7. The performance comparison of the proposed frameworks against other benchmarks under four domains: Photo, Art Painting, Cartoon, and finally
+Sketch. These results are obtained under a Rayleigh fading channel with an SNR range of 1 to 13dB.
+TABLE V
+DATA SAMPLE UNDER HIGH LEVEL OF HETEROGENEITY OF DOMAIN DATA
+Domain
+Client
+Samples
+Domain
+Client
+Samples
+Photo
+#1
+210
+Art
+#6
+223
+#2
+58
+#7
+85
+Cartoon
+#3
+82
+#8
+20
+#4
+61
+Sketch
+#9
+666
+#5
+232
+#10
+906
+degradation in both PSNR and MS-SSIM, especially in the Art
+and Photo domains. This suggests that excessive alignment
+strength constrains domain-specific features and limits the
+model’s flexibility to adapt to distinct data characteristics.
+Across all settings, the Sketch domain exhibits consistently
+high MS-SSIM values with minor variation, indicating that
+its simpler structural patterns make it less sensitive to the
+scaling coefficient. In contrast, the Art and Photo domains,
+which contain more complex and diverse textures, are more
+affected by the choice of λ. These results confirm that setting
+λ = 1.5 offers the most balanced trade-off between cross-
+domain generalization and domain-specific fidelity, and thus
+it is adopted as the default configuration for subsequent
+experiments.
+C. Performance of the Trained Model under Rayleigh Channel
+Fig. 7 illustrates the PSNR and MS-SSIM performance
+across different SNR values for the semantic communication
+trained by four FL training frameworks over the Photo, Art,
+Cartoon, and Sketch domains. The fading coefficient elements
+follow the CN(0, σ2
+k) distribution for the Rayleigh channel.
+Overall, the proposed framework consistently achieves the
+highest reconstruction quality in most domains and SNR
+conditions, confirming the effectiveness of the global represen-
+tation alignment and domain-aware aggregation mechanisms.
+Compared with the AWGN channel, the overall performance
+is slightly lower due to signal fading in the wireless channel;
+however, it still maintains high performance under low SNR
+conditions and further improves reconstruction quality as the
+noise level decreases. Specifically, in the Cartoon and Photo
+domains, the improvement over the second best is more evi-
+dent, 0.4278 and 0.5032 at 1 dB; 0.5899 and 0.5049 for PSNR
+at 13 dB, which demonstrate the robustness to channel varia-
+tions through feature generalization and alignment. In the Art
+domain, all methods perform well due to its simpler structure,
+yet our approach still maintains a clear advantage. Finally, for
+the Sketch domain, the FedAvg framework secures the highest
+performance due to two main reasons: unconstrained local
+training and the dominance of the Sketch domain in the global
+aggregation process, resulting from its large amount of data
+samples. The proposed FedDoM obtains lower performance
+in this domain but secures outstanding performance in the
+remaining domains and in the overall average across domains,
+indicating a trade-off between domain-specific performance
+and global generalization.
+D. Performance under the heterogeneity of domain data
+Up to this point, we have conducted experiments for the
+different FL training frameworks with the 30% data sample
+12
+TABLE VI
+COMPARISON OF PSNR AND MS-SSIM ACROSS DOMAINS AND FL FRAMEWORKS UNDER EXTREME DATA-DOMAIN HETEROGENEITY.
+SNR (dB)
+Framework
+Photo
+Art Painting
+Cartoon
+Sketch
+Avg of All
+1
+FedAvg
+20.0568 / 0.6851
+20.2223 / 0.6766
+21.8236 / 0.7973
+31.5472 / 0.9952
+23.4125 / 0.7885
+FedProx
+21.6571 / 0.7615
+21.8228 / 0.7543
+22.9906 / 0.8416
+32.1310 / 0.9959
+24.6504 / 0.8383
+MOON
+22.1661 / 0.7857
+22.2466 / 0.7753
+23.3503 / 0.8548
+32.6507 / 0.9969
+25.1034 / 0.8532
+FedDoM
+23.9585 / 0.8419
+24.0686 / 0.8300
+24.7176 / 0.8900
+30.1060 / 0.9914
+25.7127 / 0.8883
+4
+FedAvg
+22.1221 / 0.7872
+22.2034 / 0.7758
+23.5246 / 0.8584
+33.4756 / 0.9978
+25.3314 / 0.8548
+FedProx
+23.6223 / 0.8435
+23.7363 / 0.8354
+24.7695 / 0.8950
+34.1270 / 0.9983
+26.5638 / 0.8930
+MOON
+24.0316 / 0.8582
+24.1474 / 0.8491
+25.1535 / 0.9038
+34.6905 / 0.9985
+27.0058 / 0.9024
+FedDoM
+25.6286 / 0.8962
+25.7792 / 0.8876
+26.6404 / 0.9314
+31.9686 / 0.9962
+27.5042 / 0.9279
+7
+FedAvg
+23.4463 / 0.8509
+23.4762 / 0.8383
+24.4676 / 0.8914
+34.7323 / 0.9986
+26.5306 / 0.8948
+FedProx
+24.8811 / 0.8929
+24.9595 / 0.8837
+25.6997 / 0.9240
+35.4577 / 0.9989
+27.7495 / 0.9249
+MOON
+25.3384 / 0.9021
+25.4905 / 0.8921
+26.2142 / 0.9313
+36.0850 / 0.9990
+28.2820 / 0.9312
+FedDoM
+26.8932 / 0.9295
+27.0741 / 0.9220
+27.8017 / 0.9530
+33.0390 / 0.9975
+28.7020 / 0.9505
+10
+FedAvg
+24.1878 / 0.8866
+24.1791 / 0.8730
+24.9474 / 0.9102
+35.5192 / 0.9989
+27.2084 / 0.9172
+FedProx
+25.6403 / 0.9202
+25.6984 / 0.9104
+26.2041 / 0.9402
+36.3133 / 0.9992
+28.4640 / 0.9425
+MOON
+26.1896 / 0.9264
+26.3605 / 0.9164
+26.8509 / 0.9469
+36.9687 / 0.9993
+29.0924 / 0.9472
+FedDoM
+27.7384 / 0.9478
+27.9441 / 0.9405
+28.4965 / 0.9648
+33.6722 / 0.9981
+29.4628 / 0.9628
+13
+FedAvg
+24.5417 / 0.9042
+24.5065 / 0.8898
+25.1650 / 0.9198
+35.9707 / 0.9991
+27.5460 / 0.9282
+FedProx
+26.0381 / 0.9332
+26.0889 / 0.9229
+26.4653 / 0.9481
+36.8105 / 0.9993
+28.8507 / 0.9509
+MOON
+26.6656 / 0.9378
+26.8409 / 0.9279
+27.2035 / 0.9547
+37.4750 / 0.9994
+29.5463 / 0.9549
+FedDoM
+28.2225 / 0.9568
+28.4470 / 0.9495
+28.8829 / 0.9705
+34.0293 / 0.9983
+29.8954 / 0.9688
+from all domains. However, this approach is relatively naive
+when considering the difficulty of data generation for each
+domain. For example, for an art painting, it can take months
+or even years to produce one sample, while the sketch image
+is relatively easy and needs much less effort. Therefore, to
+further emphasize this property of real-world environment and
+demonstrate the effectiveness of our proposed framework, we
+sample 20% of data for three domains: Photo, Art painting,
+and Cartoon, while 50% for the Sketch domain. The number
+of data samples is provided in detail in Table V.
+In Table VI, we present the simulation results when the het-
+erogeneity among domains becomes more extreme. As shown,
+the performance of MOON, FedProx, and FedAvg on low-
+sample domains-Photo, Art Painting, and Cartoon-degrades
+significantly compared to the earlier training setup in Table III.
+In contrast, the proposed framework is able to preserve se-
+mantic information across domains during both local training
+and global aggregation, leading to strong performance even
+for low-sample domains. Specifically, FedDoM outperforms
+the second-best framework (MOON) by 1.7924, 1.8220, and
+1.3673 in PSNR, and by 0.0562, 0.0547, and 0.0352 in MS-
+SSIM under the SNR of 1 dB. These performance gaps further
+widen as the channel noise decreases, demonstrating the ability
+of the semantic communication model and training framework
+to adapt effectively to improved channel conditions.
+In general, our framework achieves higher performance on
+the three low-sample domains; however, this comes at the
+expense of reduced performance on the high-sample domain
+(Sketch) compared to the other FL frameworks. This behavior
+can be attributed to the dominance of the Sketch domain
+during the aggregation process, where its contribution becomes
+disproportionately large, as reflected in Equation (6) for the
+FedAvg, FedProx, and MOON frameworks. In contrast, our
+approach establishes a more balanced and domain-aware train-
+ing process that performs well across all domains and achieves
+the highest values for both evaluation metrics when averaging
+over all domains, as shown in the last columns of Table VI.
+VI. CONCLUSION
+In this paper, we have introduced a novel federated learn-
+ing framework to address the domain shift problem when
+client data originates from various sources in training a
+deep learning-based joint source-channel coding model. The
+difference in domains of client data can lead to significant
+variation in learning parameters among client models, which
+degrades the performance of the global model. Therefore, we
+have constructed a global feature representation from the local
+features at the server, which effectively provides a soft bound-
+ary for the local training at the clients. We have leveraged
+this global representation to align the local features, which
+prevents parameter updates from drifting too far from the
+generalization target. We have optimized the local model by
+combining the generalization loss with the local reconstruction
+loss, thereby facilitating both local domain learning and cross-
+domain learning. On the other hand, we have considered the
+heterogeneity in terms of data samples from different domains
+and proposed a domain-aware aggregation approach to prevent
+the dominance of easily generated data domains in the global
+aggregation process. Finally, the experimental results verify
+that our framework consistently outperforms benchmark meth-
+ods in three out of four domains, while still achieving strong
+performance in the remaining one, highlighting its robustness
+and generalization capability across diverse data distributions.
+REFERENCES
+[1] N. Jia, Z. Qu, B. Ye, Y. Wang, S. Hu, and S. Guo, “A comprehensive
+survey on communication-efficient federated learning in mobile edge
+environments,” IEEE Commun. Surveys Tuts., Early Access, 2025.
+13
+[2] W. Saad, O. Hashash, C. K. Thomas, C. Chaccour, M. Debbah, N. Man-
+dayam, and Z. Han, “Artificial general intelligence (agi)-native wireless
+systems: A journey beyond 6g,” Proceedings of the IEEE, Mar. 2025.
+[3] C. Zhou, J. Gao, S. Hu, N. Cheng, W. Zhuang, and X. Shen, “User-
+centric communication service provision for edge-assisted mobile aug-
+mented reality,” IEEE Trans. Mob. Comput., Early Access, 2025.
+[4] L. X. Nguyen et al., “A contemporary survey on semantic communi-
+cations: Theory of mind, generative ai, and deep joint source-channel
+coding,” IEEE Commun. Surveys Tuts., Early Access, 2025.
+[5] Y. Qiao, P.-N. Tran, J. Yoon et al., “Deepseek-inspired exploration of
+rl-based llms and synergy with wireless networks: A survey,” ACM
+Comput. Surv., Early Access, Nov. 2025.
+[6] D. G. S. Pivoto, F. A. P. de Figueiredo, C. Cavdar, G. R. d. L. Tejerina,
+and L. L. Mendes, “A comprehensive survey of machine learning applied
+to resource allocation in wireless communications,” IEEE Commun.
+Surveys Tuts., Mar. 2025, Early Access.
+[7] H. Zhang, H. Zhang, B. Di, M. D. Renzo, Z. Han, H. V. Poor, and
+L. Song, “Holographic integrated sensing and communication,” IEEE J.
+Sel. Areas Commun., vol. 40, no. 7, pp. 2114–2130, Mar. 2022.
+[8] M. Chen, U. Challita, W. Saad, C. Yin, and M. Debbah, “Artificial
+neural networks-based machine learning for wireless networks: A tu-
+torial,” IEEE Commun. Surveys Tuts., vol. 21, no. 4, pp. 3039–3071,
+Fourthquarter 2019.
+[9] C. Chaccour, W. Saad, M. Debbah, Z. Han, and H. Vincent Poor, “Less
+data, more knowledge: Building next-generation semantic communica-
+tion networks,” IEEE Commun. Surveys Tuts., vol. 27, no. 1, pp. 37–76,
+Firstquarter 2025.
+[10] C. E. Shannon and W. Weaver, The mathematical theory of communi-
+cation.
+University of Illinois press, 1998.
+[11] D. B. Kurka and D. G¨und¨uz, “Deepjscc-f: Deep joint source-channel
+coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,
+no. 1, pp. 178–193, May 2020.
+[12] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. Y Arcas,
+“Communication-efficient learning of deep networks from decentralized
+data,” in Proc. Int. Conf. Artif. Intell. Statist. (AISTATS), Fort Lauderdale,
+FL, Apr. 2017.
+[13] Y. Qiao, H. Q. Le, A. D. Raha, P.-N. Tran et al., “Towards artificial
+general or personalized intelligence? a survey on foundation models for
+personalized federated intelligence,” ArXiv:2505.06907, 2025.
+[14] C.-H. Hu, Z. Chen, and E. G. Larsson, “Scheduling and aggregation
+design for asynchronous federated learning over wireless networks,”
+IEEE J. Sel. Areas Commun., vol. 41, no. 4, pp. 874–886, Feb. 2023.
+[15] F. P.-C. Lin, S. Hosseinalipour, S. S. Azam, C. G. Brinton, and
+N. Michelusi, “Semi-decentralized federated learning with cooperative
+d2d local model aggregations,” IEEE J. Sel. Areas Commun., vol. 39,
+no. 12, pp. 3851–3869, Oct. 2021.
+[16] K. Pillutla, K. Malik, A.-R. Mohamed, M. Rabbat, M. Sanjabi, and
+L. Xiao, “Federated learning with partial model personalization,” in
+Proc. Int. Conf. Mach. Learn.
+PMLR, Baltimore, Maryland, Jul. 2022.
+[17] H. Tong, Z. Yang, S. Wang, Y. Hu, W. Saad, and C. Yin, “Federated
+learning based audio semantic communication over wireless networks,”
+in Proc. IEEE Glob. Commun. Conf., Marid, Spain, Dec. 2021.
+[18] B. Picano and R. Fantacci, “A semantic-oriented federated learning
+for hybrid ground–aqua computing systems,” IEEE Internet Things J.,
+vol. 11, no. 6, pp. 10 095–10 103, Mar. 2024.
+[19] L. X. Nguyen, H. Q. Le, Y. L. Tun, P. S. Aung, Y. K. Tun, Z. Han,
+and C. S. Hong, “An efficient federated learning framework for training
+semantic communication systems,” IEEE Trans. Veh. Technol., vol. 73,
+no. 10, pp. 15 872–15 877, May 2024.
+[20] M. Wu, J. Li, J. Xu, B. Chen, and K. Zhu, “Personalized federated
+learning for semantic communication with collaborative fine-tuning,”
+Digit. Commun. Netw., Early Access, Aug. 2025.
+[21] H. Sun, W. Ni, H. Tian, J. Zheng, G. Nie, and D. Niyato, “A hybrid fed-
+erated learning framework for task-oriented semantic communication,”
+IEEE Internet Things J., vol. 12, no. 13, pp. 23 444–23 461, Mar. 2025.
+[22] Y. Wang, W. Ni, W. Yi, X. Xu, P. Zhang, and A. Nallanathan, “Federated
+contrastive learning for personalized semantic communication,” IEEE
+Commun. Lett., vol. 28, no. 8, pp. 1875–1879, Jun. 2024.
+[23] H. Sun, H. Tian, W. Ni, and J. Zheng, “Federated learning-based co-
+operative model training for task-oriented semantic communication,” in
+Proc. IEEE Conf. Comput. Commun. Workshops (INFOCOM WKSHPS),
+Vancouver, Canada, May 2024.
+[24] W. Huang, M. Ye, Z. Shi, H. Li, and B. Du, “Rethinking federated
+learning with domain shift: A prototype view,” in Proc. IEEE/CVF
+Comput. Soc. Conf. Comput. Vis. Pattern Recognit. (CVPR), BC, Canada,
+Jun. 2023.
+[25] Z. Wang, Z. Wang, X. Fan, and C. Wang, “Federated learning with
+domain shift eraser,” in Proc. of the Comput. Vis. Pattern Recognit.
+(CVPR), Nashville, Tennessee, Jun. 2025.
+[26] E. Bourtsoulatze, D. B. Kurka, and D. G¨und¨uz, “Deep joint source-
+channel coding for wireless image transmission,” IEEE Trans. Cogn.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+[27] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+image transmission using deep source channel coding with attention
+modules,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4, pp.
+2315–2328, May 2021.
+[28] K. Yang, S. Wang, J. Dai, K. Tan, K. Niu, and P. Zhang, “Witt: A
+wireless image transmission transformer for semantic communications,”
+in Proc. IEEE Int. Conf. Acoust. Speech Signal Process. (ICASSP),
+Rhodes Island, Greece, Jun. 2023.
+[29] J. Park, Y. Oh, S. Kim, and Y.-S. Jeon, “Joint source-channel coding for
+channel-adaptive digital semantic communications,” IEEE Trans. Cogn.
+Commun. Netw., vol. 11, no. 1, pp. 75–89, Feb. 2025.
+[30] Z. Liu, Y. Lin, Y. Cao, H. Hu, Y. Wei, Z. Zhang, S. Lin, and et al., “Swin
+transformer: Hierarchical vision transformer using shifted windows,” in
+Proc. IEEE Int. Conf. Comput. Vis., Montreal, Canada, Oct. 2021.
+[31] R. Y.-T. Hou, G. Liu, J. Fong, H. Zhang, and S.-P. Jeong, “A model for
+quantifying the degree of understanding in cross-domain m2m semantic
+communications,” IEEE Access, vol. 12, pp. 84 515–84 536, Jun. 2024.
+[32] D. Won, Q. T. Do, T. T. Win, D. Lee, J. Oh, and S. Cho, “Multidomain
+adaptive semantic communications,” IEEE J. Sel. Areas Commun.,
+vol. 43, no. 7, pp. 2506–2517, Apr. 2025.
+[33] J. Guo, H. Yin, B. Song, Y. Chi, Z. Zhang, C. Yuen, and D. Niyato,
+“Multi-scale semantic communication for object detection: Single and
+cross-domain scenarios,” IEEE Trans. Wirel. Commun., vol. 24, no. 7,
+pp. 6195–6210, Mar. 2025.
+[34] S. Li, Y. Cai, Z. Deng, X. Ba, Q. Zheng, X. Zhang, and B. Su, “Federated
+learning for semantic communication based on cnns and transformer,”
+Int. J. Intell. Syst., no. 1, pp. 1–22, Aug. 2025.
+[35] Y. Huh, B. Kim, and W. Choi, “Feature reconstruction aided federated
+learning for image semantic communication,” Proc. IEEE Glob. Com-
+mun. Conf., Taipei, Taiwan, China, Dec. 2025.
+[36] Y. Peng, F. Jiang, L. Dong, K. Wang, and K. Yang, “Personalized
+federated learning for gai-assisted semantic communications,” IEEE
+Trans. Cogn. Commun. Netw., Early Access, Jul. 2025.
+[37] R. Huang, C. Qiu, M. Chen, C. Zhang, and H. Zhu, “Federated-learning-
+enabled cross-modal semantic communication for 6g,” IEEE Internet
+Things J., vol. 12, no. 20, pp. 41 608–41 624, Jul. 2025.
+[38] X. Zhou, Y. Li, and J. Zhao, “Fedsem: A resource allocation
+scheme for federated learning assisted semantic communication,”
+ArXiv:2503.06058, Mar. 2025.
+[39] W. Tan, Y. Wang, L. Liu, X. Wang, and T. Ding, “Adaptive federated
+deep learning-based semantic communication in the social internet of
+things,” IEEE Internet Things J., vol. 12, no. 17, pp. 34 921–34 930,
+Sep. 2025.
+[40] Y. Chen, W. Huang, and M. Ye, “Fair federated learning under domain
+skew with local consistency and domain diversity,” in Proc. of the
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit., WA, USA, Jun. 2024.
+[41] T. Li, A. K. Sahu, M. Zaheer, M. Sanjabi, A. Talwalkar, and V. Smith,
+“Federated optimization in heterogeneous networks,” in Proc. Mach.
+Learn. Syst, vol. 2, pp. 429–450, Austin, TX, Mar. 2020.
+[42] M. Mohri, G. Sivek, and A. T. Suresh, “Agnostic federated learning,”
+in Proc. of the 36th Int. Conf. Mach. Learn. (ICML).
+PMLR, Long
+Beach, California, Jun. 2019.
+[43] L. Wang, J. Bian, L. Zhang, C. Chen, and J. Xu, “Taming cross-
+domain representation variance in federated prototype learning with
+heterogeneous data domains,” in Proc. Adv. Neural Inf. Process. Syst.
+(NeurIPS), vol. 37, Vancouver, Canada, Dec. 2024.
+[44] Y. Tan, G. Long, L. Liu, T. Zhou, Q. Lu, J. Jiang, and C. Zhang,
+“Fedproto: Federated prototype learning across heterogeneous clients,”
+in Proc. AAAI Conf. Artif. Intell., vol. 36, no. 8, Virtual Conference,
+Feb. 2022.
+[45] “Supplementary
+materials
+for
+feddom,”
+2025.
+[Online].
+Available:
+https://github.com/xuanloc088/convergenceFL/blob/main/
+ConveregenceDocumentforFedDoM.pdf
+[46] D. Li, Y. Yang, Y.-Z. Song, and T. M. Hospedales, “Deeper, broader and
+artier domain generalization,” in Proc. of the IEEE Int. Conf. Comput.
+Vis., Venice, Italy, Oct. 2017.
+[47] Q. Li, B. He, and D. Song, “Model-contrastive federated learning,” in
+Proc. IEEE Comput. Soc. Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Virtual Conference, Jun. 2021.

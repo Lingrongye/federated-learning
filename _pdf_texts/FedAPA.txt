@@ -1,0 +1,1199 @@
+FedAPA: Server-side Gradient-Based Adaptive Personalized Aggregation for
+Federated Learning on Heterogeneous Data
+Yuxia Sun1 , Aoxiang Sun2 , Siyi Pan1 , Zhixiao Fu3 and Jingcai Guo∗4
+1College of Information Science and Technology, Jinan University
+2College of Information and Computational Science, Jilin University
+3Department of Computer Science, University of Toronto
+4Department of Computing & LSGI, The Hong Kong Polytechnic University
+tyxsun@email.jnu.edu.cn, 2835604014@qq.com, StuPsy@stu2022.jnu.edu.cn,
+zx.fu@mail.utoronto.ca, jc-jingcai.guo@polyu.edu.hk
+Abstract
+Personalized federated learning (PFL) tailors mod-
+els to clients’ unique data distributions while pre-
+serving privacy.
+However, existing aggregation-
+weight-based PFL methods often struggle with het-
+erogeneous data, facing challenges in accuracy,
+computational efficiency, and communication over-
+head. We propose FedAPA, a novel PFL method
+featuring a server-side, gradient-based adaptive ag-
+gregation strategy to generate personalized mod-
+els, by updating aggregation weights based on gra-
+dients of client-parameter changes with respect to
+the aggregation weights in a centralized manner.
+FedAPA guarantees theoretical convergence and
+achieves superior accuracy and computational ef-
+ficiency compared to 10 PFL competitors across
+three datasets, with competitive communication
+overhead. The code and full proofs are available
+at: https://github.com/Yuxia-Sun/FL FedAPA.
+1
+Introduction
+As a prominent distributed machine learning paradigm, Fed-
+erated Learning (FL) allows clients to collaboratively train
+models while keeping data local [Yang et al., 2019]. In cross-
+silo FL, client data is often non-IID (non-Independent and
+Identically Distributed), exhibiting statistical heterogeneity
+that leads to client drift and reduces the effectiveness of meth-
+ods like FedAvg [McMahan et al., 2017].
+To address the challenges posed by heterogeneous data dis-
+tributions, Personalized Federated Learning (PFL) has been
+developed to tailor models to the unique data characteristics
+of individual clients[Wu et al., 2020]. PFL can be broadly
+categorized into three main approaches: (1) Personalized
+model-based approaches, which directly create a personal-
+ized local model for each client, typically without relying
+on a global model [Li et al., 2021b; Huang et al., 2021;
+Luo and Wu, 2022; Shamsian et al., 2021]; (2) Global model-
+based approaches, where a global model is first constructed
+and then personalized through techniques like client-specific
+∗Corresponding Author
+Figure 1: Framework of FedAPA. ①The server generates person-
+alized model ¯θi via aggregation according to weight vector Ai; ②
+Each client downloads its model ¯θi; ③Local training on private data;
+④Each client upload its model θi; ⑤The server computes the up-
+date of model parameters △θi; ⑥Updates Ai via gradient descent
+according to △θi; ⑦Post-processes Ai via clipping, self-weight set-
+ting, and normalization.
+fine-tuning [Xu et al., 2023; Zhang et al., 2024]; and (3)
+Other PFL approaches include those that leverage informa-
+tion beyond model parameters, such as prototypes, to opti-
+mize local models [Tan et al., 2022]. Among these, personal-
+ized model-based approaches, the primary focus of this paper,
+have gained significant attention for their ability to directly
+tailor local models to each client’s unique data distribution.
+We categorize existing personalized model-based PFL ap-
+proaches into three groups based on their aggregation strate-
+gies for creating each personalized model: (1) Static metric-
+based methods:
+Approaches like FedAMP[Huang et al.,
+2021] and FedPHP[Li et al., 2021b] define aggregation
+weights using predefined metrics derived from parameter
+similarity or training progress. However, these predefined
+metrics do not directly reflect client-specific optimization ob-
+jectives (e.g., local losses or gradients). (2) Local gradient-
+based methods: Approaches such as APPLE[Luo and Wu,
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+6219
+2022] and FedALA[Zhang et al., 2023] calculate aggrega-
+tion weights locally via gradient descent. While these meth-
+ods share model parameters between clients or use element-
+wise model combination, they incur high computational com-
+plexity and potential communication overhead.
+Addition-
+ally, their focus on individual client objectives limits effec-
+tive cross-client coordination. (3) Auxiliary network-based
+methods: Approaches like pFedHN[Shamsian et al., 2021]
+utilize Hypernetworks[Ha et al., 2016] to derive personal-
+ized models or aggregation weights. However, the need to
+train auxiliary models introduces significant computational
+overhead. In summary, these limitations highlight the need
+for new model-aggregation techniques that not only enable
+adaptive personalization in non-IID scenarios but also reduce
+computational and communication costs.
+To address these limitations, we propose a novel person-
+aliezed model based PFL approach, FedAPA (Adaptive Per-
+sonalized Aggregation for Federated Learning), as illustrated
+in Fig. 1. FedAPA introduces a server-side aggregation strat-
+egy that adaptively learns aggregation weights using gradi-
+ents of client parameter changes with respect to the aggre-
+gation weights, generating aggregated personalized models
+for each client. Specifically, the server: (1) maintains the
+client parameters and an aggregation-weight vector, where
+each element quantifies the relevance of other clients’ model
+knowledge during aggregation; (2) constructs personalized
+client parameters through weighted aggregation of all col-
+laborative clients’ parameters using the learned weights; and
+(3) updates the weight vector based on the client-parameter
+delta—the change in the client’s local model parameters after
+multiple local update steps. As an additional feature, FedAPA
+adopts a partial model sharing strategy, transferring only the
+client’s feature extractor to reduce irrelevant information dur-
+ing aggregation.
+The key innovation of FedAPA lies in its aggregation strat-
+egy, which updates aggregation weights on the server side
+using the gradient of the client-parameter delta with respect
+to the aggregation weights, optimizing the personalized ag-
+gregation process. Half of the squared norm of the client-
+parameter delta serves as a proxy for the local loss, effec-
+tively capturing each client’s optimization state. By dynam-
+ically adjusting aggregation weights to reduce this proxy
+loss, FedAPA generates an aggregated personalized model
+for each client, better aligning the model with the client’s
+local objectives.
+Compared to existing model-aggregation
+approaches, FedAPA’s strategy offers the following advan-
+tages: (1) Adaptability: FedAPA dynamically learns aggre-
+gation weights based on gradients derived from the proxy
+loss, enabling the aggregation weights to adapt effectively
+to each client’s unique optimization trajectory. (2) Central-
+ized Efficiency: By centralizing weight updates on the server,
+FedAPA minimizes communication and computational over-
+head while enhancing cross-client coordination. (3) Simplic-
+ity: FedAPA avoids the need for auxiliary networks, elimi-
+nating the computational complexity associated with training
+additional models. In summary, FedAPA’s aggregation strat-
+egy effectively balances personalization and collaboration in
+non-IID scenarios, enhancing computational and communi-
+cation efficiency.
+We summarize our contributions as follows:
+• We propose FedAPA, a novel model-aggregation PFL
+framework for heterogeneous data scenarios, featuring
+a server-side gradient-based model-aggregation strat-
+egy that enhances FL performance while maintain-
+ing low computational and communication overhead.
+while maintaining low computational and communica-
+tion overhead.
+• To the best of our knowledge, FedAPA is the first to
+adaptively update aggregation weights on the server side
+to generate aggregated personalized models, using gra-
+dients derived from client-parameter changes.
+• We provide a theoretical convergence guarantee for the
+FedAPA algorithm.
+• We experimentally demonstrate that our approach out-
+performs 10 PFL competitors across three benchmarks
+under two non-IID settings, achieving top accuracy, op-
+timal computational efficiency, and low communication
+overhead. Ablation studies highlight the critical contri-
+bution of the aggregation strategy and the complemen-
+tary benefits of the partial model sharing strategy.
+2
+Related Work
+2.1
+Personalized Model-based PFL Approaches
+Personalized model-based PFL approaches, also known as
+PFL approaches via learning personalized local models, di-
+rectly create personalized models for individual clients, typi-
+cally without the need for a global model. These approaches
+employ various aggregation strategies to construct each per-
+sonalized model, which can be broadly categorized as fol-
+lows: (1) Static metric-based methods: These methods de-
+fine aggregation weights using predefined, static metrics. For
+example, FedAMP [Huang et al., 2021] calculates similar-
+ity as weights based on the Euclidean distance of model
+parameters, while FedPHP [Li et al., 2021b] measures rel-
+evance using training progress.
+Although straightforward,
+these metrics do not directly align with client-specific op-
+timization objectives, limiting their adaptability to non-IID
+data distributions. (2) Local gradient-based methods: They
+learn aggregation weights via gradient descent on the client
+side. For example, APPLE [Luo and Wu, 2022] learns inter-
+client relations by sharing model parameters between clients,
+leading to high communication costs and privacy concerns.
+FedALA [Zhang et al., 2023] computes element-wise combi-
+nation weights between client and global models, resulting in
+high computational complexity. While these methods utilize
+non-local information, their focus on local objectives limits
+cross-client coordination and adaptability to data heterogene-
+ity. (3) Hypernetwork-based methods: Hypernetworks [Ha et
+al., 2016] have been utilized as the auxilliary networks to en-
+hance personalization. For example, pFedHN [Shamsian et
+al., 2021] employs Hypernetworks to generate personalized
+models However, these methods incur significant computa-
+tional overhead due to the complexity of training Hypernet-
+works
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+6220
+2.2
+Global Model-based PFL Approaches
+Global model-based PFL approaches, also referred to as PFL
+approaches via global model personalization, involve train-
+ing a global model first and then personalizing it to derive
+local models for individual clients. For example, FedPAC
+[Xu et al., 2023] leverages a probabilistic framework for per-
+sonalization using Bayesian neural networks and a global
+model, allowing personalized models to adaptively incorpo-
+rate uncertainty during client-specific training. DBE [Zhang
+et al., 2024] enhances the generalization of the global fea-
+ture extractor through bi-directional knowledge transfer, re-
+ducing representation bias and fine-tuning client models for
+improved personalization.
+2.3
+Other PFL Approaches
+PFL can also leverage non-model information, such as pro-
+totypes, to achieve personalization. For example, FedProto
+[Tan et al., 2022] leverages local prototypes to construct
+global prototypes, which are used to improve feature extrac-
+tion and classification. As a combined method, FedGH[Yi
+et al., 2023] uses client-uploaded prototypes (i.e., class-
+averaged representations) to train a shared global head on the
+server, which is then downloaded to replace local heads.
+3
+Method
+3.1
+Problem Formulation
+Personalized Federated Learning (PFL) aims to collabora-
+tively train personalized models for a set of clients, each with
+its own private data. PFL addresses the challenge of data het-
+erogeneity across clients, ensuring that each client’s model is
+tailored to its specific data while maintaining data privacy and
+improving individual model performance.
+Let M be the total number of clients participating in the
+federated learning process. Each client i ∈{1, · · · , M} has
+a local dataset Di; with its own data distribution Pi on X ×
+Y . In PFL, each client i seeks to learn a personalized model
+parameterized by ωi. The objective function for PFL can be
+formulated as:
+arg
+min
+ω1,··· ,ωM
+M
+X
+i=1
+|Di|
+N Li (F (ωi; x) , y)
+(1)
+where |Di| is the size of the local dataset Di; N is the to-
+tal number of data points across all clients; F (ωi; x) is the
+model parameterized by ωi evaluated on input x; y is the true
+label for input x; and Li is the local loss function for client i,
+such as the following cross-entropy loss function:
+LCE,i (F (ωi; x) , y)
+= −1
+|Di|
+X
+(x,y)∈Di
+C
+X
+c=1
+yc log (F (ωi; x)c)
+(2)
+where C is the number of classes; yc is the binary indicator
+(0 or 1) if class label c is the correct classification for input x;
+and F (ωi; x)c is the predicted probability of input x belong-
+ing to class c under the model parameterized by ωi.
+3.2
+FedAPA Algorithm
+The framework of FedAPA is demonstrated in Fig1. Each
+FedAPA client uploads its feature extractor, receives a per-
+sonalized feature extractor after server-side aggregation, and
+then updates the entire client model locally, including both
+the feature extractor and the classifier. On the server side,
+the model parameters of each client’s feature extractor and
+the corresponding aggregation-weight vector are maintained.
+The core of FedAPA lies in the server-side aggregation, where
+the server constructs a personalized feature extractor for each
+client by adaptively aggregating all clients’ model parameters
+using weights updated via gradient descent.
+FedAPA adjusts each aggregation weight vector on the
+server using the gradient calculated from the client parameter
+delta, which represents the change in local model parameters
+after multiple local updates within a communication round.
+At the end of each round, the updated client parameters can
+be considered as an approximation of the local task’s opti-
+mal solution, with the client-parameter delta approximately
+reflecting the local optimization direction (as detailed in sub-
+subsection 3.2). For each client, the server iteratively up-
+dates the client’s aggregation-weight vector based on the gra-
+dient of the client-parameter delta with respect to the vec-
+tor. The learned weights represent adaptively acquired knowl-
+edge contributions from other clients, which may potentially
+reflect the data distribution correlation among clients.
+By
+aggregating beneficial model knowledge from collaborative
+clients, FedAPA addresses non-IID data challenges for indi-
+vidual clients effectively.
+Local Training
+As shown in Fig1, for each client i, the local model F(ωi) is
+partitioned into two parts: the feature extractor f(θi), which
+takes the input sample x and produces the representation z =
+f(θi; x), and the decision layer h(ϕi), which processes the
+representation z and outputs the predicted label ˆy = h(ϕi; z).
+The shared parameter θi is uploaded to the server, while the
+private parameter ϕi is kept locally. Thus, the local objective
+function in PFL can be expressed as
+arg min
+ωi Li (F (ωi; x) , y) = arg min
+θi,ϕiLi(h(ϕi; f(θi; x)), y)
+(3)
+Upon downloading the parameters ¯θi as the current feature
+extractor, client i obtains its current entire model ωi :=
+[θi; ϕi]. Each client conducts several local update steps on
+the local data using the following update rule:
+ω(t+1)
+i
+←ω(t)
+i
+−αi∇ωiLi
+
+F(ω(t)
+i ; x), y
+
+(4)
+where αi denotes the learning rate of the local model param-
+eters ωi. After the local updates, client i separates θi from the
+updated ωi, and uploads the updated θi as the shared client
+parameters to the server.
+Server-Side Aggregation of Client-Parameters
+For each client i, FedAPA server manages a trainable
+aggregation-weight vector Ai = (ai,1, . . . , ai,j, . . . , ai,M)T
+where i, j ∈{1, · · · , M}, and M indicates the total number
+of clients in the federated learning system. Here, ai,j denotes
+the weight of client j during the weighted aggregation used
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+6221
+to form the target parameters ¯θi for client i. During the ini-
+tialization of the learning process, we set the self-weight ai,i
+to 1, while the other weights ai,j to 0 for i ̸= j. For the
+t-th training round, the server computes the personalized pa-
+rameters ¯θi for client i by performing a weighted aggregation
+of all clients’ shared parameters according to the following
+formula:
+¯θi =
+M
+X
+j=1
+ai,j · θj
+(5)
+Server-Side Updating of Weight-Vectors
+Upon receiving the client-parameters θi from each client i,
+the FedAPA server calculates the difference between the cur-
+rent θi and the previous parameter versions ¯θi stored on the
+server, obtaining the client-parameter delta as follows:
+∆θi = θi −¯θi
+(6)
+Subsequently, the server leverages this client-parameter delta
+to update the aggregation-weight vector Ai for client i ac-
+cording to the following rule:
+Ai ←Ai −η(∇Ai ¯θi)T ∆θi
+(7)
+where η is the learning rate for updating the aggregation-
+weight vector on the server.
+Equation (7) is pivotal to the FedAPA algorithm. To
+provide intuition behind this formula, consider the opti-
+mal solution for the local task’s model parameters, θ∗
+i
+=
+arg min
+θi Li. After multiple local updates within a commu-
+nication round, θi can be regarded as an approximation of θ∗
+i .
+Consequently, 1
+2∥θ∗
+i −¯θi∥2
+2 approximates 1
+2∥θi −¯θi∥2
+2, which
+is equivalent to half of the squared norm of ∆θi. This mea-
+sure, 1
+2∥θ∗
+i −¯θi∥2
+2 =
+1
+2∥¯θi −θ∗
+i ∥2
+2, can be interpreted as a
+surrogate for the local loss. Thus, half of the squared norm
+of ∆θi serves as a proxy for the local loss Li, where ∆θi
+can be interpreted as −∇¯θiLi. According to the chain rule,
+(∇Ai ¯θi)T ∆θi represents −∇AiLi. Consequently, Equation
+(7) updates the aggregation weights Ai on the server in a way
+that minimizes the local loss Li for each client, ensuring that
+the personalized aggregation aligns with the client-specific
+optimization trajectory.
+Before sending the updated aggregation-weight vector Ai
+to client i , the server further optimizes the weights using
+following three post-processing steps: (1) Clipping: To im-
+prove training stability and convergence, we control the up-
+date range of each weight element in the vector Ai by clip-
+ping each element value ai,j to be within [0, 1], where j ∈
+{1, · · · , M}. (2) Self-weight adjusting: Each client should
+prioritize its own local knowledge over that of other clients.
+Therefore, for the clipped aggregation-weight vector of each
+client i, we set the weight of the element ai,i (also known
+as the self-weight µ) to 0.5, ensuring it is not less than the
+weights of the other elements in the vector. (3) Normaliza-
+tion: To balance client contributions and minimize variance
+during aggregation, thus improving training generalization,
+we normalize each aggregation-weight vector from the pre-
+vious step to ensure that the total sum of the weights equals
+1.
+Algorithm 1 FedAPA
+Input:
+dataset {D1, . . . , DM}, learning rates η and αi,
+total communication rounds T, local rounds E, client-
+parameter set {θ1, . . . , θM}, aggregation-weight vector set
+{A1, . . . , AM}.
+Output:
+Trained
+personalized
+model
+set
+{¯θ1, ¯θ2, . . . , ¯θM}.
+1: ∀i ∈{1, · · · , M}, initialize θi on server
+2: ∀i ∈{1, · · · , M}, initialize Ai = (ai,1, . . . , ai,M)T on
+server
+3: Function Server Executes
+4: for each communication round t = 1, . . . , T do
+5:
+Sample a subset of clients St
+6:
+for each client i ∈St in parallel do
+7:
+¯θi ←PM
+j=1 ai,jθj {Weighted aggregation}
+8:
+θi ←ClientUpdate(¯θi)
+9:
+∆θi ←θi −¯θi {Computing ∆θi}
+10:
+Update Ai via Eq 7 {Updating based on ∆θi}
+11:
+ai,j
+←min(max(ai,j, 0), 1) , j
+= 1, . . . , M
+{Clipping}
+12:
+ai,i ←0.5
+13:
+Normalize Ai
+14:
+end for
+15: end for
+16: End Function
+17: Function Clientupdate(¯θi)
+18: Download ¯θi
+19: θi ←¯θi.
+20: ωi ←[θi; ϕi]
+21: for each local epoch e = 1, . . . , E do
+22:
+for mini-batch B ⊆Di do
+23:
+ωi ←ωi −αi∇ωiLi(B) {Local training}
+24:
+end for
+25: end for
+26: [θi; ϕi] ←ωi
+27: return θi {Uploading θi}
+28: End Function
+In summary, during a communication round for each client
+i, the FedAPA server first constructs the personalized client
+parameters ¯θi by performing a weighted aggregation of the
+collaborative clients’ parameters. Next, the client downloads
+¯θi and uploads the optimized client parameters θi after lo-
+cal training. Subsequently, the server computes the client-
+parameters change ∆θi, and uses it to update the aggregation-
+weight vector Ai, adaptively learning beneficial knowledge
+from collaborative clients. Algorithm 1 outlines the overall
+learning process in FedAPA.
+4
+Convergence Analysis
+In this section, we analyze the convergence of FedAPA under
+suitable conditions. Additional notations used in this section
+are detailed in Appendix.
+Assumption 1. (Lipschitz Smooth). Each local objective
+function is L1-Lipschitz smooth, which also means the gra-
+dient of local objective function L is L1-Lipschitz contin-
+uous. This assumption is reasonable as it encapsulates the
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+6222
+differentiability and smoothness properties inherent to many
+common loss functions in deep learning, aligning with the
+mathematical prerequisites for the convergence of gradient-
+based optimization methods fundamental to neural network
+training,
+||∇Lt1 −∇Lt2|| ≤L1||ω(t1)
+i
+−ω(t2)
+i
+||2,
+∀t1, t2 > 0, i ∈{1, 2, . . . , M}.
+(8)
+which implies the following quadratic bound,
+Lt1 −Lt2 ≤⟨∇Lt2, (ω(t1)
+i
+−ω(t2)
+i
+)⟩
+(9)
++ L1
+2 ||ω(t1)
+i
+−ω(t2)
+i
+||2
+2, ∀t1, t2 > 0, i ∈{1, 2, . . . , M}.
+Assumption 2. (Unbiased Gradient and Bounded Variance).
+The stochastic gradient gr(t)
+i
+= ∇L(ω(t)
+i , ξi) is an unbiased
+estimator of the local gradient for each client, where the ran-
+dom variable ξi follows the distribution Di. This foundational
+assumption is pivotal, as it ensures that the expectation of the
+stochastic gradient, when averaged over the local dataset, cor-
+responds to the true gradient of the local loss function. De-
+spite the inherent variability in data distribution across dif-
+ferent clients, this property remains intact, underscoring its
+relevance in Federated Learning where data heterogeneity is
+often the rule rather than the exception,
+Eξi∼Di[gr(t)
+i ] = ∇L(ω(t)
+i ) = ∇Lt, ∀i ∈{1, 2, . . . , M},
+(10)
+and its variance is bounded by the constant σ2:
+E[||gr(t)
+i
+−∇L(ω(t)
+i )||2
+2] ≤σ2,
+∀i ∈{1, 2, . . . , M}, σ2 ≥0.
+(11)
+Assumption 3.
+(Lipschitz Continuity).
+Each local loss
+function L is L2-Lipschitz continuous with respect to θ.
+This assumption is deemed reasonable, akin to assumption
+1, as it reflects a common property of loss functions, ensur-
+ing the boundedness of the gradient’s impact on parameter
+updates, which is a prerequisite for the stability and conver-
+gence of optimization algorithms,
+||L(θ(t1)
+i
+) −L(θ(t2)
+i
+)|| ≤L2||θ(t1)
+i
+−θ(t2)
+i
+||2,
+∀t1, t2 > 0, i ∈{1, 2, . . . , M}.
+(12)
+Theorem 1. (One-round Deviation Bound). Let Assumptions
+1 to 3 hold. For an arbitrary client, after every communication
+round, we have,
+E[L(t+1)E+ 1
+2 ] ≤E[LtE+ 1
+2 ] −(α −L1α2
+2
+)
+E−1
+X
+e= 1
+2
+||∇LtE+e||2
+2
++ L1Eα2
+2
+σ2 + 2L2η(t + 1)Max3
+(13)
+where Max =
+max
+i=1,2,...,M
+t=1,2,...
+||θ(t)
+i ||.
+This theorem indicates the deviation bound of the local ob-
+jective function for an arbitrary client after each communi-
+cation round. Convergence of each client’s local objective
+function can be guaranteed when there is a certain expected
+one-round decrease, which can be achieved by choosing ap-
+propriate η and α. The proof of Theorem 1 is in Appendix.
+5
+Experiments
+5.1
+Experimental Setup
+Datasets.
+We employ three public image-classification
+datasets of varying complexities: FMNIST (simple), CIFAR-
+10 (medium), and CIFAR-100 (complex). Experiments are
+conducted with 20 and 50 clients, respectively.
+For each
+dataset, we construct heterogeneous scenarios following the
+two widely-used settings: the pathological and the practical
+settings[McMahan et al., 2017; Li et al., 2021a]. For the
+pathological setting, we allocate disjoint and unbalanced data
+of 2/2/10 classes to each client out of a total of 10/10/100
+classes on FMNIST/CIFAR-10/CIFAR-100 datasets. For the
+practical setting, we use a Dirichlet distribution[Yurochkin et
+al., 2019], denoted as Dir(α), to sample data points from each
+class in a given dataset to each client, where a smaller value
+of the concentration parameter α reflects stronger data het-
+erogeneity. We set α to 0.1/0.1/0.01 for FMNIST/CIFAR-
+10/CIFAR-100 datasets.
+Competitors. We evaluated FedAPA against FedAvg, the
+standard non-PFL baseline, and 10 state-of-the-art PFL
+algorithms.
+The comparison includes six personalized
+model-based methods (FedPHP, FedAMP, APPLE, FedALA,
+pFedHN), two global model-based approaches (FedPAC
+and DBE), and two other PFL approaches (FedProto, and
+FedGH). The dashed lines in Table 1 and Table 2 sequentially
+divide the competitor methods into these three groups.
+Model and Training. In all experiments, each client uses the
+same LeNet-5 architecture, with the first four layers serving
+as shared feature extraction layers with the server, and the
+final fully connected (FC) layer acting as a private decision
+layer. To accommodate the size and color channels of the im-
+ages in each dataset, we set the input channels/FC layer input
+dimension/output channels of each client model to 1/256/10
+for FMNIST, 3/400/10 for CIFAR-10, and 3/400/100 for
+CIFAR-100. We utilize the default training-to-test set ratio of
+each dataset, namely 6:1 for FMNIST and 5:1 for CIFAR-10
+and CIFAR-100. Unless otherwise specified, we use the fol-
+lowing training settings. we use SGD with a momentum of
+0.9 as the client optimizer. We run two local training epochs
+in each iteration with a batch size of 64 and a learning rate
+α = 0.01 for 50 communication rounds with the server. Each
+round involves participation from at least 60% of all users.
+For our FedAPA algorithm, we initialize the self-weight µ in
+aggregation-weight vectors to 0.5 and set the learning rate η
+for updating weight vectors to 0.01.
+Implementation.
+The experiments were conducted on a
+workstation running Ubuntu 22.04 LTS. The implementation
+utilized Python 3.8.10, CUDA version 11.3, and the PyTorch
+1.11.0 deep learning framework. The workstation features a
+12 vCPU Intel Xeon Platinum 8255C @ 2.50GHz CPU and
+an NVIDIA GeForce RTX 2080 Ti GPU.
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+6223
+Approach
+Pathological Non-IID
+Practical Non-IID
+FMNIST
+CIFAR-10
+CIFAR-100
+FMNIST
+CIFAR-10
+CIFAR-100
+(Simple)
+(Medium)
+(Complex)
+(Simple)
+(Medium)
+(Complex)
+c = 2
+c = 2
+c = 10
+α = 0.1
+α = 0.1
+α = 0.01
+#Client = 20
+FedAvg [McMahan et al., 2017]
+75.08
+48.48
+18.49
+86.96
+56.68
+20.39
+FedPHP [Li et al., 2021b]
+99.17
+84.40
+52.02
+95.33
+82.52
+62.09
+FedAMP [Huang et al., 2021]
+99.26
+86.31
+56.94
+96.44
+82.38
+66.43
+APPLE [Luo and Wu, 2022]
+99.06
+84.69
+54.67
+95.42
+79.79
+61.83
+FedALA [Zhang et al., 2023]
+99.33
+87.52
+59.75
+96.19
+82.53
+67.24
+pFedHN [Shamsian et al., 2021]
+99.29
+86.12
+57.43
+95.95
+80.71
+64.55
+pFedLA [Ma et al., 2022]
+98.85
+78.85
+41.96
+95.30
+82.86
+50.02
+FedPAC [Xu et al., 2023]
+99.41
+86.18
+56.06
+96.36
+84.93
+61.89
+DBE [Zhang et al., 2024]
+99.20
+86.39
+57.46
+95.97
+83.45
+63.00
+FedProto [Tan et al., 2022]
+99.31
+86.39
+57.20
+95.52
+82.71
+66.81
+FedGH [Yi et al., 2023]
+99.32
+86.50
+57.34
+95.22
+80.75
+66.59
+FedAPA (ours)
+99.35
+87.69
+59.24
+96.71
+85.85
+68.11
+#Client = 50
+FedAvg [McMahan et al., 2017]
+72.54
+38.69
+13.19
+82.98
+50.77
+11.84
+FedPHP [Li et al., 2021b]
+98.90
+82.85
+46.20
+95.27
+81.73
+69.33
+FedAMP [Huang et al., 2021]
+99.02
+83.56
+49.61
+94.40
+82.18
+73.67
+APPLE [Luo and Wu, 2022]
+98.71
+80.97
+42.51
+95.21
+79.44
+68.10
+FedALA [Zhang et al., 2023]
+99.11
+84.50
+52.44
+95.81
+82.84
+74.12
+pFedHN [Shamsian et al., 2021]
+98.96
+84.47
+52.50
+95.75
+82.76
+74.50
+pFedLA [Ma et al., 2022]
+98.26
+71.22
+31.22
+92.65
+77.31
+56.09
+FedPAC [Xu et al., 2023]
+97.83
+85.27
+51.40
+95.65
+81.69
+71.79
+DBE [Zhang et al., 2024]
+99.04
+84.26
+51.43
+95.51
+82.81
+72.24
+FedProto [Tan et al., 2022]
+99.14
+83.28
+50.16
+95.45
+81.73
+74.86
+FedGH [Yi et al., 2023]
+99.07
+83.37
+49.84
+94.87
+79.61
+73.04
+FedAPA (ours)
+99.15
+85.33
+52.62
+95.95
+84.14
+75.09
+Table 1: Test accuracy (%) of FedAPA and 11 competitors on Fashion MNIST, CIFAR-10, and CIFAR-100 in pathological and practical
+non-IID settings for 20 and 50 collaborative clients. c denotes the number of classes held by each client in pathological settings. α is the
+concentration parameter of the Dirichlet distribution used in practical settings.
+5.2
+Accuracy Evaluation
+To evaluate and compare the performance of FedAPA with
+the competitors, we ran each FL algorithm and computed the
+average accuracy from three random data allocations. Ac-
+curacy was calculated as the ratio of correct to total predic-
+tions. Table 1 shows the test accuracy of all methods across
+12 scenarios, covering three datasets, two client numbers, and
+two non-IID settings. It also includes the number of classes
+c per client for the pathological settings, and the concentra-
+tion parameter α of the Dirichlet distribution for the practi-
+cal settings. As shown in Table 1, FedAPA outperforms all
+competitors in test accuracy across 10 out of 12 scenarios.
+The only exceptions are the pathological non-IID settings on
+the FMNIST and CIFAR-100 datasets with 20 clients, where
+FedAPA trails the top-performing methods by just 0.06% (vs.
+FedPAC) and 0.51% (vs. FedALA), respectively. FedAPA
+demonstrates a more pronounced performance advantage in
+practical non-IID settings, which better reflect realistic het-
+erogeneous data distributions. Overall, FedAPA consistently
+exhibits superior performance compared to all competing
+methods.
+5.3
+Computation and Communication Overhead
+The computation times for each FL algorithm are summa-
+rized in the computation column of Table 2, showing total
+time (in minutes) and time per iteration (in seconds) for 20
+clients using the medium CIFAR-10 dataset in the practical
+non-IID setting with 2 training epochs. As shown, FedAPA
+requires 17.66 (approximately 18) seconds per iteration, com-
+parable to the baseline FedAvg. Thus, FedAPA incurs only an
+additional 0.34 seconds per iteration while achieving signifi-
+cant accuracy improvements. It offers state-of-the-art perfor-
+mance with minimal computation overhead among all com-
+pared PFL algorithms.
+The communication costs per iteration are listed in the
+communication column of Table 2. Prototype-based meth-
+ods, such as FedProto and FedGH, incur the lowest communi-
+cation overhead by transmitting prototypes instead of model
+parameters. FedAPA, while achieving higher accuracy, main-
+tains communication efficiency by transmitting only partial
+model parameters, resulting in the least communication over-
+head among all non-prototype FL algorithms. In summary,
+FedAPA achieves superior accuracy with the lowest commu-
+nication cost among non-prototype methods.
+5.4
+Ablation Study
+(1) FedAPA incorporates the Adaptive Personalized Ag-
+gregation (APA) strategy and the Partial Model Sharing
+(PMS) strategy.
+To assess the contributions of these two
+strategies, we conduct an ablation study, as shown in the
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+6224
+Approach
+Acc.
+Comput.
+Commun.
+Total
+Time
+(Practice)
+time
+per iter.
+per iter.
+%
+min.
+sec.
+KB
+FedAvg [McMahan et al., 2017]
+56.68
+42
+17
+484
+FedPHP [Li et al., 2021b]
+82.52
+50
+20
+484
+FedAMP [Huang et al., 2021]
+82.38
+46
+19
+484
+APPLE [Luo and Wu, 2022]
+79.79
+50
+20
+5087
+FedALA[Zhang et al., 2023]
+82.53
+67
+27
+484
+pFedHN [Shamsian et al., 2021]
+80.71
+48
+19
+478
+pFedLA [Ma et al., 2022]
+82.86
+89
+35
+484
+FedPAC [Xu et al., 2023]
+84.93
+161
+64
+553
+DBE [Zhang et al., 2024]
+83.45
+44
+18
+484
+FedProto [Tan et al., 2022]
+82.71
+66
+26
+5
+FedGH [Yi et al., 2023]
+80.75
+63
+25
+5
+FedAPA (ours)
+85.85
+44
+18
+478
+Table 2: Comparison of test accuracy (%), computation time (min-
+utes/seconds), and communication overhead (parameters per itera-
+tion per client) on CIFAR-10 (20 clients, practical Non-IID setting,
+α = 0.1).
+Method
+∆Acc.(%)
+Acc.(%)
+Baseline (FedAvg)
+–
+56.68
+Baseline + APA
+↑28.25
+84.93
+Baseline + APA + PMS (FedAPA)
+↑28.25 + 0.92
+85.85
+FedAPA (ours)
+–
+85.85
+w/o Clipping
+↓2.58
+83.27
+w/o Self-weight
+↓1.44
+84.41
+w/o Normalization
+↓5.51
+80.34
+w/o All
+↓26.14
+59.71
+Table 3: Ablation results of 2 strategies and 3 post-processing steps
+to FedAPA’s accuracy (Acc.) on CIFAR-10 (20 clients, practical
+Non-IID setting).
+top half of Table 3. Starting with FedAvg as the baseline,
+which uses average aggregation and entire-model sharing,
+we achieve an accuracy of 56.68%.
+Introducing the APA
+strategy significantly improves accuracy by 28.25%, reaching
+84.93%. Adding the PMS strategy further enhances accuracy
+by 0.92%, resulting in a final accuracy of 85.85%. These re-
+sults underscore the pivotal contribution of the APA strategy
+as the primary driver of performance improvement, while the
+PMS strategy offers a smaller, supplementary boost. (2) Fol-
+lowing the server-side gradient update of the weight vectors,
+FedAPA applies three post-processing steps to the weights:
+clipping, self-weight adjustment, and normalization. Abla-
+tion studies in the lower half of Table 3 show that removing
+each step individually reduces accuracy by 2.58%, 1.44%,
+and 5.51%, respectively, with a significant 26.14% drop when
+all are omitted. These results highlight the importance of each
+step in improving model accuracy.
+5.5
+Convergence Curve Analysis
+The convergence curves in Fig2 show the performance of
+the 12 methods over training rounds. FedAPA reaches con-
+vergence within approximately 10 rounds, demonstrating its
+rapid convergence rate compared to the competing methods.
+The curve for FedAPA exhibits a smooth progress towards
+convergence, indicating stable training and consistent perfor-
+Figure 2: Convergence curves of FedAPA and 11 compared methods
+on CIFAR-10 (20 clients, practical Non-IID setting).
+µ
+0
+0.3
+0.5
+0.7
+1
+Accuracy
+84.41
+84.76
+85.85
+84.02
+82.95
+drop
+1.44
+1.09
+-
+1.83
+2.90
+Table 4:
+Accuracy of FedAPA with varying self-weight µ on
+CIFAR-10 (20 clients, practical Non-IID setting).
+mance improvement. Upon convergence, FedAPA achieves
+an accuracy of around 86%, which is higher than all other
+competitors. These results confirm that FedAPA is one of the
+fastest-converging algorithms, achieving the highest accuracy
+with stable convergence behavior.
+5.6
+Effect of Self-weight µ
+FedAPA adjusts the self-weight of each aggregation-weight
+vector using the hyperparameter µ. We evaluate the effect of
+µ on accuracy by varying it from 0 to 1, using 20 clients on
+CIFAR-10 in a Practical Non-IID setting. As shown in Table
+4, the best accuracy is achieved when µ = 0.5. Lower val-
+ues underweight local knowledge, while higher values overly
+emphasize local tasks, reducing the benefits of shared knowl-
+edge. Thus, µ = 0.5 balances local and shared contributions
+effectively.
+6
+Conclusion
+In this paper, we introduce a new PFL framework, FedAPA,
+designed to automatically consolidate desired knowledge
+from collaborative clients to form personalized local mod-
+els. FedAPA adaptively learns aggregation weights on the
+server by utilizing gradients derived from changes in client
+parameters. We provide a theoretical proof for the conver-
+gence of our FedAPA algorithm. Experimental results un-
+der heterogeneous data scenarios demonstrate that FedAPA
+achieves higher accuracy and lower computational overhead
+compared to the competing PFL methods, while maintain-
+ing communication efficiency. These contributions highlight
+the effectiveness and efficiency of FedAPA in improving PFL
+performance, suggesting its potential suitability for handling
+large-scale heterogeneous data in practical applications.
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+6225
+Acknowledgements
+This research was partially supported by funding from
+Guangdong Basic and Applied Basic Research Founda-
+tion (No. 2021A1515012297), the Hong Kong RGC Gen-
+eral Research Fund (No. 152211/23E, 15216424/24E, and
+152115/25E), the PolyU Internal Fund (No. P0056171), and
+the Huawei Gifted Fund.
+References
+[Ha et al., 2016] David Ha, Andrew M. Dai, and Quoc V. Le.
+Hypernetworks. CoRR, abs/1609.09106, 2016.
+[Huang et al., 2021] Yutao Huang, Lingyang Chu, Zirui
+Zhou, Lanjun Wang, Jiangchuan Liu, Jian Pei, and Yong
+Zhang. Personalized cross-silo federated learning on non-
+iid data. Proceedings of the AAAI Conference on Artificial
+Intelligence, 35(9):7865–7873, May 2021.
+[Li et al., 2021a] Qinbin Li, Bingsheng He, and Dawn Song.
+Model-contrastive federated learning. In Proceedings of
+the IEEE/CVF Conference on Computer Vision and Pat-
+tern Recognition (CVPR), pages 10713–10722, June 2021.
+[Li et al., 2021b] Xin-Chun Li, De-Chuan Zhan, Yunfeng
+Shao, Bingshuai Li, and Shaoming Song.
+Fedphp:
+Federated personalization with inherited private models.
+In Nuria Oliver, Fernando P´erez-Cruz, Stefan Kramer,
+Jesse Read, and Jose A. Lozano, editors, Proceedings
+of the Joint European Conference on Machine Learning
+and Knowledge Discovery in Databases. Research Track,
+pages 587–602, Cham, 2021. Springer International Pub-
+lishing.
+[Luo and Wu, 2022] Jun Luo and Shandong Wu. Adapt to
+adaptation: Learning personalization for cross-silo feder-
+ated learning. In Lud De Raedt, editor, Proceedings of
+the Thirty-First International Joint Conference on Arti-
+ficial Intelligence, IJCAI-22, pages 2166–2173. Interna-
+tional Joint Conferences on Artificial Intelligence Orga-
+nization, 7 2022. Main Track.
+[Ma et al., 2022] Xiaosong Ma, Jie Zhang, Song Guo, and
+Wenchao Xu. Layer-wised model aggregation for person-
+alized federated learning. In Proceedings of the IEEE/CVF
+Conference on Computer Vision and Pattern Recognition
+(CVPR), pages 10092–10101, June 2022.
+[McMahan et al., 2017] Brendan McMahan, Eider Moore,
+Daniel Ramage, Seth Hampson, and Blaise Aguera y Ar-
+cas. Communication-Efficient Learning of Deep Networks
+from Decentralized Data. In Aarti Singh and Jerry Zhu,
+editors, Proceedings of the 20th International Conference
+on Artificial Intelligence and Statistics, volume 54 of Pro-
+ceedings of Machine Learning Research, pages 1273–
+1282. PMLR, 20–22 Apr 2017.
+[Shamsian et al., 2021] Aviv Shamsian, Aviv Navon, Ethan
+Fetaya, and Gal Chechik. Personalized federated learning
+using hypernetworks. In Marina Meila and Tong Zhang,
+editors, Proceedings of the 38th International Conference
+on Machine Learning, volume 139 of Proceedings of Ma-
+chine Learning Research, pages 9489–9502. PMLR, 18–
+24 Jul 2021.
+[Tan et al., 2022] Yue Tan, Guodong Long, LU LIU, Tianyi
+Zhou, Qinghua Lu, Jing Jiang, and Chengqi Zhang. Fed-
+proto: Federated prototype learning across heterogeneous
+clients. Proceedings of the AAAI Conference on Artificial
+Intelligence, 36(8):8432–8440, Jun. 2022.
+[Wu et al., 2020] Qiong Wu, Kaiwen He, and Xu Chen. Per-
+sonalized federated learning for intelligent iot applica-
+tions: A cloud-edge based framework. IEEE Open Journal
+of the Computer Society, 1:35–44, 2020.
+[Xu et al., 2023] Jian Xu,
+Xinyi Tong,
+and Shao-Lun
+Huang.
+Personalized federated learning with feature
+alignment and classifier collaboration.
+arXiv preprint
+arXiv:2306.11867, 2023.
+[Yang et al., 2019] Qiang Yang, Yang Liu, Tianjian Chen,
+and Yongxin Tong. Federated machine learning: Concept
+and applications. ACM Trans. Intell. Syst. Technol., 10(2),
+jan 2019.
+[Yi et al., 2023] Liping Yi, Gang Wang, Xiaoguang Liu,
+Zhuan Shi, and Han Yu. Fedgh: Heterogeneous federated
+learning with generalized global header. In Proceedings
+of the 31st ACM International Conference on Multimedia,
+MM ’23, page 8686–8696, New York, NY, USA, 2023.
+Association for Computing Machinery.
+[Yurochkin et al., 2019] Mikhail Yurochkin, Mayank Agar-
+wal, Soumya Ghosh, Kristjan Greenewald, Nghia Hoang,
+and Yasaman Khazaeni. Bayesian nonparametric feder-
+ated learning of neural networks.
+In Kamalika Chaud-
+huri and Ruslan Salakhutdinov, editors, Proceedings of
+the 36th International Conference on Machine Learning,
+volume 97 of Proceedings of Machine Learning Research,
+pages 7252–7261. PMLR, 09–15 Jun 2019.
+[Zhang et al., 2023] Jianqing Zhang, Yang Hua, Hao Wang,
+Tao Song, Zhengui Xue, Ruhui Ma, and Haibing Guan.
+Fedala: Adaptive local aggregation for personalized fed-
+erated learning. Proceedings of the AAAI Conference on
+Artificial Intelligence, 37(9):11237–11244, Jun. 2023.
+[Zhang et al., 2024] Jianqing Zhang, Yang Hua, Jian Cao,
+Hao Wang, Tao Song, Zhengui XUE, Ruhui Ma, and
+Haibing Guan.
+Eliminating domain bias for federated
+learning in representation space. In A. Oh, T. Naumann,
+A. Globerson, K. Saenko, M. Hardt, and S. Levine, edi-
+tors, Advances in Neural Information Processing Systems,
+volume 36, pages 14204–14227. Curran Associates, Inc.,
+2024. [Online]. Available: https://dl.acm.org/doi/10.5555/
+3666122.3666747.
+Proceedings of the Thirty-Fourth International Joint Conference on Artiﬁcial Intelligence (IJCAI-25)
+6226

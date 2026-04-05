@@ -1,0 +1,65 @@
+# === 排除目录 ===
+无关文件/
+
+# 模型权重（太大）
+Qwen3-VL-4B-mlc/
+mlc-qwen3-vl/
+mlc-qwen3-vl.zip
+
+# PDF论文（大文件）
+papers/
+
+# === 数据集原始数据（保留生成脚本 .py）===
+# PFLlib 数据集：排除生成出来的数据，保留 generate_*.py
+PFLlib/dataset/MNIST/
+PFLlib/dataset/utils/LEAF/
+# 未来可能下载的其他数据集目录
+PFLlib/dataset/*/rawdata/
+PFLlib/dataset/*/train/
+PFLlib/dataset/*/test/
+
+# RethinkFL 数据
+RethinkFL/data/
+
+# PARDON 风格统计缓存
+PARDON-FedDG/style_stats/
+
+# === 通用排除 ===
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+*.so
+*.bin
+
+# Office 临时文件
+~$*
+
+# OS 文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python 环境
+.env
+.venv
+env/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 日志和输出
+*.log
+wandb/
+runs/
+checkpoints/

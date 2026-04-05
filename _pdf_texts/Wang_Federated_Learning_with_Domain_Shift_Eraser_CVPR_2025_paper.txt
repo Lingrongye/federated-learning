@@ -1,0 +1,1163 @@
+Federated Learning with Domain Shift Eraser
+Zheng Wang1,2,3
+Zihui Wang5
+Zheng Wang 4
+Xiaoliang Fan 1,2
+Cheng Wang 1,2*
+1Fujian Key Laboratory of Sensing and Computing for Smart Cities, Xiamen University, China
+2Key Laboratory of Multimedia Trusted Perception and Efficient Computing,
+Ministry of Education of China, School of Informatics, Xiamen University, China
+3 Shanghai Innovation Institution
+4 School of Informatic, Xiamen University, China
+5 Peng Cheng Laboratory, Shenzhen, China
+Abstract
+Federated learning (FL) is emerging as a promising tech-
+nique for collaborative learning without local data leaving
+their devices. However, clients’ data originating from di-
+verse domains may degrade model performance due to do-
+main shifts, preventing the model from learning consistent
+representation space.
+In this paper, we propose a novel
+FL framework, Federated Domain Shift Eraser (FDSE),
+to improve model performance by differently erasing each
+client’s domain skew and enhancing their consensus. First,
+we formulate the model forward passing as an iterative
+deskewing process that extracts and then deskews features
+alternatively. This is efficiently achieved by decomposing
+each original layer in the neural network into a Domain-
+agnostic Feature Extractor (DFE) and a Domain-specific
+Skew Eraser (DSE). Then, a regularization term is applied
+to promise the effectiveness of feature deskewing by pulling
+local statistics of DSE’s outputs close to the globally con-
+sistent ones. Finally, DFE modules are fairly aggregated
+and broadcast to all the clients to maximize their consen-
+sus, and DSE modules are personalized for each client via
+similarity-aware aggregation to erase their domain skew
+differently. Comprehensive experiments were conducted on
+three datasets to confirm the advantages of our method in
+terms of accuracy, efficiency, and generalizability.
+1. Introduction
+Federated learning has emerged as a promising paradigm
+for training machine learning models on distributed data
+while preserving privacy [24]. However, a notable chal-
+lenge arises when clients originate from diverse domains,
+where domain shifts across clients may result in perfor-
+mance degradation of the aggregated model [4, 11]. For
+*Corresponding Author
+Figure 1. Inllustration of the characteristic of the proposed
+FDSE v.s. Vallina FL [24]. FDSE decomposes the model to re-
+spectively erase domain skew for each client by f (i)
+DSE and extract
+generalizable features for all the clients by fDF E. This promotes
+consistency in representation space across domains since knowl-
+edge is fine-grainedly decoupled for learning and aggregation.
+example, hospitals located in different regions may collect
+data from diverse patient populations using various ma-
+chines and protocols, leading to distinct domains in their
+feature distributions [20].
+The misalignment in feature
+spaces can hinder client consensus on the representation
+space (e.g., Figure 1 left), finally reducing model perfor-
+mance in two ways. First, the model is compelled to ad-
+ditionally learn generalizable representations for vastly dif-
+ferent samples across domains, competitively preventing it
+from focusing on the task objective. Second, the training
+process may be dominated by a single domain when clients’
+model updates exhibit conflicts and substantial variations in
+magnitude [5, 37], which causes the model to overfit on the
+prevailing domain while sacrificing its utility on others [10].
+Recent works addressing the FL domain shift problem
+can be categorized into two main groups. The first group
+This CVPR paper is the Open Access version, provided by the Computer Vision Foundation.
+Except for this watermark, it is identical to the accepted version;
+the final published version of the proceedings is available on IEEE Xplore.
+4978
+(i.e., consensus-based methods) [5, 36, 43] enhances the
+consensus among clients at various levels to improve the
+model generalizability across domains. In contrast, another
+group (i.e., personalization-based methods) [20, 21, 32]
+mitigates the need for clients’ consensus by personaliz-
+ing their models to fit their local data distributions. Since
+the two groups exhibit complementary strengths in model-
+ing different types of knowledge (i.e., general and personal
+knowledge), it’s natural to consider a hybrid solution that
+synergizes their advantages for further improvement. How-
+ever, model personalization may severely hinder clients’
+consensus due to over-focusing on clients’ local benefits,
+thereby resulting in invalid integration. This motivates us to
+rethink the FL domain shift from the hybrid perspective
+How to personalize models to enhance clients’ consensus?
+In this work, we address this issue by using personal-
+ized parameters to erase domain-specific skew for each
+client while enhancing clients’ consensus on other pa-
+rameters based on two key observations.
+First, visual
+learning tasks often mitigate samples’ domain-specific skew
+differently. For example, in point cloud segmentation, high-
+density and low-density point clouds from channel-varying
+lidars are respectively downsampled and upsampled to
+achieve their alignment in feature space [39]. These inher-
+ently opposing processes of feature alignment necessitate
+personalized modeling. Second, a unified treatment is usu-
+ally applied to different samples after their domain-specific
+skew is mitigated [11, 13, 39], revealing the importance of
+achieving post-deskewing consensus in a domain-agnostic
+way. Following the above paradigm, we develop a novel
+FL framework, Federated Domain Shift Eraser (FDSE),
+aiming to differently erase clients’ domain-specific skew
+and then enhance their consensus in a decoupled manner.
+First, we formulate the model forward passing as an it-
+erative deskewing process that extracts and then deskews
+features alternatively. This is efficiently achieved by de-
+composing each original layer in the neural network into a
+Domain-agnostic Feature Extractor (DFE) and a Domain-
+specific Skew Eraser (DSE). Then, a regularization term
+is applied to enhance the effectiveness of feature deskew-
+ing by pulling local statistics of each DSE’s output close
+to the globally consistent ones. Finally, DFE modules are
+fairly aggregated and broadcast to all the clients to maxi-
+mize their consensus, while DSE modules are respectively
+aggregated for each client based on their similarity to erase
+heterogeneous domain skew collaboratively. Compared to
+the Vallina FL in Figure 1 (left), our FDSE benefits from
+the design that emphasizes fine-grained personalization and
+consensus maximization on decoupled objectives, promot-
+ing both the consistency in the representation space and the
+efficiency of aggregating different types of knowledge. Our
+contributions are summarized as follows:
+• We rethink the domain shift problem in FL from a novel
+hybrid perspective that integrates the advantages of two
+distinct sets of existing methods, i.e., consensus-based
+and personalization-based methods.
+• We develop a novel framework, FDSE, to improve cross-
+domain FL by differently erasing clients’ domain skew
+while enhancing their consensus in a decoupled manner.
+• We conduct comprehensive experiments on three datasets
+(i.e., Office-Caltech10, PACS, and DomainNet) to con-
+firm FDSE’s superiority in terms of accuracy, efficiency,
+and generalizability against the state-of-the-art methods.
+2. Related Works
+2.1. Data Heterogeneity in FL
+FL often faces challenges due to data heterogeneity, compli-
+cating the training process and degrading overall model ac-
+curacy [24, 41]. Previous efforts have been devoted to han-
+dling heterogeneous data by maintaining consistency be-
+tween local objective and global objective [1, 15, 17, 18]
+or smoothening the clients’ loss landscape during model
+training [6, 26, 30, 33]. Another series of works instead fo-
+cuses on enhancing models’ local performance under data
+heterogeneity via model personalization techniques, such
+as partial parameter sharing [12, 21, 32], meta-learning[8,
+19], latent representation space alignment[27, 36], hyper-
+network[31], and knowledge decoupling[3, 40]. Neverthe-
+less, most of these methods are naturally designed for and
+verified in label skew scenarios [14], overlooking the do-
+main shift problem and resulting in suboptimal performance
+in cross-domain scenarios [5].
+2.2. Cross-domain FL
+Cross-domain FL refers to FL with clients whose datasets
+come from different domains [5, 11, 13, 20, 22, 29, 32, 43].
+The domain shift across clients’ datasets can hinder the
+FL model training process, leading to model performance
+degradation [5]. Previous methods addressing this issue can
+be mainly grouped into two sets. Methods in the first set
+focus on maximizing different clients’ consensus across do-
+mains at different levels. For example, [13] exchanges a few
+local data information across clients to normalize their sam-
+ples in the frequency space at the input level. [43] increases
+the visibility of all domains’ samples to each client during
+local training by feature augmentation in the intermediate
+layers of the model, leading to improved global consensus
+at the feature level. [11, 36] maintain consistent class pro-
+totypes before the output layers of the model to increase
+clients’ consensus in the representation space. [5] instead
+enhances clients’ consensus directly at the model parameter
+level by minimizing the conflicts of model updates of im-
+portant parameters. Another set of methods uses model per-
+sonalization techniques to help suit the global model to their
+4979
+local domain skew. [20] keeps batch normalization layers
+to be locally maintained to make the model more adaptable
+to their personal domains. [32] adaptively loads partial pa-
+rameters instead of the entire model for each local training.
+Despite the rapid development of the two sets of methods
+respectively, the way to integrate the advantages of the two
+sets still remains unexplored, leading to a potentially large
+space for further performance improvement.
+To this end, we rethink the domain shift problem in FL
+from a hybrid view of existing methods (e.g., consensus en-
+hancement and personalization). Different from previous
+studies, we fine-grained identify what should be personal-
+ized (e.g., domain-specific skew erasing) and on which the
+consensus should be maximized (the treatment to deskewed
+features), thus successfully bridging the two distinct in-
+sights behind existing approaches.
+3. Problem Formulation
+Personalized FL.
+In personalized FL, there exist N
+clients equipped with their private data {Di|i ∈[N]}, and
+the goal is to obtain a series of model Θ = {θ1, θ2, ..., θN}
+that minimize
+  \
+m i
+n
+ _{\m
+athb
+f { \Th et a  }}=\sum _{i\in  [ N]}\frac {|\mathcal {D}_i|}{|\mathcal {D}|} F_i, F_i={\mathbb {E}_{(x,y)\sim \mathcal {D}_i}\left [\ell ( \mathbf {\theta }_i; x,y)\right ]} 
+(1)
+where |D| = PN
+i=1 Di and ℓ(·) is the loss function. In this
+paper, we consider one popular scheme of personalized FL
+where some parameters are globally shared among all the
+clients and the others are privately kept [2, 12]. Let θi =
+[θu; θv,i], we denote θu the globally shared parameters and
+θv,i the personalized ones.
+Cross-domain FL
+Cross-domain FL [5, 43] refers to FL
+with clients that exhibit domain shift among their local
+datasets. The domain shift means that different clients share
+the consistent label space P(Y ) but differ in conditional fea-
+ture distribution P(X|Y ) given Y (e.g., Pi(X|Y = y) ̸=
+Pj(X|Y = y), ∀i ̸= j, i, j ∈[N]).
+4. Methodology
+In this section, we present the main procedure and imple-
+mentation of FDSE. We begin by illustrating the layer de-
+composition approach, which allows us to decouple the per-
+sonalized domain skew erasing from the common task ob-
+jective by assigning them to different model parameters in
+Sec. 4.1. Next, we introduce the consistency regularization
+used during clients’ local training to enhance the effective-
+ness of feature deskewing in Sec. 4.2. Finally, we discuss
+the model aggregation strategies respectively for common
+and personalized parameters in Sec. 4.3.
+4.1. Layer Decomposition
+As aforementioned in Sec.1, we personalize partial model
+parameters for each client to erase their domain-specific
+skew.
+Existing deskewing methods usually align cross-
+domain features at a certain layer of the neural network.
+For example, [13, 39] align samples’ attributions in the fea-
+ture space before feeding them into the model, and [21, 36]
+mitigate the domain divergence in the representation space
+at the output layer. However, premature deskewing (e.g.,
+the input layer) may lead to insufficient skew elimination
+while the too-delayed one (e.g., the output layer ) can hin-
+der domain-agnostic knowledge extraction. Therefore, in-
+stead of only deskewing features at a certain layer, we view
+the model forward passing as an iterative deskewing pro-
+cess that extracts and then deskews features alternatively.
+This is efficiently achieved by decomposing each original
+layer in the neural network into a Domain-agnostic Fea-
+ture Extractor (DFE) and a Domain-specific Skew Eraser
+(DSE), as is shown in Figure 2. Concretely, given a con-
+volution layer f with filter size k, input channel number
+S, and output channel number T, we follow [9] to decom-
+pose it into two sub-convolution modules fDSE ◦fDFE where
+each submodule consists of a convolution, a batch normal-
+ization layer, and an activation function. The DFE module
+shares parameters with the original layer f (e.g., kernel size,
+stride, and padding) except for the number of output chan-
+nels TDFE = ⌈T/G⌉by
+  \b o ld X _ {\text {DFE}} = f_{\text {DFE}}*\bold X 
+(2)
+where XDFE ∈RTDFE×h×w, h, w are respectively the height
+and the weight of the original output f(X) and G is the
+architecture parameter. Then, the DFE module maps each
+channel in the DFE module’s output into G channels via
+cheap linear operations by
+  \bol d  X_{\t e xt { DSE},i } &=f_{\text {DSE},i}*\text {ReLU}\left (\text {BN}_{\text {DSE}}\left (\bold X_{\text {DFE},i}\right )\right ), i\in [T_{\text {DFE}}]\notag \\ &\bold X_{\text {out}}=\text {ReLU}\left (\text {BN}_{\text {DFE}}\left (\text {Concat}(\{\bold X_{\text {DSE},i}\})\right )\right )
+(3)
+where XDFE,i ∈R1×h×w, XDSE,i ∈RG×h×w, Xout ∈
+RT ×h×w, and each fDSE,i augments each channel XDFE,i to
+G channels. Although there have been plenty of works that
+decompose convolution layers for efficiency [25, 34, 35],
+this layer separation has the natural advantage for our ob-
+jective decoupling purpose. On one hand, the core com-
+ponents of the output features are independently extracted
+by the DFE module, each of which is then cheaply ex-
+panded to several similar variants by the DSE module. This
+paradigm enables the DFE module to learn the primary
+knowledge (e.g., the core components of feature maps),
+making it suitable for modeling domain-agnostic informa-
+tion. On the other hand, the simplicity of the DSE module
+avoids over-transforming features during deskewing pro-
+cesses, e.g., 94× smaller than the DFE module in a convolu-
+tion with 64 channels and kernel size 5. We further enhance
+4980
+Figure 2. The overview of the FDSE framework.
+the knowledge decoupling for the two modules via regular-
+ization term in Sec.4.2 and the parameter sharing strategy
+in Sec.4.3.
+4.2. Consistency Regularization
+To make the DSE module focus on erasing domain-specific
+skew for each client, we consider regularizing the DSE
+module’s output features during clients’ local training. Sup-
+posing that the lth DSE module f (k,l)
+DSE in the model has ide-
+ally erased the domain skew for the kth client’s local data,
+then the BN layer of the next DFE module BN(k,l)
+DFE cannot
+infer the samples’ domain via the distribution of the seen
+data when there is no label skew. Based on this insight, we
+manually pull the statistics of DSE’s output to be close to
+the global statistics of the corresponding DFE module, thus
+enhancing the deskewing characteristic of the DSE module
+from the statistical view. Specifically, given the bth batch
+feature X(l)
+k,b, |X(l)
+k,b| = B fed to the lth layer of the model,
+we first compute its statistics (i.e., mean and variance) by
+  \m
+ath b f
+ 
+{
+\
+mu 
+}_{k
+,b}^{( l)}=\
+fra c  
+{
+1
+}
+{B}
+\
+sum 
+_{i=1 } ^B \
+bol
+d X_{k,b,i}^{(l)}, \mathbf {\sigma }_{k,b}^{(l)2}=\frac {1}{B}\sum _{i=1}^B \left (\bold X_{k,b,i}^{(l)}-\mathbf {\mu }_{k,b}^{(l)}\right )^2 
+(4)
+Then, we estimate the local running statistics by exponen-
+tial averaging with the momentum coefficient γ of BNDFE
+during local training
+ \ha
+t \ m u _{k,
+b}^{( l )} = \gamma
+ \h
+at \mu
+ _{ k ,b-1}^{
+(l)}+ ( 1- \ gamma )
+\mu _{k,b}^{(l)}\notag \\ \hat \sigma _{k,b}^{(l)2}=\gamma \hat \sigma _{k,b-1}^{(l)2}+(1-\gamma )\sigma _{k,b}^{(l)2}
+(5)
+The local statistics of the lth layer are finally pulled close to
+the global ones by
+  \m
+ath c a
+l
+ {L}^{(l
+)}_ { \tex
+t
+ {C
+o
+n
+}
+} = \fr
+ac {1 } {d}\le
+f
+t 
+\
+|\hat {\mu }^{(l)}_{k,b} - \mu ^{(l)}_{g}\right \|^2 + \left (\frac {\|\hat {\sigma }^{(l)2}_{k,b}\|_1 - \|\sigma ^{(l)2}_{g}\|_1}{d}\right )^2 
+(6)
+where µ(l)
+g , σ(l)
+g
+are the corresponding layer’s global statis-
+tics in the received global model and d is the feature di-
+mension.
+In this way, both the centers and the sizes of
+the clients’ feature spaces are regularized to be consistent.
+This rule is then applied to each DSE module in a depth-
+increasing manner, as formulated in the consistency regu-
+larization term
+  \m a
+t
+h
+cal
+ {L}_{
+\tex t {Con} }= \
+sum  _{l
+=1
+}^L  w_ {l}\mathcal {L}_{\text {Con}}^{(l)}, \text {w.r.t., }w_{l}=\frac {\exp {(\beta l)}}{\sum _{l=1}^L\exp {(\beta l)}} 
+(7)
+where L is the number of DSE modules and β is the hyper-
+parameter that enables gradual features deskewing across
+layers. A smaller β can strengthen feature deskewing by
+emphasizing each layer’s statistical consistency. We fix β =
+0.001 in practice and only tune the coefficient λ that scales
+the regularization term to balance the task objective and the
+regularization. In addition, this consistency regularization
+can help adapt the trained model to new unseen domains
+without any labels, where we fine-tune the DSE modules to
+minimize the regularization loss as depicted in Sec. 5.4.
+4.3. Model Aggregation
+We use different strategies to aggregate the two fundamen-
+tal components of FDSE (e.g., DFE and DSE). For the DFE
+4981
+modules, we share them among all the clients and aggregate
+them through a fair layer consensus maximization mecha-
+nism. For the DSE modules, we personalized them for each
+client based on similarity-aware aggregation to erase het-
+erogeneous domain skew collaboratively. As a result, the
+varying degrees of parameter sharing further facilitate the
+distinct knowledge acquisition of the DFE and DSE mod-
+ules in a decoupled manner, as the local knowledge encoded
+in the DFE modules is much more frequently smoothed over
+all the clients than the DSE modules. We illustrate the de-
+tails of the two aggregation strategies below.
+4.3.1. Consensus Maximization
+We remark that DFE modules are designed to model
+domain-agnostic knowledge. However, model updates from
+different clients may largely conflict with each other due to
+severe domain shifts [5, 10, 37], preventing the model from
+learning domain-agnostic knowledge by biasing the training
+process towards the dominant clients. To this end, we pro-
+pose to maximize client consensus when aggregating fully
+shared parameters (e.g., DFE modules and the task head) to
+enhance domain-agnostic knowledge learning. Motivated
+by the multi-gradient-descent-algorihtm [7, 10] that opti-
+mizes the model update to be harmonies with each client’s
+update, we minimize the L2-norm of the aggregated update
+for each layer to maximize layer-wise consensus. Specif-
+ically, given clients’ local updates on DSE modules and
+heads {∆θ(l)
+u,k}, k ∈[N], we aggregate them by
+  \ba
+r  d
+_
+{
+u
+}^{
+(l)}&=
+\frac {1}{
+N}\ s
+um _{
+k=1
+}^N\|\
+Delta
+ {\th
+e t a }_{
+u
+,
+k
+}^{
+(l)}
+\ |_2,
+\bol d d_ { u,k}^{(l
+)
+}
+ = 
+\frac 
+{\Del
+ta {\theta }_{u,k}^{(l)}}{\|\Delta {\theta }_{u,k}^{(l)}\|_2}\notag \\ \Delta {\theta }_{u}^{(l)}&=\bar d_{u}^{(l)}\sum _{k=1}^Nu_{k}^{(l)} \bold d_{u,k}^{(l)},\bold u^{(l)} = \text {argmin}_{\bold u}\|\sum _{k=1}^Nu_{k} \bold d_{u,k}^{(l)}\|_2^2\label {eq_sagg}
+(8)
+where ∆θ(l)
+u ·∆θ(l)
+u,k ≥0, ∀k is guaranteed by the above op-
+timization objective [7]. This aggregation scheme enhances
+the consensus in model updates across clients without sac-
+rificing anyone’s benefit. Besides, this process is indepen-
+dently repeated for different layers since simply mitigating
+conflicts at the model level cannot prevent the final update
+from favoring parts of clients at some layers, reducing the
+layer utility for those clients [28].
+4.3.2. Similarity-aware Personalization
+To enable collaboratively erasing domain skew for clients
+from similar domains, we aggregate each DSE module’s
+parameters with a self-attention module on the server side
+based on clients’ similarity. Given clients’s parameters of
+the lth DSE module {θ(l)
+v,k, k ∈[N]}, we aggregate them by
+Algorithm 1 Federated Domain Shift Eraser
+Input:The global model M, the number of local epochs E,
+and the learning rate ηt
+1: Decompose the initial model into globally shared pa-
+rameters θ0
+u and personalized parameters θ0
+v in Sec. 4.1
+2: Initialize clients’ personalized parameters θ0
+v,k
+=
+θ0
+v, ∀k ∈[N]
+3: for communication round t = 0, 1, ..., T −1 do
+4:
+The server broadcasts the model θt
+k = (θt
+u, θt
+v,k) to
+each client k.
+5:
+for each client k ∈[N] do
+6:
+for each iteration i = 0, 1, ..., E −1 do
+7:
+Compute loss Lk = Ltask + λLCon
+8:
+θt
+k,i+1 ←θt
+k,i −ηt∇Lk(θt
+k,i)
+9:
+end for
+10:
+Client k send the model parameters θt+1
+k
+= θt
+k,E
+to the server.
+11:
+end for
+12:
+The server respectively aggregates the received glob-
+ally shared model parameters θt+1
+u
+by Eq. (8) and
+personalized model parameters
+h
+θt+1
+v,k
+i⊤
+by Eq. (9)
+13: end for
+  & \b o
+l
+d Q
+_l = \
+bo
+ld K _l =\ le f
+t
+ [\f
+rac { \ b o ld V
+_{l
+k}
+}
+{\|\
+bold V_{l k } \ | _2}\
+right ]^
+\t
+o p |_{k=
+1\tex
+t
+ 
+{
+ to }N}, \bold V_l = \left [\mathbf {\theta }_{v,1}^{(l)}, \cdots , \mathbf {\theta }_{v,N}^{(l)}\right ]^\top \notag \\ &\left [\mathbf {\theta }_{v,1, \text {next}}^{(l)}, \cdots , \mathbf {\theta }_{v,N, \text {next}}^{(l)}\right ]^\top =\text {softmax}\left (\frac {\bold Q_l \bold K_l^\top }{\tau }\right )\bold V_l\label {eq_pagg}
+(9)
+where τ is the temperature parameter controlling the degree
+of personalization of DSE modules (e.g., smaller τ corre-
+sponds to a higher personalization degree and stronger skew
+elimination). We also perform the personalized aggregation
+independently for each layer’s DSE module, since the opti-
+mal personalization degree may vary across layers [23]. For
+the non-trainable statistical parameters, we did not aggre-
+gate them for BNDSE and directly average them for BNDFE.
+The pseudo-code of FDSE is summarized in Algorithm 1.
+5. Experiments
+5.1. Setup
+Dataset & Model.
+We evaluate our method on three
+popular multi-domain image classification tasks: Office-
+Caltech10 [32], DomainNet [16], and PACS [42]. We fol-
+low [20, 43] to use AlexNet as the backbone for these
+datasets and allocate a single domain’s data to each client
+respectively for all three datasets.
+4982
+Method
+Domainnet
+Office-Caltech10
+PACS
+ALL
+AVG
+ALL
+AVG
+ALL
+AVG
+Local
+57.10±0.32
+52.96±0.33
+64.47±2.52
+62.72±7.81
+61.29±2.47
+57.16±2.85
+FedAvg (AISTATS 2017)
+69.17±0.46
+67.53±0.41
+82.60±3.14
+86.26±2.54
+74.30±1.90
+72.10±1.42
+LG-FedAvg (NIPSW 2019)
+71.13±0.30
+67.97±0.32
+82.69±0.53
+87.29±1.32
+79.11±0.69
+76.72±0.54
+FedProx (MLSys 2020)
+68.81±0.71
+67.47±0.66
+82.69±1.52
+87.36±1.87
+74.38±1.55
+72.33±1.53
+Scaffold (ICML 2020)
+70.41±0.40
+69.06±0.43
+80.86±2.43
+85.87±1.87
+76.30±0.93
+74.26±0.95
+FedDyn (ICLR 2021)
+70.02±0.57
+68.86±0.54
+82.77±1.82
+87.80±1.96
+74.92±1.29
+73.19±1.01
+MOON (CVPR 2021)
+68.35±0.32
+66.65±0.29
+80.12±1.86
+82.48±1.71
+75.00±0.32
+72.13±0.32
+Ditto (ICML 2021)
+75.18±0.37
+72.82±0.35
+84.12±1.32
+88.72±1.28
+82.02±1.32
+80.03±1.37
+PartialFed (NIPS 2021)
+75.92±0.24
+73.46±0.41
+82.70±2.12
+88.33±2.17
+81.22±0.98
+79.18±1.09
+FedBN (ICLR 2021)
+74.75±0.24
+72.25±0.20
+83.08±1.84
+87.01±1.30
+81.58±0.79
+79.47±0.69
+FedFA (ICLR 2023)
+69.47±0.29
+67.60±0.29
+82.98±2.84
+86.69±3.02
+75.44±0.71
+73.60±0.86
+FedHeal (CVPR 2024)
+69.43±0.71
+67.96±0.65
+81.73±3.19
+86.29±2.71
+75.46±0.84
+73.51±0.83
+FDSE (Ours)
+76.77±0.41
+74.50±0.40
+87.15±2.06
+91.58±2.01
+83.81±1.70
+82.17±1.49
+Table 1. Comparison of model testing accuracy (%)↑on DomainNet, Office-Caltech10, and PACS datasets. The optimal results are marked
+by bold. ALL refers to the model testing accuracy on all clients’ local testing samples and AVG refers to the mean of of clients’ local
+testing accuracies. Each result is averaged over 5 trials with different fixed random seeds.
+Baselines.
+We compare our method with four types of
+baselines: 1) Local training only; 2) Vallina FL with data
+heterogeneity: FedAvg [24], FedProx [18], Scaffold [15],
+FedDyn [1], MOON [17] 3) Consensus-based FL: Fed-
+Heal [5], FedFA [43]; 4) Personalized FL: LG-FedAvg [21],
+FedBN [20], PartialFed [32].
+Hyper-parameters.
+We tune the learning rate η
+∈
+{0.001, 0.01, 0.05, 0.1, 0.5}
+by
+grid
+search
+for
+each
+method. The batch size is fixed to 50 and the local epochs
+for Domainnet, Office-Caltech10, and PACS are respec-
+tively 5, 1, and 5. We run each trial for 500 communication
+rounds with the learning rate decay ratio 0.998 per round.
+All the methods’ algorithmic hyper-parameters are respec-
+tively tuned to their optimal. More details on the hyper-
+parameter setting are in the supplementary materials.
+5.1.1. Implementation
+All our experiments are run on a 64 GB-RAM Ubuntu
+22.04.3 server with Intel(R) Xeon(R) CPU E5-2630 v4 @
+2.20GHz and 2 NVidia(R) RTX4090 GPUs. All code is im-
+plemented in PyTorch 1.12.0 and FLGo 0.3.29 [38].
+5.2. Comparison with Baselines
+Overall Performance.
+Table 1 compares our proposed
+FDSE with several baselines. Notably, FDSE consistently
+achieves optimal results across all settings, demonstrating
+a significant advantage in enhancing model performance in
+cross-domain FL. Additionally, we observe that personal-
+Figure 3. Evaluation results on individual domains (i.e., clients)
+across the three datasets. Each axis represents the result for a spe-
+cific domain and is scaled by the axis’s maximum value for clarity.
+ized methods (e.g., LG-FedAvg, Ditto, and FedBN) outper-
+form almost all non-personalized approaches (e.g., FedAvg,
+FedHeal, and FedFA). This underscores the importance of
+incorporating domain-specific knowledge for each domain.
+Furthermore, enhancing client consensus also contributes to
+performance improvement, as evidenced by FedHeal and
+FedFA consistently outperforming FedAvg in nearly all set-
+tings. Thus, we attribute the superiority of FDSE to the suc-
+cess in integrating the complementary advantages of both
+consense-based and personalization-based methods.
+4983
+Figure 4. T-SNE visualization for representation space of different methods on Office-Caltech10, DomainNet, and PACS. Each color
+represents one class of samples and each shape represents one domain.
+Figure 5. Testing accuracy v.s. communication rounds.
+Individual Performance.
+Figure 3 illustrates the individ-
+ual performance of clients for different methods, where a
+larger area under a method’s curve indicates better perfor-
+mance. FDSE outperforms all other methods across nearly
+all clients, confirming its effectiveness across all domains
+rather than just specific ones.
+Convergence.
+We plot the testing accuracy across com-
+munication rounds in Figure 5. While Ditto demonstrates a
+slightly faster convergence speed than FDSE in the early
+stages of training on DomainNet and PACS, FDSE ulti-
+mately achieves higher performance as training progresses.
+5.3. T-SNE Visualization
+Figure 4 presents the t-SNE visualization analysis of the
+representation space (i.e., the feature space before the out-
+put layer of the model) for different methods. On one hand,
+FDSE increases the inter-class distances of samples, with a
+greater separation between samples of different colors com-
+pared to other baselines. On the other hand, FDSE reduces
+the intra-class distance among samples of the same color,
+resulting in tighter color clusters than those observed in
+other baselines. This confirms FDSE’s ability to enhance
+model performance while reducing domain skew.
+5.4. Generalizability to Unseen Domains
+We evaluate the adaptability of FDSE to unseen domains in
+Table 2. Each column in Table 2 represents a target client
+that did not participate in the training process, and we eval-
+uate the model trained on other clients on the target after
+adaptation. We emphasize that the model adaptation pro-
+cesses for all methods are label-free, as we detailed in the
+4984
+Method
+Office-Caltech10
+DomainNet
+C
+A
+D
+W
+AVG
+C
+I
+P
+Q
+R
+S
+AVG
+FedAvg
+51.78
+70.52
+80.00
+65.51
+66.95
+62.81
+30.15
+55.53
+48.86
+59.74
+58.92
+52.66
+FedBN
+60.71
+70.52
+80.00
+55.17
+66.60
+62.56
+31.14
+57.26
+53.06
+63.17
+62.46
+54.94
+- align
+40.17
+68.42
+86.66
+72.41
+66.91
+60.53
+31.57
+54.33
+50.60
+59.85
+62.59
+53.24
+FDSE
+57.14
+75.78
+93.33
+75.86
+75.52
+65.22
+32.34
+59.32
+55.00
+64.28
+65.28
+56.91
+Table 2. Model performance (↑) of adapting the trained model to different unseen clients. The optimal results are marked by bold.
+Figure 6. The impact of hyper-parameters on model performance.
+Module
+DomainNet
+Office
+PACS
+A
+B
+C
+ALL
+AVG
+ALL
+AVG
+ALL
+AVG
+×
+×
+×
+74.63
+72.19
+83.94
+86.13
+82.46
+80.72
+×
+✓
+✓
+75.66
+73.23
+84.44
+88.54
+82.92
+80.97
+✓
+×
+✓
+76.57
+74.32
+85.23
+89.25
+83.40
+81.73
+✓
+✓
+×
+76.49
+74.24
+86.43
+90.38
+83.40
+81.78
+✓
+✓
+✓
+76.77
+74.50
+87.15
+91.58
+83.81
+82.17
+Table 3. The ablation study of the model performance of FDSE
+with each submodule to be respectively removed.
+supplementary materials. - align refers to directly evalu-
+ating the model trained by FDSE without adaptation. Our
+FDSE achieves comparable results to the baselines even be-
+fore model adaptation. After adaptation, FDSE significantly
+enhances model performance for most clients, confirming
+FDSE’s ability to generalize effectively to unseen domains.
+5.5. Impact of Hyper-parameters
+Effect of λ.
+As shown in the first column of Figure 6,
+slightly increasing λ can improves the accuracy while a too
+large λ will cause performance reduction, indicating that λ
+should be carefully tuned to their optimal in practice.
+Effect of β and τ.
+From the last two columns of Figure
+6, the effects of both parameters exhibit a similar trend on
+each dataset as their values change. We attribute this sim-
+ilarity to the varying degrees of domain skew presented in
+each dataset, since small values of both τ and β strengthen
+domain skew elimination. The performance is more sensi-
+tive to τ than to β, where a small β is preferred while the
+optimal τ values differ, suggesting that τ should be properly
+Method
+Num×107
+Comm.
+FLOPs×1010
+Timetrain
+FedBN
+1.30
+49.52M
+4.41
+4.03s
+Ditto
+1.30
+49.52M
+4.41
+6.59s
+FDSE
+0.65
+24.87M
+2.24
+4.27s
+Table 4. Comparison of communication and communication costs.
+tuned while β can be fixed at a low value.
+5.6. Ablation Study
+We conduct the ablation analysis of the effectiveness of
+FDSE’s modules in Table 3. Module A, B, and C respec-
+tively correspond to the consensus-maximization aggrega-
+tion in Sec.4.3.1, similarity-aware aggregation in Sec.4.3.2,
+and consistency regularization in Sec.4.2. The results show
+that the raw architecture of FDSE has achieved comparable
+results with FedBN. Further, the performance will be de-
+graded after removing each module and the optimal result
+appears in the full participation of each module, indicating
+the collaborative effectiveness of these modules.
+5.7. Efficiency
+Table 4 compares the communication and computation
+costs.
+Our FDSE saves more communication efficiency
+per round (e.g., Comm.) and computation efficiency (e.g.,
+FLOPs) than baseline due to its decomposition-based archi-
+tecture. Besides, FDSE achieves competitive time costs of
+local training against FedBN, where the additional training
+costs of FDSE mainly come from the regularization term.
+6. Conclusion
+In this work, we rethink the domain shift problem in
+FL from a hybrid view that integrates the advantages of
+personalization-based methods and consensus-based meth-
+ods. We develop a novel framework, FDSE, to differently
+erase domain skew for each client while maximizing their
+consensus. Specifically, we efficiently formulate the model
+forward passing as an iterative deskewing process that ex-
+tracts and then deskews features alternatively via layer de-
+composition. Further, we fine-grained design aggregation
+strategies and the regularization term to enhance the knowl-
+edge decoupling, leading to improved consistency in the
+representation space. We plan to extend this framework to
+more applications and model architectures in the future.
+4985
+Acknowledgement
+The research was supported by Natural Science Foundation
+of China (62272403).
+References
+[1] Durmus Alp Emre Acar, Yue Zhao, Ramon Matas Navarro,
+Matthew Mattina, Paul N Whatmough, and Venkatesh
+Saligrama.
+Federated learning based on dynamic regular-
+ization. arXiv preprint arXiv:2111.04263, 2021. 2, 6
+[2] Robert J Barro and Xavier Sala-i Martin. Convergence. Jour-
+nal of political Economy, 100(2):223–251, 1992. 3
+[3] Hong-You Chen and Wei-Lun Chao. On bridging generic
+and personalized federated learning for image classification.
+arXiv preprint arXiv:2107.00778, 2021. 2
+[4] Yiqiang Chen, Xin Qin, Jindong Wang, Chaohui Yu, and
+Wen Gao. Fedhealth: A federated transfer learning frame-
+work for wearable healthcare. IEEE Intelligent Systems, 35
+(4):83–93, 2020. 1
+[5] Yuhang Chen, Wenke Huang, and Mang Ye. Fair federated
+learning under domain skew with local consistency and do-
+main diversity. In Proceedings of the IEEE/CVF Conference
+on Computer Vision and Pattern Recognition, pages 12077–
+12086, 2024. 1, 2, 3, 5, 6
+[6] Rong Dai, Xun Yang, Yan Sun, Li Shen, Xinmei Tian, Meng
+Wang, and Yongdong Zhang. Fedgamma: Federated learn-
+ing with global sharpness-aware minimization. IEEE Trans-
+actions on Neural Networks and Learning Systems, 2023. 2
+[7] Jean-Antoine D´esid´eri. Multiple-gradient descent algorithm
+(MGDA). PhD thesis, INRIA, 2009. 5
+[8] Alireza Fallah, Aryan Mokhtari, and Asuman Ozdaglar. Per-
+sonalized federated learning with theoretical guarantees: A
+model-agnostic meta-learning approach. Advances in Neural
+Information Processing Systems, 33:3557–3568, 2020. 2
+[9] Kai Han, Yunhe Wang, Qi Tian, Jianyuan Guo, Chunjing
+Xu, and Chang Xu. Ghostnet: More features from cheap
+operations. In Proceedings of the IEEE/CVF conference on
+computer vision and pattern recognition, pages 1580–1589,
+2020. 3
+[10] Zeou Hu, Kiarash Shaloudegi, Guojun Zhang, and Yaoliang
+Yu. Federated learning meets multi-objective optimization.
+IEEE Transactions on Network Science and Engineering, 9
+(4):2039–2051, 2022. 1, 5
+[11] Wenke Huang, Mang Ye, Zekun Shi, He Li, and Bo Du.
+Rethinking federated learning with domain shift: A proto-
+type view. In 2023 IEEE/CVF Conference on Computer Vi-
+sion and Pattern Recognition (CVPR), pages 16312–16322.
+IEEE, 2023. 1, 2
+[12] Muhammad Akbar Husnoo, Adnan Anwar, Nasser Hos-
+seinzadeh, Shama Naz Islam, Abdun Naser Mahmood, and
+Robin Doss.
+Fedrep: towards horizontal federated load
+forecasting for retail energy providers. In 2022 IEEE PES
+14th Asia-Pacific Power and Energy Engineering Conference
+(APPEEC), pages 1–6. IEEE, 2022. 2, 3
+[13] Meirui Jiang, Zirui Wang, and Qi Dou. Harmofl: Harmoniz-
+ing local and global drifts in federated learning on heteroge-
+neous medical images. In Proceedings of the AAAI Confer-
+ence on Artificial Intelligence, pages 1087–1095, 2022. 2,
+3
+[14] Peter Kairouz, H Brendan McMahan, Brendan Avent,
+Aur´elien Bellet, Mehdi Bennis, Arjun Nitin Bhagoji, Kallista
+Bonawitz, Zachary Charles, Graham Cormode, Rachel Cum-
+mings, et al. Advances and open problems in federated learn-
+ing. Foundations and Trends® in Machine Learning, 14(1–
+2):1–210, 2021. 2
+[15] Sai Praneeth Karimireddy, Satyen Kale, Mehryar Mohri,
+Sashank Reddi, Sebastian Stich, and Ananda Theertha
+Suresh. Scaffold: Stochastic controlled averaging for feder-
+ated learning. In International conference on machine learn-
+ing, pages 5132–5143. PMLR, 2020. 2, 6
+[16] Aristotelis Leventidis, Laura Di Rocco, Wolfgang Gatter-
+bauer, Ren´ee J Miller, and Mirek Riedewald. Domainnet:
+Homograph detection and understanding in data lake disam-
+biguation. ACM Transactions on Database Systems, 48(3):
+1–40, 2023. 5
+[17] Qinbin Li, Bingsheng He, and Dawn Song.
+Model-
+contrastive federated learning.
+In Proceedings of the
+IEEE/CVF conference on computer vision and pattern
+recognition, pages 10713–10722, 2021. 2, 6
+[18] Tian Li, Anit Kumar Sahu, Manzil Zaheer, Maziar Sanjabi,
+Ameet Talwalkar, and Virginia Smith. Federated optimiza-
+tion in heterogeneous networks.
+Proceedings of Machine
+learning and systems, 2:429–450, 2020. 2, 6
+[19] Tian Li, Shengyuan Hu, Ahmad Beirami, and Virginia
+Smith.
+Ditto: Fair and robust federated learning through
+personalization.
+In International Conference on Machine
+Learning, pages 6357–6368. PMLR, 2021. 2
+[20] Xiaoxiao Li, Meirui Jiang, Xiaofei Zhang, Michael Kamp,
+and Qi Dou.
+Fedbn:
+Federated learning on non-iid
+features via local batch normalization.
+arXiv preprint
+arXiv:2102.07623, 2021. 1, 2, 3, 5, 6
+[21] Paul Pu Liang, Terrance Liu, Liu Ziyin, Nicholas B Allen,
+Randy P Auerbach, David Brent, Ruslan Salakhutdinov, and
+Louis-Philippe Morency. Think locally, act globally: Fed-
+erated learning with local and global representations. arXiv
+preprint arXiv:2001.01523, 2020. 2, 3, 6
+[22] Quande Liu, Cheng Chen, Jing Qin, Qi Dou, and Pheng-Ann
+Heng. Feddg: Federated domain generalization on medical
+image segmentation via episodic learning in continuous fre-
+quency space. In Proceedings of the IEEE/CVF conference
+on computer vision and pattern recognition, pages 1013–
+1023, 2021. 2
+[23] Xiaosong Ma, Jie Zhang, Song Guo, and Wenchao Xu.
+Layer-wised model aggregation for personalized federated
+learning.
+In Proceedings of the IEEE/CVF conference
+on computer vision and pattern recognition, pages 10092–
+10101, 2022. 5
+[24] Brendan McMahan, Eider Moore, Daniel Ramage, Seth
+Hampson, and Blaise Aguera y Arcas.
+Communication-
+efficient learning of deep networks from decentralized data.
+In Artificial intelligence and statistics, pages 1273–1282.
+PMLR, 2017. 1, 2, 6
+[25] Yiqun Mei, Pengfei Guo, Mo Zhou, and Vishal Patel.
+Resource-adaptive federated learning with all-in-one neural
+4986
+composition. In Advances in Neural Information Processing
+Systems, pages 4270–4284. Curran Associates, Inc., 2022. 3
+[26] Matias Mendieta, Taojiannan Yang, Pu Wang, Minwoo Lee,
+Zhengming Ding, and Chen Chen. Local learning matters:
+Rethinking data heterogeneity in federated learning. In Pro-
+ceedings of the IEEE/CVF Conference on Computer Vision
+and Pattern Recognition, pages 8397–8406, 2022. 2
+[27] Jaehoon Oh, Sangmook Kim, and Se-Young Yun. Fedbabu:
+Towards enhanced representation for federated image classi-
+fication. arXiv preprint arXiv:2106.06042, 2021. 2
+[28] Zibin Pan, Chi Li, Fangchen Yu, Shuyi Wang, Haijin Wang,
+Xiaoying Tang, and Junhua Zhao.
+Fedlf: Layer-wise fair
+federated learning. In Proceedings of the AAAI Conference
+on Artificial Intelligence, pages 14527–14535, 2024. 5
+[29] Xingchao Peng, Zijun Huang, Yizhe Zhu, and Kate Saenko.
+Federated adversarial domain adaptation.
+arXiv preprint
+arXiv:1911.02054, 2019. 2
+[30] Zhe Qu, Xingyu Li, Rui Duan, Yao Liu, Bo Tang, and Zhuo
+Lu. Generalized federated learning via sharpness aware min-
+imization. In International conference on machine learning,
+pages 18250–18280. PMLR, 2022. 2
+[31] Aviv Shamsian, Aviv Navon, Ethan Fetaya, and Gal Chechik.
+Personalized federated learning using hypernetworks. In In-
+ternational Conference on Machine Learning, pages 9489–
+9502. PMLR, 2021. 2
+[32] Benyuan Sun, Hongxing Huo, Yi Yang, and Bo Bai. Par-
+tialfed: Cross-domain personalized federated learning via
+partial initialization. Advances in Neural Information Pro-
+cessing Systems, 34:23309–23320, 2021. 2, 3, 5, 6
+[33] Yan Sun, Li Shen, Tiansheng Huang, Liang Ding, and
+Dacheng Tao.
+Fedspeed: Larger local interval, less com-
+munication round, and higher generalization accuracy, 2023.
+2
+[34] Mingxing Tan and Quoc Le. Efficientnet: Rethinking model
+scaling for convolutional neural networks. In International
+conference on machine learning, pages 6105–6114. PMLR,
+2019. 3
+[35] Mingxing Tan and Quoc Le. Efficientnetv2: Smaller models
+and faster training. In International conference on machine
+learning, pages 10096–10106. PMLR, 2021. 3
+[36] Yue Tan, Guodong Long, Lu Liu, Tianyi Zhou, Qinghua Lu,
+Jing Jiang, and Chengqi Zhang. Fedproto: Federated proto-
+type learning across heterogeneous clients. In Proceedings of
+the AAAI Conference on Artificial Intelligence, pages 8432–
+8440, 2022. 2, 3
+[37] Zheng Wang, Xiaoliang Fan, Jianzhong Qi, Chenglu Wen,
+Cheng Wang, and Rongshan Yu. Federated learning with
+fair averaging. arXiv preprint arXiv:2104.14937, 2021. 1, 5
+[38] Zheng Wang, Xiaoliang Fan, Zhaopeng Peng, Xueheng Li,
+Ziqi Yang, Mingkuan Feng, Zhicheng Yang, Xiao Liu, and
+Cheng Wang. Flgo: A fully customizable federated learning
+platform. arXiv preprint arXiv:2306.12079, 2023. 6
+[39] Zhimin Yuan, Wankang Zeng, Yanfei Su, Weiquan Liu,
+Ming Cheng, Yulan Guo, and Cheng Wang.
+Density-
+guided translator boosts synthetic-to-real unsupervised do-
+main adaptive segmentation of 3d point clouds. In Proceed-
+ings of the IEEE/CVF Conference on Computer Vision and
+Pattern Recognition, pages 23303–23312, 2024. 2, 3
+[40] Jianqing Zhang, Yang Hua, Hao Wang, Tao Song, Zhengui
+Xue, Ruhui Ma, Jian Cao, and Haibing Guan.
+Gpfl: Si-
+multaneously learning global and personalized feature infor-
+mation for personalized federated learning. In Proceedings
+of the IEEE/CVF International Conference on Computer Vi-
+sion, pages 5041–5051, 2023. 2
+[41] Yue Zhao, Meng Li, Liangzhen Lai, Naveen Suda, Damon
+Civin, and Vikas Chandra. Federated learning with non-iid
+data. arXiv preprint arXiv:1806.00582, 2018. 2
+[42] Kaiyang Zhou, Yongxin Yang, Timothy Hospedales, and Tao
+Xiang. Deep domain-adversarial image generation for do-
+main generalisation. In Proceedings of the AAAI conference
+on artificial intelligence, pages 13025–13032, 2020. 5
+[43] Tailin Zhou, Jun Zhang, and Danny HK Tsang. Fedfa: Feder-
+ated learning with feature anchors to align features and clas-
+sifiers for heterogeneous data. IEEE Transactions on Mobile
+Computing, 2023. 2, 3, 5, 6
+4987

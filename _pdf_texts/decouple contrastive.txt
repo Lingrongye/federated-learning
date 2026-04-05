@@ -1,0 +1,1639 @@
+Decoupled Contrastive Learning for Federated Learning
+Hyungbin Kim, Incheol Baek, Yon Dohn Chung
+Korea University
+{ hyungbinkim, inch307, ydchung }@korea.ac.kr
+Abstract
+Federated learning is a distributed machine learning paradigm
+that allows multiple participants to train a shared model by
+exchanging model updates instead of their raw data. How-
+ever, its performance is degraded compared to centralized
+approaches due to data heterogeneity across clients. While
+contrastive learning has emerged as a promising approach to
+mitigate this, our theoretical analysis reveals a fundamental
+conflict: its asymptotic assumptions of an infinite number of
+negative samples are violated in finite-sample regime of fed-
+erated learning. To address this issue, we introduce Decou-
+pled Contrastive Learning for Federated Learning (DCFL),
+a novel framework that decouples the existing contrastive
+loss into two objectives. Decoupling the loss into its align-
+ment and uniformity components enables the independent
+calibration of the attraction and repulsion forces without re-
+lying on the asymptotic assumptions. This strategy provides
+a contrastive learning method suitable for federated learn-
+ing environments where each client has a small amount of
+data. Our experimental results show that DCFL achieves
+stronger alignment between positive samples and greater uni-
+formity between negative samples compared to existing con-
+trastive learning methods. Furthermore, experimental results
+on standard benchmarks, including CIFAR-10, CIFAR-100,
+and Tiny-ImageNet, demonstrate that DCFL consistently out-
+performs state-of-the-art federated learning methods.
+Introduction
+Federated Learning (FL) is a distributed learning frame-
+work that enables a shared model to be trained across dis-
+tributed devices (termed clients) without sharing of raw data
+of clients (McMahan et al. 2017). By exchanging only model
+updates rather than raw data, FL mitigates privacy risks.
+However, since clients train on locally collected data, the
+data distribution across them is often not independent and
+identically distributed (non-IID). This gives rise to the pri-
+mary challenges of data heterogeneity among clients and
+class imbalance within each local dataset. Under non-IID
+settings, these heterogeneity and imbalance cause a mis-
+alignment between the global and local objectives. This
+phenomenon—commonly referred to in the FL literature
+as client drift—leads to degraded model performance and
+slower convergence (Li et al. 2019).
+The approaches to these challenges have focused on two
+complementary strategies: (1) stabilizing training during the
+local update phase (Li et al. 2020; Lee et al. 2024; Xu et al.
+2025; Fu et al. 2025), and (2) improving efficiency in the
+aggregation phase (Reddi et al. 2020; Kim, Kim, and Han
+2024; Xia et al. 2025; Liu et al. 2025; Huang and Liu 2025).
+Recently, contrastive learning–based regularization methods
+(Li, He, and Song 2021; Seo et al. 2024; Mu et al. 2023) have
+been introduced to constrain local models from deviating ex-
+cessively. The objective of these methods is to maximize the
+cosine similarity between the representations of an anchor
+and a positive sample (from the same class), while minimiz-
+ing the cosine similarity to negative samples (from different
+classes). In contrastive learning, the mechanism that aligns
+the representations of a positive pair is termed the attraction
+force, while the mechanism separating them from negative
+samples is termed the repulsion force. The intuition behind
+using contrastive learning is that by encouraging the model
+to learn generalizable and robust feature representations on
+local clients, the negative impact of data heterogeneity can
+be mitigated during global model aggregation.
+However, these methods rely on the implicit assumption
+that standard contrastive objectives are directly applicable to
+FL setting, neglecting the detail that these objectives were
+not designed for the inherent constraints of FL, specifically
+the finite number of samples per client. We demonstrate that
+applying standard contrastive learning to the FL setting is
+theoretically unsuitable. Existing works show that a larger
+number of negative samples leads to better downstream
+task performances (Wang and Isola 2020; Chen et al. 2020;
+Awasthi, Dikkala, and Kamath 2022). In (Wang and Isola
+2020), researchers show that standard contrastive learning
+operates under the asymptotic assumption of infinite nega-
+tive samples, which allows its loss function to be decom-
+posed into an alignment term, which encourages the features
+of positive pairs to be similar, and a uniformity term, which
+promotes a uniform distribution of features from negative
+samples. Furthermore, their analysis indicates that the stan-
+dard contrastive loss approaches its theoretical optimum as
+the number of negative samples becomes exceedingly large.
+This poses a fundamental conflict with FL environments,
+where each client’s dataset is small and finite. Therefore, it is
+essential to develop a contrastive learning approach tailored
+to the unique constraints of FL.
+In this paper, we propose Decoupled Contrastive Learn-
+ing for Federated Learning (DCFL), a novel framework for
+arXiv:2508.04005v1  [cs.LG]  6 Aug 2025
+robust representation learning in FL. Unlike existing con-
+trastive regularization methods that rely on a single con-
+trastive loss, DCFL decouples the forces of attraction and
+repulsion into two distinct objectives, alignment and uni-
+formity. This design enables independent control over each
+force via two hyperparameters, λa and λu. Furthermore, our
+method offers both sample-wise and prototype-wise con-
+trastive learning under a unified formulation. Our contribu-
+tions are summarized as follows:
+• We first provide a theoretical analysis that demonstrates
+the incompatibility between the standard contrastive loss
+and the finite-sample constraints of FL.
+• We propose Decoupled Contrastive Learning for Feder-
+ated Learning (DCFL), a novel framework that separates
+the loss into its alignment and uniformity objectives. Our
+non-asymptotic design allows for the independent cali-
+bration of attractive and repulsive forces.
+• DCFL is designed for versatility, unifying both sample-
+wise and prototype-wise contrastive learning approaches
+under a single, coherent formulation.
+• Evaluation results on multiple standard federated learn-
+ing datasets demonstrate that our method consistently
+outperforms state-of-the-art federated learning methods.
+Related Work
+In this section, we overview federated learning approaches
+from two complementary perspectives: (1) local training,
+which focuses on how clients optimize model parameters
+under heterogeneity constraints, and (2) global aggregation,
+which addresses strategies for effectively combining client
+updates into a robust global model. Additionally, we dis-
+cuss recent approaches that integrate contrastive learning
+into federated learning frameworks, leveraging representa-
+tion learning techniques to further mitigate data heterogene-
+ity and improve model generalization.
+Federated Learning
+Federated Learning (FL) has emerged as an effective frame-
+work for collaborative model training across distributed
+clients without compromising data privacy (McMahan et al.
+2017). FL consists of a central server and multiple partici-
+pants, who train a model on their local data and then send
+only the resulting model updates to the server for aggre-
+gation. This approach provides the advantages of preserv-
+ing data privacy and reducing the computational cost on the
+server, as models are updated locally by the participants.
+However, data heterogeneity across distributed clients leads
+to significant challenges, such as slower convergence and
+performance degradation compared to traditional centralized
+learning. To overcome these limitations, existing studies in
+FL have mainly focused on two complementary perspec-
+tives: local training and global aggregation.
+Researchers have focused on local training methods to
+enhance model convergence and mitigate client drift. Fed-
+Prox (Li et al. 2020) introduces a proximal term in local
+objectives to stabilize training against heterogeneous client
+updates. Similarly, SCAFFOLD (Karimireddy et al. 2020)
+employs control variates to correct local updates, reducing
+client drift. FedDecorr (Shi et al. 2022) shows that data het-
+erogeneity leads to dimensional collapse in representations
+and introduces a regularization term during local training to
+enforce decorrelation among feature dimensions. FedSOL
+(Lee et al. 2024) finds a robust parameter space that balances
+the conflicting objectives of global alignment and local gen-
+erality. Our framework is a client-side approach that specif-
+ically focuses on reducing client drift among heterogeneous
+local clients and enhancing generalization performance.
+In addition to local training methods, server-side aggre-
+gation strategies have been studied to address client hetero-
+geneity through update normalization (Wang et al. 2020b),
+layer-wise alignment (Wang et al. 2020a; Mendieta et al.
+2022), and adaptive weighting (Reddi et al. 2020; Kim, Kim,
+and Han 2024; Xia et al. 2025). As our framework is based
+on the client-side approach, it is orthogonal to server-side
+techniques and can be easily combined with these methods
+to further improve performance.
+Contrastive Learning in FL
+Contrastive learning has been increasingly integrated into
+FL to tackle the challenges posed by heterogeneous data and
+client drift. These works can be classified into three com-
+plementary categories—sample-level (Dong and Voiculescu
+2021; Collins et al. 2021; Seo et al. 2024), model-level (Li,
+He, and Song 2021), and prototypical contrastive methods
+(Mu et al. 2023; Tan et al. 2022)—each aiming to align lo-
+cal representations and stabilize training while preserving
+privacy and imposing only modest additional communica-
+tion overhead.
+FedRCL (Seo et al. 2024), a recent sample-level method,
+adaptively imposes the divergence penalty on pairs of ex-
+amples in the same class and prevents their representa-
+tions from being learned to be indistinguishable. MOON
+(Li, He, and Song 2021), which is a pioneering model-
+level method, maximizes similarity between local and global
+model embeddings while repelling from the client’s previous
+state, correcting drift caused by skewed local updates. Pro-
+totypical contrastive strategies introduce shared class pro-
+totypes—either computed on the server or aggregated from
+clients—as anchors for local feature alignment. FedProc
+(Mu et al. 2023) enforces a contrastive loss between local
+embeddings and these global prototypes, narrowing the dis-
+tribution gap among clients and improving generalization.
+Positioning Our Work. While these studies differ in their
+approach, they share the implicit assumption that standard
+contrastive objectives are directly applicable to the FL set-
+ting. Motivated by this foundation, we demonstrate that ap-
+plying standard contrastive learning to the FL setting is the-
+oretically unsuitable and propose a novel contrastive loss
+function suitable for supervised learning scenarios under
+heterogeneous data in FL.
+Preliminaries
+Federated Learning
+We consider a federated learning (FL) setting consist-
+ing of N clients, each possessing a local dataset Dk =
+{(xi, yi)}nk
+i=1, where xi ∈Rd is an input sample and yi ∈
+{1, . . . , C} is the corresponding label. Let nk = |Dk| denote
+the number of samples at client k, and let n = PN
+k=1 nk be
+the total number of samples across all clients. The objec-
+tive of FL is to collaboratively optimize a global model fθ
+parameterized by θ without directly sharing local datasets,
+thereby maintaining data privacy.
+Formally, the FL objective function is defined as:
+(1)
+min
+θ
+L(θ)
+with
+L(θ) =
+N
+X
+k=1
+nk
+n L(θk),
+where the local objective at client k is
+(2)
+L(θk) = 1
+nk
+X
+(x,y)∈Dk
+ℓ(fθ(x), y),
+and ℓ(·, ·) denotes the cross-entropy loss. Training proceeds
+in communication rounds: at each round, clients perform
+local updates on θ and send model updates to a central
+server, which aggregates them (e.g., by Federated Averag-
+ing (McMahan et al. 2017)).
+Supervised Contrastive Learning
+Supervised contrastive learning extends the contrastive loss
+paradigm by leveraging label information to enhance the
+discriminative power of learned representations. Given a
+batch of samples, the supervised contrastive loss aims to
+bring representations of samples from the same class closer
+while pushing apart representations of samples from differ-
+ent classes.
+Formally, the supervised contrastive loss (Khosla et al.
+2020) is defined as:
+LSupCon = −
+X
+j̸=i, yj=yi
+log
+exp(sim(zi, zj)/τ)
+P
+k̸=i exp(sim(zi, zk)/τ),
+(3)
+where zi = h(fθ(xi)) is the normalized embedding of sam-
+ple xi, h(·) denotes the representation extractor, sim(·, ·) in-
+dicates cosine similarity, τ is the temperature hyperparame-
+ter.
+Integrating supervised contrastive learning into FL sce-
+narios aims to mitigate representation drift among clients
+due to heterogeneous data distributions, thus improving
+overall global model robustness.
+Proposed Method
+Rationale for a Decoupled Contrastive Learning
+Approach in Federated Learning
+The theoretical foundations of our Decoupled Supervised
+Contrastive Learning for Federated Learning (DCFL)
+framework are derived from the alignment and uniformity
+principles for representation learning first formalized by
+(Wang and Isola 2020). As mentioned in the introduction,
+the standard contrastive loss is unsuitable for the finite-
+sample nature of FL. To address this, we first examine how
+its underlying asymptotic assumptions break down. We then
+introduce DCFL, which resolves this issue by explicitly de-
+coupling the loss function. This provides a principled solu-
+tion for the finite-sample regime under the heterogeneous
+data distributions common in FL.
+Breakdown of asymptotic assumptions in FL.
+Prior
+work has demonstrated that a larger number of negative sam-
+ples leads to better performance in contrastive learning (Wu
+et al. 2018; He et al. 2020; Tian, Krishnan, and Isola 2020).
+In the limit of infinite negative samples (M →∞), the
+loss decomposes into two objectives: one optimizing for the
+alignment of similar samples and the other for the unifor-
+mity of the feature distribution.
+Let f be an encoder that maps an input to its feature rep-
+resentation. The temperature parameter is denoted by τ, and
+M is the number of negative samples. A positive pair (x, y)
+is drawn from the distribution ppos, while the anchor x and
+negative samples x−are drawn from the global data distri-
+bution pdata. The following theorem provides a formal justi-
+fication, demonstrating that the optimization of the limiting
+loss is driven by the dual objectives of alignment and unifor-
+mity.
+Theorem 1 (Asymptotics of LSupCon (Wang and Isola
+2020)). For a fixed τ > 0, as the number of negative samples
+M →∞, the contrastive loss converges to:
+(4)
+lim
+M →∞(LSupCon(f; τ, M) −log M)
+= −1
+τ E(x,y)∼ppos
+
+f(x)⊤f(y)
+
++ Ex∼pdata
+h
+log Ex−∼pdata
+h
+ef(x−)⊤f(x)/τii
+.
+Proposition 1 (Finite-Sample Error Bound (Wang and Isola
+2020)). The deviation between the actual contrastive loss
+and its asymptotic limit is bounded as follows:
+ lim
+M→∞(LSupCon(f; τ, M) −log M)
+−(LSupCon(f; τ, M) −log M)|
+≤1
+M e2/τ + O(M −1/2).
+(5)
+The error term, which arises from the difference between
+the true expected similarity over the global data distribution
+and the empirical average calculated from the finite M neg-
+ative samples, decays slowly at a rate of O(M −1/2). This
+slow convergence poses a fundamental challenge in FL set-
+tings. Each client in an FL environment operates on a lim-
+ited local dataset, meaning the number of available negative
+samples M is small. With a small M, the O(M −1/2) error
+term becomes large, causing the actual loss function expe-
+rienced by the client to deviate from the theoretically ideal
+decomposition.
+Therefore, the foundational asymptotic assumptions of
+standard contrastive loss are violated in the practical, finite-
+sample regime of FL. The loss function optimized by each
+client deviates substantially from the ideal global objectives
+of alignment and uniformity. This fundamental incompat-
+ibility motivates the development of a non-asymptotic ap-
+proach.
+Decoupled Supervised Contrastive Learning
+Detailed decomposition.
+We rewrite Eq. (13) by separat-
+ing the numerator and denominator inside the logarithm us-
+ing log properties:
+(6)
+LSupCon = −
+X
+j̸=i, yj=yi
+
+log exp
+sim(zi, zj)
+τ
+
+−log
+X
+k̸=i
+exp
+sim(zi, zk)
+τ
+
+
+= −
+X
+j̸=i, yj=yi
+sim(zi, zj)
+τ
++
+X
+j̸=i, yj=yi
+log
+X
+k̸=i
+exp
+sim(zi, zk)
+τ
+
+.
+Since the second term does not depend on the index j
+explicitly, it can be simplified as:
+(7)
+X
+j ̸=i, yj=yi
+log
+X
+k ̸=i
+exp
+sim(zi, zk)
+τ
+
+= |Pi|log
+X
+k̸=i
+exp
+sim(zi, zk)
+τ
+
+,
+where Pi = zj : yj = yi, j ̸= i denotes the set of positive
+samples for anchor zi. Thus, we have:
+(8)
+LSupCon = −
+X
+p∈Pi
+sim(zi, p)
+τ
++ |Pi|log
+X
+k̸=i
+exp
+sim(zi, zk)
+τ
+
+.
+Decoupling alignment and uniformity.
+To fully decou-
+ple alignment and uniformity terms, we exclude positive
+samples from the uniformity term. This modification decou-
+ples the loss, allowing the uniformity term to independently
+enforce feature uniformity by pushing the anchor away from
+all available negative samples. Introducing the scaling hy-
+perparameters λa, λu ∈(0, 1) with λa + λu = 1, we obtain
+the decoupled contrastive loss:
+(9)
+LDCFL = −λa
+X
+p∈Pi
+sim(zi, p)
+τ
++ λu|Pi|log
+X
+n∈Ni
+exp
+sim(zi, n)
+τ
+
+,
+where Ni = zk : yk ̸= yi denotes the negative samples. This
+ensures a clear separation and independent optimization of
+each term.
+Algorithm 1: DCFL
+Require: communication rounds {T}, batch embeddings
+{zi}, prototypes {cγ} (for prototype-wise), temperature
+{τ}, hyperparameters {λa, λu}, learning rate {η}.
+1: Server executes:
+2: Initialize θ0
+3: for t = 1, 2, ..., T do
+4:
+Randomly sample Kt ⊆K
+5:
+Send θt−1 to Kt
+6:
+for each client in Kt do
+7:
+θk
+t ←θt−1
+8:
+Client updates θk
+t
+9:
+Client sends θk
+t to the server
+10:
+end for
+11:
+θt =
+1
+Kt
+P
+Kt⊆K θk
+t
+12: end for
+13: Clients update θk
+t :
+14: for each anchor embedding zi do
+15:
+Construct positive samples Pi, negative samples Ni
+16:
+Compute LDCFL using Eq. (10)
+17:
+L = LCE + µLDCFL
+18:
+Update parameters: θk
+t ←θt−1 −η∇θt−1L
+19: end for
+Decoupling alignment and uniformity in finite samples.
+To overcome the limitations of asymptotic approach, our
+proposed DCFL replaces the standard loss with two sep-
+arate, non-asymptotic objectives designed specifically for
+finite-sample environments.
+(10)
+LDCFL
+= −λa
+X
+p∈Pi
+sim(zi, p)
+τ
+|
+{z
+}
+Direct Alignment
++λu|Pi|log
+X
+n∈Ni
+exp
+sim(zi, n)
+τ
+
+|
+{z
+}
+Local Uniformity
+,
+This formulation is theoretically justified as it directly op-
+timizes the core principles within the practical constraints
+of FL. The alignment term isolates and preserves the often-
+weak attractive force from the scarce positive samples avail-
+able locally. The uniformity term enforces feature separa-
+tion based on the available—finite and biased—local nega-
+tive samples. The hyperparameters λa and λu provide a nec-
+essary mechanism to control the trade-off between these two
+terms.
+By enforcing this separation, DCFL provides a robust the-
+oretical foundation for contrastive learning in the practical
+FL environment. For more theoretical discussion, please re-
+fer to the supplementary material.
+Sample-wise and prototype-wise variants.
+Eq. (10) gen-
+eralizes naturally to two important cases:
+• Sample-wise DCFL: Positive samples Pi = {z+
+i }, neg-
+ative samples Ni = {z−
+j : j ̸= i}.
+• Prototype-wise DCFL: Positive prototype Pi = {cyi},
+negative prototypes Ni = {cγ : γ ̸= yi}.
+CIFAR-10
+CIFAR-100
+Method
+IID
+α = 0.5
+α = 0.3
+IID
+α = 0.5
+α = 0.3
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+FedAvg
+90.47
+90.12
+90.09
+89.17
+89.47
+87.43
+63.34
+62.99
+63.86
+63.33
+63.06
+62.63
+FedProx
+90.50
+90.20
+90.21
+89.27
+89.25
+87.06
+63.93
+63.71
+63.37
+63.24
+63.43
+63.41
+MOON
+91.18
+90.66
+88.88
+87.97
+87.71
+86.23
+63.52
+63.13
+63.12
+62.75
+63.59
+63.13
+FedDecorr
+90.36
+90.17
+89.48
+88.72
+89.20
+87.56
+63.27
+62.97
+62.64
+62.40
+62.57
+62.16
+FedRCL
+89.32
+88.86
+88.44
+86.71
+87.02
+83.97
+63.22
+62.94
+62.35
+62.23
+61.53
+60.83
+FedSOL
+91.22
+91.04
+89.69
+88.84
+88.19
+86.69
+65.47
+65.15
+64.23
+64.06
+63.50
+62.96
+FedSCL
+88.92
+88.70
+85.47
+83.40
+83.89
+81.67
+61.44
+61.23
+59.41
+58.91
+58.41
+57.56
+FedProc
+91.10
+90.99
+90.39
+87.95
+90.15
+88.84
+64.76
+64.26
+64.92
+64.39
+64.38
+64.02
+DCFL-SW (ours)
+91.53
+91.30
+90.68
+89.16
+89.66
+87.79
+66.05
+65.82
+64.88
+64.57
+65.25
+64.10
+DCFL-PW (ours)
+91.72
+91.39
+90.41
+89.51
+89.74
+88.42
+66.38
+65.85
+65.57
+65.54
+65.54
+64.49
+Table 1: Performance comparison from 5% participation rate over 100 clients on CIFAR-10 and CIFAR-100 under different
+data heterogeneity (α) settings. Also, we report exponential moving average accuracy with the parameter set to 0.9.
+This versatility allows the proposed method to adapt
+seamlessly to diverse scenarios. The training procedure is
+summarized in Algorithm 1.
+Experiments
+Experimental Setup
+Datasets.
+We conducted experiments on three datasets to
+explore the impact of our method, including CIFAR-10
+(Krizhevsky, Hinton et al. 2009), CIFAR-100 (Krizhevsky,
+Hinton et al. 2009), and Tiny-ImageNet (Le and Yang 2015).
+To generate the training and test datasets, we employed the
+Dirichlet distribution Dir(α) (Hsu, Qi, and Brown 2019),
+with a symmetric parameter α ∈{0.3, 0.5, ∞}.
+Baselines.
+We evaluate the performance of our proposed
+DCFL under two settings—sample-wise (DCFL-SW) and
+prototype-wise (DCFL-PW). We then compare DCFL with
+several state-of-the-art federated learning methods, includ-
+ing FedAvg (McMahan et al. 2017), FedProx (Li et al. 2020),
+MOON (Li, He, and Song 2021), FedDecorr (Shi et al.
+2022), FedProc (Mu et al. 2023), FedRCL (Seo et al. 2024),
+FedSOL (Lee et al. 2024), and FedSCL. Here, FedSCL
+refers to a technique that applies sample-wise contrastive
+learning in a federated setting and has been employed as a
+baseline in prior work (Seo et al. 2024).
+Implementation
+details.
+We
+considered
+a
+federated
+learning setting with 100 clients. We adopted sample frac-
+tions of 0.02, 0.05, and 0.1; unless otherwise specified, a
+sample fraction of 0.05 was used. Each client trained a lo-
+cal ResNet-18 backbone (He et al. 2016) for 5 epochs using
+stochastic gradient descent with an initial learning rate of
+0.01, an exponential decay factor of 0.998, and a regulariza-
+tion factor of 0.0005. For methods that require a proximal
+or contrastive hyperparameter µ, we tuned µ from {0.001,
+0.01, 0.1, 1, 5, 10} and report the best value in the sup-
+plementary material. Unless otherwise noted, throughout all
+experiments we set λa to 0.9 and λu to 0.1, with a batch
+size of 64, and a temperature τ of 0.5. We used accuracy as
+an evaluation metric, reporting both the maximum accuracy
+achieved (MAX) and its exponential moving average (EMA)
+over rounds. Our experiments were implemented in Python
+3.11.7 with PyTorch 2.6.0 under CUDA 12.1, and executed
+on 4 NVIDIA Tesla V100 GPUs.
+Experimental Results
+Accuracy comparison.
+Table 1 shows the accuracy of all
+methods at a 5% participation rate under varying degrees of
+data heterogeneity. A comparison of different FL methods
+reveals that our proposed DCFL achieves the highest per-
+formance across almost all settings. Specifically, FedProc,
+which is based on prototypical contrastive learning, already
+achieves high performance across almost all settings; in
+comparison, DCFL further yields significant gains by inde-
+pendently balancing the attraction and repulsion forces dur-
+ing prototype contrastive learning. These findings demon-
+strate the effectiveness of DCFL under different levels of
+data heterogeneity.
+Scalability on varying number of clients.
+To evaluate the
+scalability of our proposed method, we assessed its perfor-
+mance under environments with different numbers of partic-
+ipating clients per round. The results for a 10% client par-
+ticipation rate are presented in Table 2. We also conducted
+experiments with a 2% participation rate. For brevity, the
+detailed results are provided in the supplementary material.
+As presented in Table 2, DCFL demonstrates strong scal-
+ability by consistently outperforming competing methods
+across different settings, confirming that its effectiveness
+is not limited to a specific client scale. This robustness is
+particularly evident in the most challenging scenarios, such
+as on the CIFAR-100 dataset with high data heterogene-
+ity, where our method achieves a clear performance gain
+over strong baselines. This consistent performance advan-
+tage demonstrates that our decoupled loss function provides
+a robust optimization framework, making DCFL a scalable
+and practical solution for real-world federated networks.
+Robustness on complex dataset.
+Table 3 presents the
+experimental results on Tiny-ImageNet. Compared to
+CIFAR-10 and CIFAR-100, Tiny-ImageNet includes more
+classes and a larger total number of samples, allowing us
+CIFAR-10
+CIFAR-100
+Method
+IID
+α = 0.5
+α = 0.3
+IID
+α = 0.5
+α = 0.3
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+FedAvg
+89.81
+89.30
+89.54
+89.04
+89.01
+87.61
+61.67
+61.57
+61.80
+61.57
+61.99
+61.58
+FedProx
+89.81
+89.56
+89.33
+88.55
+89.11
+87.36
+61.69
+61.37
+61.73
+61.68
+61.77
+61.10
+MOON
+91.23
+90.81
+89.55
+88.87
+87.94
+86.36
+62.12
+61.85
+61.50
+61.14
+62.68
+62.15
+FedDecorr
+89.70
+89.46
+88.99
+88.27
+88.56
+87.02
+60.98
+60.51
+60.88
+60.56
+60.70
+60.68
+FedRCL
+89.46
+88.96
+88.10
+87.33
+86.73
+84.11
+61.35
+60.93
+60.79
+60.55
+59.99
+59.68
+FedSOL
+91.38
+91.20
+90.13
+89.58
+88.90
+88.26
+64.28
+63.92
+63.33
+63.21
+63.05
+62.88
+FedSCL
+89.33
+88.95
+86.41
+85.30
+84.96
+82.93
+60.24
+60.04
+58.57
+58.06
+56.17
+55.92
+FedProc
+91.07
+90.84
+90.11
+89.11
+89.44
+87.42
+63.50
+63.10
+62.72
+62.50
+63.05
+62.88
+DCFL-SW (ours)
+90.98
+90.79
+90.47
+89.27
+89.75
+88.19
+63.86
+63.65
+64.30
+63.92
+64.14
+63.52
+DCFL-PW (ours)
+91.70
+91.50
+90.26
+89.35
+89.55
+87.55
+65.90
+65.31
+64.53
+63.93
+63.96
+63.57
+Table 2: Performance comparison from 10% participation rate over 100 clients on CIFAR-10 and CIFAR-100 under different
+data heterogeneity (α) settings. Also, we report exponential moving average accuracy with the parameter set to 0.9.
+Tiny-ImageNet
+Method
+IID
+α = 0.5
+α = 0.3
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+FedAvg
+50.36
+49.97
+47.29
+46.76
+46.43
+45.45
+FedProx
+49.70
+49.16
+47.46
+47.11
+46.78
+45.68
+MOON
+49.59
+49.54
+47.20
+46.65
+46.71
+45.12
+FedDecorr
+49.34
+48.58
+47.73
+46.94
+45.97
+45.17
+FedRCL
+49.60
+49.01
+46.63
+45.75
+46.09
+45.27
+FedSOL
+49.88
+49.25
+47.89
+47.19
+47.17
+45.96
+FedSCL
+48.98
+47.78
+45.47
+44.83
+44.10
+43.32
+FedProc
+50.82
+50.20
+47.68
+47.25
+47.24
+46.27
+DCFL-SW (ours)
+50.40
+49.58
+47.61
+47.18
+46.50
+45.46
+DCFL-PW (ours)
+51.45
+50.74
+48.80
+48.32
+47.46
+46.92
+Table 3: Performance comparison from 5% participation rate over 100 clients on Tiny-ImageNet under different data hetero-
+geneity (α) settings. Also, we report exponential moving average accuracy with the parameter set to 0.9.
+to assess robustness in more challenging scenarios. Across
+varying degrees of data heterogeneity, DCFL consistently
+achieves promising performance improvements in every set-
+ting. While FedProc already achieves high accuracy in most
+settings, DCFL further outperforms it by decoupling the
+alignment and uniformity terms. These results demonstrate
+the robustness of DCFL in challenging federated learning
+scenarios.
+Influence of λa and λu.
+Table 4 shows the sensitiv-
+ity of the hyperparameters λa and λu on CIFAR-10 and
+CIFAR-100. To analyze the influence of λa and λu, we con-
+ducted experiments for two scenarios under the constraint
+λa, λu ∈(0, 1) with λa + λu = 1: one with a large λa
+and another with a large λu. In most settings, assigning a
+larger weight to the alignment term (λa > λu) yields supe-
+rior performance. In particular, under more heterogeneous
+data distributions, the performance gap widens significantly,
+and when λu is large, the model fails to converge (e.g.,
+λa = 0.3, λu = 0.7, α = 0.3 on CIFAR-10). These obser-
+vations indicate both that high values of λu induce unstable
+early-phase learning and that increasing λa can effectively
+stabilize training and mitigate these convergence failures.
+Discussion on Representation Quality via Cosine
+Similarity Analysis
+To demonstrate that DCFL successfully encourages both
+alignment and uniformity in an FL environment, we ex-
+tracted the feature representations of test samples from two
+representative models, FedProc and our proposed DCFL-
+PW, and computed the pairwise cosine similarity for each
+model. We chose FedProc for comparison due to its robust
+performance among the baselines and its status as a pro-
+totypical contrastive learning method in FL. In this analy-
+sis, we consider two types of sample pairs: intra-class pairs
+(samples sharing the same label), for which cosine similar-
+ity values close to 1 indicate strong alignment in feature
+space; and inter-class pairs (samples from different labels),
+for which cosine similarity values near 0 indicate that repre-
+sentations are well separated and uniformly distributed.
+Fig. 1 shows the intra- and inter-class cosine similarity
+distributions for the DCFL model, revealing a clear sepa-
+ration between them. Specifically, the distribution of intra-
+class cosine similarities is tightly concentrated near 1, while
+the inter-class similarities concentrate around 0, demonstrat-
+ing that DCFL effectively pulls together positives without
+CIFAR-10
+CIFAR-100
+Method
+IID
+α = 0.5
+α = 0.3
+IID
+α = 0.5
+α = 0.3
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+DCFL-SW
+(λa = 0.3, λu = 0.7)
+87.32
+87.18
+73.07
+70.67
+20.18
+10.26
+61.57
+61.02
+56.13
+55.04
+52.95
+52.09
+DCFL-SW
+(λa = 0.9, λu = 0.1)
+91.30
+90.80
+90.38
+88.03
+86.84
+81.76
+68.17
+67.56
+66.78
+65.35
+65.35
+64.09
+DCFL-PW
+(λa = 0.3, λu = 0.7)
+91.72
+91.47
+87.87
+86.69
+85.45
+81.12
+69.16
+67.61
+66.19
+64.15
+63.13
+61.75
+DCFL-PW
+(λa = 0.9, λu = 0.1)
+91.50
+91.16
+89.83
+88.40
+86.99
+83.98
+68.64
+68.11
+67.32
+65.70
+65.26
+64.08
+Table 4: Ablation study with different λa and λu.
+1.00
+0.75
+0.50
+0.25 0.00
+0.25
+0.50
+0.75
+1.00
+Cosine Similarity
+0
+100
+200
+300
+400
+500
+600
+Count
+Median: 0.498
+Q1 (25%): 0.336
+Q3 (75%): 0.639
+IQR (Q1 Q3)
+(a) Intra-class: FedProc
+1.00
+0.75
+0.50
+0.25 0.00
+0.25
+0.50
+0.75
+1.00
+Cosine Similarity
+0
+100
+200
+300
+400
+500
+600
+Count
+Median: 0.682
+Q1 (25%): 0.511
+Q3 (75%): 0.816
+IQR (Q1 Q3)
+(b) Intra-class: DCFL-PW
+1.0
+0.5
+0.0
+0.5
+1.0
+Cosine Similarity
+0
+10000
+20000
+30000
+40000
+50000
+60000
+Count
+Median: 0.114
+Q1 (25%): -0.070
+Q3 (75%): 0.307
+IQR (Q1 Q3)
+(c) Inter-class: FedProc
+1.0
+0.5
+0.0
+0.5
+1.0
+Cosine Similarity
+0
+10000
+20000
+30000
+40000
+50000
+60000
+Count
+Median: 0.065
+Q1 (25%): -0.130
+Q3 (75%): 0.282
+IQR (Q1 Q3)
+(d) Inter-class: DCFL-PW
+Figure 1: Distribution of pairwise cosine similarities for samples, comparing FedProc and DCFL-PW.
+collapsing or misplacing different-class samples. In contrast
+to DCFL, intra-class similarities of FedProc are more dis-
+persed away from 1, and its inter-class similarities are less
+tightly clustered around 0, indicating weaker alignment and
+reduced uniformity.
+Conclusion
+In this work, we identified and addressed a foundational con-
+flict between theoretical assumptions of contrastive learn-
+ing and the practical constraints of federated learning. Our
+analysis revealed how the reliance on infinite negative sam-
+ples leads to unstable training in such a decentralized set-
+ting. To address this, we proposed Decoupled Contrastive
+Learning for Federated Learning (DCFL), a novel frame-
+work that separates the alignment and uniformity objec-
+tives, achieving effective representation learning. Our ap-
+proach introduces hyperparameters to calibrate the align-
+ment and uniformity terms, thereby enabling control over
+the attraction and repulsion forces. Experiment results con-
+firmed that DCFL consistently outperforms state-of-the-art
+methods, particularly in challenging, highly heterogeneous
+environments. Furthermore, our visualizations demonstrate
+that DCFL outperforms existing federated contrastive learn-
+ing methods in achieving both alignment and uniformity.
+References
+Awasthi, P.; Dikkala, N.; and Kamath, P. 2022. Do more
+negative samples necessarily hurt in contrastive learning? In
+International conference on machine learning, 1101–1116.
+PMLR.
+Chen, T.; Kornblith, S.; Norouzi, M.; and Hinton, G. 2020.
+A simple framework for contrastive learning of visual repre-
+sentations. In International conference on machine learning,
+1597–1607. PmLR.
+Collins, L.; Hassani, H.; Mokhtari, A.; and Shakkottai, S.
+2021.
+Exploiting shared representations for personalized
+federated learning. In International conference on machine
+learning, 2089–2099. PMLR.
+Dong, N.; and Voiculescu, I. 2021. Federated contrastive
+learning for decentralized unlabeled medical images. In In-
+ternational Conference on Medical Image Computing and
+Computer-Assisted Intervention, 378–387. Springer.
+Fu, X.; Chen, Z.; He, Y.; Wang, S.; Zhang, B.; Chen, C.;
+and Li, J. 2025. Virtual Nodes Can Help: Tackling Distribu-
+tion Shifts in Federated Graph Learning. In Proceedings of
+the AAAI Conference on Artificial Intelligence, volume 39,
+16657–16665.
+He, K.; Fan, H.; Wu, Y.; Xie, S.; and Girshick, R. 2020.
+Momentum contrast for unsupervised visual representation
+learning. In Proceedings of the IEEE/CVF conference on
+computer vision and pattern recognition, 9729–9738.
+He, K.; Zhang, X.; Ren, S.; and Sun, J. 2016. Deep resid-
+ual learning for image recognition. In Proceedings of the
+IEEE conference on computer vision and pattern recogni-
+tion, 770–778.
+Hsu, T.-M. H.; Qi, H.; and Brown, M. 2019. Measuring the
+effects of non-identical data distribution for federated visual
+classification. arXiv preprint arXiv:1909.06335.
+Huang, C.; and Liu, B. 2025. Pa3fed: Period-aware adap-
+tive aggregation for improved federated learning. In Pro-
+ceedings of the AAAI Conference on Artificial Intelligence,
+volume 39, 17395–17403.
+Karimireddy, S. P.; Kale, S.; Mohri, M.; Reddi, S.; Stich, S.;
+and Suresh, A. T. 2020. Scaffold: Stochastic controlled av-
+eraging for federated learning. In International conference
+on machine learning, 5132–5143. PMLR.
+Khosla, P.; Teterwak, P.; Wang, C.; Sarna, A.; Tian, Y.; Isola,
+P.; Maschinot, A.; Liu, C.; and Krishnan, D. 2020. Super-
+vised contrastive learning. Advances in neural information
+processing systems, 33: 18661–18673.
+Kim, G.; Kim, J.; and Han, B. 2024.
+Communication-
+efficient federated learning with accelerated client gradient.
+In Proceedings of the IEEE/CVF Conference on Computer
+Vision and Pattern Recognition, 12385–12394.
+Krizhevsky, A.; Hinton, G.; et al. 2009. Learning multiple
+layers of features from tiny images.
+Le, Y.; and Yang, X. 2015. Tiny imagenet visual recognition
+challenge. CS 231N, 7(7): 3.
+Lee, G.; Jeong, M.; Kim, S.; Oh, J.; and Yun, S.-Y. 2024.
+Fedsol: Stabilized orthogonal learning with proximal restric-
+tions in federated learning. In Proceedings of the IEEE/CVF
+Conference on Computer Vision and Pattern Recognition,
+12512–12522.
+Li, Q.; He, B.; and Song, D. 2021. Model-contrastive feder-
+ated learning. In Proceedings of the IEEE/CVF conference
+on computer vision and pattern recognition, 10713–10722.
+Li, T.; Sahu, A. K.; Zaheer, M.; Sanjabi, M.; Talwalkar, A.;
+and Smith, V. 2020.
+Federated optimization in heteroge-
+neous networks. Proceedings of Machine learning and sys-
+tems, 2: 429–450.
+Li, X.; Huang, K.; Yang, W.; Wang, S.; and Zhang, Z.
+2019. On the convergence of fedavg on non-iid data. arXiv
+preprint arXiv:1907.02189.
+Liu, X.; Han, P.; Li, X.; and Liu, B. 2025.
+SemiDFL:
+A Semi-Supervised Paradigm for Decentralized Federated
+Learning. In Proceedings of the AAAI Conference on Artifi-
+cial Intelligence, volume 39, 18987–18995.
+McMahan, B.; Moore, E.; Ramage, D.; Hampson, S.; and
+y Arcas, B. A. 2017. Communication-efficient learning of
+deep networks from decentralized data. In Artificial intelli-
+gence and statistics, 1273–1282. PMLR.
+Mendieta, M.; Yang, T.; Wang, P.; Lee, M.; Ding, Z.; and
+Chen, C. 2022.
+Local learning matters: Rethinking data
+heterogeneity in federated learning. In Proceedings of the
+IEEE/CVF Conference on Computer Vision and Pattern
+Recognition, 8397–8406.
+Mu, X.; Shen, Y.; Cheng, K.; Geng, X.; Fu, J.; Zhang, T.; and
+Zhang, Z. 2023. Fedproc: Prototypical contrastive federated
+learning on non-iid data. Future Generation Computer Sys-
+tems, 143: 93–104.
+Reddi, S.; Charles, Z.; Zaheer, M.; Garrett, Z.; Rush,
+K.; Koneˇcn`y, J.; Kumar, S.; and McMahan, H. B.
+2020.
+Adaptive federated optimization.
+arXiv preprint
+arXiv:2003.00295.
+Seo, S.; Kim, J.; Kim, G.; and Han, B. 2024. Relaxed con-
+trastive learning for federated learning. In Proceedings of
+the IEEE/CVF Conference on Computer Vision and Pattern
+Recognition, 12279–12288.
+Shi, Y.; Liang, J.; Zhang, W.; Tan, V. Y.; and Bai, S.
+2022. Towards understanding and mitigating dimensional
+collapse in heterogeneous federated learning. arXiv preprint
+arXiv:2210.00226.
+Tan, Y.; Long, G.; Ma, J.; Liu, L.; Zhou, T.; and Jiang, J.
+2022. Federated learning from pre-trained models: A con-
+trastive learning approach. Advances in neural information
+processing systems, 35: 19332–19344.
+Tian, Y.; Krishnan, D.; and Isola, P. 2020. Contrastive mul-
+tiview coding. In European conference on computer vision,
+776–794. Springer.
+Wang, H.; Yurochkin, M.; Sun, Y.; Papailiopoulos, D.; and
+Khazaeni, Y. 2020a. Federated learning with matched aver-
+aging. arXiv preprint arXiv:2002.06440.
+Wang, J.; Liu, Q.; Liang, H.; Joshi, G.; and Poor, H. V.
+2020b. Tackling the objective inconsistency problem in het-
+erogeneous federated optimization. Advances in neural in-
+formation processing systems, 33: 7611–7623.
+Wang, T.; and Isola, P. 2020. Understanding contrastive rep-
+resentation learning through alignment and uniformity on
+the hypersphere.
+In International conference on machine
+learning, 9929–9939. PMLR.
+Wu, Z.; Xiong, Y.; Yu, S. X.; and Lin, D. 2018. Unsuper-
+vised feature learning via non-parametric instance discrimi-
+nation. In Proceedings of the IEEE conference on computer
+vision and pattern recognition, 3733–3742.
+Xia, Z.; Hu, M.; Yan, D.; Liu, R.; Li, A.; Xie, X.; and
+Chen, M. 2025. MultiSFL: Towards Accurate Split Feder-
+ated Learning via Multi-Model Aggregation and Knowledge
+Replay. In Proceedings of the AAAI Conference on Artificial
+Intelligence, volume 39, 914–922.
+Xu, H.; Li, J.; Wu, W.; and Ren, H. 2025. Federated learning
+with sample-level client drift mitigation. In Proceedings of
+the AAAI Conference on Artificial Intelligence, volume 39,
+21752–21760.
+Supplementary Material
+Extended Theoretical Discussion
+We first review the principles of alignment and uniformity,
+then provide a deeper analysis of why the standard super-
+vised contrastive loss is unsuitable for the Federated Learn-
+ing (FL) environment.
+Revisiting Alignment and Uniformity
+As introduced by (Wang and Isola 2020), the success of con-
+trastive learning can be understood through two properties.
+• Alignment: Feature representations of similar samples
+(positive pairs) should be mapped to nearby points in the
+embedding space. This can be quantified by minimizing
+the expected distance between them.
+Lalign(f; α) ≜E(x,y) ∼ppos[||f(x)−f(y)||α
+2 ],
+α > 0.
+(11)
+• Uniformity: The feature vectors of all samples should
+be distributed as uniformly as possible. This encourages
+the preservation of maximal information from the data.
+This can be optimized by minimizing the following loss,
+which is based on the average pairwise Gaussian poten-
+tial:
+Luniform(f; t) ≜log Ex,y
+iid
+∼pdata[e−t||f(x)−f(y)||2
+2],
+t > 0.
+(12)
+The key insight from (Wang and Isola 2020) is that the stan-
+dard contrastive loss implicitly optimizes for both properties
+in asymptotic assumptions of an infinite number of negative
+samples.
+Analysis of the Coupled Loss in the FL Context
+The standard supervised contrastive loss (LSupCon) can be
+written as (Khosla et al. 2020):
+LSupCon = −
+X
+j̸=i, yj=yi
+log
+exp(sim(zi, zj)/τ)
+P
+k̸=i exp(sim(zi, zk)/τ),
+(13)
+where zi = h(fθ(xi)) is the normalized embedding of sam-
+ple xi, h(·) denotes the representation extractor, sim(·, ·) in-
+dicates cosine similarity, τ is the temperature hyperparame-
+ter.
+The denominator term couples the attractive and repul-
+sive forces. For any positive sample zj, it contributes to the
+numerator (attraction) while also being part of the denomi-
+nator’s sum (repulsion).
+In the IID setting, this formulation might lead to a stable
+training. However, in the FL setting where each client has
+a finite—and often small—amount of data, this structure is
+problematic.
+• The alignment signal, derived from the numerator, is in-
+herently weak due to the scarcity of positive samples
+(|P(i)| is small).
+• The uniformity signal, derived from the denominator, is
+biased due to the non-IID nature of the negative samples.
+The coupled loss forces a direct competition between this
+weak alignment signal and a biased uniformity signal. This
+makes it difficult for the model to learn meaningful repre-
+sentations. Our DCFL formulation (Eq. 10 in the main pa-
+per) solves this issue by separating the two forces, allowing
+each to be calibrated independently.
+Hyperparameter µ We Used
+Method
+CIFAR-10
+CIFAR-100
+Tiny-ImageNet
+MOON
+5
+1
+1
+FedProx
+0.01
+0.001
+0.001
+FedDecorr
+0.01
+0.01
+0.01
+FedProc
+10
+10
+10
+FedRCL
+1
+1
+1
+DCFL (ours)
+10
+10
+1
+Table 5: Optimal µ values for different methods and datasets.
+Scalability on Varying Number of Clients
+Table 2 in the main paper and Table 6 show that DCFL can
+scale to more challenging scenarios with varying numbers of
+participants. In practical FL settings, both data heterogeneity
+and participation rate heterogeneity play critical roles. We
+observe that DCFL consistently outperforms all other meth-
+ods across almost all scenarios, regardless of variations in
+participation rate. Table 6 presents the robust performance
+gains of DCFL on two benchmarks at a 2% participation
+rate. In particular, recent methods still suffer a significant
+performance drop compared to FedAvg due to lower partic-
+ipation rates. Despite these challenges, DCFL demonstrates
+promising performance gains by independently adjusting the
+attraction and repulsion forces.
+CIFAR-10
+CIFAR-100
+Method
+IID
+α = 0.5
+α = 0.3
+IID
+α = 0.5
+α = 0.3
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+MAX
+EMA
+FedAvg
+91.06
+90.99
+89.69
+89.06
+86.16
+78.46
+67.31
+66.21
+66.75
+65.23
+65.65
+64.46
+FedProx
+91.13
+90.64
+89.96
+89.02
+86.31
+75.16
+67.10
+66.58
+65.97
+63.93
+65.68
+64.70
+MOON
+90.79
+90.59
+87.71
+85.08
+84.50
+82.05
+67.20
+66.35
+65.95
+64.50
+65.91
+64.57
+FedDecorr
+91.22
+90.80
+90.33
+89.67
+86.67
+76.19
+66.15
+65.56
+66.01
+64.15
+65.64
+64.53
+FedRCL
+90.32
+90.00
+88.06
+86.80
+84.74
+76.74
+66.58
+66.13
+65.05
+63.24
+63.72
+62.59
+FedSOL
+90.70
+90.61
+88.46
+88.01
+85.68
+83.37
+66.72
+66.25
+65.39
+64.66
+65.32
+65.19
+FedSCL
+88.61
+88.58
+85.41
+84.39
+81.14
+75.62
+64.60
+64.35
+61.58
+59.39
+59.76
+59.20
+FedProc
+91.38
+90.90
+90.26
+88.63
+86.47
+79.40
+68.36
+67.69
+66.89
+65.07
+65.83
+64.86
+DCFL-SW (ours)
+91.30
+90.80
+90.38
+88.03
+86.84
+81.76
+68.17
+67.56
+66.78
+65.35
+65.35
+64.09
+DCFL-PW (ours)
+91.50
+91.16
+89.83
+88.40
+86.99
+83.98
+68.64
+68.11
+67.32
+65.70
+65.26
+64.08
+Table 6: Performance comparison from 2% participation rate over 100 clients on CIFAR-10 and CIFAR-100 under different
+data heterogeneity (α) settings. Also, we report exponential moving average accuracy with the parameter set to 0.9.

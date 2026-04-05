@@ -1,0 +1,1079 @@
+FEDERATED STYLE-AWARE TRANSFORMER AGGREGATION OF
+REPRESENTATIONS
+Mincheol Jeon, Euinam Huh
+Khuynghee Univ
+20191022224@khu.ac.kr, johnhuh@khu.ac.kr
+ABSTRACT
+Personalized Federated Learning (PFL) faces persistent challenges, including domain heterogeneity
+from diverse client data, data imbalance due to skewed participation, and strict communication
+constraints. Traditional federated learning often lacks personalization, as a single global model fails
+to capture personalized features, leading to biased predictions and poor generalization—especially
+for clients with divergent data distributions.
+To address these issues, we propose FedSTAR, a style-aware federated learning framework that
+disentangles client-specific style factors from shared content representations. FedSTAR aggregates
+class-wise prototypes via a Transformer-based attention mechanism, allowing the server to weigh
+client contributions adaptively while preserving personalization.
+Furthermore, by exchanging compact prototypes and style vectors rather than full model parame-
+ters, FedSTAR significantly reduces communication overhead. Experimental results demonstrate
+that combining content-style disentanglement with attention-driven prototype aggregation improves
+personalization and robustness in heterogeneous environments, without incurring additional commu-
+nication cost.
+Keywords personalized federated learning, disentangled representation, attention-based aggregation
+1
+Introduction
+Federated Learning (FL) has become a widely used paradigm for collaboratively training models across decentralized,
+privacy-sensitive environments [1, 2]. However, most classical FL approaches assume that a single global model can
+adequately serve all clients. In practical deployments, clients often exhibit substantial domain heterogeneity, driven by
+differences in user behavior, sensing hardware, environmental conditions, and collection biases [3, 4]. Without adequate
+personalization, these variations lead to biased global parameters, poor local generalization, and significant performance
+degradation, especially for clients whose data distributions differ sharply from the global average [5]. These challenges
+highlight the necessity of Personalized Federated Learning (PFL), where global knowledge must be shared while still
+accommodating client-specific characteristics [5, 6].
+A fundamental difficulty in PFL lies in the personalized features present in local representations. Clients may observe
+the same semantic categories but express them through distinctive “styles” due to lighting conditions, background
+textures, sensor noise, or temporal distortions [7, 8]. When content and style remain entangled, the server aggregates
+heterogeneous representations, contaminating global prototypes and hindering effective personalization at the client
+side.
+While style decomposition has been explored in centralized learning and domain generalization [9], its integration
+within federated learning—particularly under prototype-based communication—remains largely unexplored. Indeed,
+to the best of our knowledge, FedSTAR is the first approach to apply explicit content–style decomposition within a
+prototype-based personalized federated learning framework. Existing prototype-based FL methods treat prototypes as
+unified embeddings, mixing task-relevant content with client-specific style and limiting the expressiveness of aggregated
+prototypes [10, 11].
+arXiv:2511.18841v1  [cs.LG]  24 Nov 2025
+Another major limitation of prior prototype-based FL methods is their reliance on simple averaging for server-side
+aggregation. Although averaging provides computational simplicity, it implicitly assumes that all client prototypes
+are equally informative and equally reliable—an assumption that rarely holds under non-IID or imbalanced settings
+[12, 5]. In heterogeneous environments, naïve averaging can suppress minority-client information, amplify noisy or
+stylistic deviations, and ultimately degrade global prototype quality. Motivated by this limitations, we propose replacing
+uniform averaging with attention-based aggregation, enabling the server to learn the relative importance of each client’s
+prototype and adaptively weight contributions in a data-driven manner [13, 14].
+Building on these insights, we now introduce FedSTAR, our proposed framework to tackle these challenges more
+effectively. FedSTAR decomposes each client’s prototype into a content component aligned with global semantics and a
+style component representing local variability. Clients transmit only the content prototypes, while style vectors remain
+local and modulate representations using a lightweight StyleFiLM module, thereby enhancing personalization without
+additional communication cost.
+At the server, FedSTAR employs a Transformer-based aggregator that integrates class embeddings, client identity
+embeddings, and class-wise content prototypes. Through multi-head attention, the server learns nuanced inter-client
+relationships and dynamically reweights prototype contributions, overcoming the limitations of uniform averaging and
+improving robustness to non-IID data, label imbalance, and inconsistent client participation.
+Importantly, FedSTAR maintains the communication efficiency of prototype-based FL: clients exchange only compact
+class-level prototypes rather than full model parameters. By combining content-style disentanglement and attention-
+based prototype aggregation, FedSTAR improves the quality of learned representations while offering more consistent
+personalization across clients.
+In summary, FedSTAR provides a new perspective on personalized federated learning by integrating style-aware
+representation modeling, explicit content–style decomposition, and Transformer-based attention aggregation. This
+represents, to our knowledge, the first prototype-based PFL framework that leverages content–style separation and
+attention-driven prototype aggregation, enabling a principled and communication-efficient solution for heterogeneous
+real-world federated environments.
+Contributions
+In summary, the main contributions of this work are as follows:
+• Content–style decomposition within prototype-based personalized federated learning. This is the first
+framework to incorporate content–style separation in a prototype-based PFL setting. FedSTAR transmits only
+content-aligned prototypes while keeping style information local, preventing style noise from contaminating
+global representations and enabling style-aware personalization via a lightweight FiLM module.
+• Attention-driven server-side prototype aggregation. Unlike most prototype-based FL methods that rely on
+simple averaging for aggregation, FedSTAR adopts a Transformer-based attention mechanism incorporating
+client identity embeddings, class embeddings, and content prototypes. This allows the server to learn data-
+dependent aggregation weights and capture cross-client relationships more effectively.
+• Improved personalization and robustness without additional communication cost. FedSTAR maintains
+the communication efficiency of prototype-based FL by exchanging compact class-level content prototypes
+instead of full model parameters or gradients. The combination of content–style decomposition and attention-
+based aggregation strengthens global consistency and local adaptation without increasing communication
+overhead.
+• Practical applicability under heterogeneous and imbalanced federated environments. Through explicit
+style modeling, adaptive local modulation, and attention-weighted global aggregation, FedSTAR demonstrates
+robustness under severe non-IID distributions, class imbalance, and irregular client participation, making it
+suitable for realistic federated learning deployments.
+2
+Related Works
+2.1
+Personalized Federated Learning
+Personalized Federated Learning (PFL) has emerged as a practical solution to the performance degradation caused
+by data heterogeneity across clients—a challenge that is especially critical in real-world deployments such as mobile
+keyboards [1], multi-hospital medical imaging collaboration [15, 16], IoT and autonomous driving systems [17], and
+2
+financial fraud detection and credit modeling [18]. In these applications, clients often exhibit substantial differences in
+data distributions due to device usage patterns, institutional policies, sensor variations, or demographic differences,
+making personalization indispensable for achieving reliable performance [2].
+In these real-world environments, the fundamental limitation of conventional federated learning lies in its reliance on a
+single global model, which inevitably fails to account for the pronounced variability among clients [5]. When all clients
+are forced to conform to a unified decision boundary, users whose data distributions deviate from the population average
+experience substantial performance degradation, manifested through biased predictions, unstable convergence behaviors,
+and poor generalization to local conditions [19]. This issue is further exacerbated in settings where client participation
+is intermittent, computational resources are constrained, or local datasets are extremely sparse or skewed—conditions
+that are prevalent in mobile, healthcare, and IoT deployments [4].
+Consequently, personalization is not merely an optional enhancement but a fundamental requirement for ensuring
+fairness, robustness, and practicality in federated learning systems [20]. A desirable PFL framework must satisfy several
+essential criteria. First, it should effectively capture client-specific characteristics, including domain-specific features,
+stylistic attributes, demographic differences, and device- or institution-level data patterns [6]. Second, it must maintain
+a meaningful degree of shared knowledge transfer to prevent overfitting to limited local data while still leveraging the
+collective intelligence of the federation [21]. Third, such a framework must provide robustness under severe non-IID
+conditions, including heterogeneous feature spaces, label imbalance, and large domain shifts—scenarios in which
+global-only methods typically fail [22].
+Moreover, practical PFL systems must operate under tight communication and privacy constraints. In many application
+domains, such as cross-hospital collaboration or large-scale mobile deployments, exchanging full model parameters is
+infeasible due to limited bandwidth and privacy regulations [23]. Therefore, personalization must be achieved with
+compact, semantically meaningful representations that can be communicated efficiently without exposing sensitive
+user information [10]. Additionally, as federated systems scale to hundreds or thousands of clients, the personalization
+mechanism must remain computationally lightweight and compatible with heterogeneous device capabilities [5].
+Overall, these requirements highlight the intrinsic tension in PFL: the need to simultaneously preserve local adaptability,
+global coherence, and system-level efficiency. Designing a framework capable of balancing these factors remains a
+central challenge in realizing federated learning that is both high-performing and deployable in the diverse, dynamic
+conditions of real-world applications [24].
+Several recent PFL methods have attempted to address these challenges from different perspectives.
+Ditto [25]
+introduces a local regularization term to encourage proximity to a shared model while allowing personalized fine-tuning.
+APFL [26] jointly optimizes a shared global model and personalized local models through a convex combination,
+balancing generalization and personalization. FedMTL [21] frames PFL as a multi-task learning problem, learning
+shared representations while preserving task-specific nuances. FedALA [27] leverages attention to adaptively align local
+and global features, enhancing personalization via adaptive local aggregation. These approaches form the foundation
+for evaluating new methods, including our proposed framework.
+2.2
+Distanglement Representation
+Federated Learning (FL) has become a widely used paradigm for collaboratively training models across decentralized,
+privacy-sensitive environments [1, 2]. However, most classical FL approaches assume that a single global model can
+adequately serve all clients. In practical deployments, clients often exhibit substantial domain heterogeneity, driven
+by differences in user behavior, sensing hardware, environmental conditions, and collection biases [19, 4]. Without
+adequate personalization, these variations lead to biased global parameters, poor local generalization, and significant
+performance degradation, especially for clients whose data distributions differ sharply from the global average [5].
+These challenges highlight the necessity of Personalized Federated Learning (PFL), where global knowledge must be
+shared while still accommodating client-specific characteristics [20, 6].
+A fundamental difficulty in PFL lies in the personalized features present in local representations. Clients may observe
+the same semantic categories but express them through distinctive “styles” due to lighting conditions, background
+textures, sensor noise, or temporal distortions [7, 8]. When content and style remain entangled, the server aggregates
+heterogeneous representations, contaminating global prototypes and hindering effective personalization at the client
+side.
+While style decomposition has been explored in centralized learning and domain generalization [9, 28], its integration
+within federated learning—particularly under prototype-based communication—remains largely unexplored. Existing
+prototype-based FL methods, including FedProto [10] and FedRep [11], treat class prototypes as unified embeddings,
+mixing task-relevant content with client-specific style and limiting the expressiveness of aggregated prototypes.
+3
+Another key limitation of prior prototype-based FL methods is their reliance on simple averaging for server-side
+aggregation. Although averaging provides computational simplicity, it implicitly assumes that all client prototypes
+are equally informative and equally reliable—an assumption that rarely holds under non-IID or imbalanced settings
+[22, 5]. In heterogeneous environments, naïve averaging can suppress minority-client information, amplify noisy or
+stylistic deviations, and ultimately degrade global prototype quality. Motivated by this limitation, we propose replacing
+uniform averaging with attention-based aggregation, enabling the server to learn the relative importance of each client’s
+prototype and adaptively weight contributions in a data-driven manner [13, 14].
+3
+Motivation
+Simple averaging in prototype-based federated learning often leads to biased and degraded representations because it
+fails to account for variations in data quality, client-specific styles, class imbalance, and domain-specific distributions
+[22]. When prototypes are aggregated uniformly, stylistic noise from heterogeneous clients becomes entangled with
+task-relevant content features, causing over-representation of dominant domains and poor representation of minority
+or rare distributions. This entanglement significantly weakens the semantic clarity of global prototypes, ultimately
+reducing their effectiveness for personalization and downstream adaptation.
+Existing prototype-based approaches such as FedProto [10] reduce communication by exchanging class-wise prototypes
+but treat each prototype as a single undifferentiated embedding, overlooking the crucial distinction between domain-
+invariant content and client-specific style. FedPAC [29] addresses part of this challenge by incorporating adversarial
+feature alignment and supervised contrastive learning to refine local prototype representations. However, both FedProto
+and FedPAC rely on static averaging for server-side aggregation, leaving the server blind to domain variability
+and stylistic discrepancies encoded within client prototypes. Similarly, methods like FedRep [11] enhance local
+representation learning but do not inform or optimize global prototype aggregation, limiting their effectiveness in
+heterogeneous environments.
+In contrast, incorporating explicit content–style disentanglement provides a more principled foundation for prototype ag-
+gregation. Prior work on disentangled representation learning, including Domain Separation Networks [7] and adaptive
+style modulation techniques such as AdaIN [8], demonstrates that separating semantic content from personalized feature
+improves robustness to domain shift. Likewise, studies in domain generalization [9, 28] emphasize the importance of
+isolating invariant representations when learning from diverse environments. Motivated by these insights, applying
+disentanglement before aggregation prevents stylistic contamination and ensures that only semantic content contributes
+to shared prototypes.
+Building upon these ideas, this paper proposes FedSTAR (Federated Style-Aware Transformer Aggregation of
+Representations), a framework that integrates explicit content–style decomposition with Transformer-based, class-wise
+attention over client prototypes. By disentangling local representations and dynamically weighting client contributions
+based on domain similarity and reliability, FedSTAR addresses the limitations of static averaging and yields cleaner,
+more discriminative global prototypes tailored for personalized federated learning under severe non-IID conditions.
+4
+Method
+FedSTAR is a prototype-based personalized federated learning framework designed to address the limitations of
+prior prototype-based FL approaches—particularly their inability to separate semantic content from client-specific
+stylistic variations, and their reliance on uniform averaging for prototype aggregation. FedSTAR consists of four main
+components:
+• Shared feature alignment that stabilizes global semantics,
+• Class-wise content–style decomposition of local prototype parameters,
+• FiLM-based style modulation using class-dependent style vectors,
+• Transformer- and class-embedding–driven prototype aggregation.
+Each component below reflects the exact operations implemented in FedSTAR.
+4.1
+Shared Feature Alignment
+Given an input example x, each client extracts a raw feature representation through its local encoder:
+hk(x) = BaseEncoderk(x).
+(1)
+4
+Algorithm 1 FedSTAR: Style-Aware Federated Prototype Learning (Simplified)
+Require: Clients K, global prototypes Pglobal, Transformer aggregator Φ
+Ensure: Trained client models and updated global prototypes
+1: for round t = 1, . . . , T do
+2:
+St ←Sample a subset of clients
+3:
+Broadcast Pglobal to St
+Local Update
+4:
+for client k ∈St in parallel do
+5:
+Extract local features hk(x)
+6:
+Compute shared alignment loss Lshared
+7:
+Decompose personal parameter uk,c into content and style vectors: uk,c →(pcontent
+k,c
+, sk,c)
+8:
+Apply FiLM modulation hpersonal = FiLM(hk(x), sk,y)
+9:
+Compute task loss + pull loss
+10:
+Update local model parameters
+11:
+Collect shared mean prototypes and personal parameters
+12:
+end for
+Server Aggregation
+13:
+Construct prototype tensor CP from all clients
+14:
+Z ←Φ(CP)
+▷Transformer encoder
+15:
+for each class c do
+16:
+Compute attention weights αk,c using class embedding
+17:
+pglobal
+c
+←P
+k αk,cZk,c
+18:
+end for
+Broadcast Personalized Prototypes
+19:
+for client k ∈St do
+20:
+Fuse global and local prototypes via gating:
+21:
+ppersonal
+k,c
+= αk,cpglobal
+c
++ (1 −αk,c)uk,c
+22:
+Provide ppersonal
+k,c
+and style vectors sk,c to client
+23:
+end for
+24: end for
+To encourage these raw representations to align with global semantic structure, FedSTAR adopts a prototypical classifier
+based on the negative squared Euclidean distance. Given a feature vector h ∈Rd and a global class prototype
+pglobal
+c
+∈Rd, the logit for class c is computed as:
+ℓc = 2h⊤pglobal
+c
+−∥h∥2 −∥pglobal
+c
+∥2.
+(2)
+The shared alignment loss is applied using the global prototypes received from the server:
+Lshared = CE
+ ProtoClassify
+ hk(x), {pglobal
+c
+}
+
+, y
+
+.
+(3)
+This alignment stabilizes the feature manifold across heterogeneous clients and reduces representation drift under
+non-IID distributions.
+4.2
+Content–Style Decomposition
+On each client, for every class c, we maintain:
+• a shared mean prototype mk,c =
+1
+|Dk,c|
+P
+x∈Dk,c hk(x),
+• a learnable personal parameter uk,c ∈Rd.
+The full local prototype (used later for personalization) is conceptually mk,c + uk,c, while the style decomposition
+operates on uk,c.
+FedSTAR decomposes each uk,c with respect to the global prototype pglobal
+c
+.
+Content projection.
+We first compute the component of uk,c aligned with the global prototype:
+pcontent
+k,c
+=
+u⊤
+k,cpglobal
+c
+∥pglobal
+c
+∥2 + ε
+pglobal
+c
+.
+(4)
+5
+Style residual.
+The residual orthogonal component captures client-specific style:
+pstyle
+k,c
+= uk,c −pcontent
+k,c
+,
+pstyle
+k,c
+←
+pstyle
+k,c
+∥pstyle
+k,c ∥+ ε
+.
+(5)
+This produces a unit-norm class-specific style vector sk,c = pstyle
+k,c
+used for personalized feature modulation.
+4.3
+StyleFiLM Personalization
+To incorporate stylistic information into the local representations, FedSTAR applies a FiLM-based modulation layer[30].
+The use of style vectors in FedSTAR is grounded in the observation that convolutional features encode content and
+style in disentangled forms [31]. Following this principle, we model the residual orthogonal component of each local
+prototype as a style descriptor and use it to guide personalized feature modulation. Importantly, the style vector is
+class-specific: for each sample (x, y) from client k, we select sk,y and compute
+FiLM(h) = h ⊙(1 + γ(sk,y)) + β(sk,y),
+(6)
+where γ(·) and β(·) are small MLPs. This yields personalized representations hpersonal
+k
+(x) that incorporate client-side
+stylistic factors while remaining anchored to the shared content manifold.
+4.4
+Prototype Pull Loss
+Clients further encourage personalized representations to remain aligned with their personalized prototypes ppersonal
+k,c
+via a cosine-based pull loss:
+Lpull = 1 −cos
+
+hpersonal
+k
+(x), ppersonal
+k,c
+
+.
+(7)
+This promotes tight client-specific clusters in the embedding space, improving personal discriminability and robustness
+under style modulation.
+4.5
+Transformer-Based Prototype Aggregation
+For each communication round, the server receives a tensor of shared prototypes
+CP ∈RM×C×d,
+where M is the number of participating clients and C is the number of classes observed in that round. We denote by
+pshared
+k,c
+the shared prototype for client k and class c (i.e., the mean feature without uk,c).
+To encode client identity and class semantics, the server first adds client and class embeddings and normalizes the result:
+Xk,c = LN
+ pshared
+k,c
++ eclient
+k
++ eclass
+c
+
+,
+(8)
+where eclient
+k
+and eclass
+c
+are learnable embedding vectors. The Transformer encoder then refines these representations:
+Z = TransformerEncoder(X),
+(9)
+yielding contextualized prototypes Zk,c.
+Class-embedding–driven attention.
+FedSTAR performs a second attention pass driven by class embeddings. For
+each class c, the attention weight for client k is defined as
+αk,c =
+exp
+
+Z⊤
+k,ceclass
+c
+/
+√
+d
+
+PM
+j=1 exp
+
+Z⊤
+j,ceclass
+c
+/
+√
+d
+.
+(10)
+The global prototype for class c is then aggregated as
+pglobal
+c
+=
+M
+X
+k=1
+αk,c Zk,c.
+(11)
+This mechanism allows the server to model domain similarity, client reliability, and stylistic deviations, significantly
+outperforming naive averaging in heterogeneous settings.
+6
+4.6
+Personalized Prototype Reconstruction
+Each client refines the global prototype using a learned gate that fuses the global prototype with its personal parameter
+uk,c. Specifically, we construct a feature vector
+[zk,c] =
+
+pglobal
+c
+, uk,c, |pglobal
+c
+−uk,c|, pglobal
+c
+⊙uk,c
+
+and compute
+αk,c = σ
+ G
+ pglobal
+c
+, uk,c, |pglobal
+c
+−uk,c|, pglobal
+c
+⊙uk,c
+
+,
+(12)
+where G is a small MLP (the gating network) and σ is the sigmoid function. The personalized prototype is then obtained
+as
+ppersonal
+k,c
+= αk,cpglobal
+c
++ (1 −αk,c)uk,c.
+(13)
+This reconstruction retains global semantic structure while integrating client-specific stylistic properties.
+4.7
+Overall Objective
+The local training objective on client k combines classification, prototype alignment, and shared feature alignment:
+Lclient = LCE + λpullLpull + λsharedLshared.
+(14)
+On the server side, the Transformer aggregator is additionally trained to keep its refined representations close to the
+original client prototypes. Let
+¯Zc = 1
+M
+M
+X
+k=1
+Zk,c
+denote the mean refined prototype for class c across clients. The server consistency loss is defined as
+Lserver =
+1
+MC
+C
+X
+c=1
+M
+X
+k=1
+
+1 −cos
+  ¯Zc, CPk,c
+ 
+,
+(15)
+which matches the cosine-based objective used in our implementation. Together, these components yield personalized
+yet globally coherent prototype learning under heterogeneous and stylistically diverse federated environments.
+5
+Experiment
+5.1
+Experiment Setup
+We now validate FedSTAR through comprehensive experiments on diverse federated benchmarks. All experiments
+were conducted on a four NVIDIA RTX 3090 GPU. We employ MobileNetV3 [32] as the backbone model across all
+datasets. Four evaluation metrics are reported: Test Accuracy (Best Test Acc); F1 Score (Best F1-score ); Brier Score
+(Min Brier Score); and Convergence Round (Conv. Round) (the training round at which the model reaches 95% of its
+maximum Accuracy). All reported performance metrics correspond to the best average values obtained across three
+repeated runs per method.
+Non-IID Partitioning.
+Dirichlet sampling with concentration parameters α = 0.1 is used to generate heterogeneous
+client partitions. Smaller α values produce more skewed and non-IID label distributions across clients, better reflecting
+practical FL scenarios. In addition, we inject zero-mean Gaussian noise with variance 0.05 into the sampled class
+proportions to introduce mild stochastic perturbations, further increasing distributional diversity among clients.
+Dataset Settings.
+We conduct experiments on four widely used benchmark datasets spanning diverse visual domains:
+(1) CIFAR-100 [33] (100 classes), (2) DomainNet [34] (345 classes across six domains; ∼0.6M images), (3) Fashion-
+MNIST [35] (10 classes), and (4) Office-31 [36] (31 classes spanning three domains). All datasets are resized to
+(3 × 320 × 320) and partitioned across 100 clients to simulate large-scale federated environments.
+Training Configuration.
+All experiments are conducted for 200 communication rounds, with five local epochs per
+round. At each round, 30% of the 100 clients are randomly selected to participate, and the local batch size is set to 8192.
+We evaluate the global model on the held-out test set every 5 rounds.
+In our method, FedSTAR, we fix the learning rate to 0.005 and set the shared-prototype regularization weight λshared to
+1.0. For all datasets except DomainNet, the personalization regularization weight λpull is set to 0.7, while DomainNet
+uses a slightly smaller value of 0.6 due to its larger domain diversity and higher inter-client heterogeneity.
+Further details regarding the experimental setup can be found in the appendix.
+7
+5.2
+Results
+Ablation Study I: Effectiveness of Attention-based Prototype Aggregation
+We first evaluate the contribution
+of our attention-based server aggregation. All ablation analyses and visualization experiments in this subsection are
+conducted using the Fashion-MNIST benchmark as a default comparison dataset, as it provides a clean and controlled
+environment for observing prototype behaviors and representation shifts.
+We compare the FedProto and an Ablation variant in which the personalization branch is removed while the attention-
+driven aggregation is preserved. Ablation variant and FedProto show a clear performance gap, with the Ablation variant
+consistently outperforming FedProto. This confirms that uniform averaging is insufficient for aligning heterogeneous
+prototypes, and that attention-based aggregation alone already provides substantial benefits.
+0
+25
+50
+75
+100
+125
+150
+175
+200
+Round
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Train Acc
+Train Acc
+Method
+Ablation variant
+FedProto
+0
+25
+50
+75
+100
+125
+150
+175
+200
+Round
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+Test Acc
+Test Acc
+Method
+Ablation variant
+FedProto
+0
+25
+50
+75
+100
+125
+150
+175
+200
+Round
+0.0
+0.2
+0.4
+0.6
+0.8
+Test Fscore
+Test Fscore
+Method
+Ablation variant
+FedProto
+0
+25
+50
+75
+100
+125
+150
+175
+200
+Round
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Brier Score
+Brier Score
+Method
+Ablation variant
+FedProto
+Figure 1: Performance comparison of FedSTAR and the Ablation variant on the Fashion-MNIST dataset. Figure 1
+illustrates the training accuracy and test performance over rounds. As seen, FedSTAR consistently outperforms the
+ablation variant in all metrics.
+The ablation variant model itself significantly improves upon FedProto, demonstrating the standalone benefit of
+attention-guided prototype fusion. A paired Wilcoxon signed-rank test conducted on test accuracy further confirms that
+the ablation variant significantly outperforms FedProto (p = 3.6 ∗10−8 < 0.05).
+Ablation Study II: Contribution of the Personalization Module
+FedSTAR also yields substantial improvements in
+predictive quality. On Fashion-MNIST, the maximum F1-score increases from 0.4366 (Ablation variant) to 0.8416
+(FedSTAR), corresponding to an improvement of approximately 40.5%. This substantial gains demonstrate that
+personalization improves both accuracy and class-level discriminability.
+A Wilcoxon signed-rank test based on test accuracy further confirms that this improvement is statistically significant
+(p = 4.7 ∗10−8 < 0.05). These results highlight that personalization—via style-aware FiLM modulation and prototype
+refinement—plays a crucial role beyond the benefits provided by attention-based aggregation.
+Representation Quality via UMAP Visualization
+Using Fashion-MNIST as the primary visualization dataset, we
+illustrate the representation quality of different aggregation strategies through UMAP. FedProto produces relatively
+dispersed and partially overlapping class clusters, indicating limited ability to align client-specific prototypes. The
+Ablation model (attention-based aggregation only) shows noticeably clearer class boundaries and improved cluster
+coherence, confirming that adaptive aggregation already yields stronger alignment than uniform averaging. Finally,
+FedSTAR exhibits the most discriminative and compact clusters, with reduced inter-client variation and minimal
+prototype drift, highlighting the combined benefit of attention-driven aggregation and personalization.
+8
+0
+25
+50
+75
+100
+125
+150
+175
+200
+Round
+0.2
+0.4
+0.6
+0.8
+1.0
+Train Acc
+Train Acc
+Method
+Ablation variant
+FedSTAR
+0
+25
+50
+75
+100
+125
+150
+175
+200
+Round
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Test Acc
+Test Acc
+Method
+Ablation variant
+FedSTAR
+0
+25
+50
+75
+100
+125
+150
+175
+200
+Round
+0.0
+0.2
+0.4
+0.6
+0.8
+Test Fscore
+Test Fscore
+Method
+Ablation variant
+FedSTAR
+0
+25
+50
+75
+100
+125
+150
+175
+200
+Round
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Brier Score
+Brier Score
+Method
+Ablation variant
+FedSTAR
+Figure 2: Performance comparison of FedSTAR and the Ablation variant on the Fashion-MNIST dataset.
+Figure 3: UMAP embeddings of Fashion-MNIST under three federated learning methods. From left to right: FedProto,
+Ablation variant (attention-only), and FedSTAR. FedSTAR achieves the most compact and discriminative class clusters.
+Overall Performance Comparison
+Table 1–4 present a comprehensive comparison of all methods across four
+benchmarks with varying levels of heterogeneity. Fashion-MNIST is used as the default dataset for ablation and
+visualization, while the full evaluation spans CIFAR-100, DomainNet, and Office-31 to assess robustness under
+increasingly challenging non-IID conditions.
+9
+Table 1: Fashion-MNIST Performance Summary: Best Test Accuracy, F1-score, Brier Score, and Convergence Round.
+Method
+Best Test Acc
+Best F1-score
+Min Brier Score
+Conv. Round
+APFL
+0.8187 ± 0.2917 (200)
+0.8150 ± 0.2766 (160)
+0.2579 (200)
+140
+Ditto
+0.8310 ± 0.1873 (200)
+0.8306 ± 0.1980 (200)
+0.4393 (200)
+155
+FedALA
+0.8866 ± 0.1409 (195)
+0.8864 ± 0.1396 (195)
+0.1759 (200)
+150
+FedMTL
+0.8513 ± 0.1955 (190)
+0.8511 ± 0.2030 (190)
+0.2379 (200)
+105
+FedProto
+0.8580 ± 0.1841 (190)
+0.8578 ± 0.1923 (190)
+0.2288 (200)
+105
+FedRep
+0.8436 ± 0.1776 (200)
+0.8430 ± 0.1983 (200)
+0.2442 (200)
+165
+MOON[37]
+0.8001 ± 0.2293 (195)
+0.7998 ± 0.2245 (195)
+0.3340 (195)
+175
+Ablation Variant
+0.8657 ± 0.1438 (200)
+0.8657 ± 0.1560 (200)
+0.2173 (200)
+200
+FedSTAR
+0.8937 ± 0.1774 (200)
+0.8936 ± 0.1918 (200)
+0.3488 (20)
+55
+Table 2: CIFAR-100 Performance Summary: Best Test Accuracy, F1-score, Brier Score, and Convergence Round.
+Method
+Best Test Acc
+Best F1-score
+Min Brier Score
+Conv. Round
+APFL
+0.0945 ± 0.0388 (185)
+0.0912 ± 0.0542 (185)
+0.9831 (70)
+185
+Ditto
+0.2215 ± 0.0925 (200)
+0.2115 ± 0.0753 (200)
+0.9721 (200)
+185
+FedALA
+0.1856 ± 0.1280 (185)
+0.1641 ± 0.0902 (200)
+0.9415 (200)
+170
+FedMTL
+0.2148 ± 0.1078 (200)
+0.2016 ± 0.0767 (200)
+0.9532 (200)
+155
+FedProto
+0.2441 ± 0.0856 (135)
+0.2318 ± 0.0770 (160)
+0.9464 (170)
+105
+FedRep
+0.2464 ± 0.0863 (200)
+0.2128 ± 0.0668 (200)
+0.9198 (200)
+140
+MOON
+0.0526 ± 0.0268 (195)
+0.0393 ± 0.0379 (195)
+0.9814 (195)
+195
+Ablation Variant
+0.2629 ± 0.0933 (110)
+0.2489 ± 0.0798 (110)
+0.9322 (165)
+100
+FedSTAR
+0.2917 ± 0.1019 (125)
+0.2841 ± 0.0781 (125)
+0.9019 (145)
+100
+Table 3: DomainNet Performance Summary: Best Test Accuracy, F1-score, Brier Score, and Convergence Round.
+Method
+Best Test Acc
+Best F1-score
+Min Brier Score
+Conv. Round
+APFL
+0.0195 ± 0.0478 (5)
+0.0159 ± 0.0354 (155)
+0.9935 (10)
+5
+Ditto
+0.1340 ± 0.0982 (195)
+0.1120 ± 0.0715 (195)
+0.9941 (200)
+180
+FedALA
+0.0658 ± 0.0874 (200)
+0.0388 ± 0.0657 (200)
+0.9903 (130)
+195
+FedMTL
+0.1083 ± 0.0976 (200)
+0.0861 ± 0.0678 (200)
+0.9905 (185)
+165
+FedProto
+0.1452 ± 0.0977 (130)
+0.1187 ± 0.0704 (130)
+0.9923 (125)
+130
+FedRep
+0.1598 ± 0.1117 (200)
+0.1245 ± 0.0795 (200)
+0.9898 (185)
+165
+MOON
+0.0321 ± 0.0594 (45)
+0.0087 ± 0.0378 (170)
+0.9964 (40)
+45
+Ablation Variant
+0.1491 ± 0.1104 (195)
+0.1196 ± 0.0779 (200)
+0.9942 (200)
+195
+FedSTAR
+0.1603 ± 0.1032 (195)
+0.1372 ± 0.0838 (195)
+0.9900 (200)
+195
+10
+Table 4: Office-31 Performance Summary: Best Test Accuracy, F1-score, Brier Score, and Convergence Round.
+Method
+Best Test Acc
+Best F1-score
+Min Brier Score
+Conv. Round
+APFL
+0.1397 ± 0.1480 (155)
+0.1268 ± 0.1763 (70)
+0.9690 (5)
+70
+Ditto
+0.3880 ± 0.2455 (200)
+0.3881 ± 0.2366 (200)
+0.8966 (200)
+125
+FedALA
+0.2875 ± 0.2351 (160)
+0.2869 ± 0.2199 (105)
+0.8710 (165)
+160
+FedMTL
+0.3180 ± 0.2390 (200)
+0.3160 ± 0.2325 (200)
+0.8604 (200)
+140
+FedProto
+0.4192 ± 0.2260 (180)
+0.4185 ± 0.2202 (180)
+0.7735 (200)
+140
+FedRep
+0.3949 ± 0.2465 (90)
+0.3922 ± 0.2393 (200)
+0.8072 (200)
+70
+MOON
+0.0993 ± 0.1176 (155)
+0.0867 ± 0.1403 (155)
+0.9652 (30)
+155
+Ablation Variant
+0.4365 ± 0.2213 (190)
+0.4366 ± 0.2276 (190)
+0.7637 (190)
+150
+FedSTAR
+0.4503 ± 0.2331 (175)
+0.4505 ± 0.2281 (175)
+0.7601 (200)
+155
+Across all benchmarks, FedSTAR consistently ranks among the top-performing methods, achieving the highest test
+accuracy on CIFAR-100, DomainNet, and Office-31. Although some methods such as FedALA show competitive
+results on the simpler Fashion-MNIST dataset—where domain heterogeneity is limited—FedSTAR demonstrates the
+most stable and scalable performance as data complexity and domain shift increase. This trend confirms that the
+combination of attention-guided prototype aggregation and style-aware personalization is particularly effective under
+strong distributional shifts.
+The ablation variant, which retains only the attention-based aggregation while removing personalization, also performs
+competitively and outperforms baseline prototype learning approaches such as FedProto. However, it consistently lags
+behind the full FedSTAR model on all challenging benchmarks. This performance gap highlights the importance of
+FedSTAR’s personalization mechanism: while attention improves global prototype alignment, personalization further
+enhances local discriminability and reduces client-specific drift, especially in high-heterogeneity scenarios.
+Overall, the results indicate that both components—adaptive aggregation and style-aware personalization—are essential
+for achieving state-of-the-art performance, and their synergy becomes increasingly beneficial as the degree of client
+heterogeneity grows.
+6
+Conclusion
+In this work, we introduced FedSTAR, a style-aware federated prototype learning framework that integrates attention-
+based aggregation and personalized representation refinement. FedSTAR addresses a fundamental limitation of existing
+prototype-based FL methods, which often rely on uniform averaging and therefore fail to capture client-specific
+variations under heterogeneous data distributions. FedSTAR combines adaptive transformer-based prototype alignment
+with lightweight StyleFiLM-based personalization. This reduces prototype drift and improves consistency across clients,
+all while maintaining scalability.
+Extensive experiments across multiple benchmarks—including CIFAR-100, DomainNet, Office-31, and Fashion-
+MNIST—demonstrate that FedSTAR achieves strong performance, particularly in non-IID and multi-domain scenarios.
+Ablation studies further confirm the complementary roles of attention-based aggregation and personalization: the
+former significantly improves prototype alignment, while the latter enhances local discriminability and robustness.
+Visualization results using UMAP also show that FedSTAR produces more compact and better-separated clusters
+compared to both FedProto and attention-only variants, highlighting its superior representation quality.
+In summary, FedSTAR offers a principled and scalable solution for federated representation learning in heterogeneous
+environments. Future work may explore extending FedSTAR to more complex modalities such as vision-language
+models, improving communication efficiency through prototype compression, or incorporating uncertainty-aware
+aggregation to further enhance robustness in dynamic federated environments.
+References
+[1] H. Brendan McMahan, Eider Moore, Daniel Ramage, Seth Hampson, and Blaise Agüera y Arcas. Communication-
+efficient learning of deep networks from decentralized data, 2023.
+[2] Peter Kairouz, H Brendan McMahan, Brendan Avent, Aurélien Bellet, Mehdi Bennis, Arjun Nitin Bhagoji, Keith
+Bonawitz, Zachary Charles, Graham Cormode, Rachel Cummings, Raphael G.L. D’Oliveira, Hubert Eichner,
+Salim El Rouayheb, David Evans, Joshua Gardner, Zachary Garrett, Adrià Gascón, Badih Ghazi, Phillip B.
+11
+Gibbons, Marco Gruteser, Zaid Harchaoui, Chaoyang He, Ligeng He, Seungyeon Hong, Justin Hsu, Zhiwei
+Huang, Xinyun Huo, Martin Jaggi, Tara Javidi, Girish Joshi, Shubham Joshi, Mikhail Khodak, Oluwasanmi
+Koyejo, Jakub Koneˇcn`y, Farinaz Koushanfar, Oluwasanmi Koyejo, Tian Li, Tyler Li, Yang Liu, Prateek Mittal,
+Mehryar Mohri, Richard Nock, Alex Olshevsky, Rasmus Pagh, Hu Qi, Daniel Ramage, Ramesh Raskar, Garvesh
+Raskutti, Dawn Song, Sebastian U. Stich, Ke Sun, Nhan Tran, Wenlong Wang, Blake Woodworth, Shuang Xie,
+Fan Xu, Felix Yu, Huan Yuan, Manzil Zaheer, and Ce Zhang. Advances and open problems in federated learning.
+Foundations and Trends in Machine Learning, 14(1–2):1–210, 2021.
+[3] Tzu-Ming Harry Hsu, Hang Qi, and Matthew Brown. Measuring the effects of non-iid data in federated learning.
+arXiv preprint arXiv:1909.06335, 2019.
+[4] Keith Bonawitz, Hubert Eichner, Wolfgang Grieskamp, Dzmitry Huba, Alex Ingerman, Vladimir Ivanov, Chloe
+Kiddon, Jakub Koneˇcný, Stefano Mazzocchi, H. Brendan McMahan, Timon Van Overveldt, David Petrou, Daniel
+Ramage, and Jason Roselander. Towards federated learning at scale: System design, 2019.
+[5] Tian Li, Anit Kumar Sahu, Manzil Zaheer, Maziar Sanjabi, Ameet Talwalkar, and Virginia Smith. Federated
+optimization in heterogeneous networks, 2020.
+[6] Manoj Ghuhan Arivazhagan, Vinay Aggarwal, Aaditya Kumar Singh, and Sunav Choudhary. Federated learning
+with personalization layers, 2019.
+[7] Konstantinos Bousmalis, George Trigeorgis, Nathan Silberman, Dilip Krishnan, and Dumitru Erhan. Domain
+separation networks, 2016.
+[8] Xun Huang and Serge Belongie. Arbitrary style transfer in real-time with adaptive instance normalization. In
+ICCV, 2017.
+[9] Ishaan Gulrajani and David Lopez-Paz. In search of lost domain generalization. In ICLR, 2021.
+[10] Yue Tan, Guodong Long, Lu Liu, Tianyi Zhou, Qinghua Lu, Jing Jiang, and Chengqi Zhang. Fedproto: Federated
+prototype learning across heterogeneous clients, 2022.
+[11] Liam Collins et al. Exploiting shared representations for personalized federated learning. In ICLR, 2021.
+[12] Felix Sattler et al. Clustered federated learning: Model-agnostic distributed multitask optimization under privacy
+constraints. In AISTATS, 2020.
+[13] S. Ghosh et al. Efficient federated learning via local adaptive optimization and attention-based aggregation. arXiv
+preprint arXiv:2007.03831, 2020.
+[14] Shaoxiong Ji et al. Attention-based aggregation for federated learning. IEEE Transactions on Neural Networks
+and Learning Systems, 2022.
+[15] Micah J Sheller, Gabriela A Reina, Brandon Edwards, Joseph Martin, and Spyridon Bakas. Federated learning
+in medicine: facilitating multi-institutional collaborations without sharing patient data.
+Scientific Reports,
+10(1):12598, 2020.
+[16] Nicola Rieke, Jonny Hancox, Wenqi Li, Fausto Milletarì, Holger R. Roth, Shadi Albarqouni, Spyridon Bakas,
+Mathieu N. Galtier, Bennett A. Landman, Klaus Maier-Hein, Sébastien Ourselin, Micah Sheller, Ronald M.
+Summers, Andrew Trask, Daguang Xu, Maximilian Baust, and M. Jorge Cardoso. The future of digital health
+with federated learning. npj Digital Medicine, 3(1):119, 2020.
+[17] Yang Liu, Anbu Huang, Yun Luo, He Huang, Youzhi Liu, Yuanyuan Chen, Lican Feng, Tianjian Chen, Han Yu,
+and Qiang Yang. Fedvision: An online visual object detection platform powered by federated learning, 2020.
+[18] David Byrd and Antigoni Polychroniadou. Differentially private secure multi-party computation for federated
+learning in financial applications, 2020.
+[19] Tzu-Ming Harry Hsu, Hang Qi, and Matthew Brown. Measuring the effects of non-identical data distribution for
+federated visual classification. arXiv preprint arXiv:1909.06335, 2019.
+[20] Viraj Kulkarni, Milind Kulkarni, and Aniruddha Pant. Survey of personalization techniques for federated learning,
+2020.
+[21] Virginia Smith, Chao-Kai Chiang, Maziar Sanjabi, and Ameet Talwalkar. Federated multi-task learning. In
+NeurIPS, 2018.
+[22] Felix Sattler, Klaus-Robert Müller, and Wojciech Samek. Clustered federated learning: Model-agnostic distributed
+multi-task optimization under privacy constraints, 2019.
+[23] Keith Bonawitz, Vladimir Ivanov, Ben Kreuter, Antonio Marcedone, H. Brendan McMahan, Sarvar Patel, Daniel
+Ramage, Aaron Segal, and Karn Seth. Practical secure aggregation for federated learning on user-held data, 2016.
+12
+[24] Peter Kairouz, H. Brendan McMahan, Brendan Avent, Aurélien Bellet, Mehdi Bennis, Arjun Nitin Bhagoji,
+Kallista Bonawitz, Zachary Charles, Graham Cormode, Rachel Cummings, Rafael G. L. D’Oliveira, Hubert
+Eichner, Salim El Rouayheb, David Evans, Josh Gardner, Zachary Garrett, Adrià Gascón, Badih Ghazi, Phillip B.
+Gibbons, Marco Gruteser, Zaid Harchaoui, Chaoyang He, Lie He, Zhouyuan Huo, Ben Hutchinson, Justin
+Hsu, Martin Jaggi, Tara Javidi, Gauri Joshi, Mikhail Khodak, Jakub Koneˇcný, Aleksandra Korolova, Farinaz
+Koushanfar, Sanmi Koyejo, Tancrède Lepoint, Yang Liu, Prateek Mittal, Mehryar Mohri, Richard Nock, Ayfer
+Özgür, Rasmus Pagh, Mariana Raykova, Hang Qi, Daniel Ramage, Ramesh Raskar, Dawn Song, Weikang Song,
+Sebastian U. Stich, Ziteng Sun, Ananda Theertha Suresh, Florian Tramèr, Praneeth Vepakomma, Jianyu Wang,
+Li Xiong, Zheng Xu, Qiang Yang, Felix X. Yu, Han Yu, and Sen Zhao. Advances and open problems in federated
+learning, 2021.
+[25] Tian Li, Maziar Sanjabi, Virginia Smith, and Ameet Talwalkar. Ditto: Fair and robust federated learning through
+personalization. In ICML, 2021.
+[26] Yujun Deng, Mahdi Kamani, and Mehrdad Mahdavi. Adaptive personalized federated learning. In NeurIPS, 2020.
+[27] Yihan Xu, Shiqi Wang, and et al. Fedala: Adapting model aggregation for personalized federated learning. In
+AAAI, 2022.
+[28] Hakan Bilen and Andrea Vedaldi. Universal representations: The missing link between domain adaptation and
+domain generalization. In ICCV, 2017.
+[29] Jian Xu, Xinyi Tong, and Shao-Lun Huang. Personalized federated learning with feature alignment and classifier
+collaboration, 2023.
+[30] Ethan Perez, Florian Strub, Harm de Vries, Vincent Dumoulin, and Aaron Courville. Film: Visual reasoning with
+a general conditioning layer, 2017.
+[31] Leon A Gatys, Alexander S Ecker, and Matthias Bethge. Image style transfer using convolutional neural networks.
+CVPR, 2016.
+[32] Andrew Howard, Mark Sandler, Grace Chu, Liang-Chieh Chen, Bo Chen, Mingxing Tan, Weijun Wang, Yukun
+Zhu, Ruoming Pang, Vijay Vasudevan, Quoc V. Le, and Hartwig Adam. Searching for mobilenetv3, 2019.
+[33] Alex Krizhevsky. Learning multiple layers of features from tiny images. Technical Report TR-2009, University of
+Toronto, 2009. Technical Report.
+[34] Xingchao Peng, Qinxun Bai, Xide Xia, Zijun Huang, Kate Saenko, and Bo Wang. Moment matching for
+multi-source domain adaptation, 2019.
+[35] Han Xiao, Kashif Rasul, and Roland Vollgraf. Fashion-mnist: a novel image dataset for benchmarking machine
+learning algorithms, 2017.
+[36] Kate Saenko, Brian Kulis, Mario Fritz, and Trevor Darrell. Adapting visual category models to new domains. In
+Proceedings of the European Conference on Computer Vision (ECCV), pages 213–226. Springer, 2010.
+[37] Qinbin Li, Bingsheng He, and Dawn Song. Model-contrastive federated learning. In CVPR, 2021.
+13

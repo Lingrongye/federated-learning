@@ -1,0 +1,1230 @@
+Taming Cross-Domain Representation Variance in
+Federated Prototype Learning with Heterogeneous
+Data Domains
+Lei Wang ∗
+University of Florida
+Gainesville, FL 32611
+leiwang1@ufl.edu
+Jieming Bian ∗
+University of Florida
+Gainesville, FL 32611
+jieming.bian@ufl.edu
+Letian Zhang
+Middle Tennessee State University
+Murfreesboro, TN 37132
+letian.zhang@mtsu.edu
+Chen Chen
+University of Central Florida
+Orlando, FL 32816
+chen.chen@crcv.ucf.edu
+Jie Xu
+University of Florida
+Gainesville, FL 32611
+jie.xu@ufl.edu
+Abstract
+Federated learning (FL) allows collaborative machine learning training without
+sharing private data. While most FL methods assume identical data domains across
+clients, real-world scenarios often involve heterogeneous data domains. Federated
+Prototype Learning (FedPL) addresses this issue, using mean feature vectors as
+prototypes to enhance model generalization. However, existing FedPL methods
+create the same number of prototypes for each client, leading to cross-domain
+performance gaps and disparities for clients with varied data distributions. To miti-
+gate cross-domain feature representation variance, we introduce FedPLVM, which
+establishes variance-aware dual-level prototypes clustering and employs a novel α-
+sparsity prototype loss. The dual-level prototypes clustering strategy creates local
+clustered prototypes based on private data features, then performs global prototypes
+clustering to reduce communication complexity and preserve local data privacy.
+The α-sparsity prototype loss aligns samples from underrepresented domains, en-
+hancing intra-class similarity and reducing inter-class similarity. Evaluations on
+Digit-5, Office-10, and DomainNet datasets demonstrate our method’s superiority
+over existing approaches.
+1
+Introduction
+Federated Learning [21] (FL) is a novel distributed learning framework that enables clients to collabo-
+ratively train a global model using their respective local datasets, thereby preserving data privacy. FL
+offers distinct advantages over traditional distributed learning methodologies by mitigating communi-
+cation costs and addressing privacy concerns, which has led to its increased adoption across various
+sectors. Despite these benefits, FL comes with its own challenges, especially in terms of data hetero-
+geneity [41]. In FL, clients gather private data from unique sources, resulting in non-independent
+and identically distributed (non-IID) datasets. Such non-IID distributions can lead clients toward
+their local optima, potentially diverging from the global objective. Consequently, this may impede
+convergence rates and diminish overall model performance [17].
+To address the aforementioned issue of data heterogeneity, numerous FL techniques have been
+devised [20, 5, 41, 29, 14, 12]. While these methods have indeed improved convergence, their focus
+on non-IID scenarios remains largely restricted. Typically, they assume that the data across clients
+∗The first two authors contributed equally to this work.
+38th Conference on Neural Information Processing Systems (NeurIPS 2024).
+arXiv:2403.09048v2  [cs.LG]  27 Oct 2024
+Proposed
+MNIST
+Synth
+MNIST-M
+Server
+Client K
+Client 2
+Client 1
+Vanilla
+MNIST (Easy Domain)
+MNIST-M (Hard Domain)
+Local Averaged Prototype
+Figure 1: Illustration of federated learning with heterogeneous data domains. The Vanilla
+column depicts the local feature distribution of the standard FedPL approach, obtaining average
+local and global prototypes directly. Proposed method showcased in the adjacent column yields a
+larger inter-class distance and a reduced intra-class distance. Note that without capturing variance
+information, even for hard domains, local averaged prototypes for each class can be well distinguished
+while the feature vectors are still mixed up. Both methods illustrate noticeable variations in domain
+characteristics across datasets, as detailed in Fig. 4.
+pertain to a single domain, attributing non-IID distribution to label skew alone. Yet, in more realistic
+scenarios, clients gather data according to their unique preferences, making it impractical to assume
+identical domain origins for local data. Instead, the data often stems from heterogeneous domains,
+resulting in varied feature distributions.
+Current approaches [10, 32] to FL in heterogeneous domains aim to develop a global prototype for
+each label category. These prototypes are designed to minimize the distance between the individual
+training samples and their corresponding category’s global prototype. Typically, a global prototype
+is computed as the mean of the local prototypes from each client, whereas a local prototype is
+itself the average of the representations of samples within the same category. Several studies have
+proposed unique designs to enhance training performance in these settings. For example, one work
+[33] enables contrastive learning at the client level by facilitating the exchange of local prototypes,
+thus promoting inter-client knowledge transfer. However, this exchange raises privacy concerns
+and substantially increases communication overhead. Another study [10] opts for a clustering
+approach to identify representative prototypes, thereby preserving domain diversity and preventing
+bias towards predominant domains. This technique has proven effective, especially in scenarios with
+disproportionate client distribution across domains.
+Although these methods improve overall performance across domains, they do not address the unequal
+learning challenges that arise from domain diversity. For instance, on the Digits dataset [42], methods
+may perform well in domains like MNIST [7] but underperform in more challenging domains such
+as SVHN [24]. This discrepancy is evident in representation distributions, as exemplified in Fig. 1,
+where ‘easy’ domains show tight clustering of samples within the same category and clear separation
+between different categories, facilitating accurate classification. In contrast, ‘hard’ domains display
+looser clustering, increasing the likelihood of misclassification, particularly for samples near category
+boundaries. Addressing these disparities is crucial for the equitable advancement of FL methodologies
+across diverse client domains.
+Considering the challenges posed by unequal learning due to domain diversity, we introduce a
+novel method, termed FedPLVM (short for Federated Prototype Learning with Variance Mitigation).
+FedPLVM devises two main mechanisms. Firstly, we develop a dual-level prototype clustering
+mechanism that adeptly captures variance information, a significant improvement over previous
+methodologies that rely on averaging local training samples’ representations to derive local prototypes.
+Our local-level clustering generates multiple local clustered prototypes within each domain. To
+further mitigate increased communication costs and privacy concerns arising from transferring a
+2
+comprehensive set of diverse prototypes for each class from every client, we employ global-level
+prototype clustering on the server side. Secondly, by capturing the variance information through
+clustered prototypes, we design an innovative α-sparsity prototype loss to enhance the training
+process. To prevent the intermingling of feature distributions from ‘hard’ clients, instead of simply
+maximizing the feature-level distance between each local instance and the prototypes of other classes,
+we refine this distance by elevating it to an α power, with α being a value between 0 and 1. This
+modification effectively repels other prototypes, thereby introducing greater sparsity in the inter-class
+feature distributions. Moreover, we incorporate an intra-class similarity correction term to lessen the
+feature-level distance among intra-class samples, thereby concentrating the α-sparsity prototype loss
+on amplifying the feature-level distance across inter-class samples. Collectively, these two strategies
+empower FedPLVM to reasonably leverage variance information, thus equilibrating fairness between
+‘hard’ and ‘easy’ learning domains and enhancing overall learning performance. Consequently,
+FedPLVM emerges as a reliable approach for Federated Learning in contexts characterized by
+heterogeneous data domains. Our main contributions are outlined as follows:
+• This study delves into FL with heterogeneous data domains, examining why models exhibit
+varying performance across different domains. We identify a fundamental limitation in
+existing methods: their inability to effectively address the disparate learning challenges
+inherent in diverse domains.
+• To tackle these uneven learning challenges, we introduce a novel approach, FedPLVM. This
+method incorporates a dual-level prototype clustering method, capturing the rich sample
+representation variance information while ensuring communication efficiency. Additionally,
+we develop a new α-sparsity prototype loss to address learning difficulties more equitably.
+• Extensive experiments conducted on the Digit-5 [42], Office-10 [8], and DomainNet [26]
+datasets demonstrate the superior performance of our proposed method when compared
+with multiple state-of-the-art approaches.
+2
+Related Work
+Federated Learning. FL aims to train a global model through collaboration among multiple clients
+while preserving their data privacy. FedAvg [21], the pioneering work in FL, demonstrates the
+advantages of this approach in terms of privacy and communication efficiency by aggregating local
+model parameters to train a global model. A significant challenge in FL is data heterogeneity,
+often manifested as non-IID (independently and identically distributed) data. Subsequent research,
+following FedAvg, has primarily focused on addressing data heterogeneity to enhance training
+performance in FL environments. Specifically, studies such as [18, 2, 30] have improved performance
+by incorporating a global penalty term to mitigate discrepancies. Other works, e.g., [32, 23], have
+sought to maximize feature-level agreement between local and global models to further boost
+performance. Recent works [10, 32, 19, 40] have explored data heterogeneity arising from client-
+specific domain diversity, while overlooking the challenges of unequal learning across different
+domains. In this paper, we propose a novel approach using dual-level prototype clustering to capture
+essential local variance information. Additionally, we introduce a new α-sparsity loss, specifically
+designed to tackle the challenges of learning in diverse domains, thereby facilitating the development
+of a more generalizable global model.
+Prototype Learning. Prototype learning has been extensively explored in various tasks, such as
+transfer learning [27, 13], few-shot learning [31], zero-shot learning [11], and unsupervised learning
+[34]. The concept of a prototype in this context refers to the average feature vectors of samples
+within the same class. In the FL literature, prototypes serve to abstract knowledge while preserving
+privacy. Specifically, approaches like FedProc [23] and FedProto [32] focus on achieving feature-wise
+alignment with global prototypes. FedPCL [33] employs prototypes to capture knowledge across
+clients, constructing client representations in a prototype-wise contrastive manner using a set of
+pre-trained models. FPL [10] highlights the use of cluster-based and unbiased global prototypes to
+tackle the challenges in FL where clients possess domain-diverse data. Our study addresses a similar
+issue as FPL but with distinct emphases. While FPL concentrates on the disparities in the number of
+clients across domains, aiming to mitigate the bias in the overall model caused by domains with more
+clients, our work focuses on the intrinsic learning challenges that vary across domains.
+3
+ℎ1
+ℎ𝐾𝐾
+Embedding
+Generation
+Local
+Clustering
+Model
+Aggregation
+Global
+Clustering
+ℎ𝐾𝐾
+ℒ𝛼𝛼
+ℎ1
+𝑓𝑓1
+ℒ𝛼𝛼
+𝑓𝑓𝐾𝐾
+Local
+Training
+ℒ𝐶𝐶𝐶𝐶
+ℒ𝐶𝐶𝐶𝐶
+𝑓𝑓𝐾𝐾
+𝑓𝑓1
+Feature Extractor   
+Classifier
+Local Clustered Prototype
+…
+…
+…
+Sample Embedding
+Global Clustered Prototype
+Server
+Clients
+…
+Clients
+(b)
+(a)
+(d)
+Upload
+Download
+(c)
+(e)
+(f)
+Figure 2: An overview of our proposed FedPLVM framework. Once the sample embedding is
+generated by the feature extractor, the client conducts the first-level local clustering, following Eq. 3.
+Subsequently, the server gathers all local clustered prototypes and local models (comprising feature
+extractors and classifiers), initiates the second-level global clustering based on Eq. 4, and averages the
+local models to form a global model. Finally, clients utilize the received global clustered prototypes
+to update the local model, employing loss functions Lα from Eq. 5 and LCE from Eq. 9.
+Contrastive Learning. Contrastive learning is a promising self-supervised learning technique. The
+work by [25] constructs pairs of positives and negatives for each sample and applies the InfoNCE
+loss to compare these pairs. Another work by [15] extends contrastive learning from self-supervised
+to fully supervised settings, utilizing both label information and contrastive methods. Additionally,
+some studies [16, 39] integrate contrastive learning into local training to enhance performance in FL.
+Instead of the conventional InfoNCE loss, our approach introduces a new α-sparsity loss, aiming
+to further reduce similarity among inter-class sample features while amplifying similarity among
+intra-class samples.
+3
+Preliminary
+Regular FL Scenario. Consider the classic FL scenario: there exist K clients and one server, which
+aims to assist all clients to train a common machine learning model without sharing their private data,
+denoted by Dk = {xi, yi}Nk
+i
+for client k. Formally, the global objective of FL can be formulated as:
+min
+w
+K
+X
+k=1
+Nk
+N Lk(w; Dk),
+(1)
+where Lk is the local loss function for client k, w and N = PK
+k=1 Nk denote the shareable model
+and the total number of samples among all clients respectively.
+Domain Shift in FL. In the simplest FL setting, the label and feature distribution are the same
+between two clients i and j, formally Pi(y) = Pj(y) and Pi(x|y) = Pj(x|y). Extending such a
+scenario to the heterogeneous data setting brings us to the point of domain shift, also denoted as
+feature non-IID setting. Domain shift is caused by distinctive feature distributions among clients, that
+is Pi(x|y) ̸= Pj(x|y), though their label space is still the same.
+Federated Prototype Learning. To handle the FL domain shift problem, previous works [32, 10]
+divide the classification network into two parts: feature extractor and classifier. The feature extractor
+h : RV →RD maps a sample x ∈RV into the feature space and generates the corresponding
+feature vector z = h(x) ∈RD. Then the classifier f : RD →RM outputs the M-class prediction
+f(z) = f(h(x)) ∈RM given the feature vector z. The intuition of FedPL is adjusting the feature
+extractor to generate a consistent feature distribution among different domains. Similar to the global
+shareable model, the straightforward solution computes the average feature vector of all samples
+belonging to the same class for further processing, called the prototype. Due to the distributed
+property of FL, we cannot collect all samples via the server, which makes the above-mentioned idea
+4
+a two-step procedure:
+¯pm
+k =
+1
+|Dm
+k |
+X
+(xi,yi)∈Dm
+k
+h(xi),
+¯gm = 1
+K
+K
+X
+k=1
+¯pm
+k ,
+∀k ∈K, m ∈M,
+(2)
+where K = {1, 2, . . . , K} is the set of clients, M = {1, 2, . . . , M} is the set of classes. ¯pm
+k and ¯gm
+denotes the local prototype of class m on client k and the global prototype of class m, respectively.
+Dm
+k is the subset that all samples belonging to class m in the local dataset Dk. Upon obtaining the
+prototypes, most FedPL works tend to design a loss function that approximates the prototype of one’s
+own class while staying away from the prototypes of others.
+4
+FedPLVM: FedPL with Variance Mitigation
+4.1
+Dual-Level Prototype Generation
+Local Prototype Clustering. To mitigate the impact of domain variance in FedPL, we revise the
+two-step averaged prototype generation process to a dual-level clustering algorithm. In Fig. 1, the
+pronounced diversity in domain variances among clients becomes evident, intricately linked to
+the complexity of their datasets. For instance, comparing the feature distribution between Synth
+and MNIST shows a visibly more scattered pattern in Synth due to its higher complexity, whereas
+MNIST, being comparatively easier to learn, displays a more structured distribution. It becomes
+evident that computing a single local averaged prototype for one class per client is ‘unfair’, given the
+differing richness of feature distribution information among clients. Particularly, for ‘hard’ clients
+with complex datasets such as SVHN, employing multiple local prototypes becomes imperative to
+capture the scattered feature distribution comprehensively. Hence, we propose the first-level prototype
+generation, namely local prototype clustering. Instead of a straightforward averaging approach, our
+method involves initially clustering the feature vectors of all same-class local samples, forming
+several local clustered prototypes as a set of local representations.
+Pm
+k =
+
+pm
+k,j
+	Jk,m
+j=1
+Cluster
+←−−−−−{h(xi)|(xi, yi) ∈Dm
+k } ,
+(3)
+where Jk,m and pm
+k,j represents the number of local clustered prototypes and the j-th local clustered
+prototype of class m on client k clustered from the set of feature vectors {h(xi)|(xi, yi) ∈Dm
+k }. It is
+important to note that the number of local clustered prototypes may differ across various classes and
+clients. To determine these prototypes, we employ the parameter-free clustering algorithm, FINCH
+[28], utilizing cosine similarity as the clustering metric. We also conduct additional experiments
+on comparison with other clustering methods in Supplementary Material. This choice ensures the
+alignment of the number of local clustered prototypes with the sparsity of the domain distribution. By
+leveraging this approach, we enhance the representation of distinct feature distributions, preventing
+the overdrift of local averaged prototypes towards densely concentrated regions in the feature space.
+Global Prototype Clustering on Server. Distributing all local clustered prototypes among clients
+poses challenges due to the extra communication cost and privacy concerns. Hence, we introduce the
+second level of prototype generation, namely global prototype clustering, which can be formulated
+as:
+Gm =
+
+gm
+j
+	Cm
+j=1
+Cluster
+←−−−−−Pm = {Pm
+k }K
+k=1 ,
+(4)
+where Cm and gm
+j denote the number of global clustered prototypes and the j-th global clustered
+prototype of class m on the server from the local collected prototypes set Pm = {Pm
+k }K
+k=1. Through
+the second-level global clustering, we significantly reduce the number of prototypes that the server
+must distribute to clients compared to distributing all locally clustered prototypes, alleviating potential
+communication costs. Dual-level clustering also addresses privacy concerns that arise from original
+local clustered prototypes potentially revealing client-specific features and the corresponding results
+can be found in Supplementary Material.
+4.2
+α-Sparsity Prototype Loss
+Unlike previous methods in FedPL, which generate a single prototype per class, our approach
+employs dual-level clustering to create multiple prototypes for each class, thereby capturing valuable
+5
+variance information. This multiplicity of prototypes could potentially lead to overlapping feature
+representations among different classes, especially in challenging client scenarios. To mitigate this
+risk, we introduce a novel α-sparsity prototype loss, inspired by the InfoNCE-based loss. Our newly
+designed α-sparsity prototype loss enhances inter-class feature distribution sparsity and maintains
+balanced feature representation distances within classes, unlike the traditional InfoNCE-based loss.
+The formulation of the α-sparsity prototype loss is detailed below:
+Lα = Lcontra + Lcorr.
+(5)
+The first contrastive term can be formulated as:
+Lcontra = −log
+P
+gyi∈Gyi
+exp (sα(h(xi), gyi)/τ)
+P
+g∈G
+exp (sα(h(xi), g)/τ)
+,
+(6)
+where τ is the temperature hyper-parameter that controls the concentration strength of the similarity
+[35], and G = {Gm}M
+m=1 is the set of all global clustered prototypes. sα(·, ·) in the first term is the
+modified α-sparsity cosine similarity metric between the feature vector h(xi) and the prototype gm
+from class m and can be formulated as:
+sα(h(xi), gm) =
+ h(xi)
+||h(xi)|| ·
+gm
+||gm||
+α
+,
+(7)
+where α ∈(0, 1). This metric serves to compel the feature extractor to generate feature outputs
+closely aligned with the global clustered prototypes of their respective classes while distancing them
+from other global prototypes. It achieves this by maximizing intra-class similarity and minimizing
+inter-class similarity. As our feature vectors have positive values, cosine similarity always falls within
+the range of [0, 1]. By introducing a sparsity factor α to the similarity and applying it as a power, all
+similarity values are elevated. However, due to the smaller denominator component representing
+similarity with other classes in the Lα function, the impact of the concave function (·)α is more
+pronounced. This emphasis on maximizing inter-class distance is what we denote as α-sparsity
+operation, which directs more attention toward expanding the overall feature distribution to a broader
+range. Consequently, it mitigates the issue of feature distributions within one class being excessively
+dispersed and overlapping with feature distributions of other classes.
+This modification does indeed lead to an unintended consequence: an increase in intra-class distance
+due to heightened similarity between the feature vector and prototypes of the corresponding class,
+resulting from the concavity of (·)α. This brings us to the second correction term of our α-sparsity
+prototype loss:
+Lcorr =
+
+
+X
+gyi∈Gyi
+sα(h(xi), gyi) −Cyi
+
+
+2
+.
+(8)
+The latter term within the α-sparsity prototype loss serves as a corrective measure, which focuses on
+pushing the average cosine similarity closer to 1. This correction measure aims to counterbalance the
+increase in intra-class distance stemming from the adjustment introduced by α.
+An additional Cross-Entropy (CE) loss [6] is employed to train the classifier and derive prediction
+results, which can be formulated as:
+LCE =
+X
+(xi,yi)∈Dk
+−1yi log(f(h(xi))).
+(9)
+The total local loss, combining the previously mentioned loss functions, is expressed as follows:
+Llocal = λLα + LCE.
+(10)
+Here, λ serves as a hyper-parameter that regulates the balance between the α-sparsity prototype loss
+and the CE loss. This formulation allows for a unified and weighted consideration of the α-sparsity
+prototype loss.
+In summary, our FedPLVM operates as follows in each training round: Initially, each client generates
+feature vectors for all local samples and clusters these into several local clustered prototypes. These
+local clustered prototypes are then uploaded to the server, which aggregates them into distinct
+6
+prototype sets for various classes and further clusters them to form global clustered prototypes.
+Concurrently, the server collects local models from all clients and consolidates them into a unified
+global model. The server then distributes all global clustered prototypes and global model to clients.
+Subsequently, each client utilizes the global clustered prototypes to train the global model on its
+private dataset using Llocal, obtaining its local model. Finally, clients employ their local models to
+generate new feature vectors and repeat the aforementioned procedure in the next training round. For
+a detailed insight into FedPLVM, refer to Algorithm 1 in the Supplementary Material.
+Comparison with FPL [10]. FPL studies on FL among clients with distinct domain datasets and is
+considered a state-of-the-art method. FPL is specifically designed to address imbalances in client
+distribution across domains, aiming to neutralize the skewed influence of domains with more clients
+on the global model training. In contrast, our study concentrates on the unequal learning obstacles
+that vary by domain, a challenge that persists regardless of equal client distribution, leading to distinct
+learning hurdles across domains and thereby leading to our two key operations. Firstly, although both
+our method and FPL employ prototype clustering, the objectives and implementations markedly differ.
+FPL’s clustering is intended to harmonize the impact of local prototypes from each domain, involving
+only global (server-level) clustering. Conversely, our method integrates dual-level clustering at both
+the client (local) and server (global) levels. Our technique distinguishes itself by performing local
+prototype clustering, capturing critical variance and not just the mean data, which is particularly
+crucial in hard domains. At the global level, our clustering aims to reduce communication overhead
+and privacy risks by limiting the prototype variety each client sends, thereby enhancing both efficiency
+and privacy. Secondly, we introduce an innovative α-sparsity prototype loss that features a corrective
+component to reasonably utilize the variance information to reduce feature similarity across different
+classes while boosting it within the same class, promoting more effective and stable learning.
+5
+Experiments
+Datasets. We evaluate our proposed algorithm on three datasets: Digit-5 [42], Office-10 [8] and
+DomainNet [26]. Digit-5 is a dataset for digits recognition, consisting of 5 domains: MNIST, SVHN,
+USPS, Synth and MNIST-M. Office-10 is a dataset for office item recognition, consisting of 4
+domains: Amazon, Caltech, DSLR and Webcam. DomainNet is a large-scale classification dataset,
+consisting of 6 domains: Clipart, Infograph, Painting, Quickdraw, Real and Sketch.
+Baselines. We compare our algorithm with classic FL methods: FedAvg [21], FedProx [18], FedPL
+methods: FedProto [32], FedPCL [33], FPL[10] and FL method on feature skew: FedFA [43].
+Implement Details. We employ the ResNet10 [9] as our backbone model, configuring the feature
+vectors’ dimension to 512. The optimization is done using the SGD optimizer, employing a learning
+rate of 0.01, momentum of 0.5, and a weight decay of 1e −5. For Digit-5, Office-10 and DomainNet,
+we use 5, 4 and 6 clients respectively. The client data is independent and identically distributed (i.i.d.)
+and non i.i.d. results can be found in Supplementary Material. It is important to note that each client
+operates within distinct data domains, meaning different datasets. For Digit-5 and Office-10, each
+client possessed 100 training samples and 1000 test samples. Global communication rounds are
+fixed at T = 50 for Digit-5 and T = 80 for Office-10. Each local training epoch consists of E = 2
+iterations. We maintain default hyper-parameter values: τ = 0.07, α = 0.25, and λ = 100. As for
+DomainNet, we followed the setup in FedPCL using a 10-class subset. Each client employs 300
+training samples and all test samples (approximately 1000, vary on domains). λ = 1 and T = 200
+for DomainNet. The batch size is set at 32 for all datasets. Details regarding hyper-parameter settings
+will be elaborated in Sec. 5.2. For fair comparisons, we conduct each setting for 5 experiments and
+report the average result.
+5.1
+Performance Comparison
+We compare our proposed method with the state-of-the-art methods using the Digit-5, Office-10 and
+DomainNet datasets, as detailed in Tab. 1, Tab. 2 and Tab. 6. Our method demonstrates significant
+improvements in average accuracy over baseline methods for both datasets. A closer examination
+of domain-specific results reveals a more pronounced enhancement in performance on domains
+that are more challenging to learn. For instance, within the Digit-5 dataset, our method achieves
+a 5.3% increase in accuracy for the SVHN domain, which is more difficult, and a 0.58% increase
+for the MNIST dataset, considered easier. This aligns with the goal of our method, which is to
+7
+Table 1: Test accuracy on Digit-5. Avg means average results among all clients. Details in Sec. 5.1.
+Methods
+Digit-5
+MNIST
+SVHN
+USPS
+Synth
+MNIST-M
+Avg
+∆
+FedAvg
+84.98 ± 0.92
+29.38 ± 1.06
+82.36 ± 1.18
+47.00 ± 0.73
+53.14 ± 0.78
+59.37
+-
+FedProx
+85.72 ± 1.50
+28.86 ± 1.23
+82.30 ± 0.75
+46.78 ± 1.10
+52.60 ± 2.37
+59.25
+-0.12
+FedProto
+88.60 ± 0.72
+31.94 ± 1.58
+85.54 ± 0.34
+51.82 ± 1.12
+56.86 ± 0.42
+62.95
++3.58
+FedPCL
+88.84 ± 1.08
+39.70 ± 2.25
+84.74 ± 0.72
+54.70 ± 1.18
+59.96 ± 1.34
+65.59
++6.22
+FedFA
+89.46 ± 0.55
+38.96 ± 1.69
+85.86 ± 0.38
+58.04 ± 1.06
+61.38 ± 0.98
+66.74
++7.37
+FPL
+90.12 ± 1.39
+36.78 ± 1.88
+86.10 ± 0.66
+57.36 ± 1.96
+64.02 ± 1.38
+66.88
++7.51
+Ours
+90.70 ± 0.39
+42.08 ± 1.59
+86.24 ± 1.37
+60.08 ± 1.47
+67.16 ± 0.77
+69.25
++9.88
+Table 2: Test accuracy on Office-10. Details in Sec. 5.1.
+Methods
+Office-10
+Amazon
+Caltech
+DSLR
+Webcam
+Avg
+∆
+FedAvg
+48.26 ± 1.92
+35.11 ± 0.96
+57.29 ± 1.47
+71.75 ± 0.80
+53.10
+-
+FedProx
+47.74 ± 0.65
+36.44 ± 1.92
+56.25 ± 4.42
+73.45 ± 0.80
+53.47
++0.37
+FedProto
+49.31 ± 2.18
+36.07 ± 0.91
+57.38 ± 2.55
+79.05 ± 2.40
+55.45
++2.35
+FedPCL
+53.65 ± 2.33
+38.93 ± 2.73
+58.13 ± 5.08
+78.64 ± 0.83
+57.34
++4.24
+FedFA
+56.46 ± 2.15
+40.91 ± 2.39
+60.00 ± 4.68
+78.58 ± 1.86
+58.99
++5.89
+FPL
+54.38 ± 1.02
+38.24 ± 2.38
+61.25 ± 3.19
+80.34 ± 1.73
+58.55
++5.45
+Ours
+57.03 ± 1.45
+42.71 ± 1.04
+61.50 ± 2.02
+81.36 ± 1.86
+60.65
++7.55
+address the disparate learning challenges across various domains, enhancing fairness and aiding
+in performance improvement in harder domains. Similar improvements can also be observed in
+Office-10 and DomainNet in Sec. C of Appendix.
+5.2
+Ablation Study
+To evaluate the effectiveness of each component within our proposed methodology, we conducted a
+series of ablation studies using the Digit-5 dataset.
+5.2.1
+Impact of Dual-Level Prototype Generation.
+In this subsection, we focus on examining the impact of dual-level clustered prototypes, as demon-
+strated by the results in Tab. 3. The first row illustrates outcomes derived from calculating local
+prototypes by averaging features of samples within the same class, and global prototypes through
+the direct averaging of these local prototypes. This approach, utilizing straightforward averaging for
+both levels, yields the least effective performance. This is attributed to its failure to capture variance
+information, a non-trivial aspect in this context. Moreover, adopting a solely global clustering
+approach does not significantly enhance performance. This is attributed to the fact that while global
+clusters incorporate inter-domain variance, they overlook the critical aspect of high intra-domain
+sample variance, particularly in domains that are challenging to learn. To elucidate this, we present
+a t-SNE visualization analysis in Fig. 3 comparing the three prototype generation methods. Our
+approach fosters a more generalizable decision boundary, as illustrated in the visualization. This
+ability to effectively capture variance at both local and global levels is key to why our dual-level
+clustering method outperforms the others.
+Table 3: Comparison on prototype generation methods. Variance means the average distance
+from the normalized feature vector of one sample to its corresponding class feature center (i.e. the
+averaged prototype). Results are then used for visualization in Fig. 3. Details in Sec. 5.2.1.
+Local
+Global
+MNIST
+SVHN
+USPS
+Synth
+MNIST-M
+Avg
+Variance
+Avg
+Avg
+86.90
+33.10
+83.90
+53.40
+61.40
+63.54
+1.725
+Avg
+Cluster
+89.40
+37.00
+85.50
+56.60
+63.50
+66.40
+1.393
+Cluster
+Cluster
+90.20
+43.70
+86.90
+61.20
+65.40
+69.48
+0.825
+To further explore alternative methods, we examine the efficacy of directly transferring all local
+prototypes to each client without employing any aggregation or clustering techniques. This approach
+8
+MNIST
+SVHN
+Synth
+Local Avg
+Global Avg
+Local Avg
+Global Cluster
+Local Cluster
+Global Cluster
+USPS
+MNIST-M
+Total
+Figure 3: Visualization of different prototype generation methods. The first row averages feature
+vectors locally and averages local prototypes globally. The second row averages feature vectors
+locally and clusters local prototypes globally. The last row (ours) clusters feature vectors locally and
+clusters local clustered prototypes globally. The last column Total is the visualization of mixing the
+feature vectors from all datasets. Details in Sec. 5.2.1.
+preserves variance information but raises significant privacy concerns, unlike our dual-level clustering
+method, which offers enhanced privacy protection. As demonstrated in Tab. 4, directly transferring
+all local prototypes yields performance comparable to our dual-cluster approach. However, it requires
+transmitting approximately five times as many prototypes in each training round.
+Table 4: Comparison between w/o and w/ global clustering. w/o means the server distributes all
+local clustered prototypes to the clients for local training. Avg # of prototypes is the average number
+of prototypes each client receives from the server during each global round. Details in Sec. 5.2.1.
+Global Clustering
+Avg
+Avg # of Prototypes
+Privacy Preservation
+Communication Cost
+w/o
+69.18 ± 0.77
+100.92
+×
+4.76×
+w/
+69.47 ± 0.71
+21.20
+✓
+1×
+5.2.2
+Impact of α-Sparsity Prototype Loss.
+Table 5: Comparison on components
+of α-sparsity prototype loss. Contrast
+and Correction stand for the contrastive
+and corrective loss term in the total α-
+sparsity loss respectively. Avg is the av-
+erage accuracy result for all clients. De-
+tails in Sec. 5.2.2.
+Contrast
+Correction
+Avg
+∆
+w/o
+w/o
+66.96 ± 0.85
+-
+w/
+w/o
+68.42 ± 0.95
++1.46
+w/o
+w/
+67.95 ± 0.63
++0.99
+w/
+w/
+69.25 ± 0.62
++2.29
+To evaluate the specific impact of our proposed α-sparsity
+prototype loss, we conduct experiments comparing both
+contrastive and corrective loss terms. Results in Tab. 5
+demonstrates that employing the contrast term led to a
+1.46% improvement in final average accuracy, while the
+correction term resulted in a 0.99% enhancement. Com-
+bining all components yields the best performance, show-
+casing a 2.29% improvement. Our investigation also fo-
+cuses on the sparsity parameter α, depicted in Fig. 4. We
+find that varying α within the range of (0, 1) consistently
+outperforms the baseline setting with α = 1. After careful
+consideration of numerical stability, we opt for an α value
+of 0.250.
+Comparing our method to the prior work FPL, which also integrates its proposed prototype loss with
+the CE loss, we explore different prototype loss weights, denoted by λ. The results depicted in Fig. 4
+substantiate the superiority of our approach over FPL across various λ settings.
+9
+0.125
+0.250
+0.500
+1.000
+55.0
+57.5
+60.0
+62.5
+65.0
+67.5
+70.0
+72.5
+Accuracy
+Synth
+MNIST-M
+AVG
+1
+10
+100
+1000
+45
+50
+55
+60
+65
+70
+Accuracy
+FPL
+Proposed
+Figure 4: Impact of α sparsity and λ prototype loss weight. The left figure shows the accuracy of
+two selected datasets and the average accuracy among all clients with different α. The right figure
+shows the effects of different λ for both FPL and our proposed approach. Details in Sec. 5.2.2.
+5.3
+Impact of Temperature τ.
+To assess the impact of the contrastive temperature (τ) on our model’s performance, we conduct
+the following experiment. The results, depicted in Fig. 5, demonstrate that our method consistently
+surpasses the baselines across a range of temperatures (refer to Tab. 1 and Tab. 2 for details, where
+FPL exhibits the highest baseline performance at 66.88% and 58.55% respectively). Further analysis
+indicates that an optimal temperature setting for our model on Digit-5 is τ = 0.070. Another results
+on Office-10 identifies an optimal temperature setting for our model at τ = 0.045, while we maintain
+τ = 0.070 for stability in performance comparisons. It is noteworthy that temperatures either
+significantly higher or lower than this value lead to training difficulties due to numerical instability.
+0.025 0.040 0.055 0.070 0.085 0.100
+Temperature 
+65
+66
+67
+68
+69
+70
+71
+72
+Accuracy
+67.97
+68.45
+68.93
+69.25
+69.16
+68.57
+Average
+0.025 0.040 0.055 0.070 0.085 0.100
+Temperature 
+50.0
+52.5
+55.0
+57.5
+60.0
+62.5
+65.0
+67.5
+70.0
+Accuracy
+57.75
+59.72
+60.88 60.65 60.14 59.97
+Average
+Figure 5: Impact of τ. The left figure shows the impact on the Digital-5 dataset while the right
+figure shows on the Office-10 dataset. Average means the average test accuracy with variance among
+all clients. Details in Sec. 5.3.
+6
+Conclusion
+In this paper, we start by noting the significant difference in domain-specific representation variance
+across various datasets within the context of federated learning involving heterogeneous data do-
+mains. Traditional methods relying on averaged prototypes, calculated as the mean values of feature
+representations from samples within the same class, consistently fail to capture this essential local
+information. Our proposed approach, FedPLVM, addresses this issue by implementing a dual-level
+prototype generation method. This method leverages first-level local clustering to manage variance
+information and employs second-level global clustering to streamline communication complexity
+while ensuring privacy. Additionally, we introduce an α-sparsity prototype loss that prioritizes
+expanding the inter-class distance, considering the diverse cross-domain variances, and includes a
+correction term to subsequently reduce the intra-class distance. Comprehensive experiments have
+been conducted to validate the effectiveness of FedPLVM, demonstrating a significant accuracy
+improvement over state-of-the-art federated prototype learning methods.
+10
+Acknowledgements
+This work is supported in part by NSF under grants 2033681, 2006630, 2044991, 2319780.
+References
+[1] Abadi, M., Chu, A., Goodfellow, I., McMahan, H.B., Mironov, I., Talwar, K., Zhang, L.: Deep
+learning with differential privacy. In: Proceedings of the 2016 ACM SIGSAC conference on
+computer and communications security. pp. 308–318 (2016)
+[2] Acar, D.A.E., Zhao, Y., Navarro, R.M., Mattina, M., Whatmough, P.N., Saligrama, V.: Federated
+learning based on dynamic regularization. arXiv preprint arXiv:2111.04263 (2021)
+[3] Asoodeh, S., Liao, J., Calmon, F.P., Kosut, O., Sankar, L.: A better bound gives a hundred
+rounds: Enhanced privacy guarantees via f-divergences. In: 2020 IEEE International Symposium
+on Information Theory (ISIT). pp. 920–925. IEEE (2020)
+[4] Canonne, C.L., Kamath, G., Steinke, T.: The discrete gaussian for differential privacy. Advances
+in Neural Information Processing Systems 33, 15676–15688 (2020)
+[5] Dai, Y., Chen, Z., Li, J., Heinecke, S., Sun, L., Xu, R.: Tackling data heterogeneity in fed-
+erated learning with class prototypes. In: Proceedings of the AAAI Conference on Artificial
+Intelligence. vol. 37, pp. 7314–7322 (2023)
+[6] De Boer, P.T., Kroese, D.P., Mannor, S., Rubinstein, R.Y.: A tutorial on the cross-entropy
+method. Annals of operations research 134, 19–67 (2005)
+[7] Deng, L.: The mnist database of handwritten digit images for machine learning research [best
+of the web]. IEEE signal processing magazine 29(6), 141–142 (2012)
+[8] Gong, B., Shi, Y., Sha, F., Grauman, K.: Geodesic flow kernel for unsupervised domain
+adaptation. In: 2012 IEEE conference on computer vision and pattern recognition. pp. 2066–
+2073. IEEE (2012)
+[9] He, K., Zhang, X., Ren, S., Sun, J.: Deep residual learning for image recognition. In: Pro-
+ceedings of the IEEE conference on computer vision and pattern recognition. pp. 770–778
+(2016)
+[10] Huang, W., Ye, M., Shi, Z., Li, H., Du, B.: Rethinking federated learning with domain shift: A
+prototype view. In: 2023 IEEE/CVF Conference on Computer Vision and Pattern Recognition
+(CVPR). pp. 16312–16322. IEEE (2023)
+[11] Jetley, S., Romera-Paredes, B., Jayasumana, S., Torr, P.: Prototypical priors: From improving
+classification to zero-shot learning. arXiv preprint arXiv:1512.01192 (2015)
+[12] Jhunjhunwala, D., Sharma, P., Nagarkatti, A., Joshi, G.: Fedvarp: Tackling the variance due to
+partial client participation in federated learning. In: Uncertainty in Artificial Intelligence. pp.
+906–916. PMLR (2022)
+[13] Kang, Z., Grauman, K., Sha, F.: Learning with whom to share in multi-task feature learning.
+In: Proceedings of the 28th International Conference on Machine Learning (ICML-11). pp.
+521–528 (2011)
+[14] Karimireddy, S.P., Kale, S., Mohri, M., Reddi, S., Stich, S., Suresh, A.T.: Scaffold: Stochastic
+controlled averaging for federated learning. In: International conference on machine learning.
+pp. 5132–5143. PMLR (2020)
+[15] Khosla, P., Teterwak, P., Wang, C., Sarna, A., Tian, Y., Isola, P., Maschinot, A., Liu, C.,
+Krishnan, D.: Supervised contrastive learning. Advances in neural information processing
+systems 33, 18661–18673 (2020)
+[16] Li, Q., He, B., Song, D.: Model-contrastive federated learning. In: Proceedings of the IEEE/CVF
+conference on computer vision and pattern recognition. pp. 10713–10722 (2021)
+11
+[17] Li, T., Sahu, A.K., Talwalkar, A., Smith, V.: Federated learning: Challenges, methods, and
+future directions. IEEE signal processing magazine 37(3), 50–60 (2020)
+[18] Li, T., Sahu, A.K., Zaheer, M., Sanjabi, M., Talwalkar, A., Smith, V.: Federated optimization in
+heterogeneous networks. Proceedings of Machine learning and systems 2, 429–450 (2020)
+[19] Lu, W., Wang, J., Chen, Y., Qin, X., Xu, R., Dimitriadis, D., Qin, T.: Personalized federated
+learning with adaptive batchnorm for healthcare. IEEE Transactions on Big Data (2022)
+[20] Luo, M., Chen, F., Hu, D., Zhang, Y., Liang, J., Feng, J.: No fear of heterogeneity: Classifier
+calibration for federated learning with non-iid data. Advances in Neural Information Processing
+Systems 34, 5972–5984 (2021)
+[21] McMahan, B., Moore, E., Ramage, D., Hampson, S., y Arcas, B.A.: Communication-efficient
+learning of deep networks from decentralized data. In: Artificial intelligence and statistics. pp.
+1273–1282. PMLR (2017)
+[22] Mironov, I., Talwar, K., Zhang, L.: R\’enyi differential privacy of the sampled gaussian
+mechanism. arXiv preprint arXiv:1908.10530 (2019)
+[23] Mu, X., Shen, Y., Cheng, K., Geng, X., Fu, J., Zhang, T., Zhang, Z.: Fedproc: Prototypical
+contrastive federated learning on non-iid data. Future Generation Computer Systems 143,
+93–104 (2023)
+[24] Netzer, Y., Wang, T., Coates, A., Bissacco, A., Wu, B., Ng, A.Y., et al.: Reading digits in
+natural images with unsupervised feature learning. In: NIPS workshop on deep learning and
+unsupervised feature learning. vol. 2011, p. 4. Granada (2011)
+[25] Oord, A.v.d., Li, Y., Vinyals, O.: Representation learning with contrastive predictive coding.
+arXiv preprint arXiv:1807.03748 (2018)
+[26] Peng, X., Bai, Q., Xia, X., Huang, Z., Saenko, K., Wang, B.: Moment matching for multi-source
+domain adaptation. In: Proceedings of the IEEE International Conference on Computer Vision.
+pp. 1406–1415 (2019)
+[27] Quattoni, A., Collins, M., Darrell, T.: Transfer learning for image classification with sparse pro-
+totype representations. In: 2008 IEEE Conference on Computer Vision and Pattern Recognition.
+pp. 1–8. IEEE (2008)
+[28] Sarfraz, S., Sharma, V., Stiefelhagen, R.: Efficient parameter-free clustering using first neigh-
+bor relations. In: Proceedings of the IEEE/CVF conference on computer vision and pattern
+recognition. pp. 8934–8943 (2019)
+[29] Sattler, F., Wiedemann, S., Müller, K.R., Samek, W.: Robust and communication-efficient
+federated learning from non-iid data. IEEE transactions on neural networks and learning
+systems 31(9), 3400–3413 (2019)
+[30] Shoham, N., Avidor, T., Keren, A., Israel, N., Benditkis, D., Mor-Yosef, L., Zeitak, I.: Over-
+coming forgetting in federated learning on non-iid data. arXiv preprint arXiv:1910.07796
+(2019)
+[31] Snell, J., Swersky, K., Zemel, R.: Prototypical networks for few-shot learning. Advances in
+neural information processing systems 30 (2017)
+[32] Tan, Y., Long, G., Liu, L., Zhou, T., Lu, Q., Jiang, J., Zhang, C.: Fedproto: Federated prototype
+learning across heterogeneous clients. In: Proceedings of the AAAI Conference on Artificial
+Intelligence. vol. 36, pp. 8432–8440 (2022)
+[33] Tan, Y., Long, G., Ma, J., Liu, L., Zhou, T., Jiang, J.: Federated learning from pre-trained
+models: A contrastive learning approach. Advances in Neural Information Processing Systems
+35, 19332–19344 (2022)
+[34] Tanwisuth, K., Fan, X., Zheng, H., Zhang, S., Zhang, H., Chen, B., Zhou, M.: A prototype-
+oriented framework for unsupervised domain adaptation. Advances in Neural Information
+Processing Systems 34, 17194–17208 (2021)
+12
+[35] Wang, F., Liu, H.: Understanding the behaviour of contrastive loss. In: Proceedings of the
+IEEE/CVF conference on computer vision and pattern recognition. pp. 2495–2504 (2021)
+[36] Wang, L., Bian, J., Xu, J.: Federated learning with instance-dependent noisy labels. arXiv
+preprint arXiv:2312.10324 (2023)
+[37] Xu, J., Chen, Z., Quek, T.Q., Chong, K.F.E.: Fedcorr: Multi-stage federated learning for label
+noise correction. In: Proceedings of the IEEE/CVF conference on computer vision and pattern
+recognition. pp. 10184–10193 (2022)
+[38] Yang, S., Park, H., Byun, J., Kim, C.: Robust federated learning with noisy labels. IEEE
+Intelligent Systems 37(2), 35–43 (2022)
+[39] Zhang, F., Kuang, K., Chen, L., You, Z., Shen, T., Xiao, J., Zhang, Y., Wu, C., Wu, F., Zhuang,
+Y., et al.: Federated unsupervised representation learning. Frontiers of Information Technology
+& Electronic Engineering 24(8), 1181–1193 (2023)
+[40] Zhang, L., Lei, X., Shi, Y., Huang, H., Chen, C.: Federated learning with domain generalization.
+arXiv preprint arXiv:2111.10487 (2021)
+[41] Zhao, Y., Li, M., Lai, L., Suda, N., Civin, D., Chandra, V.: Federated learning with non-iid data.
+arXiv preprint arXiv:1806.00582 (2018)
+[42] Zhou, K., Yang, Y., Hospedales, T., Xiang, T.: Learning to generate novel domains for domain
+generalization. In: Computer Vision–ECCV 2020: 16th European Conference, Glasgow, UK,
+August 23–28, 2020, Proceedings, Part XVI 16. pp. 561–578. Springer (2020)
+[43] Zhou, T., Konukoglu, E.:
+Fedfa:
+Federated feature augmentation. arXiv preprint
+arXiv:2301.12995 (2023)
+13
+A
+Supplementary Material Overview
+The supplementary material is organized into the following sections:
+B: Detailed algorithm of our proposed method, FedPLVM.
+C: Further results of our experiments.
+D: Additional quantitative results comparing FedPLVM and other baseline methods under the label
+non-i.i.d. setting.
+E: Additional quantitative results comparing different clustering algorithms for the prototype cluster-
+ing procedure of FedPLVM.
+F: Additional quantitative results comparing FedPLVM and FPL[10] under the unbalanced client
+domain distribution setting.
+G: Additional quantitative results employing differential privacy technology in conjunction with
+FedPLVM.
+H: Additional quantitative results comparing different global prototype generation methodologies of
+FedPLVM.
+I: Additional quantitative results analyzing the effectiveness of local prototypes clustering on different
+domains.
+J: Discussion on the wider range of scenario of our method, including limitation and broader impact.
+B
+Detailed Algorithm of FedPLVM
+We summarize our proposed method, FedPLVM in the Alg. 1.
+Algorithm 1 FedPLVM
+Input: Communication rounds T, local training epochs E, number of classes M, number of
+clients K, private dataset Dk = {xi, yi}Nk
+i
+Output: Global model wT +1
+Server Aggregation:
+1: for t = 1, 2, ..., T do
+2:
+for k = 1, 2, ..., K do
+3:
+Collect local models and clustered prototypes wt
+k,E+1, {Pm
+k }M
+m=1 ←Local Update
+(k, wt, G)
+4:
+end for
+5:
+Aggregate collected prototypes {Pm}M
+m=1
+6:
+Generate global clustered prototypes G in Eq. 4
+7:
+Aggregate global model wt+1 = PK
+k=1
+Nk
+N wt
+k,E+1
+8: end for
+Local Update(k, wt, G):
+1: wt
+k,1 ←wt
+2: for e = 1, 2, ..., E do
+3:
+Update wt
+k,e+1 from wt
+k,e using G by Eq. 10
+4: end for
+5: Compute local feature vectors {h(xi)}Nk
+i=1 for Dk
+6: Generate local clustered prototypes {Pm
+k }M
+m=1 in Eq. 3
+7: Return wt
+k,E+1, {Pm
+k }M
+m=1
+C
+Further results on DomainNet
+Due to page limitation, we put some further experimental results in Sec. 5.1 here:
+14
+Table 6: Test accuracy on DomainNet. Details in Sec. 5.1.
+Methods
+DomainNet
+Clipart
+Infograph
+Painting
+Quickdraw
+Real
+Sketch
+Avg
+∆
+FedAvg
+50.62 ± 0.58
+27.31 ± 0.91
+42.71 ± 2.72
+14.11 ± 1.26
+43.71 ± 3.39
+34.67 ± 2.80
+35.52
+-
+FedProx
+52.33 ± 1.25
+28.22 ± 0.11
+42.56 ± 3.32
+13.50 ± 0.94
+45.85 ± 1.19
+35.46 ± 2.98
+36.32
++0.80
+FedProto
+54.08 ± 2.11
+30.44 ± 1.70
+47.20 ± 3.34
+19.40 ± 3.36
+50.57 ± 2.07
+44.22 ± 2.61
+40.99
++5.47
+FedPCL
+53.37 ± 1.76
+29.53 ± 3.08
+46.69 ± 3.51
+16.32 ± 1.22
+51.36 ± 1.85
+43.32 ± 0.12
+40.10
++4.58
+FedFA
+53.20 ± 0.50
+29.22 ± 1.50
+47.12 ± 1.42
+17.90 ± 0.65
+50.14 ± 1.37
+45.76 ± 1.61
+40.56
++5.04
+FPL
+53.13 ± 0.65
+27.55 ± 1.86
+45.40 ± 2.29
+17.47 ± 1.36
+50.64 ± 1.33
+47.64 ± 2.45
+40.31
++4.79
+Ours
+54.19 ± 1.73
+31.14 ± 1.68
+47.22 ± 1.10
+22.40 ± 1.91
+51.66 ± 1.73
+48.70 ± 2.03
+42.55
++7.03
+0.125
+0.250
+0.500
+1.000
+10
+20
+30
+40
+50
+Accuracy
+Clipart
+Quickdraw
+AVG
+Figure 6: Impact of α on the DomainNet
+dataset.
+0.1
+0.5
+1.0
+5.0
+10.0
+Distribution Parameter
+40
+50
+60
+70
+80
+90
+Accuracy
+59.86
+61.60
+64.09
+66.21
+68.64
+59.44
+60.05
+62.04
+64.08
+66.72
+Ours
+FPL
+Figure 7: Test accuracy on DomainNet with
+different Dirichlet distribution parameters.
+D
+Label Non-I.I.D. Setting
+We expanded our method’s assessment on Digit-5 and Office-10 within a non-i.i.d. label setting.
+Utilizing the Dirichlet method (α = 0.5), we shaped the data distribution and generated non-i.i.d.
+datasets for individual clients. Notably, our approach showcased substantial accuracy improvements
+compared to baseline methods across both datasets. Non-i.i.d. distributions are visualized in Fig. 8,
+the variation in features across non-identically distributed data is reflected by the colors of the dots,
+whereas the non-identical label distribution (α = 0.5) is denoted by the sizes of the dots. For the
+top figure in Fig. 8, client index 0, 1, 2, 3, 4 own the datasets MNIST, SVHN, USPS, Synth and
+MNIST-M respectively; for the bottom figure, client index 0, 1, 2, 3 represent the dataset domains
+Amazon, Caltech, DSLR and Webcam repectively.
+0
+1
+2
+3
+Client Index
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Class Index
+Client Index
+0
+1
+2
+3
+4
+Num of Samples
+0
+8
+16
+24
+32
+0
+1
+2
+3
+Client Index
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Class Index
+Client Index
+0
+1
+2
+3
+Num of Samples
+0
+6
+12
+18
+24
+30
+Figure 8: Visualization of data distributions under label non-i.i.d. setting. Every point on the
+graph symbolizes a collection of samples belonging to a specific class assigned to a client. The left
+figure is from digit-5 and the right figure is from office-10. Details in Sec. D
+The outcomes are presented in Tab. 7 and Tab. 8. Consistent with our findings in the i.i.d. label
+setting, we observed a significant performance boost in domains that pose greater learning challenges.
+For instance, within the Digit-5 dataset, our method achieved a 2.24% accuracy surge in the Synth
+domain—a more complex task—while showing a 0.94% increase in accuracy for the comparatively
+15

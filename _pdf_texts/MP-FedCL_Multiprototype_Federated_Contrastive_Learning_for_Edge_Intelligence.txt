@@ -1,0 +1,1539 @@
+8604
+IEEE INTERNET OF THINGS JOURNAL, VOL. 11, NO. 5, 1 MARCH 2024
+MP-FedCL: Multiprototype Federated Contrastive
+Learning for Edge Intelligence
+Yu Qiao
+, Md. Shirajum Munir
+, Member, IEEE, Apurba Adhikary
+, Huy Q. Le
+, Avi Deb Raha,
+Chaoning Zhang, Member, IEEE, and Choong Seon Hong
+, Senior Member, IEEE
+Abstract—Federated learning-assisted edge intelligence enables
+privacy protection in modern intelligent services. However, not
+independent and identically distributed (non-IID) distribution
+among edge clients can impair the local model performance.
+The existing single prototype-based strategy represents a class by
+using the mean of the feature space. However, feature spaces are
+usually not clustered, and a single prototype may not represent
+a class well. Motivated by this, this article proposes a multi-
+prototype federated contrastive learning approach (MP-FedCL)
+which demonstrates the effectiveness of using a multiprototype
+strategy over a single-prototype under non-IID settings, includ-
+ing both label and feature skewness. Speciﬁcally, a multiprototype
+computation strategy based on k-means is ﬁrst proposed to cap-
+ture different embedding representations for each class space,
+using multiple prototypes (k centroids) to represent a class in the
+embedding space. In each global round, the computed multiple
+prototypes and their respective model parameters are sent to
+the edge server for aggregation into a global prototype pool,
+which is then sent back to all clients to guide their local train-
+ing. Finally, local training for each client minimizes their own
+supervised learning tasks and learns from shared prototypes in
+the global prototype pool through supervised contrastive learn-
+ing, which encourages them to learn knowledge related to their
+own class from others and reduces the absorption of unre-
+lated knowledge in each global iteration. Experimental results
+on MNIST, Digit-5, Ofﬁce-10, and DomainNet show that our
+Manuscript received 16 August 2023; revised 20 September 2023; accepted
+22 September 2023. Date of publication 28 September 2023; date of
+current version 21 February 2024. This work was supported in part by
+the National Research Foundation of Korea (NRF) Grant funded by the
+Korea Government (MSIT) under Grant RS-2023-00207816; in part by
+the Institute of Information and Communications Technology Planning and
+Evaluation (IITP) Grant funded by the Korea Government (MSIT) (Artiﬁcial
+Intelligence Innovation Hub) under Grant 2021-0-02068, through the Artiﬁcial
+Intelligence Convergence Innovation Human Resources Development (Kyung
+Hee University) under Grant RS-2022-00155911, and through the Evolvable
+Deep Learning Model Generation Platform for Edge Computing under
+Grant 2019-0-01287; in part by the MSIT under the ITRC Support Program
+supervised by the IITP under Grant IITP-2023-RS-2023-00258649; and in
+part by the Kyung Hee University in 2022 under Grant KHU-20222221.
+(Corresponding authors: Choong Seon Hong; Chaoning Zhang.)
+Yu
+Qiao
+and
+Chaoning
+Zhang
+are
+with
+the
+Department
+of
+Artiﬁcial
+Intelligence,
+School
+of
+Computing,
+Kyung
+Hee
+University,
+Yongin
+17104,
+Republic
+of
+Korea
+(e-mail:
+qiaoyu@khu.ac.kr;
+chaoningzhang1990@gmail.com).
+Md. Shirajum Munir is with the School of Cyber Security, Old Dominion
+University, Suffolk, VA 2343 USA, and also with the Department of Computer
+Science and Engineering, Kyung Hee University, Yongin 17104, Republic of
+Korea (e-mail: munir@khu.ac.kr).
+Apurba Adhikary, Huy Q. Le, Avi Deb Raha, and Choong Seon
+Hong are with the Department of Computer Science and Engineering,
+School of Computing, Kyung Hee University, Yongin 17104, Republic of
+Korea (e-mail: apurba@khu.ac.kr; quanghuy69@khu.ac.kr; avi@khu.ac.kr;
+cshong@khu.ac.kr).
+Digital Object Identiﬁer 10.1109/JIOT.2023.3320250
+method outperforms multiple baselines, with an average test
+accuracy improvement of about 4.6% and 10.4% under feature
+and label non-IID distributions, respectively.
+Index Terms—Communication efﬁciency, contrastive learning,
+edge intelligence, federated learning (FL), global prototype pool,
+label and feature not independent and identically distributed
+(non-IID), multiprototype.
+I. INTRODUCTION
+I
+NCREASINGLY,
+intelligence
+devices
+in
+distributed
+networks are showing explosive growth, which generates
+a huge amount of raw data that needs to be processed [1].
+Because of the challenges of limitation in network bandwidth
+or the requirements for transmission delay, the traditional
+cloud computing paradigm that uploads such big data to a
+cloud center for data processing can no longer meet these
+demands [2]. Thanks to the improvements in storage and
+computing capabilities of edge intelligence devices, most
+computing tasks can now be completed directly at the edge,
+making the mobile-edge computing (MEC) paradigm the
+next-generation computing network [3]. Further, collecting
+data from distributed devices poses risks and challenges due
+to the sensitive nature of a large amount of data, as well as
+regulations, such as the general data protection regulation
+(GDPR) [4] in Europe. Therefore, as edge devices’ storage
+and computing power continue to grow, coupled with concerns
+about privacy issues, it becomes more attractive to implement
+edge intelligence in MEC systems in a distributed manner [5].
+To this end, federated learning (FL), as one application
+of edge computing in distributed machine learning, is ﬁrst
+proposed by [6] to simultaneously achieve edge intelligence
+and address privacy concerns. It trains a global model through
+the cooperation between local clients and an edge server
+while keeping the clients’ raw data within their respective
+local environments. In general, the typical federated training
+process consists of the following four steps [6].
+1) The server chooses a certain network architecture, such
+as convolutional neural network (CNN) as the global
+model to be optimized and sends it to local clients.
+2) The clients update the received the model parameters of
+the global model based on their local data.
+3) All clients send their updated model parameters back to
+the edge server for aggregation.
+4) The server averages all the sent parameters as the new
+global model parameters for the next global round,
+repeating these four steps until convergence.
+2327-4662 c⃝2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+QIAO et al.: MP-FedCL: MULTIPROTOTYPE FEDERATED CONTRASTIVE LEARNING FOR EDGE INTELLIGENCE
+8605
+In this fashion, FL’s ability to protect data conﬁdentiality
+and enable multiple parties to cooperatively train a model
+makes it a highly promising technology for the future of
+network intelligence [7].
+Nonetheless, a main challenge in FL is that data distribu-
+tion among clients is usually not independent and identically
+distributed (non-IID), which can result in reduced effective-
+ness of FL [8], [9]. To tackle the issue, existing research
+works under non-IID scenarios can be mainly divided into
+two categories in terms of optimization objectives, i.e., typical
+FL [6], [10], [11], [12] and personalized FL [9], [13], [14],
+[15], [16]. The former objective is to develop a single shared
+global model that is accurate and efﬁcient, while also capable
+of adapting to the unique characteristics of each client’s data.
+FedAvg [6] is the ﬁrst FL optimization algorithm to enable
+efﬁcient training of machine learning models on decentralized
+data. It achieves this through collaborative training of a shared
+global model via model parameter transmission among clients
+in each global round. FedLC [10] adopts a ﬁne-grained cali-
+bration strategy for clients’ cross-entropy loss to mitigate the
+bias caused by label distribution skewness among clients in
+the global model. However, training the global model directly
+with heterogeneous data from local clients can result in poor
+generalization abilities to unseen data [17]. In contrast, the
+latter approach focuses on optimizing local models individu-
+ally for each client rather than using a shared global model.
+This is typically achieved by adding a regularization term to
+the local objective of each client to guide their local train-
+ing, which enables the models to generalize well to new data.
+FedProx [9] proposes to add a local regularization term in
+the local objective of each client to correct the bias between
+local models and the global model. PFedMe [13] proposes to
+add an additional term to allow clients to update their local
+models in different directions without deviating from a global
+reference point. FedPer [15] proposes a strategy of adding
+a personalized layer to the base layer and suggests updat-
+ing only the base layer during the federated training process.
+Afterward, clients can update their personalized layer based
+on their own local data. Additionally, Li et al. [18] explored a
+benchmark for non-IID settings, they divide non-IID settings
+into ﬁve cases, such as label distribution skew, feature distribu-
+tion skew, quantity skew, etc. Further, as [18] mentioned, some
+existing studies [9], [10], [11], [19] cover only one non-IID
+case, which do not give sufﬁcient evaluations to this challenge.
+Therefore, to avoid the inﬂuence of biased global models and
+to evaluate non-IID cases as comprehensively as possible, we
+focus on personalized FL by optimizing the local objective
+of each local client under the label and feature distribution
+skewness.
+Inspired by prototypical networks [22], which adopts a sin-
+gle prototype to represent each class by calculating the mean
+of the class’s embedding space. This prototype can serve as
+an important information carrier to boost the performance of
+various learning domains, and has been successfully applied
+in meta-learning [23], multitask learning [24], and transfer
+learning [25]. There have been some existing works [19],
+[26], [27], [28] introducing the concept of prototypes into FL.
+FedProto [19] proposes to reduce communication overhead
+by only exchanging prototypes between clients and the
+server, instead of exchanging gradients or model parameters.
+FedPCL [27] proposes to use multiple pretrained models to
+extract the features separately, and then they use a projec-
+tion network to fuse these extracted features in a personalized
+way while keeping the shared representation compact for
+efﬁcient communication. These works adopt a single proto-
+type to represent each class and argue that directly averaging
+the representations from heterogeneous data across clients
+can effectively capture the embedding representations of each
+class.
+However, in their approach, they represent each class with
+a single prototype obtained by averaging over the same class
+space for each client, which can be considered intuitively
+incomplete and ambiguous [29]. For instance, consider the
+class of dogs, which includes various breeds differing in size,
+color, or appearance. Averaging all the dogs within the same
+class may not adequately capture the diversity and distinc-
+tive features present in different dog breeds. This limitation
+could lead to a less expressive and less discriminative rep-
+resentation for each class, potentially impacting the overall
+model’s performance in scenarios with intraclass variations.
+Here, we consider a toy example as shown in Fig. 1 to illus-
+trate this intuition. The ﬁgure showcases the embeddings in
+the class space during local training (the upper two sub-
+ﬁgures) and federated training (the bottom two subﬁgures)
+under the setting of data heterogeneity among clients. It
+becomes evident from the visualization that there is consid-
+erable separation and diversity across the embedding class
+space in both training scenarios. In local training, each client
+reﬁnes the model using its own data, leading to distinct rep-
+resentations of each class. Similarly, in federated training,
+where multiple clients collaboratively train the global model,
+the embedding space still demonstrates signiﬁcant variations
+and differentiation. This observation highlights the nontriv-
+ial nature of using a single prototype to sufﬁciently capture
+the entire embedding space, whether during local or federated
+training.
+Motivated by the above intuition, we introduce multipro-
+totype federated contrastive learning (MP-FedCL), a strategy
+that improves the classiﬁcation performance of FL in scenar-
+ios where there is skewness in the distribution of labels and
+features. The proposed approach uses a contrastive learning
+scheme, which employs multiple prototypes to represent each
+class, thereby learning a more differentiated prototype repre-
+sentation in the embedding space for each class.
+Here, we
+are inspired by some recent studies [29], [30], [31], which
+use k-means to cluster features in their methods. For instance,
+Rippel et al. [30] employed k-means clustering to learn a
+density representation within the embedding space. Moreover,
+in recent studies by [29] and [31], a method for calculating
+multiple prototypes based on k-means clustering was proposed
+and achieved good results in image classiﬁcation tasks. These
+ﬁndings highlight the effectiveness of using k-means clustering
+to perform feature-based clustering. However, it has not been
+validated in the FL setting, and our scheme is the ﬁrst new
+attempt to introduce the concept of multiprototype into FL.
+Speciﬁcally, our proposed strategy ﬁrst applies the k-means
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+8606
+IEEE INTERNET OF THINGS JOURNAL, VOL. 11, NO. 5, 1 MARCH 2024
+Fig. 1.
+Toy example: T-SNE [20] visualization of the embedding vectors of local clients. The sample distribution for each client follows the Dirichlet
+distribution [21] with Dir(0.1). The upper two represent local training, which means no communication with other clients. The below two represent federated
+training based on FedAvg.
+clustering algorithm to multiple prototypes calculation, in
+which each client can calculate their own multiple prototypes
+for each class. Note that considering the ever-increasing com-
+puting capabilities of local clients [5], [32], [33] and privacy
+issues caused by transferring raw data features [34], [35],
+[36], we apply the k-means clustering on the feature space
+on the local side. Due to the natural clustering properties of
+k-means, the output (i.e., k centroids) of k-means clustering
+algorithm can be viewed as the calculated multiple prototypes
+for that class. These calculated prototypes from various dis-
+tributed clients are then sent to the edge server for aggregation
+as a global prototype pool. The global prototype pool is a com-
+bination of multiple prototypes from each client, and it can be
+updated during training in each global round. To regularize
+individual local training, we reformulate the local objective
+of each client in a contrastive learning manner by conducting
+any supervised learning task (e.g., a cross-entropy loss) and a
+contrastive learning task. The goal of the contrastive learning
+task is that prototypes in the global prototype pool and local
+representations belonging to the same class are pulled together
+while simultaneously pushing apart those prototypes from dif-
+ferent classes. Note that the k-means clustering algorithm is
+conducted on the local side, and the prototype is a 1-D vec-
+tor of low-dimensional samples that are naturally small and
+privacy-preserving, which does not incur excessive communi-
+cation costs or raise privacy concerns compared to the model
+parameters. To the best of our knowledge, we are the ﬁrst to
+present multiprototype learning in FL. The preliminary version
+of this work has been published in [16] where we design a
+multiprototype-based federated training framework for model
+inference in the last global iteration based on the typical fed-
+erated training process. The major differences between the
+current work and [16] are the addition of the global prototype
+pool based on a contrastive learning strategy, the modiﬁca-
+tion of the global iteration process, and the exploration of the
+feature distribution skewness. Our main contributions to this
+article are as follows.
+1) We introduce a k-means-based MP-FedCL framework,
+designed to capture both intraclass and interdevice
+information. The former can be achieved through the
+multiprototype strategy, while the latter can be accom-
+plished by the global prototype pool for information
+exchange.
+2) We reformulate the loss function for each client to per-
+form both supervised learning and contrastive learning
+tasks. This strategy can encourage each client to learn
+their own supervised learning task, while also learning
+from the global prototype pool.
+3) We demonstrate that our proposed strategy outper-
+forms several baselines on multiple benchmark data sets
+regarding test accuracy and communication efﬁciency,
+with improvements of about 4.6% and 10.4% under
+feature and label skewness, respectively.
+The remainder of this article is organized as follows. Related
+work on FL and prototype learning is presented in Section II.
+The system model and problem formulation are provided in
+Section III. The strategy for multiprototype computation and
+aggregation, as well as the model inference, are presented in
+Section IV. Experimental results are provided in Section V.
+Finally, conclusions are drawn in Section VI.
+II. RELATED WORK
+In this section, we ﬁrst review the existing works to deal
+with FL challenges in Section II-A, including the statisti-
+cal and system heterogeneity, and communication efﬁciency.
+Then, we brieﬂy review some works that apply prototype
+learning to FL in Section II-B, followed by a schematic
+diagram of our proposed multiprototype FL, which will be
+explained in detail in the next section.
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+QIAO et al.: MP-FedCL: MULTIPROTOTYPE FEDERATED CONTRASTIVE LEARNING FOR EDGE INTELLIGENCE
+8607
+A. Federated Learning
+One of the key challenges in FL is the distribution of train-
+ing data across multiple clients, which is usually statistically
+heterogeneous (also known as the non-IID issue). This het-
+erogeneity can limit the effectiveness and performance of FL.
+Many existing works [37], [38], [39], [40], [41], [42] are
+dedicated to improving communication efﬁciency under the
+challenge of statistical heterogeneity. Other works [43], [44],
+[45], [46], [47] are mainly from the perspective of system
+heterogeneity, dealing with communication efﬁciency issues
+under the system heterogeneity.
+To tackle the system heterogeneity, FedAT [43] introduces
+an asynchronous layer in which clients are grouped accord-
+ing to their system-speciﬁc capabilities to avoid the straggler
+problem, thus reducing the total number of communication
+rounds. Unlike typical federated training processes, which are
+usually implemented with synchronous approaches and can
+cause stragglers and heterogeneous latency, FedAsync [44]
+combines asynchronous training with federated training to
+tackle that issue. To solve the lag or dropout problems of dis-
+tributed edge devices during federated training, ASO-Fed [45]
+presents an online FL strategy, in which edge devices use
+continuous streaming local data for online learning and an
+edge server aggregated model parameters from clients in an
+asynchronous manner. Sageﬂow [46] proposes a robust FL
+framework to cope with both stragglers and adversaries prob-
+lems. In this framework, clients are grouped and weighted
+according to their staleness (i.e., arrival delay). Then, entropy-
+based ﬁltering and loss-weighted averaging are applied within
+each group to defend against attacks from malicious adver-
+saries. Another asynchronous FL framework in a wireless
+network environment is proposed in [47]. The framework aims
+to adapt to environments with heterogeneous edge devices,
+communication environments, and learning tasks by consider-
+ing possible delays in local training and uploading local model
+parameters, as well as the freshness between received models.
+However, most of these works do not consider the statistical
+heterogeneity which is the major challenge in FL.
+To address the statistical heterogeneity, FedNova [37] sug-
+gests that different clients can perform a different number of
+local steps when updating their shared global model with their
+local private data. SCAFFOLD [38] introduces two control
+variables which contain the updated direction information of
+the global model and local models to overcome the gradi-
+ent difference and effectively alleviate client drift problems.
+CMFL [39] designs a feedback mechanism that can reﬂect
+the updated trend of the global model. Each client in the
+system checks whether it is consistent with the update trend
+of the global model before uploading its model updates to
+the edge server, otherwise, it does not upload. This strategy
+of uploading only information related to model improve-
+ment to the server greatly reduces communication overhead.
+FedMMD [40] employs a two-stream model to extract a
+more generalized representation by minimizing the maximum
+mean difference (MMD) loss, which is a measure of the
+distance between two data distributions. This approach can
+accelerate the convergence rate and reduce communication
+rounds. AFD [41] proposes a dynamical submodel parameters
+selection method, in which clients can update their mod-
+els using a submodel rather than the whole global model
+parameters. This submodel selection strategy is performed
+by maintaining an independent activation score map for each
+client. At each round, the server sends a different submodel
+for selected clients, and then clients update their respective
+score maps according to their own local loss function. A sim-
+ilar approach is also considered in Fed-Dropout [42], which
+adopts a lossy compression way for server-to-client commu-
+nication while allowing clients to update their models using
+submodels of the global model, further reducing communica-
+tion overhead. However, most of these works do not consider
+the scenario where clients in FL are under heterogeneous
+feature distribution.
+B. Prototype Learning
+Prototype
+learning
+is
+ﬁrst
+proposed
+by
+prototype
+networks [22] in few-shot learning. Its design idea is to
+use a single prototype to represent one class, where the single
+prototype is calculated by averaging the embedding vectors
+within the same class space. Prototype learning has received
+signiﬁcant progress in various tasks, such as image classi-
+ﬁcation [48], video processing [49], and natural language
+processing [50] areas. In image classiﬁcation tasks [48], a class
+is represented as a single prototype by computing the mean
+of the feature vectors of that class. In video processing [49],
+prototypes are obtained by calculating the average feature
+over different timestamps. In natural language processing
+tasks [50], taking the average of word embeddings can yield a
+prototype representation for a sentence. Further, both few-shot
+learning and FL are based on the scenario of training with
+a small amount of data: the clients do not have enough data
+to train their own models. Recently, there have been various
+successful works using prototypes for federated optimization
+in computer vision tasks. In FedProto, Tan et al. [19] proposed
+to reduce communication overhead by only exchanging pro-
+totypes between clients and the server instead of exchanging
+gradients or model parameters. However, their work does
+not validate in a more general heterogeneous environment
+setting, such as Dirichlet distribution [21]. An optimized
+prototype-based FL is proposed in [51] by using margins
+of
+prototypical
+representations
+learned
+from
+distributed
+heterogeneous data to calculate the deviations of clients and
+applying these deviations through an attention mechanism to
+boost model performance. FedProc [26] introduces that global
+prototypes in the server can be used as a guideline to correct
+clients’ training in local updates, and they use a contrastive
+loss to pull each class to be close to the corresponding global
+prototypes while pushing away from other global prototypes.
+FedPCL [27] proposes a strategy based on contrastive learn-
+ing that uses single prototype exchange instead of gradient
+communication for efﬁcient communication. MOON [52]
+is designed based on model-level contrastive learning by
+comparing the representations between the global model
+and local models. However, most of them focus on each
+client’s individual learning process while disregarding the
+collaborative contributions from other clients. Moreover, most
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+8608
+IEEE INTERNET OF THINGS JOURNAL, VOL. 11, NO. 5, 1 MARCH 2024
+Fig. 2.
+Two strategies for model inference: the single prototype-based
+(left) and multiprototype-based (right) approaches. In the diagram, black solid
+circles represent prototypes, while white solid circles represent query classes.
+of the above-mentioned works adopt to represent the same
+class using a single prototype, which may fail to capture
+discriminative embedding representations by naively taking
+the mean of the feature space [53], [54].
+Therefore, different from the single prototype learning
+paradigm used in these works, we propose to use multiple
+prototypes to represent each class and adopt multiprototype-
+based contrastive learning to capture intraclass differences and
+interclass similarities. Here, we brieﬂy describe the core part
+of the model inference process in the single-prototype-based
+approach and our proposed multiprototype-based approach, as
+shown in Fig. 2. Taking the multiprototype strategy, as illus-
+trated in the right subﬁgure of Fig. 2, as an example, the
+model inference stage involves two main processes: 1) dis-
+tance calculation and 2) decision making. When a query
+class is introduced to the network during inference, these
+two processes are executed to determine the most appropriate
+prototype for the query class.
+1) The network calculates distances between the new query
+class and the multiple prototypes associated with each
+existing class in the class space. These prototypes rep-
+resent the diverse representations learned from different
+clients during the FL process.
+2) The classiﬁcation decision for the new query class is
+made based on the shortest distance to any of the
+prototypes of that speciﬁc class.
+The network assigns the new query class to the class whose
+prototype exhibits the closest similarity in the embedding
+space. Note that the multiprototype concept used in the model
+inference strategy is also used in our contrastive learning-
+based model training process. However, the training process
+differs from the multiprototype-based model inference pro-
+cess. During the contrastive learning-based model training, the
+objective is to optimize the query to be as close as possi-
+ble to multiple prototypes belonging to the same class space
+while simultaneously ensuring that it remains far away from
+all other prototypes belonging to class spaces different from
+its own. The contrastive learning technique aims to enhance
+the discriminative power of the model by encouraging similar
+representations for data points belonging to the same class and
+pushing apart those from different classes. This way, the model
+learns to create well-separated and informative embeddings for
+each class, which in turn is expected to beneﬁt the subsequent
+TABLE I
+SUMMARY OF NOTATIONS
+inference process. The details of the multiprototype calculation
+and multiprototype-based model training and inference will
+be illustrated in the following sections. Table I presents a
+summary of the notations used in this manuscript.
+III. SYSTEM MODEL AND PROBLEM FORMULATION
+In this section, we ﬁrst introduce the key elements behind
+FL, including the system model in Section III-A and the
+local training optimization algorithm for local training in
+Section III-B. Then, our optimization problem is formulated
+in Section III-C.
+A. Federated Learning Model
+The essence of the FL strategy is to train a model through
+the collaboration of distributed clients based on their local
+data, which serves the purpose of protecting data privacy. The
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+QIAO et al.: MP-FedCL: MULTIPROTOTYPE FEDERATED CONTRASTIVE LEARNING FOR EDGE INTELLIGENCE
+8609
+Fig. 3.
+Overview of federated training framework. In the beginning of each
+global round, the server ﬁrst sends the global model to clients (step 1). Each
+local client then performs local training based on its own training data (step
+2). Next, after the local training is ﬁnished, each client send the updated
+model parameters to the server for aggregation (step 3). Finally, the model
+parameters are averaged at the server (step 4).
+overview of the FL framework is shown in Fig. 3. The training
+process can be summarized as follows.
+The typical process of FL is based on the setting where
+each client i has a heterogeneous and privacy-sensitive data
+set, denoted by Di = (xi, yi), of size Di, where xi and yi
+represent the feature space and corresponding label of the ith
+client, respectively. The goal is to coordinate the collaboration
+between clients and the edge server to train a shared model
+F(ω; xi) for each client. The empirical risk (e.g., cross-entropy
+loss) of the client i with one-hot encoded labels can be deﬁned
+as follows [26]:
+fi(ω) = −
+C
+
+j=1
+1y=j log pj(F(ω; xi); yi)
+(1)
+where 1(·) is the indicator function, ω is the shared model
+parameters of global model, C is the number of classes belong-
+ing to label space [C] = {1, . . . , C}, and pj(F(ω; xi); yi)
+denotes the probability of data sample (xi, yi) being classi-
+ﬁed as the jth class. In addition, the local training of each
+client is to minimize the local loss Li as follows:
+Li(ω) = 1
+Di
+
+i∈Di
+fi(ω).
+(2)
+The global objective is to minimize the loss function across
+heterogeneous clients as follows:
+arg min
+ω
+L(ω) =
+
+i∈[N]
+Di
+
+i∈[N] Di
+Li(ω)
+(3)
+where
+[N]
+denotes
+the
+set
+of
+distributed
+clients
+with
+[N] = {1, . . . , N}.
+B. SGD Optimization
+As the ﬁrst FL optimization algorithm, FedAvg requires
+multiple global iterations during the training process. Most
+subsequent works [10], [11], [12], [13], [14], [15] follow
+this training framework, including our work. In each global
+iteration process, each selected client participates in train-
+ing and performs local stochastic gradient descent (SGD) to
+optimize its local objective
+ωt+1 = ωt −η∇Li(ωt)
+(4)
+where η is the learning rate, ∇Li(•) is the loss gradient of
+client i, and ωt is the updated result of the global model in
+the previous round.
+C. Problem Formulation
+The system model is shown in Fig. 4, and the illustra-
+tion of the transmission of model parameters between clients
+and the edge server is omitted for simplicity. In each global
+iteration, the server needs to not only receive model parame-
+ters from clients and perform model parameters averaging but
+also receive prototype knowledge from clients and aggregate
+them (the strategy for prototype aggregation will be explained
+in Section IV-B). Finally, the aggregated model parameters and
+global prototype pool are returned to local clients participating
+in the training, while the next iteration begins until conver-
+gence. In summary, during the model training phase, clients
+i and j with heterogeneous data sets Di and Dj, respectively,
+need to simultaneously transmit their own model parameters
+and their own prototypes based on the features extracted from
+the feature extraction layers (a.k.a the encoder) to be used in
+the next global round. Note that the prototypes are the out-
+put after clustering, rather than directly averaging the output
+of the feature extractor layers. The MLP includes the fully
+connected (FC) layers and a decision-making layer (a.k.a the
+classiﬁer). In order to extract better features, the former can
+be an ordinary convolutional layer or a pretrained network,
+and the latter is used to map the output of the former from
+one latent space to another for further representation learning.
+Each client aims to minimize the typical supervised learn-
+ing loss LS, while also minimizing the distance between their
+local representations and the global prototype pool for sam-
+ples belonging to the same class space, and maximizing the
+distance for samples not belonging to the same class space.
+This can be denoted as LR. During the model inference stage,
+the clients can use their individual updated local representa-
+tions to compare with the updated global prototype pool for
+model inference. We have marked these entities in the system
+model and given the basic prototype calculation process.
+Speciﬁcally, motivated by prototype learning in FL and the
+observation in their works [53], [54], the goal of this article
+is ﬁrst to learn multiprototype representations for each class
+space through the federated training process, and then perform
+the ﬁnal model inference based on these prototypes. Formally
+arg min
+j
+∥c −ui∥,
+ui ∈Uj,
+j ∈[C]
+(5)
+where c is a local representation of one client, Uj is deﬁned
+to aggregate the multiple prototypes for each client belong-
+ing to jth class, and ui denotes one instance in corresponding
+aggregated global prototype set Uj. Finally, the prediction can
+be made by measuring the distance between one local repre-
+sentation c and each aggregated prototypes set Uj and then
+choosing the jth label with the smallest distance as the ﬁnal
+prediction.
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+8610
+IEEE INTERNET OF THINGS JOURNAL, VOL. 11, NO. 5, 1 MARCH 2024
+Fig. 4.
+Overview of the proposed multiprototype-based FL framework (here illustrated with K = 2 prototypes). In each global round, clients not only transmit
+their model parameters but also the calculated multiple prototypes by k-means to the server for aggregation. The aggregated prototypes set (the aggregated
+prototypes set is also called the global prototype pool) is then sent back to each client along with updated model parameters for the next global iteration.
+Finally, the clients update their local models by minimizing the loss of typical supervised learning loss Ls and the distance between the global prototype pool
+and local representations LR in a contrastive way, repeating the above process until convergence.
+IV. MULTIPROTOTYPE FEDERATED LEARNING
+In
+this
+section,
+we
+design
+an
+MP-FedCL
+algorithm
+to
+improve
+the
+performance
+of
+federated
+training.
+In
+Section IV-A, we give the method for calculating multiple
+prototypes, which is used to compute multiple prototypes in
+the embedding space for each class based on k-means clus-
+tering, thus obtaining a relatively full representation for each
+class. Then, a strategy for multiple prototypes aggregation is
+proposed in Section IV-B to collect all class-related knowledge
+shared by all clients. The objective function of the proposed
+algorithm is presented in Section IV-C. During the model infer-
+ence stage, predictions are made based on the distance from
+the prototypes rather than through a classiﬁer in Section IV-D.
+A. Multiprototype Calculation
+The feature extraction layer and the decision-making layer
+in the MLP are usually two core parts of the deep learn-
+ing model. The former is mainly used to extract feature
+information from the input space, and the latter makes the ﬁnal
+prediction decision based on the learned feature information.
+For any client i, we denote its feature extraction layers and the
+MLP as fe(ωe; xi) and fc(ωc; xi), then the embedding space of
+its jth class instance can be calculated as
+vi,j =
+
+fe(ωe; xi) | xi ∈Di,j
+
+(6)
+where Di,j is a set of Di that belongs to the jth class, and vi,j
+is the embedding space of jth class.
+In order to calculate multiple prototypes for each class,
+we iteratively cluster vi,j into k clusters based on k-means
+algorithm, which is an effective unsupervised algorithm for
+clustering and has been proven to converge to at least a local
+optimum after a small number of iterations [55]. Based on
+the standard iteration of k-means, similarly we also randomly
+select the k centroids in the ﬁrst iteration. We then calculate
+the centroid to which each sample in Di,j should belong to,
+and repeat this process until the centroid does not change or
+changes only slightly. The multiple prototypes used in our
+method are deﬁned as centroids obtained through k-means
+clustering. Speciﬁcally, we apply k-means clustering to the
+embeddings of each class, and each resulting centroid is con-
+sidered a prototype for that class in the embedding space.
+Thus, multiple prototypes of class j can be deﬁned as follows:
+uk
+i,j = Clustering
+
+vi,j
+
+,
+k ∈{1, . . . , K}
+(7)
+where K is the number of clusters, the output of Clustering(·)
+for the ith client of the jth class is denoted as
+ui,j where
+ui,j = {uk
+i,j | k ∈{1, . . . , K}}. Note that because our clustering
+algorithm is executed on the client side, we need to communi-
+cate prototypes with the server, but compared to the complete
+model parameters, the additional communication cost of proto-
+type communication is very small [19], [56], [57]. The model
+parameters and the corresponding multiprototypes, and their
+ratios are shown in Table II. The Ratio in Table II is deﬁned
+as the proportion of multiprototype to corresponding model
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+QIAO et al.: MP-FedCL: MULTIPROTOTYPE FEDERATED CONTRASTIVE LEARNING FOR EDGE INTELLIGENCE
+8611
+TABLE II
+COMPARISON BETWEEN MODEL PARAMETERS AND CORRESPONDING
+MULTIPROTOTYPE ON VARIOUS DATA SETS
+parameters, and its result indicates that multiprototype com-
+munication accounts for only a small fraction (less than 0.1)
+of model parameters. Note that the model architecture and the
+selection of K for multiprototype are discussed in detail in
+Section V.
+B. Multiprototype Aggregation
+The goal of multiprototype learning is to reduce the dis-
+tance of embedding space between local prototypes and the
+corresponding prototypes from the global prototype pool. After
+receiving the clustering results as computed in (7), the server
+groups these prototypes (also denotes k centroids) by class as
+a global prototype pool. This pool is denoted as U = {U1,
+U2, . . . , UC}, where each group contains prototypes from the
+same class but from different clients. Formally
+Uj =
+
+uk
+i,j | i ∈[N]
+	
+, k ∈{1, . . . , K}
+(8)
+where Uj denotes the set of clients that own multiple proto-
+types of class j. Through this aggregation mechanism,
+the
+prototypes are grouped according to their respective class
+labels. The resulting global pool summarizes all class-related
+knowledge shared by all clients, allowing us to effectively
+utilize information from various clients while maintaining
+classwise separation.
+After the aggregation process, the server sends back the
+global prototype pool to local clients, which is used to guide
+their local training in the next global round. However, some
+clients’ classes may be missing [26], [58], [59] or underrepre-
+sented (i.e., classes with very few samples) [60], [61], [62]. In
+such cases, the global prototype pool can be utilized to ﬁll in
+the missing classes and ensure that prototypes for all classes
+have the same number of prototypes for the learning process.
+Here, inspired by the single prototype padding approach used
+in various tasks [27], [63], [64], we introduce a multiprototype-
+based padding procedure to achieve a balanced representation
+of all class prototypes per client. By introducing this prototype
+padding process, each client is guaranteed to have a consis-
+tent and balanced set of prototypes for all classes, regardless of
+their respective data distribution. Speciﬁcally, for the averag-
+ing process, the prototypes from different clients are matched
+based on their respective class labels, which means that proto-
+types belonging to the same class but originating from different
+clients are grouped together. Next, we perform the averaging
+of prototypes by summing up all the prototypes belonging to a
+particular group and then dividing the sum by the total number
+of prototypes in that group. Formally
+Uj = 1
+Ni
+Ni
+
+i=1
+ui, ui ∈Uj
+(9)
+where Uj represents the averaged value belonging to global
+prototype set Uj, Ni denotes the number of instance belonging
+to Uj.
+Subsequently, we implement the prototype padding proce-
+dure to ensure that each client has a consistent and balanced
+set of K prototypes for every class, which can be formulated
+as follows:
+∀k ∈{1, . . . , K},
+uk
+i,j =
+
+Uj, if |ui,j| < K
+uk
+i,j, if |ui,j| = K
+(10)
+where |ui,j| is the number of ui,j for class j of ith client. We tra-
+verse all K possible prototypes uk
+i,j for class j of the ith client.
+For each k, we check the number of prototypes |ui,j| currently
+available for class j of the ith client. If |ui,j| is less than K, we
+apply prototype padding by replacing uk
+i,j with the averaged
+prototype Uj. This ensures that each client has K prototypes
+for each class, even in cases where some prototypes might be
+missing or underrepresented. On the other hand, if |ui,j| equals
+K, it indicates that the client already has the required number
+of prototypes for class j, and no padding is needed. In this
+case, we keep the kth prototype uk
+i,j unchanged.
+C. Objective Function
+As shown in Fig. 4, our proposed network architecture con-
+sists of two loss functions. The ﬁrst one, LS, is the loss
+of typical supervised learning tasks, which can be computed
+using (3). The second one, LR, is our proposed supervised
+contrastive loss term. After receiving the global prototype pool
+from the server, the objective of local clients, LR, is to align
+their local representations with the corresponding prototype
+in the global prototype pool, while simultaneously pushing
+away dissimilar prototypes from themselves. As such, each
+client can beneﬁt from other clients. We deﬁne the supervised
+contrastive loss [65] as
+LR =
+
+i∈Di
+−1
+KN
+N
+
+i=1
+K
+
+k=1
+1
+|P(y)|
+
+p∈P(y)
+log
+exp
+
+vi • uk
+p/τ
+
+
+a∈[C] exp
+
+vi • uka/τ
+
+(11)
+where the
+• symbol denotes the inner (dot) product, τ is a
+scalar temperature hyperparameter (the smaller the tempera-
+ture coefﬁcient, the more focused it is on difﬁcult samples.),
+vi represents the local embedding of client i, P(y) is the set
+of labels distinct from y and the size of P(y) is |P(y)|, and k
+denotes one element in a certain global prototype set and the
+size of one set is K.
+Therefore, the global objective for the network can be
+formulated as
+L(ωi | Di) = LS(F(ωi; xi); yi) + LR.
+(12)
+A more detailed model training pseudocode for MP-FedCL is
+shown in Algorithm 1. The inputs of this algorithm are het-
+erogeneous data sets and some training parameters. After the
+network is initialized, the federated training process is per-
+formed from lines 3–20. The multiple prototypes calculation
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+8612
+IEEE INTERNET OF THINGS JOURNAL, VOL. 11, NO. 5, 1 MARCH 2024
+Algorithm 1 MP-FedCL for Federated Training
+Input:
+Dataset Di(xi, yi) of each client, learning rate η,
+Number of local clients N, number of local epoch E,
+Number of global communication rounds T,
+Number of clusters k.
+Edge server executes:
+1: Initialize ω0
+2: Initialize global prototype set U for all classes
+3: for t = 1, 2, . . . , T do
+4:
+for i = 0, 1, . . . , N in parallel do
+5:
+Send global model ωt and global prototype set U to
+client i
+6:
+ωt
+i, uk
+i,j ←LocalUpdate(ωt
+i, U)
+7:
+U ←{{uk
+i,j | i ∈[N], j ∈[C]}, k ∈{1, . . . , K}}
+8:
+end for
+9:
+ωt+1 ←N
+i=1
+|Di|
+|D| ωt
+i
+10: end for
+LocalUpdate(ωt
+i, U):
+11: for each local epoch do
+12:
+for each batch (xi; yi) of Di do
+13:
+vi,j ←fei(ωt
+ei; xi)
+14:
+LS ←CrossEntropyLoss(F(ωi; xi); yi)).
+15:
+Calculate LR according to Eq. (11)
+16:
+ωt
+i ←ωt
+i −η∇(LS + LR)
+17:
+end for
+18: end for
+19: uk
+i,j ←Clustering(vi,j)
+20: return ωt
+i, uk
+i,j
+and aggregation are dealt with in lines 19 and 7, respectively.
+In each global round, the local representations for each client
+are calculated in line 13. The supervised learning task for them
+is computed in line 14, and the regularization term is calcu-
+lated in line 15. After the SGD in the local clients has been
+performed in line 16, each client then sends their own updated
+model parameters and calculated multiple prototypes in line 20
+back to the server for model parameters aggregation in line 9
+and multiple prototypes aggregation in line 7, repeating the
+above iteration process for T rounds until convergence.
+D. Model Inference
+Based on the ﬁndings of the survey in [66], it is revealed
+that the lower test accuracy of models in FL environ-
+ments can be attributed primarily to the later layers of the
+model. Speciﬁcally, the classiﬁer’s predictions have the great-
+est impact on the model’s accuracy. As a result of this ﬁnding,
+we propose an innovative approach that utilizes the output
+before the decision-making layer in the model for making
+predictions instead of relying solely on the classiﬁer. This new
+approach can be expressed mathematically as a reformulation
+of (5)
+ˆy = arg min
+j
+∥fe(ωe; x) −ui∥,
+ui ∈Uj
+(13)
+where ˆy is the predicted label, fe(ωe; x) is the output of feature
+extraction layers (this symbol is originally denoted as c in (5),
+Algorithm 2 MP-FedCL for Model Inference
+Input: Test dataset of each client
+1: for each sample i in testing dataset do
+2:
+for each class j in U do
+3:
+for each instance k in class j do
+4:
+Compute the ℓ2 distance between fe(ωe; xi)
+and each instance in Uj
+5:
+end for
+6:
+Choose the smallest distance as a candidate-predicted
+label for class j according to Eq. (13)
+7:
+end for
+8:
+Collect all candidate-predicted labels
+9:
+Make ﬁnal predictions based on the smallest candidate
+prediction label
+10: end for
+i.e., the output of feature extraction layers is represented as the
+local representation), and ∥• ∥denotes the ℓ2-norm of a vec-
+tor. The prediction can be made by measuring the ℓ2 distance
+between the local representation fe(ωe; x) and the aggregated
+prototypes set Uj of jth class. A more detailed model infer-
+ence pseudocode for MP-FedCL is shown in Algorithm 2.
+For each client, each sample in its test data set ﬁrst calculates
+the distance to each instance of an aggregated global proto-
+type set in line 4 and then chooses the smallest distance as
+a candidate-predicted label in line 6. Later, all the candidate-
+predicted labels are collected in line 8. Finally, the prediction
+can be made based on the smallest candidate-predicted label in
+line 9. We also provide a convergence analysis of MP-FedCL
+in Appendix-A.
+E. Complexity Analysis
+Since Algorithm 1 in MP-FedCL involves many similar
+global iterations, we analyze the time complexity of only
+one such iteration for simplicity. In Algorithm 1, each global
+iteration mainly consists of the following steps: 1) communica-
+tion round; 2) local model training; and 3) k-means clustering.
+The algorithm executes a total of T global communication
+rounds. In each round, the global model ωt and the global
+prototype set U are sent to each of the N clients in parallel.
+Therefore, the time complexity for each round can be consid-
+ered as O(1). For the local model training process, each client
+performs local updates for a ﬁxed number of local epochs E.
+For the convenience of analysis, let us consider a FC neural
+network where each layer has the same number of param-
+eters, denoted as M. Without loss of generality, we assume
+that the data samples of each client are the same D, given
+that the batch size is expressed as B, the total number of
+iterations required to complete one local iteration is D/B. In
+addition, since the computation in each layer can be viewed as
+a matrix-vector multiplication (note that the matrix calculation
+mainly involves weight parameters, we ignore bias parameters
+calculation for simplicity), the time complexity for forward
+propagation of the FC network in local model training can
+be expressed as O(E · D/B · Llayer · M2), where Llayer repre-
+sents the number of layers in the FC network. Overall, the
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+QIAO et al.: MP-FedCL: MULTIPROTOTYPE FEDERATED CONTRASTIVE LEARNING FOR EDGE INTELLIGENCE
+8613
+TABLE III
+MODEL ARCHITECTURE FOR MNIST
+time complexity for forward propagation can be simpliﬁed
+as O(DM2); here, certain variables E, B, and Llayer can be
+considered as constants since E, B, and Llayer ≪M hold typi-
+cally. Therefore, the time complexity for local model training
+is O(DM2 +DM3), where the time complexity for back prop-
+agation is O(DM3). After local model training, each client
+performs k-means clustering to update its embedding space
+vi,j for each class. The time complexity for k-means algorithm
+is typically O(E ·I ·K ·D·C ·M), where E denotes the number
+of local epochs, I is the number of iterations, K is the number
+of clusters, D is the number of data points, C is the number
+of classes, and M is the dimensionality of the output before
+the decision-making layer (here, the output is M because it
+is assumed that parameters of each layer are M). Similarly,
+certain variables like E, I, K, and C can be considered as con-
+stants since E, I, K, C ≪M, then the time complexity for
+the proposed multiprototype calculation can be simpliﬁed to
+O(DM). Compared with local model training, the time com-
+plexity for multiprototype calculation is relatively low. For
+Algorithm 2, after the embedding space is calculated, for a
+certain test sample, the time complexity for model inference
+is O(K · C). We assume the number of test samples for each
+client is D′, then the total time complexity for model infer-
+ence is linear as O(D′) since K and C can be considered as
+constants.
+V. EXPERIMENTS
+We now present the experimental results of the proposed
+multiprototype-based FL strategy. We implement MP-FedCL
+on different data sets, and models and compare with the
+most commonly used baselines, including Local, FedAvg [6],
+FedProx [9], and FedProto [19]. We ﬁrst introduce the data
+sets and local models in Section V-A. Then, the implementa-
+tion details are provided in Section V-B. The selection of K for
+different data sets is discussed in Section V-C. In Section V-D,
+the test accuracy of different baselines under different data
+sets with different non-IID settings is illustrated. The robust-
+ness and communication efﬁciency comparison are shown in
+Sections V-E and V-F, respectively.
+A. Data Sets and Local Models
+We conduct experiments on four popular benchmark data
+sets: 1) MNIST [67]; 2) Digit-5 [68]; 3) Ofﬁce-10 [69]; and
+4) DomainNet [70] to verify the potential beneﬁts of multiple-
+prototype-based FL for edge network intelligence. MNIST is
+the handwritten digit recognition data set. It contains 10 dif-
+ferent classes with 60 000 training samples and 10 000 test
+samples. Digit-5 is a collection of images of handwritten digits
+from the ﬁve most popular data sets, including SVHN, USPS,
+MNIST, MNIST-M, and SynthDigits. Ofﬁce-10 consists of
+images from four different ofﬁce environments, each contain-
+ing a distinct set of classes: 1) Amazon (A); 2) Webcam (W);
+3) DSLR (D); and 4) Caltech (C). DomainNet is a large-scale,
+multidomain image classiﬁcation data set. It consists of over
+600 000 images from 345 categories, divided into six domains:
+1) clipart; 2) infograph; 3) painting; 4) quickdraw; 5) real; and
+6) sketch. Each domain contains a distinct set of classes and
+has its own characteristics and challenges.
+For local models, a 2-layer encoder network with two FC
+layers and an MLP with two FC layers are considered for
+MNIST, as shown in Table III. For these data sets that are
+more complex than MNIST, such as Digit-5, Ofﬁce-10, and
+DomainNet, we use ResNet18 [71], which has been pre-
+trained on DomainNet, as the encoder. Please refer to their
+work [72] for more details about the pretrained model. We
+employ the same MLP architecture as in MNIST for these
+data sets. The output dimension of the encoder and the input
+of the decision-making layer of the MLP network are 512
+and 256, respectively. Note that for fair comparisons, all
+baselines adopt the same network architecture as MP-FedCL,
+including MLP.
+B. Implementation Details
+We investigate two different non-IID settings to mimic non-
+IID scenarios:
+1) Feature Distribution Skew: Clients have the same label
+distributions but different feature distributions;
+2) Label Distribution Skew: Clients have different label
+distributions but the same feature distribution, which is
+simulated by Dirichlet distribution Dir(α) [21].
+Here, the more skewness among clients is, the smaller the
+value α is, and vice versa. The label distribution skewness
+α is set to 0.05 for all federated training algorithms unless
+explicitly speciﬁed.
+We compare our proposed method with popular FL algo-
+rithms, including Local, where local models are updated in
+each global round without any communication with others,
+FedAvg [6], FedProto [19], and FedProx [9]. We use 5, 4,
+and 6 clients for Digit-5, Ofﬁce-10, and DomainNet in the
+feature distribution skewed setting, respectively. In the label
+distribution skewed setting, the number of clients for Digit-
+5, Ofﬁce-10, and DomainNet is all 5. We use ﬁve clients for
+MNIST unless explicitly speciﬁed. The size of MNIST for all
+experiments is 2000 for simplicity. The visualization results of
+all data sets with label non-IID and feature non-IID settings
+are shown in Figs. 5 and 6, respectively.
+We use PyTorch [73] to implement all the baselines.
+Following [9] and [27], the grid search is used to select the
+optimal hyperparameters for model training. Speciﬁcally, we
+use the SGD optimizer for all baselines, and the SGD momen-
+tum is set to 0.5. The other training parameters are set to be
+B = 32, E = 1, τ = 0.07, η = 0.01 with decay rate =
+0.95, which denotes local batch size, local epochs, temper-
+ature, learning rate, and learning rate decay per iteration,
+respectively.
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+8614
+IEEE INTERNET OF THINGS JOURNAL, VOL. 11, NO. 5, 1 MARCH 2024
+Fig. 5.
+Illustration of the label non-IID setting on (a) MNIST, (b) Digit-5, (c) Ofﬁce-10, and (d) DomainNet data sets. The same color represents the same
+client, and each client samples from their respective data set according to Dir(0.05). The sampling results have the same feature distribution but different label
+distribution.
+Fig. 6.
+Illustration of the feature non-IID setting on (a) Digit-5, (b) Ofﬁce-10, and (c) DomainNet data sets. The different color represents clients with
+different data sets, and the visualization result shows that each client shares the same label distribution but has different feature distribution.
+Fig. 7.
+Average test accuracy (%) under the label distribution skew with
+Dir(0.05) on four baseline data sets with K ranging from 2 to 4.
+C. Choosing K
+The selection of K is performed in the feature space of
+samples in different data sets. Intuitively, the feature space
+of samples from different data sets is different; thus the
+number of K is associated with speciﬁc data sets. Here,
+we adopt a similar way as [30] to maintain a uniform
+value for K across classes for simplicity, although this value
+may vary for different classes. Note that since we focus
+on the ﬁxed-prototype strategy in this article, we initially
+explore a dynamic prototype-based scheme for completeness.
+Speciﬁcally, we study the effect of different K ∈{2, 3, 4}
+under label distribution skew through heuristic selection and
+then apply the most appropriate K value to all experiments
+under different non-IID settings. Similar heuristic selection
+method applied in the feature space has been utilized in
+many papers [16], [31], [74]. We run three trials with dif-
+ferent random seeds and report the average test accuracy
+on validation data sets, as shown in Fig. 7. The number of
+communication rounds is set to 60 for all data sets. It can
+be found that the appropriate K values for MNIST, Digit-5,
+Ofﬁce-10, and DomainNet are 2, 4, 4, and 3, respectively. The
+hyperparameters used are presented in Table IV.
+D. Accuracy Comparison
+In this section, given that the number of K may vary across
+different classes, we attempt to explore another feature cluster-
+ing method for feature clustering, called density-based spatial
+clustering of applications with noise (DBSCAN) [75], which
+is different from k-means as it does not require specifying
+the number of clusters beforehand. It automatically deter-
+mines the number of clusters based on the data’s density and
+has been applied in the image ﬁeld [76], [77], [78], [79],
+[80]. Here, we combine the DBSCAN clustering method with
+our proposal that each client uses DBSCAN for clustering
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+QIAO et al.: MP-FedCL: MULTIPROTOTYPE FEDERATED CONTRASTIVE LEARNING FOR EDGE INTELLIGENCE
+8615
+TABLE IV
+EXPERIMENTAL PARAMETERS
+TABLE V
+TOP-1 AVERAGE TEST ACCURACY (%) OF MP-FEDCL AND OTHER
+BASELINES ON DIGIT-5 UNDER Feature Non-IID SETTING
+TABLE VI
+TOP-1 AVERAGE TEST ACCURACY (%) OF MP-FEDCL AND OTHER
+BASELINES ON VARIOUS DATA SETS UNDER Label Non-IID SETTING
+instead of k-means, terming it DP-FedCL, and compare it with
+MP-FedCL and other baselines.
+Speciﬁcally, we compare our method with the baselines
+under the feature non-IID and label non-IID settings where
+feature non-IID means the feature distribution is skewed while
+the label distribution is IID, and label non-IID means the label
+distribution is skewed while the feature distribution is IID. For
+the sake of fair comparison, we conduct experiments with the
+same hyperparameters, run three trials, and report the mean
+and standard derivation. The best results are shown in bold.
+Table V reports the average test accuracies of our method
+and baselines in the mean(std) format under the feature
+non-IID setting. The results indicate that MP-FedCL achieves
+higher test accuracy and smaller standard deviation compared
+to most cases, with an improvement of approximately 4.6%
+over the second-highest test accuracy. In addition, Table VI
+presents our results and those of the baselines under the label
+non-IID setting. In this setting, we use SP-FedCL, which refers
+to our training strategy that employs a single prototype (i.e.,
+K = 1). Speciﬁcally, we do not use any clustering algorithm
+in (7), but instead take the mean value of the feature space
+belonging to the same label as the prototype of the label, which
+is also known as a single prototype. The results show that our
+method enjoys relatively signiﬁcant advantages over almost all
+other baselines, and about at least 10.4% improvement in test
+accuracy compared to most cases. Moreover, since the cost of
+communication has been considered to be the bottleneck of
+FL, we also report the number of communication rounds for
+each algorithm in Table VI accordingly. It can be seen that
+our proposal and other methods based on our strategy only
+need relatively few communication rounds compared to oth-
+ers. For DP-FedCL, the only difference from MP-FedCL is
+that it dynamically selects the number of clusters using the
+DBSCAN algorithm on each local client. The results indi-
+cate that clustering using k-means and assigning an equal
+number of prototypes to each class outperforms the adopted
+dynamic selection approach. We conjecture that while dynam-
+ically selecting the number of clusters might lead to varying
+prototype assignments for each class, it can also introduce an
+imbalance in class representations, resulting in biased model
+learning.
+E. Robustness Comparison
+Different Degrees of Label Non-IID: Considering that label-
+ing non-IID is a common challenge in FL, designing an
+algorithm that is robust to various heterogeneous data is crucial
+for deploying the FL algorithm in real applications. Therefore,
+we compare our method with several baselines under different
+levels of label heterogeneity to verify the robustness of differ-
+ent algorithms to data heterogeneity. As shown in Fig. 8, the
+α decreases from 1.0 to 0.1, controlling the degree of label
+heterogeneity, which means that labels are distributed more
+and more heterogeneously among clients. We report the aver-
+age test accuracy for Digit-5 under different heterogeneities in
+Fig. 8(a). Note that since our proposal requires only a small
+number of iterations, therefore the number of communication
+rounds for MP-FedCL and SP-FedCL is set to 60, and 100
+for others. The results show that our proposal outperforms all
+approaches under different heterogeneous settings in terms of
+test accuracy, and enjoys a relatively small deviation compared
+to those in most cases.
+Speciﬁcally, in comparison to the performance under all
+heterogeneity settings, our method achieves at least an 8.8%
+and 2.0% increase in accuracy compared to the popular
+baseline FedAvg and state-of-the-art FedProto, respectively.
+To highlight the advantage of multiprototype learning over
+single-prototype learning, we conduct experiments using the
+same learning strategy as the former, but with only a sin-
+gle prototype, which we refer to as SP-FedCL. The results
+show that our method consistently outperforms SP-FedCL by
+approximately 2.0% in average test accuracy across various
+scenarios. These results underscore the effectiveness of our
+multiprototype learning approach in FL, leading to improved
+robustness compared to both single-prototype and state-of-
+the-art methods. Interestingly, in some scenarios (such as
+α = 0.1), the performance of FedAvg is lower than that of
+Local, which shows that FedAvg does not always perform
+well in dealing with heterogeneous scenarios. It would be an
+intriguing research direction to explore the synergies between
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+8616
+IEEE INTERNET OF THINGS JOURNAL, VOL. 11, NO. 5, 1 MARCH 2024
+Fig. 8.
+Illustration of the average test accuracy (%) on (a) Digit-5 and
+(b) Ofﬁce-10 under different levels of label non-IID settings.
+local optimization and federated optimization, allowing us to
+harness the advantages offered by both approaches.
+Additionally, in Fig. 8(b), we present similar results for
+Ofﬁce-10 under various degrees of heterogeneity. The ﬁnd-
+ings further demonstrate that, in the majority of cases, our
+proposed method outperforms all other approaches in terms of
+test accuracy, highlighting its advantage in dealing with data
+heterogeneity. Speciﬁcally, compared to SP-FedCL, FedProto,
+and FedAvg, our method shows improvements of at least 0.3%,
+1.4%, and 7.5%, respectively, across different label non-IID
+settings. However, it is worth noting that almost all meth-
+ods, including ours, encounter signiﬁcant deviations under
+extremely heterogeneous settings like Dir(0.1) and Dir(0.2).
+This can be attributed to the relatively limited number of train-
+ing samples available in Ofﬁce-10 compared to Digit-5, which
+may lead to higher ﬂuctuations in performance. Moreover, it
+should be noted that similar results are observed in this setting,
+with FedAvg performing worse than Local in most cases.
+Different Numbers of Clients: In addition to exploring the
+robustness of our proposed algorithm to different levels of
+data heterogeneity, we also aim to investigate its robustness
+Fig. 9.
+Illustration of the average test accuracy (%) on (a) MNIST and
+(b) Digit-5 based on Dir(0.1) with the varying numbers of clients.
+to varying numbers of participating clients in the FL set-
+ting. As depicted in Fig. 9, we demonstrate the robustness
+of our proposed method by evaluating its performance across
+an increasing number of clients, ranging from 5 to 40, with
+labels distribution following Dir(0.1). The average test accu-
+racy for MNIST and Digit-5 under the various number of
+clients is shown in Fig. 9(a) and (b), respectively. The illustra-
+tion demonstrates that our proposed method exhibits a distinct
+advantage over FedAvg in terms of test accuracy across dif-
+ferent numbers of clients. Moreover, our approach maintains a
+relatively small deviation compared to FedAvg in most cases,
+further highlighting its robustness against various numbers of
+clients.
+Speciﬁcally, regarding the results of MNIST displayed in
+Fig. 9(a), our proposed method achieves a remarkable increase
+of at least 7.2% in test accuracy compared to the baseline
+FedAvg when varying the number of clients. It is interesting to
+note that, compared to both FedAvg and MP-FedCL, FedProto
+exhibits inferior performance across all numbers of participat-
+ing clients. Moreover, the performance of FedProto decreases
+as the number of clients increases, and its peak performance
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+QIAO et al.: MP-FedCL: MULTIPROTOTYPE FEDERATED CONTRASTIVE LEARNING FOR EDGE INTELLIGENCE
+8617
+TABLE VII
+TOP-1 AVERAGE TEST ACCURACY (%) OF MP-FEDCL AND OTHER
+BASELINES ON DIGIT-5 AND OFFICE-10 UNDER Label Non-IID WITH
+DIR(0.5) AND Feature Non-IID
+is only about half of that of MP-FedCL. This observation
+strongly suggests that the approach of not transmitting the
+model parameters, as adopted in FedProto, may not be suit-
+able for models trained from scratch. Similarly, in the case of
+Digit-5, as shown in Fig. 9(b), our proposal consistently out-
+performs both FedAvg and FedProto in terms of test accuracy
+across different numbers of clients. To be precise, our method
+demonstrates an improvement of at least 18.73% and 10.99%
+compared to FedAvg and FedProto, respectively. Furthermore,
+it is worthwhile to mention that our proposed method exhibits
+lower accuracy variance compared to the other methods in the
+majority of cases, whereas FedAvg experiences higher ﬂuc-
+tuations. This observation could be attributed to the inherent
+complexity of the feature space in Digit-5, which is likely
+more intricate compared to the MNIST data set. Consequently,
+the variations between clients in Digit-5 become more pro-
+nounced, leading to the observed differences in performance
+for FedAvg. In contrast, prototype-based schemes, such as
+FedProto and MP-FedCL, show more robust results (in terms
+of accuracy variation) across different numbers of participat-
+ing clients in the FL setting. This indicates that an approach
+based on prototypes successfully handles heterogeneity to a
+certain extent.
+F. Communication Efﬁciency Comparison
+As FL involves training models across distributed clients,
+ensuring a fast and efﬁcient convergence rate is of great impor-
+tance. A faster convergence rate implies that the participating
+clients can converge to the optimal with higher accuracy in
+fewer communication rounds, reducing the overall communi-
+cation and computational overhead. Therefore, in this section,
+we evaluate the convergence rate of our proposal and conduct
+a comprehensive investigation with other benchmarks.
+Table VII presents the top-1 average test accuracy (%)
+of different methods, including Local, FedAvg, FedProto,
+DP-FedCL, SP-FedCL, and MP-FedCL, on two data sets:
+1) Digit-5 and 2) Ofﬁce-10 and the corresponding communica-
+tion rounds. The evaluation is performed under the condition
+of label non-IID with Dir(0.5) and feature non-IID. From the
+results in Table VII, we observe that MP-FedCL consistently
+achieves the highest top-1 average test accuracy and fewer
+TABLE VIII
+TOP-1 AVERAGE TEST ACCURACY (%) OF MP-FEDCL AND OTHER
+BASELINES ON DIGIT-5 AND OFFICE-10 UNDER Label Non-IID WITH
+DIR(0.5) AND Feature Non-IID
+communication rounds compared to other methods in most
+cases. Speciﬁcally, Local achieves the lowest accuracy since
+it does not participate in FL rounds (0 communication rounds).
+The methods based on federated training, such as FedAvg and
+FedProto, have shown improved performance, but they require
+a high number of communication rounds (130 communica-
+tion rounds). In contrast, MP-FedCL consistently outperforms
+the other federated methods in most cases and only requires
+about half the number of communication rounds (60 com-
+munication rounds) of FedAvg, showcasing its capability to
+learn from distributed data efﬁciently. In other words, achiev-
+ing similar performance to the baselines MP-FedCL requires
+fewer computational resources. Moreover, we observe a sim-
+ilar phenomenon as in Table VI that DP-FedCL is still lower
+than the single-prototype scheme and our proposal in this set-
+ting. However, it is worthwhile to note that other schemes for
+dynamically selecting prototypes may potentially outperform
+our current approach, which leaves for our future work.
+Table VIII shows the top-1 average test accuracy of
+MP-FedCL and other baselines on Digit-5 and Ofﬁce-10
+under label non-IID with Dir(0.5) and feature non-IID. All
+algorithms are compared under similar training times. The
+results show that MP-FedCL achieves comparable or supe-
+rior performance compared to baselines. In other words,
+MP-FedCL can still achieve competitive performance under
+approximately the same computational resources. In addi-
+tion, we compare the average test accuracy of our proposed
+MP-FedCL with FedProto and SP-FedCL per global round
+during training based on different kinds of heterogeneous
+settings (including feature non-IID and label non-IID) after
+several runs with different random seeds, as shown in Fig. 10.
+Both subﬁgures demonstrate that our method outperforms
+them in terms of test accuracy and communication efﬁciency.
+Speciﬁcally, we evaluate our proposal with FedProto and
+SP-FedCL on Digit-5 under label non-IID with Dir(1.0). It
+shows that our method outperforms theirs by approximately
+2.74% and 1.40% in test accuracy, respectively, and also
+leads them the way in convergence rate. Similar results are
+available in Fig. 10(b), which is the test accuracy of Ofﬁce-
+10 with feature non-IID. It demonstrates that our proposal
+still outperforms theirs by 3.47% and 4.92% in terms of
+test accuracy, and they lag behind us by a signiﬁcant mar-
+gin in terms of convergence rate. This indicates the potential
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 
+8618
+IEEE INTERNET OF THINGS JOURNAL, VOL. 11, NO. 5, 1 MARCH 2024
+Fig. 10.
+Illustration of the average test accuracy (%) in each global round
+on (a) Digit-5 and (b) Ofﬁce-10, respectively. The upper subﬁgure result is
+reported under label non-IID with Dir(1.0), and the below is reported under
+feature non-IID.
+advantages of using multiprototype learning in handling het-
+erogeneous tasks in FL, and we believe that multiprototype
+learning based on architectures, such as transformers, will be
+a promising research direction in the future. Moreover, it can
+be expected that combining strategies aimed at accelerating
+k-means calculation and other privacy-preserving techniques
+with our strategy will further make contributions to the FL
+community.
+VI. CONCLUSION
+In this article, we have introduced multiprototype learning
+into the FL framework, and at the same time, a contrastive
+learning strategy is applied to multiprototype learning to make
+full use of multiprototype knowledge. First, a clustering-based
+multiprototype calculation approach has been proposed. In
+order to better leverage the knowledge from each client, we
+then have proposed a contrastive learning strategy that encour-
+ages clients to learn class-related knowledge from others in
+each global round through multiprototype exchange, while
+reducing the absorption of class-unrelated knowledge. Further,
+we have introduced a multiprototype-based model inference
+strategy into FL. This strategy also provides the potential for
+fast model training in distributed edge networks, as only a
+small amount of training is required when adding a new client,
+to compare its prototype with the trained prototypes in the
+global prototype pool for fast and correct predictions. Finally,
+extensive experiments on four data sets demonstrate that our
+proposal has a robust performance against label and feature
+heterogeneity in terms of test accuracy and communication
+efﬁciency. Compared to several baselines, our test accuracy
+improves by about 4.6% and 10.4% under feature and label
+non-IID, respectively.
+APPENDIX
+A. Convergence Analysis
+We provide a convergence analysis for MP-FedCL. We add
+a subscript to the local objective deﬁned in (2) indicating the
+number of global iterations and give the following assumptions
+following [5], [9], [19], and [43].
+Assumption 1 (Convex, ζ-Lipschitz, and L1-Smooth): The
+local loss objective Li(ω) is convex, ζ-Lipschitz, and L1-
+smooth for each client i
+∥Li
+
+ωt1
+
+−Li
+
+ωt2
+
+∥≤ζ∥ωt1 −ωt2∥
+∥∇Li
+
+ωt1
+
+−∇Li
+
+ωt2
+
+∥≤L1∥ωt1 −ωt2∥
+∀t1, t2 > 0, i ∈{1, 2, . . . , N}.
+(14)
+Based on Assumption 1, the deﬁnition of Li(ω), and triangle
+inequality, it is easy to prove that Li(ω) is convex, ζ-Lipschitz,
+and L1-smooth.
+Assumption 2 (δ-Local Dissimilarity): Each local loss func-
+tion Li(ωt) is δ-local dissimilar at ωt, i.e.,
+Ei∼Di
+
+∥∇Li(ωt)∥2
+≤∥∇L(ωt)∥2δ2
+∀t > 0, i ∈{1, 2, . . . , N}.
+(15)
+Ei∼Di[•] denotes the expectation over client i. ∇L(ωt) is the
+global gradient at the tth global round, which can be deﬁned
+as ∇L(ωt) = (1/Di) 
+i∈Di ∇Li(ωt). This assumption is to
+ensure the bounded similarity between the local model and
+the global model, thus ensuring the convergence of the model.
+Assumption 3 (Bounded Gradient): The expectation of the
+stochastic gradient of each client i is bounded by G, i.e.,
+E[∥∇Li(ωt; ξt)∥] ≤G
+∀i ∈{1, 2, . . . , N}.
+(16)
+Assumption 4 (Local Embedding L2-Lipschitz Continuous):
+Each local embedding function is L2-Lipschitz continuous, that
+is
+∥fe,i
+
+ωe,t1
+
+−fe,i
+
+ωe,t2
+
+∥≤L2∥ωe,t1 −ωe,t2∥
+∀t1, t2 > 0, i ∈{1, 2, . . . , N}.
+(17)
+Assumptions from 1 to 3 are standard, and have been made
+in different variants by previous works [5], [9], [19], [43].
+Further, the similar assumption deﬁned in Assumption 4 can be
+found in their works [19]. The main purpose of this assumption
+is to control the changing rate of the local embedding function,
+making it easier to study its behavior and properties.
+Authorized licensed use limited to: SOUTH CHINA UNIVERSITY OF TECHNOLOGY. Downloaded on December 08,2025 at 12:56:53 UTC from IEEE Xplore.  Restrictions apply. 

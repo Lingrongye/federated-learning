@@ -1,0 +1,1291 @@
+Model-Contrastive Federated Learning
+Qinbin Li
+National University of Singapore
+qinbin@comp.nus.edu.sg
+Bingsheng He
+National University of Singapore
+hebs@comp.nus.edu.sg
+Dawn Song
+UC Berkeley
+dawnsong@berkeley.edu
+Abstract
+Federated learning enables multiple parties to collab-
+oratively train a machine learning model without commu-
+nicating their local data.
+A key challenge in federated
+learning is to handle the heterogeneity of local data dis-
+tribution across parties. Although many studies have been
+proposed to address this challenge, we ﬁnd that they fail
+to achieve high performance in image datasets with deep
+learning models. In this paper, we propose MOON: model-
+contrastive federated learning.
+MOON is a simple and
+effective federated learning framework.
+The key idea of
+MOON is to utilize the similarity between model represen-
+tations to correct the local training of individual parties,
+i.e., conducting contrastive learning in model-level. Our
+extensive experiments show that MOON signiﬁcantly out-
+performs the other state-of-the-art federated learning algo-
+rithms on various image classiﬁcation tasks.
+1. Introduction
+Deep learning is data hungry. Model training can beneﬁt
+a lot from a large and representative dataset (e.g., ImageNet
+[6] and COCO [31]). However, data are usually dispersed
+among different parties in practice (e.g., mobile devices and
+companies). Due to the increasing privacy concerns and
+data protection regulations [40], parties cannot send their
+private data to a centralized server to train a model.
+To address the above challenge, federated learning [20,
+44, 27, 26] enables multiple parties to jointly learn a ma-
+chine learning model without exchanging their local data.
+A popular federated learning algorithm is FedAvg [34]. In
+each round of FedAvg, the updated local models of the par-
+ties are transferred to the server, which further aggregates
+the local models to update the global model. The raw data is
+not exchanged during the learning process. Federated learn-
+ing has emerged as an important machine learning area and
+attracted many research interests [34, 28, 22, 25, 41, 5, 16,
+2, 11]. Moreover, it has been applied in many applications
+such as medical imaging [21, 23], object detection [32], and
+landmark classiﬁcation [15].
+A key challenge in federated learning is the hetero-
+geneity of data distribution on different parties [20]. The
+data can be non-identically distributed among the parties in
+many real-world applications, which can degrade the per-
+formance of federated learning [22, 29, 24]. When each
+party updates its local model, its local objective may be
+far from the global objective. Thus, the averaged global
+model is away from the global optima. There have been
+some studies trying to address the non-IID issue in the lo-
+cal training phase [28, 22]. FedProx [28] directly limits
+the local updates by ℓ2-norm distance, while SCAFFOLD
+[22] corrects the local updates via variance reduction [19].
+However, as we show in the experiments (see Section 4),
+these approaches fail to achieve good performance on im-
+age datasets with deep learning models, which can be as
+bad as FedAvg.
+In this work, we address the non-IID issue from a novel
+perspective based on an intuitive observation: the global
+model trained on a whole dataset is able to learn a bet-
+ter representation than the local model trained on a skewed
+subset. Speciﬁcally, we propose model-contrastive learn-
+ing (MOON), which corrects the local updates by max-
+imizing the agreement of representation learned by the
+current local model and the representation learned by the
+global model. Unlike the traditional contrastive learning
+approaches [3, 4, 12, 35], which achieve state-of-the-art re-
+sults on learning visual representations by comparing the
+representations of different images, MOON conducts con-
+trastive learning in model-level by comparing the represen-
+tations learned by different models.
+Overall, MOON is
+a simple and effective federated learning framework, and
+addresses the non-IID data issue with the novel design of
+model-based contrastive learning.
+We conduct extensive experiments to evaluate the ef-
+fectiveness of MOON. MOON signiﬁcantly outperforms
+the other state-of-the-art federated learning algorithms [34,
+28, 22] on various image classiﬁcation datasets including
+CIFAR-10, CIFAR-100, and Tiny-Imagenet.
+With only
+lightweight modiﬁcations to FedAvg, MOON outperforms
+existing approaches by at least 2% accuracy in most cases.
+Moreover, the improvement of MOON is very signiﬁcant
+10713
+Figure 1. The FedAvg framework. In this paper, we focus on the
+second step, i.e., the local training phase.
+on some settings. For example, on CIFAR-100 dataset with
+100 parties, MOON achieves 61.8% top-1 accuracy, while
+the best top-1 accuracy of existing studies is 55%.
+2. Background and Related Work
+2.1. Federated Learning
+FedAvg [34] has been a de facto approach for federated
+learning. The framework of FedAvg is shown in Figure 1.
+There are four steps in each round of FedAvg. First, the
+server sends a global model to the parties. Second, the par-
+ties perform stochastic gradient descent (SGD) to update
+their models locally. Third, the local models are sent to a
+central server. Last, the server averages the model weights
+to produce a global model for the training of the next round.
+There have been quite some studies trying to improve
+FedAvg on non-IID data. Those studies can be divided into
+two categories: improvement on local training (i.e., step 2
+of Figure 1) and on aggregation (i.e., step 4 of Figure 1).
+This study belongs to the ﬁrst category.
+As for studies on improving local training, FedProx [28]
+introduces a proximal term into the objective during local
+training. The proximal term is computed based on the ℓ2-
+norm distance between the current global model and the
+local model. Thus, the local model update is limited by
+the proximal term during the local training. SCAFFOLD
+[22] corrects the local updates by introducing control vari-
+ates. Like the training model, the control variates are also
+updated by each party during local training. The differ-
+ence between the local control variate and the global con-
+trol variate is used to correct the gradients in local train-
+ing. However, FedProx shows experiments on MNIST and
+EMNIST only with multinomial logistic regression, while
+SCAFFOLD only shows experiments on EMNIST with lo-
+gistic regression and 2-layer fully connected layer. The ef-
+fectiveness of FedProx and SCAFFOLD on image datasets
+with deep learning models has not been well explored. As
+shown in our experiments, those studies have little or even
+no advantage over FedAvg, which motivates this study for
+a new approach of handling non-IID image datasets with
+deep learning models. We also notice that there are other
+related contemporary work [1, 30, 43] when preparing this
+paper. We leave the comparison between MOON and these
+contemporary work as future studies.
+As for studies on improving the aggregation phase,
+FedMA [41] utilizes Bayesian non-parametric methods to
+match and average weights in a layer-wise manner.
+Fe-
+dAvgM [14] applies momentum when updating the global
+model on the server. Another recent study, FedNova [42],
+normalizes the local updates before averaging. Our study
+is orthogonal to them and potentially can be combined with
+these techniques as we work on the local training phase.
+Another research direction is personalized federated
+learning [8, 7, 10, 47, 17], which tries to learn personal-
+ized local models for each party. In this paper, we study
+the typical federated learning, which tries to learn a single
+global model for all parties.
+2.2. Contrastive Learning
+Self-supervised learning [18, 9, 3, 4, 12, 35] is a recent
+hot research direction, which tries to learn good data repre-
+sentations from unlabeled data. Among those studies, con-
+trastive learning approaches [3, 4, 12, 35] achieve state-of-
+the-art results on learning visual representations. The key
+idea of contrastive learning is to reduce the distance be-
+tween the representations of different augmented views of
+the same image (i.e., positive pairs), and increase the dis-
+tance between the representations of augmented views of
+different images (i.e., negative pairs).
+A typical contrastive learning framework is SimCLR [3].
+Given an image x, SimCLR ﬁrst creates two correlated
+views of this image using different data augmentation op-
+erators, denoted xi and xj. A base encoder f(·) and a pro-
+jection head g(·) are trained to extract the representation
+vectors and map the representations to a latent space, re-
+spectively. Then, a contrastive loss (i.e., NT-Xent [38]) is
+applied on the projected vector g(f(·)), which tries to max-
+imize agreement between differently augmented views of
+the same image. Speciﬁcally, given 2N augmented views
+and a pair of view xi and xj of same image, the contrastive
+loss for this pair is deﬁned as
+li,j = −log
+exp(sim(xi, xj)/τ)
+P2N
+k=1 I[k̸=i] exp(sim(xi, xk)/τ)
+(1)
+where sim(·, ·) is a cosine similarity function and τ de-
+10714
+notes a temperature parameter. The ﬁnal loss is computed
+by summing the contrastive loss of all pairs of the same im-
+age in a mini-batch.
+Besides SimCLR, there are also other contrastive learn-
+ing frameworks such as CPC [36], CMC [39] and MoCo
+[12]. We choose SimCLR for its simplicity and effective-
+ness in many computer vision tasks. Still, the basic idea of
+contrastive learning is similar among these studies: the rep-
+resentations obtained from different images should be far
+from each other and the representations obtained from the
+same image should be related to each other. The idea is
+intuitive and has been shown to be effective.
+There is one recent study [46] that combines federated
+learning with contrastive learning. They focus on the un-
+supervised learning setting. Like SimCLR, they use con-
+trastive loss to compare the representations of different im-
+ages. In this paper, we focus on the supervised learning
+setting and propose model-contrastive learning to compare
+representations learned by different models.
+3. Model-Contrastive Federated Learning
+3.1. Problem Statement
+Suppose there are N parties, denoted P1, ..., PN. Party
+Pi has a local dataset Di. Our goal is to learn a machine
+learning model w over the dataset D ≜S
+i∈[N] Di with
+the help of a central server, while the raw data are not ex-
+changed. The objective is to solve
+arg min
+w
+L(w) =
+N
+X
+i=1
+|Di|
+|D| Li(w),
+(2)
+where Li(w) = E(x,y)∼Di[ℓi(w; (x, y))] is the empirical
+loss of Pi.
+3.2. Motivation
+MOON is based on an intuitive idea: the model trained
+on the whole dataset is able to extract a better feature rep-
+resentation than the model trained on a skewed subset. For
+example, given a model trained on dog and cat images, we
+cannot expect the features learned by the model to distin-
+guish birds and frogs which never exist during training.
+To further verify this intuition, we conduct a simple ex-
+periment on CIFAR-10. Speciﬁcally, we ﬁrst train a CNN
+model (see Section 4.1 for the detailed structure) on CIFAR-
+10. We use t-SNE [33] to visualize the hidden vectors of
+images from the test dataset as shown in Figure 2a. Then,
+we partition the dataset into 10 subsets in an unbalanced
+way (see Section 4.1 for the partition strategy) and train a
+CNN model on each subset. Figure 2b shows the t-SNE
+visualization of a randomly selected model. Apparently,
+the model trained on the subset learns poor features. The
+feature representations of most classes are even mixed and
+(a) global model
+(b) local model
+(c) FedAvg global model
+(d) FedAvg local model
+Figure 2. T-SNE visualizations of hidden vectors on CIFAR-10.
+cannot be distinguished. Then, we run FedAvg algorithm
+on 10 subsets and show the representation learned by the
+global model in Figure 2c and the representation learned by
+a selected local model (trained based on the global model)
+in Figure 2d. We can observe that the points with the same
+class are more divergent in Figure 2d compared with Figure
+2c (e.g., see class 9). The local training phase even leads
+the model to learn a worse representation due to the skewed
+local data distribution. This further veriﬁes that the global
+model should be able to learn a better feature representation
+than the local model, and there is a drift in the local up-
+dates. Therefore, under non-IID data scenarios, we should
+control the drift and bridge the gap between the representa-
+tions learned by the local model and the global model.
+3.3. Method
+Based on the above intuition, we propose MOON.
+MOON is designed as a simple and effective approach
+based on FedAvg, only introducing lightweight but novel
+modiﬁcations in the local training phase. Since there is al-
+ways drift in local training and the global model learns a
+better representation than the local model, MOON aims to
+decrease the distance between the representation learned by
+the local model and the representation learned by the global
+model, and increase the distance between the representation
+learned by the local model and the representation learned by
+the previous local model. We achieve this from the inspira-
+tion of contrastive learning, which is now mainly used to
+learn visual representations. In the following, we present
+the network architecture, the local learning objective and
+the learning procedure. At last, we discuss the relation to
+contrastive learning.
+10715
+3.3.1
+Network Architecture
+The network has three components: a base encoder, a pro-
+jection head, and an output layer. The base encoder is used
+to extract representation vectors from inputs. Like [3], an
+additional projection head is introduced to map the repre-
+sentation to a space with a ﬁxed dimension. Last, as we
+study on the supervised setting, the output layer is used to
+produce predicted values for each class. For ease of pre-
+sentation, with model weight w, we use Fw(·) to denote the
+whole network and Rw(·) to denote the network before the
+output layer (i.e., Rw(x) is the mapped representation vec-
+tor of input x).
+3.3.2
+Local Objective
+As shown in Figure 3, our local loss consists two parts. The
+ﬁrst part is a typical loss term (e.g., cross-entropy loss) in
+supervised learning denoted as ℓsup. The second part is our
+proposed model-contrastive loss term denoted as ℓcon.
+Suppose party Pi is conducting the local training. It re-
+ceives the global model wt from the server and updates the
+model to wt
+i in the local training phase. For every input x,
+we extract the representation of x from the global model wt
+(i.e., zglob = Rwt(x)), the representation of x from the lo-
+cal model of last round wt−1
+i
+(i.e., zprev = Rwt−1
+i
+(x)), and
+the representation of x from the local model being updated
+wt
+i (i.e., z = Rwt
+i(x)). Since the global model should be
+able to extract better representations, our goal is to decrease
+the distance between z and zglob, and increase the distance
+between z and zprev. Similar to NT-Xent loss [38], we de-
+ﬁne model-contrastive loss as
+ℓcon = −log
+exp(sim(z, zglob)/τ)
+exp(sim(z, zglob)/τ) + exp(sim(z, zprev)/τ)
+(3)
+where τ denotes a temperature parameter. The loss of an
+input (x, y) is computed by
+ℓ= ℓsup(wt
+i; (x, y)) + µℓcon(wt
+i; wt−1
+i
+; wt; x),
+(4)
+where µ is a hyper-parameter to control the weight of
+model-contrastive loss. The local objective is to minimize
+min
+wt
+i
+E(x,y)∼Di[ℓsup(wt
+i; (x, y)) + µℓcon(wt
+i; wt−1
+i
+; wt; x)].
+(5)
+The overall federated learning algorithm is shown in Al-
+gorithm 1. In each round, the server sends the global model
+to the parties, receives the local model from the parties, and
+updates the global model using weighted averaging. In local
+training, each party uses stochastic gradient descent to up-
+date the global model with its local data, while the objective
+is deﬁned in Eq. (5).
+Figure 3. The local loss in MOON.
+Algorithm 1: The MOON framework
+Input: number of communication rounds T,
+number of parties N, number of local
+epochs E, temperature τ, learning rate η,
+hyper-parameter µ
+Output: The ﬁnal model wT
+1 Server executes:
+2 initialize w0
+3 for t = 0, 1, ..., T −1 do
+4
+for i = 1, 2, ..., N in parallel do
+5
+send the global model wt to Pi
+6
+wt
+i ←PartyLocalTraining(i, wt)
+7
+wt+1 ←PN
+k=1
+|Di|
+|D| wt
+k
+8 return wT
+9 PartyLocalTraining(i, wt):
+10 wt
+i ←wt
+11 for epoch i = 1, 2, ..., E do
+12
+for each batch b = {x, y} of Di do
+13
+ℓsup ←CrossEntropyLoss(Fwt
+i(x), y)
+14
+z ←Rwt
+i(x)
+15
+zglob ←Rwt(x)
+16
+zprev ←Rwt−1
+i
+(x)
+17
+ℓcon ←
+−log
+exp(sim(z,zglob)/τ)
+exp(sim(z,zglob)/τ)+exp(sim(z,zprev)/τ)
+18
+ℓ←ℓsup + µℓcon
+19
+wt
+i ←wt
+i −η∇ℓ
+20 return wt
+i to server
+For simplicity, we describe MOON without applying
+sampling technique in Algorithm 1. MOON is still applica-
+ble when only a sample set of parties participate in federated
+10716
+Figure 4. The comparison between SimCLR and MOON. Here x
+denotes an image, w denotes a model, and R denotes the function
+to compute representation. SimCLR maximizes the agreement be-
+tween representations of different views of the same image, while
+MOON maximizes the agreement between representations of the
+local model and the global model on the mini-batches.
+learning each round. Like FedAvg, each party maintains its
+local model, which will be replaced by the global model and
+updated only if the party is selected to participate in a round.
+MOON only needs the latest local model that the party has,
+even though it may not be updated in round (t −1) (e.g.,
+wt−1
+i
+= wt−2
+i
+).
+An notable thing is that considering an ideal case where
+the local model is good enough and learns (almost) the same
+representation as the global model (i.e., zglob = zprev),
+the model-contrastive loss will be a constant (i.e., −log 1
+2).
+Thus, MOON will produce the same result as FedAvg, since
+there is no heterogeneity issue. In this sense, our approach
+is robust regardless of different amount of drifts.
+3.4. Comparisons with Contrastive Learning
+A comparison between MOON and SimCLR is shown
+in Figure 4. The model-contrastive loss compares represen-
+tations learned by different models, while the contrastive
+loss compares representations of different images. We also
+highlight the key difference between MOON and traditional
+contrastive learning: MOON is currently for supervised
+learning in a federated setting while contrastive learning is
+for unsupervised learning in a centralized setting. Draw-
+ing the inspirations from contrastive learning, MOON is a
+new learning methodology in handling non-IID data distri-
+butions among parties in federated learning.
+4. Experiments
+4.1. Experimental Setup
+We compare MOON with three state-of-the-art ap-
+proaches including (1) FedAvg [34], (2) FedProx [28], and
+(3) SCAFFOLD [22]. We also compare a baseline approach
+named SOLO, where each party trains a model with its lo-
+cal data without federated learning.
+We conduct experi-
+ments on three datasets including CIFAR-10, CIFAR-100,
+and Tiny-Imagenet1 (100,000 images with 200 classes).
+Moreover, we try two different network architectures. For
+CIFAR-10, we use a CNN network as the base encoder,
+which has two 5x5 convolution layers followed by 2x2 max
+pooling (the ﬁrst with 6 channels and the second with 16
+channels) and two fully connected layers with ReLU activa-
+tion (the ﬁrst with 120 units and the second with 84 units).
+For CIFAR-100 and Tiny-Imagenet, we use ResNet-50 [13]
+as the base encoder. For all datasets, like [3], we use a 2-
+layer MLP as the projection head. The output dimension
+of the projection head is set to 256 by default. Note that
+all baselines use the same network architecture as MOON
+(including the projection head) for fair comparison.
+We use PyTorch [37] to implement MOON and the other
+baselines. The code is publicly available2. We use the SGD
+optimizer with a learning rate 0.01 for all approaches. The
+SGD weight decay is set to 0.00001 and the SGD momen-
+tum is set to 0.9. The batch size is set to 64. The num-
+ber of local epochs is set to 300 for SOLO. The number
+of local epochs is set to 10 for all federated learning ap-
+proaches unless explicitly speciﬁed. The number of com-
+munication rounds is set to 100 for CIFAR-10/100 and 20
+for Tiny-ImageNet, where all federated learning approaches
+have little or no accuracy gain with more communications.
+For MOON, we set the temperature parameter to 0.5 by de-
+fault like [3].
+Like previous studies [45, 41], we use Dirichlet distri-
+bution to generate the non-IID data partition among par-
+ties. Speciﬁcally, we sample pk ∼DirN(β) and allocate a
+pk,j proportion of the instances of class k to party j, where
+Dir(β) is the Dirichlet distribution with a concentration
+parameter β (0.5 by default). With the above partitioning
+strategy, each party can have relatively few (even no) data
+samples in some classes. We set the number of parties to
+10 by default. The data distributions among parties in de-
+fault settings are shown in Figure 5. For more experimental
+results, please refer to Appendix.
+4.2. Accuracy Comparison
+For MOON, we tune µ from {0.1, 1, 5, 10} and report the
+best result. The best µ of MOON for CIFAR-10, CIFAR-
+100, and Tiny-Imagenet are 5, 1, and 1, respectively. Note
+that FedProx also has a hyper-parameter µ to control the
+weight of its proximal term (i.e., LF edP rox = ℓF edAvg +
+µℓprox). For FedProx, we tune µ from {0.001, 0.01, 0.1, 1}
+(the range is also used in the previous paper [28]) and re-
+port the best result. The best µ of FedProx for CIFAR-10,
+CIFAR-100, and Tiny-Imagenet are 0.01, 0.001, and 0.001,
+respectively. Unless explicitly speciﬁed, we use these µ set-
+tings for all the remaining experiments.
+Table 1 shows the top-1 test accuracy of all approaches
+1https://www.kaggle.com/c/tiny-imagenet
+2https://github.com/QinbinLi/MOON
+10717
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Party ID
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Class ID
+0
+500
+1000
+1500
+2000
+2500
+3000
+3500
+(a) CIFAR-10
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Party ID
+0
+6
+12
+18
+24
+30
+36
+42
+48
+54
+60
+66
+72
+78
+84
+90
+96
+Class ID
+0
+50
+100
+150
+200
+250
+300
+350
+400
+(b) CIFAR-100
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Party ID
+0
+11
+22
+33
+44
+55
+66
+77
+88
+99
+110
+121
+132
+143
+154
+165
+176
+187
+198
+Class ID
+0
+50
+100
+150
+200
+250
+300
+350
+400
+(c) Tiny-Imagenet
+Figure 5. The data distribution of each party using non-IID data partition. The color bar denotes the number of data samples. Each rectangle
+represents the number of data samples of a speciﬁc class in a party.
+Table 1. The top-1 accuracy of MOON and the other baselines on
+test datasets. For MOON, FedAvg, FedProx, and SCAFFOLD,
+we run three trials and report the mean and standard derivation.
+For SOLO, we report the mean and standard derivation among all
+parties.
+Method
+CIFAR-10
+CIFAR-100
+Tiny-Imagenet
+MOON
+69.1%±0.4%
+67.5%±0.4%
+25.1%±0.1%
+FedAvg
+66.3%±0.5%
+64.5% ±0.4%
+23.0%±0.1%
+FedProx
+66.9%±0.2%
+64.6%±0.2%
+23.2%±0.2%
+SCAFFOLD
+66.6%±0.2%
+52.5% ±0.3%
+16.0%±0.2%
+SOLO
+46.3% ±5.1%
+22.3%±1.0%
+8.6%±0.4%
+with the above default setting.
+Under non-IID settings,
+SOLO demonstrates much worse accuracy than other fed-
+erated learning approaches. This demonstrates the beneﬁts
+of federated learning. Comparing different federated learn-
+ing approaches, we can observe that MOON is consistently
+the best approach among all tasks. It can outperform Fe-
+dAvg by 2.6% accuracy on average of all tasks. For Fed-
+Prox, its accuracy is very close to FedAvg. The proximal
+term in FedProx has little inﬂuence in the training since µ is
+small. However, when µ is not set to a very small value, the
+convergence of FedProx is quite slow (see Section 4.3) and
+the accuracy of FedProx is bad. For SCAFFOLD, it has
+much worse accuracy on CIFAR-100 and Tiny-Imagenet
+than other federated learning approaches.
+4.3. Communication Efﬁciency
+Figure 6 shows the accuracy in each round during train-
+ing. As we can see, the model-contrastive loss term has lit-
+tle inﬂuence on the convergence rate with best µ. The speed
+of accuracy improvement in MOON is almost the same as
+FedAvg at the beginning, while it can achieve a better accu-
+racy later beneﬁt from the model-contrastive loss. Since the
+best µ values are generally small in FedProx, FedProx with
+best µ is very close to FedAvg, especially on CIFAR-10 and
+CIFAR-100. However, when setting µ = 1, FedProx be-
+comes very slow due to the additional proximal term. This
+Table 2. The number of rounds of different approaches to achieve
+the same accuracy as running FedAvg for 100 rounds (CIFAR-
+10/100) or 20 rounds (Tiny-Imagenet). The speedup of an ap-
+proach is computed against FedAvg.
+Method
+CIFAR-10
+CIFAR-100
+Tiny-Imagenet
+#rounds
+speedup
+#rounds
+speedup
+#rounds
+speedup
+FedAvg
+100
+1×
+100
+1×
+20
+1×
+FedProx
+52
+1.9×
+75
+1.3×
+17
+1.2×
+SCAFFOLD
+80
+1.3×
+<1×
+<1×
+MOON
+27
+3.7×
+43
+2.3×
+11
+1.8×
+implies that limiting the ℓ2-norm distance between the local
+model and the global model is not an effective solution. Our
+model-contrastive loss can effectively increase the accuracy
+without slowing down the convergence.
+We show the number of communication rounds to
+achieve the same accuracy as running FedAvg for 100
+rounds on CIFAR-10/100 or 20 rounds on Tiny-Imagenet
+in Table 2. We can observe that the number of communi-
+cation rounds is signiﬁcantly reduced in MOON. MOON
+needs about half the number of communication rounds on
+CIFAR-100 and Tiny-Imagenet compared with FedAvg.
+On CIFAR-10, the speedup of MOON is even close to
+4. MOON is much more communication-efﬁcient than the
+other approaches.
+4.4. Number of Local Epochs
+We study the effect of number of local epochs on the
+accuracy of ﬁnal model. The results are shown in Figure
+7. When the number of local epochs is 1, the local update
+is very small. Thus, the training is slow and the accuracy
+is relatively low given the same number of communication
+rounds. All approaches have a close accuracy (MOON is
+still the best). When the number of local epochs becomes
+too large, the accuracy of all approaches drops, which is due
+to the drift of local updates, i.e., the local optima are not
+consistent with the global optima. Nevertheless, MOON
+clearly outperforms the other approaches. This further veri-
+ﬁes that MOON can effectively mitigate the negative effects
+10718
+0
+20
+40
+60
+80
+100
+#Communication rounds
+10
+20
+30
+40
+50
+60
+70
+top-1 accuracy (%)
+MOON
+FedAvg
+FedProx (best )
+FedProx (
+= 1)
+SCAFFOLD
+(a) CIFAR-10
+0
+20
+40
+60
+80
+100
+#Communication rounds
+0
+10
+20
+30
+40
+50
+60
+70
+top-1 accuracy (%)
+MOON
+FedAvg
+FedProx (best )
+FedProx (
+= 1)
+SCAFFOLD
+(b) CIFAR-100
+5
+10
+15
+20
+#Communication rounds
+0
+5
+10
+15
+20
+25
+top-1 accuracy (%)
+MOON
+FedAvg
+FedProx (best )
+FedProx (
+= 1)
+SCAFFOLD
+(c) Tiny-Imagenet
+Figure 6. The top-1 test accuracy in different number of communication rounds. For FedProx, we report both the accuracy with best µ and
+the accuracy with µ = 1.
+1
+5
+10
+20
+40
+#local epochs
+60
+62
+64
+66
+68
+70
+top-1 accuracy (%)
+MOON
+FedAvg
+FedProx
+SCAFFOLD
+(a) CIFAR-10
+1
+5
+10
+20
+40
+#local epochs
+45
+50
+55
+60
+65
+70
+test accuracy (%)
+MOON
+FedAvg
+FedProx
+SCAFFOLD
+(b) CIFAR-100
+1
+5
+10
+20
+40
+#local epochs
+5
+10
+15
+20
+25
+30
+test accuracy (%)
+MOON
+FedAvg
+FedProx
+SCAFFOLD
+(c) Tiny-Imagenet
+Figure 7. The top-1 test accuracy with different number of local epochs. For MOON and FedProx, µ is set to the best µ from Section 4.2
+for all numbers of local epochs. The accuracy of SCAFFOLD is quite bad when number of local epochs is set to 1 (45.3% on CIFAR10,
+20.4% on CIFAR-100, 2.6% on Tiny-Imagenet). The accuracy of FedProx on Tiny-Imagenet with one local epoch is 1.2%.
+of the drift by too many local updates.
+4.5. Scalability
+To show the scalability of MOON, we try a larger num-
+ber of parties on CIFAR-100. Speciﬁcally, we try two set-
+tings: (1) We partition the dataset into 50 parties and all par-
+ties participate in federated learning in each round. (2) We
+partition the dataset into 100 parties and randomly sample
+20 parties to participate in federated learning in each round
+(client sampling technique introduced in FedAvg [34]). The
+results are shown in Table 3 and Figure 8. For MOON,
+we show the results with µ = 1 (best µ from Section 4.2)
+and µ = 10. For MOON (µ = 1), it outperforms the Fe-
+dAvg and FedProx over 2% accuracy at 200 rounds with
+50 parties and 3% accuracy at 500 rounds with 100 par-
+ties. Moreover, for MOON (µ = 10), although the large
+model-contrastive loss slows down the training at the begin-
+ning as shown in Figure 8, MOON can outperform the other
+approaches a lot with more communication rounds. Com-
+pared with FedAvg and FedProx, MOON achieves about
+about 7% higher accuracy at 200 rounds with 50 parties and
+at 500 rounds with 100 parties. SCAFFOLD has a low ac-
+curacy with a relatively large number of parties.
+Table 3. The accuracy with 50 parties and 100 parties (sample frac-
+tion=0.2) on CIFAR-100.
+Method
+#parties=50
+#parties=100
+100 rounds
+200 rounds
+250 rounds
+500 rounds
+MOON (µ=1)
+54.7%
+58.8%
+54.5%
+58.2%
+MOON (µ=10)
+58.2%
+63.2%
+56.9%
+61.8%
+FedAvg
+51.9%
+56.4%
+51.0%
+55.0%
+FedProx
+52.7%
+56.6%
+51.3%
+54.6%
+SCAFFOLD
+35.8%
+44.9%
+37.4%
+44.5%
+SOLO
+10%±0.9%
+7.3%±0.6%
+4.6. Heterogeneity
+We study the effect of data heterogeneity by varying
+the concentration parameter β of Dirichlet distribution on
+CIFAR-100. For a smaller β, the partition will be more un-
+balanced. The results are shown in Table 4. MOON always
+achieves the best accuracy among three unbalanced levels.
+When the unbalanced level decreases (i.e., β = 5), Fed-
+Prox is worse than FedAvg, while MOON still outperforms
+FedAvg with more than 2% accuracy.
+The experiments
+demonstrate the effectiveness and robustness of MOON.
+4.7. Loss Function
+To maximize the agreement between the representation
+learned by the global model and the representation learned
+10719
+0
+25
+50
+75
+100
+125
+150
+175
+200
+#Communication rounds
+0
+10
+20
+30
+40
+50
+60
+top-1 accuracy (%)
+MOON (
+= 1)
+MOON (
+= 10)
+FedAvg
+FedProx
+SCAFFOLD
+(a) 50 parties
+0
+100
+200
+300
+400
+500
+#Communication rounds
+0
+10
+20
+30
+40
+50
+60
+top-1 accuracy (%)
+MOON (
+= 1)
+MOON (
+= 10)
+FedAvg
+FedProx
+SCAFFOLD
+(b) 100 parties (sample fraction=0.2)
+Figure 8. The top-1 test accuracy on CIFAR-100 with 50/100 parties.
+Table 4. The test accuracy with β from {0.1, 0.5, 5}.
+Method
+β = 0.1
+β = 0.5
+β = 5
+MOON
+64.0%
+67.5%
+68.0%
+FedAvg
+62.5%
+64.5%
+65.7%
+FedProx
+62.9%
+64.6%
+64.9%
+SCAFFOLD
+47.3%
+52.5%
+55.0%
+SOLO
+15.9%±1.5%
+22.3%±1%
+26.6%±1.4%
+by the local model, our model-contrastive loss ℓcon is pro-
+posed inspired by NT-Xent loss [3]. Another intuitive op-
+tion is to use ℓ2 regularization, and the local loss is
+ℓ= ℓsup + µ ∥z −zglob∥2
+(6)
+Here we compare the approaches using different kinds
+of loss functions to limit the representation: no additional
+term (i.e., FedAvg: L = ℓsup), ℓ2 norm, and our model-
+contrastive loss. The results are shown in Table 5. We can
+observe that simply using ℓ2 norm even cannot improve the
+accuracy compared with FedAvg on CIFAR-10. While us-
+ing ℓ2 norm can improve the accuracy on CIFAR-100 and
+Tiny-Imagenet, the accuracy is still lower than MOON. Our
+model-contrastive loss is an effective way to constrain the
+representations.
+Our model-contrastive loss inﬂuences the local model
+from two aspects. Firstly, the local model learns a close rep-
+resentation to the global model. Secondly, the local model
+also learns a better representation than the previous one un-
+til the local model is good enough (i.e., z = zglob and ℓcon
+becomes a constant).
+5. Conclusion
+Federated learning has become a promising approach
+to resolve the pain of data silos in many domains such as
+Table 5. The top-1 accuracy with different kinds of loss for the
+second term of local objective. We tune µ from {0.001, 0.01 , 0.1,
+1, 5, 10} for the ℓ2 norm approach and report the best accuracy.
+second term
+CIFAR-10
+CIFAR-100
+Tiny-Imagenet
+none (FedAvg)
+66.3%
+64.5%
+23.0%
+ℓ2 norm
+65.8%
+66.9%
+24.0%
+MOON
+69.1%
+67.5%
+25.1%
+medical imaging, object detection, and landmark classiﬁ-
+cation. Non-IID is a key challenge for the effectiveness of
+federated learning. To improve the performance of feder-
+ated deep learning models on non-IID datasets, we propose
+model-contrastive learning (MOON), a simple and effective
+approach for federated learning. MOON introduces a new
+learning concept, i.e., contrastive learning in model-level.
+Our extensive experiments show that MOON achieves sig-
+niﬁcant improvement over state-of-the-art approaches on
+various image classiﬁcation tasks. As MOON does not re-
+quire the inputs to be images, it potentially can be applied
+to non-vision problems.
+Acknowledgements
+This research is supported by the National Research
+Foundation, Singapore under its AI Singapore Programme
+(AISG Award No: AISG2-RP-2020-018). Any opinions,
+ﬁndings and conclusions or recommendations expressed in
+this material are those of the authors and do not reﬂect the
+views of National Research Foundation, Singapore. The au-
+thors thank Jianxin Wu, Chaoyang He, Shixuan Sun, Yaqi
+Xie and Yuhang Chen for their feedback. The authors also
+thank Yuzhi Zhao, Wei Wang, and Mo Sha for their supports
+of computing resources.
+10720
+References
+[1] Durmus Alp Emre Acar, Yue Zhao, Ramon Matas, Matthew
+Mattina, Paul Whatmough, and Venkatesh Saligrama. Fed-
+erated learning based on dynamic regularization. In Interna-
+tional Conference on Learning Representations, 2021.
+[2] Sebastian Caldas, Sai Meher Karthik Duddu, Peter Wu, Tian
+Li, Jakub Koneˇcn`y, H Brendan McMahan, Virginia Smith,
+and Ameet Talwalkar. Leaf: A benchmark for federated set-
+tings. arXiv preprint arXiv:1812.01097, 2018.
+[3] Ting Chen, Simon Kornblith, Mohammad Norouzi, and Ge-
+offrey Hinton. A simple framework for contrastive learning
+of visual representations. arXiv preprint arXiv:2002.05709,
+2020.
+[4] Ting Chen, Simon Kornblith, Kevin Swersky, Mohammad
+Norouzi, and Geoffrey Hinton.
+Big self-supervised mod-
+els are strong semi-supervised learners.
+arXiv preprint
+arXiv:2006.10029, 2020.
+[5] Zhongxiang Dai, Bryan Kian Hsiang Low, and Patrick Jail-
+let.
+Federated bayesian optimization via thompson sam-
+pling. Advances in Neural Information Processing Systems,
+33, 2020.
+[6] Jia Deng, Wei Dong, Richard Socher, Li-Jia Li, Kai Li,
+and Li Fei-Fei. Imagenet: A large-scale hierarchical image
+database. In 2009 IEEE conference on computer vision and
+pattern recognition, pages 248–255. Ieee, 2009.
+[7] Canh T Dinh, Nguyen H Tran, and Tuan Dung Nguyen. Per-
+sonalized federated learning with moreau envelopes. arXiv
+preprint arXiv:2006.08848, 2020.
+[8] Alireza Fallah, Aryan Mokhtari, and Asuman Ozdaglar. Per-
+sonalized federated learning with theoretical guarantees: A
+model-agnostic meta-learning approach. Advances in Neural
+Information Processing Systems, 33, 2020.
+[9] Jean-Bastien Grill, Florian Strub, Florent Altch´e, Corentin
+Tallec, Pierre H Richemond, Elena Buchatskaya, Carl Do-
+ersch, Bernardo Avila Pires, Zhaohan Daniel Guo, Moham-
+mad Gheshlaghi Azar, et al. Bootstrap your own latent: A
+new approach to self-supervised learning.
+arXiv preprint
+arXiv:2006.07733, 2020.
+[10] Filip Hanzely, Slavom´ır Hanzely, Samuel Horv´ath, and Peter
+Richt´arik. Lower bounds and optimal algorithms for person-
+alized federated learning. arXiv preprint arXiv:2010.02372,
+2020.
+[11] Chaoyang He, Songze Li, Jinhyun So, Mi Zhang, Hongyi
+Wang, Xiaoyang Wang, Praneeth Vepakomma, Abhishek
+Singh, Hang Qiu, Li Shen, Peilin Zhao, Yan Kang, Yang
+Liu, Ramesh Raskar, Qiang Yang, Murali Annavaram,
+and Salman Avestimehr.
+Fedml: A research library and
+benchmark for federated machine learning. arXiv preprint
+arXiv:2007.13518, 2020.
+[12] Kaiming He, Haoqi Fan, Yuxin Wu, Saining Xie, and Ross
+Girshick. Momentum contrast for unsupervised visual rep-
+resentation learning. In Proceedings of the IEEE/CVF Con-
+ference on Computer Vision and Pattern Recognition, pages
+9729–9738, 2020.
+[13] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun.
+Deep residual learning for image recognition. In Proceed-
+ings of the IEEE conference on computer vision and pattern
+recognition, pages 770–778, 2016.
+[14] Tzu-Ming Harry Hsu, Hang Qi, and Matthew Brown. Mea-
+suring the effects of non-identical data distribution for feder-
+ated visual classiﬁcation. arXiv preprint arXiv:1909.06335,
+2019.
+[15] Tzu-Ming Harry Hsu, Hang Qi, and Matthew Brown. Fed-
+erated visual classiﬁcation with real-world data distribution.
+arXiv preprint arXiv:2003.08082, 2020.
+[16] Sixu Hu, Yuan Li, Xu Liu, Qinbin Li, Zhaomin Wu, and
+Bingsheng He.
+The oarf benchmark suite: Characteriza-
+tion and implications for federated learning systems. arXiv
+preprint arXiv:2006.07856, 2020.
+[17] Yutao Huang, Lingyang Chu, Zirui Zhou, Lanjun Wang,
+Jiangchuan Liu, Jian Pei, and Yong Zhang.
+Personalized
+cross-silo federated learning on non-iid data. In Proceedings
+of the AAAI Conference on Artiﬁcial Intelligence, 2021.
+[18] Longlong Jing and Yingli Tian. Self-supervised visual fea-
+ture learning with deep neural networks: A survey. IEEE
+Transactions on Pattern Analysis and Machine Intelligence,
+2020.
+[19] Rie Johnson and Tong Zhang. Accelerating stochastic gradi-
+ent descent using predictive variance reduction. In Advances
+in neural information processing systems, pages 315–323,
+2013.
+[20] Peter Kairouz, H Brendan McMahan, Brendan Avent,
+Aur´elien Bellet, Mehdi Bennis, Arjun Nitin Bhagoji, Keith
+Bonawitz, Zachary Charles, Graham Cormode, Rachel Cum-
+mings, et al. Advances and open problems in federated learn-
+ing. arXiv preprint arXiv:1912.04977, 2019.
+[21] Georgios A Kaissis, Marcus R Makowski, Daniel R¨uckert,
+and Rickmer F Braren. Secure, privacy-preserving and feder-
+ated machine learning in medical imaging. Nature Machine
+Intelligence, pages 1–7, 2020.
+[22] Sai Praneeth Karimireddy, Satyen Kale, Mehryar Mohri,
+Sashank J Reddi, Sebastian U Stich, and Ananda Theertha
+Suresh.
+Scaffold: Stochastic controlled averaging for on-
+device federated learning. In Proceedings of the 37th Inter-
+national Conference on Machine Learning. PMLR, 2020.
+[23] Rajesh Kumar, Abdullah Aman Khan, Sinmin Zhang, WenY-
+ong Wang, Yousif Abuidris, Waqas Amin, and Jay Ku-
+mar. Blockchain-federated-learning and deep learning mod-
+els for covid-19 detection using ct imaging. arXiv preprint
+arXiv:2007.06537, 2020.
+[24] Qinbin Li, Yiqun Diao, Quan Chen, and Bingsheng He. Fed-
+erated learning on non-iid data silos: An experimental study.
+arXiv preprint arXiv:2102.02079, 2021.
+[25] Qinbin Li, Zeyi Wen, and Bingsheng He.
+Practical fed-
+erated gradient boosting decision trees. In Proceedings of
+the AAAI Conference on Artiﬁcial Intelligence, pages 4642–
+4649, 2020.
+[26] Qinbin Li, Zeyi Wen, Zhaomin Wu, Sixu Hu, Naibo Wang,
+and Bingsheng He.
+A survey on federated learning sys-
+tems: Vision, hype and reality for data privacy and protec-
+tion. arXiv preprint arXiv:1907.09693, 2019.
+[27] Tian Li, Anit Kumar Sahu, Ameet Talwalkar, and Virginia
+Smith. Federated learning: Challenges, methods, and future
+directions. arXiv preprint arXiv:1908.07873, 2019.
+10721
+[28] Tian Li, Anit Kumar Sahu, Manzil Zaheer, Maziar Sanjabi,
+Ameet Talwalkar, and Virginia Smith. Federated optimiza-
+tion in heterogeneous networks. In Third Conference on Ma-
+chine Learning and Systems (MLSys), 2020.
+[29] Xiang Li, Kaixuan Huang, Wenhao Yang, Shusen Wang, and
+Zhihua Zhang.
+On the convergence of fedavg on non-iid
+data. In International Conference on Learning Representa-
+tions, 2020.
+[30] Xiaoxiao Li, Meirui JIANG, Xiaofei Zhang, Michael Kamp,
+and Qi Dou. Fed{bn}: Federated learning on non-{iid} fea-
+tures via local batch normalization. In International Confer-
+ence on Learning Representations, 2021.
+[31] Tsung-Yi Lin, Michael Maire, Serge Belongie, James Hays,
+Pietro Perona, Deva Ramanan, Piotr Doll´ar, and C Lawrence
+Zitnick. Microsoft coco: Common objects in context. In
+European conference on computer vision, pages 740–755.
+Springer, 2014.
+[32] Yang Liu, Anbu Huang, Yun Luo, He Huang, Youzhi Liu,
+Yuanyuan Chen, Lican Feng, Tianjian Chen, Han Yu, and
+Qiang Yang. Fedvision: An online visual object detection
+platform powered by federated learning. In Proceedings of
+the AAAI Conference on Artiﬁcial Intelligence, pages 13172–
+13179, 2020.
+[33] Laurens van der Maaten and Geoffrey Hinton.
+Visualiz-
+ing data using t-sne. Journal of machine learning research,
+9(Nov):2579–2605, 2008.
+[34] H Brendan McMahan, Eider Moore, Daniel Ramage, Seth
+Hampson, et al.
+Communication-efﬁcient learning of
+deep networks from decentralized data.
+arXiv preprint
+arXiv:1602.05629, 2016.
+[35] Ishan Misra and Laurens van der Maaten. Self-supervised
+learning of pretext-invariant representations. In Proceedings
+of the IEEE/CVF Conference on Computer Vision and Pat-
+tern Recognition, pages 6707–6717, 2020.
+[36] Aaron van den Oord, Yazhe Li, and Oriol Vinyals. Repre-
+sentation learning with contrastive predictive coding. arXiv
+preprint arXiv:1807.03748, 2018.
+[37] Adam Paszke, Sam Gross, Francisco Massa, Adam Lerer,
+James Bradbury, Gregory Chanan, Trevor Killeen, Zeming
+Lin, Natalia Gimelshein, Luca Antiga, et al. Pytorch: An
+imperative style, high-performance deep learning library. In
+Advances in neural information processing systems, pages
+8026–8037, 2019.
+[38] Kihyuk Sohn. Improved deep metric learning with multi-
+class n-pair loss objective. In Advances in neural information
+processing systems, pages 1857–1865, 2016.
+[39] Yonglong Tian, Dilip Krishnan, and Phillip Isola.
+Con-
+trastive multiview coding. arXiv preprint arXiv:1906.05849,
+2019.
+[40] Paul Voigt and Axel Von dem Bussche. The eu general data
+protection regulation (gdpr).
+A Practical Guide, 1st Ed.,
+Cham: Springer International Publishing, 2017.
+[41] Hongyi Wang, Mikhail Yurochkin, Yuekai Sun, Dimitris Pa-
+pailiopoulos, and Yasaman Khazaeni.
+Federated learning
+with matched averaging.
+In International Conference on
+Learning Representations, 2020.
+[42] Jianyu Wang, Qinghua Liu, Hao Liang, Gauri Joshi, and
+H Vincent Poor. Tackling the objective inconsistency prob-
+lem in heterogeneous federated optimization. Advances in
+Neural Information Processing Systems, 33, 2020.
+[43] Lixu Wang, Shichao Xu, Xiao Wang, and Qi Zhu. Address-
+ing class imbalance in federated learning. In Proceedings of
+the AAAI Conference on Artiﬁcial Intelligence, 2021.
+[44] Qiang Yang, Yang Liu, Tianjian Chen, and Yongxin Tong.
+Federated machine learning: Concept and applications. ACM
+Transactions on Intelligent Systems and Technology (TIST),
+10(2):1–19, 2019.
+[45] Mikhail Yurochkin, Mayank Agarwal, Soumya Ghosh,
+Kristjan Greenewald, Nghia Hoang, and Yasaman Khaza-
+eni.
+Bayesian nonparametric federated learning of neural
+networks. In Proceedings of the 36th International Confer-
+ence on Machine Learning. PMLR, 2019.
+[46] Fengda Zhang, Kun Kuang, Zhaoyang You, Tao Shen, Jun
+Xiao, Yin Zhang, Chao Wu, Yueting Zhuang, and Xiaolin
+Li. Federated unsupervised representation learning. arXiv
+preprint arXiv:2010.08982, 2020.
+[47] Michael Zhang, Karan Sapra, Sanja Fidler, Serena Yeung,
+and Jose M. Alvarez. Personalized federated learning with
+ﬁrst order model optimization. In International Conference
+on Learning Representations, 2021.
+10722
