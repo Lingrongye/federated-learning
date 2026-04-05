@@ -1,0 +1,72 @@
+{
+  "algorithm": "FedDSA",
+  "dataset": "PACS",
+  "start_time": "2026-04-05T08:48:42.066134",
+  "end_time": "2026-04-05T09:06:47.158454",
+  "elapsed_seconds": 1085.1,
+  "global_rounds": 10,
+  "best_avg_accuracy": 0.212085,
+  "final_avg_accuracy": 0.212085,
+  "best_eval_index": 5,
+  "per_client_accuracy_at_best": {
+    "art_painting": 0.142578,
+    "cartoon": 0.284983,
+    "photo": 0.200957,
+    "sketch": 0.209563
+  },
+  "domain_std_at_best": 0.050619,
+  "all_eval_avg_acc": [
+    0.19968,
+    0.10004,
+    0.120048,
+    0.148059,
+    0.198079,
+    0.212085
+  ],
+  "all_eval_train_loss": [
+    2.189005,
+    2.140478,
+    2.06388,
+    2.050839,
+    2.053832,
+    2.042145
+  ],
+  "all_per_client_acc": [
+    {
+      "art_painting": 0.208984,
+      "cartoon": 0.182594,
+      "photo": 0.253589,
+      "sketch": 0.182096
+    },
+    {
+      "art_painting": 0.152344,
+      "cartoon": 0.168942,
+      "photo": 0.133971,
+      "sketch": 0.017294
+    },
+    {
+      "art_painting": 0.152344,
+      "cartoon": 0.191126,
+      "photo": 0.145933,
+      "sketch": 0.049847
+    },
+    {
+      "art_painting": 0.294922,
+      "cartoon": 0.216724,
+      "photo": 0.174641,
+      "sketch": 0.019329
+    },
+    {
+      "art_painting": 0.105469,
+      "cartoon": 0.291809,
+      "photo": 0.198565,
+      "sketch": 0.190234
+    },
+    {
+      "art_painting": 0.142578,
+      "cartoon": 0.284983,
+      "photo": 0.200957,
+      "sketch": 0.209563
+    }
+  ]
+}

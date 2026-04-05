@@ -1,0 +1,39 @@
+host: lab-lry
+remote_dir: /home/lry/code/federated-learning
+exclude:
+  - .git
+  - 无关文件
+  - Qwen3-VL-4B-mlc
+  - mlc-qwen3-vl
+  - "mlc-qwen3-vl.zip"
+  - papers
+  - "PFLlib/dataset/MNIST"
+  - "PFLlib/dataset/utils/LEAF"
+  - "PFLlib/dataset/*/rawdata"
+  - "PFLlib/dataset/*/train"
+  - "PFLlib/dataset/*/test"
+  - "RethinkFL/data"
+  - "PARDON-FedDG/style_stats"
+  - __pycache__
+  - "*.pyc"
+  - "*.pyo"
+  - "*.egg-info"
+  - .eggs
+  - dist
+  - build
+  - "*.so"
+  - "*.bin"
+  - "~$*"
+  - .DS_Store
+  - Thumbs.db
+  - desktop.ini
+  - .env
+  - .venv
+  - env
+  - venv
+  - .ipynb_checkpoints
+  - .idea
+  - .vscode
+  - "*.swp"
+  - "*.swo"
+  - wandb

@@ -59,7 +59,4 @@ venv/
 *.swo
 
 # 日志和输出
-*.log
 wandb/
-runs/
-checkpoints/

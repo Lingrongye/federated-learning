@@ -3,11 +3,34 @@ import copy
 import torch
 import argparse
 import os
+import sys
 import time
 import warnings
 import numpy as np
 import torchvision
 import logging
+from datetime import datetime
+
+
+class Tee:
+    """将 stdout 同时输出到终端和日志文件"""
+    def __init__(self, log_path):
+        self.terminal = sys.stdout
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        self.log_file = open(log_path, 'w', encoding='utf-8')
+
+    def write(self, data):
+        self.terminal.write(data)
+        self.log_file.write(data)
+        self.log_file.flush()
+
+    def flush(self):
+        self.terminal.flush()
+        self.log_file.flush()
+
+    def close(self):
+        self.log_file.close()
+        sys.stdout = self.terminal
 
 from flcore.servers.serveravg import FedAvg
 from flcore.servers.serverpFedMe import pFedMe
@@ -516,8 +539,6 @@ if __name__ == "__main__":
                         help="Weight for HSIC decoupling loss")
     parser.add_argument('-ls2', "--lambda_sem", type=float, default=1.0,
                         help="Weight for semantic contrastive alignment loss")
-    parser.add_argument('-tau', "--tau", type=float, default=0.1,
-                        help="Temperature for InfoNCE contrastive loss")
     parser.add_argument('-wr', "--warmup_rounds", type=int, default=10,
                         help="Warmup rounds before style augmentation starts")
     parser.add_argument('-sdn', "--style_dispatch_num", type=int, default=5,
@@ -526,6 +547,8 @@ if __name__ == "__main__":
                         help="Cosine similarity threshold for style dedup")
     parser.add_argument('-sbm', "--style_bank_max", type=int, default=50,
                         help="Maximum style bank size")
+    parser.add_argument('-edir', "--exp_dir", type=str, default="",
+                        help="实验文件夹路径，非空则自动Tee到terminal.log并生成metrics.json")
 
     args = parser.parse_args()
 
@@ -535,21 +558,29 @@ if __name__ == "__main__":
         print("\ncuda is not avaiable.\n")
         args.device = "cpu"
 
+    # 设置 Tee：同时输出到终端和实验文件夹内的 terminal.log
+    tee = None
+    if args.exp_dir:
+        os.makedirs(args.exp_dir, exist_ok=True)
+        os.makedirs(os.path.join(args.exp_dir, "results"), exist_ok=True)
+        log_path = os.path.join(args.exp_dir, "terminal.log")
+        tee = Tee(log_path)
+        sys.stdout = tee
+        sys.stderr = tee
+        print(f"[Tee] 日志同步写入: {log_path}")
+
+    model_str = args.model
+
     print("=" * 50)
+    print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     for arg in vars(args):
         print(arg, '=',getattr(args, arg))
     print("=" * 50)
 
-    # with torch.profiler.profile(
-    #     activities=[
-    #         torch.profiler.ProfilerActivity.CPU,
-    #         torch.profiler.ProfilerActivity.CUDA],
-    #     profile_memory=True, 
-    #     on_trace_ready=torch.profiler.tensorboard_trace_handler('./log')
-    #     ) as prof:
-    # with torch.autograd.profiler.profile(profile_memory=True) as prof:
     run(args)
 
-    
-    # print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
-    # print(f"\nTotal time cost: {round(time.time()-total_start, 2)}s.")
+    total_time = time.time() - total_start
+    print(f"\nTotal time cost: {round(total_time, 2)}s.")
+
+    if tee:
+        tee.close()

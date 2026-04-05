@@ -1,0 +1,42 @@
+experiment:
+  id: "EXP-001"
+  name: "FedDSA Sanity Check on PACS"
+  date: "2026-04-05"
+  purpose: "验证FedDSA代码能正常运行，损失下降，无报错"
+
+dataset:
+  name: "PACS"
+  num_clients: 4
+  num_classes: 7
+  split: "每个域=1个客户端"
+  domains: ["art_painting", "cartoon", "photo", "sketch"]
+
+model:
+  backbone: "ResNet18"
+  pretrained: false
+  feat_dim: 512
+  proj_dim: 128
+
+training:
+  global_rounds: 10
+  local_epochs: 5
+  batch_size: 32
+  lr: 0.01
+  optimizer: "SGD"
+  momentum: 0.9
+  weight_decay: 1.0e-5
+  seeds: [0]
+  eval_gap: 2
+
+method:
+  name: "FedDSA"
+  lambda_orth: 1.0
+  lambda_hsic: 0.1
+  lambda_sem: 1.0
+  tau: 0.1
+  warmup_rounds: 5
+  style_dispatch_num: 5
+  style_dedup: 0.95
+  style_bank_max: 50
+
+notes: "Sanity check: 仅10轮，验证代码无bug，损失能下降，准确率超过随机水平(>14%)"

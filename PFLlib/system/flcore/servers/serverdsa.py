@@ -7,12 +7,21 @@ Differential aggregation:
 - BN layers → Private (FedBN principle)
 """
 import copy
+import json
+import os
 import time
 import torch
 import torch.nn.functional as F
 import numpy as np
+from datetime import datetime
 from flcore.clients.clientdsa import clientDSA
 from flcore.servers.serverbase import Server
+
+DOMAIN_NAMES = {
+    'PACS': ['art_painting', 'cartoon', 'photo', 'sketch'],
+    'Digit5': ['MNIST', 'SVHN', 'USPS', 'SynthDigits', 'MNIST-M'],
+    'DomainNet': ['clipart', 'infograph', 'painting', 'quickdraw', 'real', 'sketch'],
+}
 
 
 class FedDSA(Server):
@@ -32,6 +41,10 @@ class FedDSA(Server):
         self.style_dispatch_num = args.style_dispatch_num if hasattr(args, 'style_dispatch_num') else 5
         self.warmup_rounds = args.warmup_rounds if hasattr(args, 'warmup_rounds') else 10
 
+        self.exp_dir = args.exp_dir if hasattr(args, 'exp_dir') else ""
+        self.domain_names = DOMAIN_NAMES.get(self.dataset, [f'client_{i}' for i in range(self.num_clients)])
+        self.per_client_acc_history = []
+
         print(f"\n{'='*50}")
         print(f"FedDSA: Decouple-Share-Align")
         print(f"Join ratio / total clients: {self.join_ratio} / {self.num_clients}")
@@ -42,13 +55,38 @@ class FedDSA(Server):
 
         self.Budget = []
 
+    def evaluate(self, acc=None, loss=None):
+        stats = self.test_metrics()
+        stats_train = self.train_metrics()
+
+        test_acc = sum(stats[2]) * 1.0 / sum(stats[1])
+        test_auc = sum(stats[3]) * 1.0 / sum(stats[1])
+        train_loss = sum(stats_train[2]) * 1.0 / sum(stats_train[1])
+        accs = [a / n for a, n in zip(stats[2], stats[1])]
+
+        if acc is None:
+            self.rs_test_acc.append(test_acc)
+        else:
+            acc.append(test_acc)
+        if loss is None:
+            self.rs_train_loss.append(train_loss)
+        else:
+            loss.append(train_loss)
+
+        self.per_client_acc_history.append(accs)
+
+        print(f"  Train Loss: {train_loss:.4f} | Avg Acc: {test_acc:.4f} | Std: {np.std(accs):.4f}")
+        for i, (name, a) in enumerate(zip(self.domain_names, accs)):
+            print(f"    [{name}] {a:.4f}")
+
     def train(self):
+        train_start = datetime.now()
+
         for i in range(self.global_rounds + 1):
             s_t = time.time()
 
             self.selected_clients = self.select_clients()
 
-            # Send global model + prototypes + style bank
             self.send_models()
             self.send_protos_and_styles(i)
 
@@ -57,15 +95,12 @@ class FedDSA(Server):
                 print(f"Style bank size: {len(self.style_bank)}")
                 self.evaluate()
 
-            # Client local training
             for client in self.selected_clients:
                 client.set_round(i)
                 client.train()
 
-            # Receive and aggregate
             self.receive_models()
 
-            # FIX: Build active client list from uploaded_ids to handle dropout
             active_clients = [self.clients[cid] for cid in self.uploaded_ids]
 
             self.aggregate_parameters_no_bn()
@@ -81,11 +116,58 @@ class FedDSA(Server):
             ):
                 break
 
-        print(f"\nBest accuracy: {max(self.rs_test_acc):.4f}")
-        print(f"Avg time/round: {sum(self.Budget[1:])/max(len(self.Budget)-1, 1):.1f}s")
+        train_end = datetime.now()
+        best_acc = max(self.rs_test_acc)
+        best_round_idx = self.rs_test_acc.index(best_acc)
+        best_per_client = self.per_client_acc_history[best_round_idx]
+
+        print(f"\n{'='*50}")
+        print(f"[RESULT] Best Avg Accuracy: {best_acc:.4f} (eval #{best_round_idx})")
+        print(f"[RESULT] Final Avg Accuracy: {self.rs_test_acc[-1]:.4f}")
+        for name, a in zip(self.domain_names, best_per_client):
+            print(f"[RESULT]   {name}: {a:.4f}")
+        print(f"[RESULT] Domain Std: {np.std(best_per_client):.4f}")
+        print(f"[RESULT] Avg time/round: {sum(self.Budget[1:])/max(len(self.Budget)-1, 1):.1f}s")
+        print(f"[RESULT] Total time: {(train_end - train_start).total_seconds():.1f}s")
+        print(f"{'='*50}")
 
         self.save_results()
         self.save_global_model()
+
+        if self.exp_dir:
+            self._save_metrics_json(train_start, train_end, best_acc, best_round_idx, best_per_client)
+
+    def _save_metrics_json(self, start_time, end_time, best_acc, best_round_idx, best_per_client):
+        """训练结束后自动保存 results/metrics.json 到实验文件夹"""
+        results_dir = os.path.join(self.exp_dir, "results")
+        os.makedirs(results_dir, exist_ok=True)
+        path = os.path.join(results_dir, "metrics.json")
+
+        data = {
+            "algorithm": self.algorithm,
+            "dataset": self.dataset,
+            "start_time": start_time.isoformat(),
+            "end_time": end_time.isoformat(),
+            "elapsed_seconds": round((end_time - start_time).total_seconds(), 1),
+            "global_rounds": self.global_rounds,
+            "best_avg_accuracy": round(best_acc, 6),
+            "final_avg_accuracy": round(self.rs_test_acc[-1], 6),
+            "best_eval_index": best_round_idx,
+            "per_client_accuracy_at_best": {
+                name: round(a, 6) for name, a in zip(self.domain_names, best_per_client)
+            },
+            "domain_std_at_best": round(float(np.std(best_per_client)), 6),
+            "all_eval_avg_acc": [round(a, 6) for a in self.rs_test_acc],
+            "all_eval_train_loss": [round(l, 6) for l in self.rs_train_loss],
+            "all_per_client_acc": [
+                {name: round(a, 6) for name, a in zip(self.domain_names, accs)}
+                for accs in self.per_client_acc_history
+            ],
+        }
+
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        print(f"[Metrics] 结构化指标已保存: {path}")
 
     def send_protos_and_styles(self, round_num):
         """Send global semantic prototypes and style bank subset to each client."""
