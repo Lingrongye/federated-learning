@@ -129,11 +129,14 @@ class clientDSA(Client):
                 if self.global_semantic_protos is not None:
                     loss_sem_con = self._compute_sem_con_loss(z_sem, y)
 
+                # Auxiliary loss warmup: linearly ramp up over warmup_rounds
+                aux_warmup = min(1.0, self.current_round / max(self.warmup_rounds, 1))
+
                 # Total loss (FIX: lambda_orth and lambda_hsic are separate)
                 loss = loss_task + loss_task_aug + \
-                       self.lambda_orth * loss_orth + \
-                       self.lambda_hsic * loss_hsic + \
-                       self.lambda_sem * loss_sem_con
+                       aux_warmup * self.lambda_orth * loss_orth + \
+                       aux_warmup * self.lambda_hsic * loss_hsic + \
+                       aux_warmup * self.lambda_sem * loss_sem_con
 
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -304,6 +307,33 @@ class clientDSA(Client):
         cls_params = {k.replace('sem_classifier.', ''): v for k, v in params.items() if k.startswith('sem_classifier.')}
         self.semantic_head.load_state_dict(head_params)
         self.sem_classifier.load_state_dict(cls_params)
+
+    def train_metrics(self):
+        """Override: evaluate train loss using semantic_head + sem_classifier path."""
+        trainloader = self.load_train_data()
+        self.model.eval()
+        self.semantic_head.eval()
+        self.sem_classifier.eval()
+
+        train_num = 0
+        losses = 0
+        with torch.no_grad():
+            for x, y in trainloader:
+                if type(x) == type([]):
+                    x[0] = x[0].to(self.device)
+                else:
+                    x = x.to(self.device)
+                y = y.to(self.device)
+
+                h = self.model.base(x)
+                z_sem = self.semantic_head(h)
+                output = self.sem_classifier(z_sem)
+                loss = self.loss(output, y)
+
+                train_num += y.shape[0]
+                losses += loss.item() * y.shape[0]
+
+        return losses, train_num
 
     def test_metrics(self):
         """FIX: Evaluate using semantic_head + sem_classifier path (same as training)."""

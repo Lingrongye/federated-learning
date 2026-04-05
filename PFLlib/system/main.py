@@ -134,12 +134,14 @@ def run(args):
                 args.model = DNN(60, 20, num_classes=args.num_classes).to(args.device)
         
         elif model_str == "ResNet18":
-            args.model = torchvision.models.resnet18(pretrained=False, num_classes=args.num_classes).to(args.device)
-            
-            # args.model = torchvision.models.resnet18(pretrained=True).to(args.device)
-            # feature_dim = list(args.model.fc.parameters())[0].shape[1]
-            # args.model.fc = nn.Linear(feature_dim, args.num_classes).to(args.device)
-            
+            if hasattr(args, 'pretrained') and args.pretrained:
+                args.model = torchvision.models.resnet18(pretrained=True).to(args.device)
+                feature_dim = args.model.fc.in_features
+                args.model.fc = nn.Linear(feature_dim, args.num_classes).to(args.device)
+                print(f"[Model] ResNet18 pretrained=True, fc replaced: {feature_dim} -> {args.num_classes}")
+            else:
+                args.model = torchvision.models.resnet18(pretrained=False, num_classes=args.num_classes).to(args.device)
+
             # args.model = resnet18(num_classes=args.num_classes, has_bn=True, bn_block_num=4).to(args.device)
         
         elif model_str == "ResNet10":
@@ -549,6 +551,8 @@ if __name__ == "__main__":
                         help="Maximum style bank size")
     parser.add_argument('-edir', "--exp_dir", type=str, default="",
                         help="实验文件夹路径，非空则自动Tee到terminal.log并生成metrics.json")
+    parser.add_argument('-pt', "--pretrained", action='store_true', default=False,
+                        help="Use ImageNet pretrained backbone")
 
     args = parser.parse_args()
 

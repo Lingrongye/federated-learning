@@ -640,3 +640,85 @@ PARDON-FedDG/
 
 ### 可选加分基线
 FedPall, MOON, FedSTAR(需复现), FedSeProto(代码不公开)
+
+---
+
+## 十七、开发与同步工作流
+
+### 17.1 环境架构
+
+```
+Windows 本地 (D:\桌面文件\联邦学习\)
+  ├── Claude Code / Cursor 编辑代码
+  ├── Git 仓库 → https://github.com/Lingrongye/federated-learning
+  └── WSL (Ubuntu 20.04)
+       └── rr (Road Runner) → rsync + SSH 同步执行
+                ↓
+服务器 (lab-lry: 222.201.145.9:22, user lry)
+  ├── GPU: 双卡 RTX 3090 (各24GB)
+  ├── 项目目录: /home/lry/code/federated-learning
+  └── 共享服务器（其他用户: wjc, syy, tfs）
+```
+
+### 17.2 rr 配置
+
+- **全局配置**: WSL `~/.rr/config.yaml`
+- **项目配置**: `.rr.yaml`（定义 host、remote_dir、exclude 规则）
+- **SSH 配置**: WSL `~/.ssh/config` → Host lab-lry, 密钥 `~/.ssh/id_ed25519`
+
+### 17.3 日常工作流命令（WSL 终端执行）
+
+```bash
+cd "/mnt/d/桌面文件/联邦学习"
+
+# 推送代码到服务器并执行命令
+rr run "cd PFLlib/system && CUDA_VISIBLE_DEVICES=1 python main.py -algo FedDSA -data PACS ..."
+
+# 只推送文件不执行
+rr sync
+
+# 只执行命令不推送
+rr exec "nvidia-smi"
+
+# 执行并拉回结果文件
+rr run "cd PFLlib/system && python main.py ..." --pull experiments/results/metrics.json
+
+# 从服务器拉文件到本地（排除数据集等大文件）
+bash sync_pull.sh
+
+# 拉之前预览
+bash sync_pull.sh --dry-run
+```
+
+### 17.4 同步排除规则
+
+以下目录/文件在 `.rr.yaml`、`sync_pull.sh`、`.gitignore` 三处保持一致排除：
+
+| 排除项 | 原因 |
+|--------|------|
+| `.git` | 避免 git 仓库冲突 |
+| `无关文件/` | 周报、文档等无关内容 |
+| `Qwen3-VL-4B-mlc/`, `mlc-qwen3-vl/` | 模型权重（2.4GB） |
+| `papers/` | PDF论文（193MB） |
+| `PFLlib/dataset/MNIST/`, `PFLlib/dataset/utils/LEAF/` | 数据集原始数据 |
+| `PFLlib/dataset/*/rawdata,train,test` | 各数据集生成的数据文件 |
+| `RethinkFL/data/` | RethinkFL数据（244MB） |
+| `PARDON-FedDG/style_stats/` | 风格统计缓存 |
+| `__pycache__/`, `*.pyc` | Python 缓存 |
+| `wandb/` | 实验追踪日志 |
+
+**注意：以下目录需要同步，不排除：**
+- `*.log` — 训练日志
+- `checkpoints/` — 模型检查点
+- `runs/` — TensorBoard 运行记录
+- `experiments/` — 实验记录
+
+### 17.5 换行符规则
+
+`.gitattributes` 统一所有文本文件为 LF（`* text=auto eol=lf`），避免 Windows CRLF 与 Linux LF 差异导致 rsync 同步后产生假修改。
+
+### 17.6 GPU 使用注意
+
+- 共享服务器，先用 `rr exec "nvidia-smi"` 检查 GPU 占用
+- 指定空闲卡：`CUDA_VISIBLE_DEVICES=0` 或 `CUDA_VISIBLE_DEVICES=1`
+- 小实验 batch_size 调小防止 OOM

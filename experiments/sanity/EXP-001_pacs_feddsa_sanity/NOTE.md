@@ -5,7 +5,7 @@
 - **类型**：sanity
 - **数据集**：PACS（4域×7类，每域=1客户端）
 - **方法**：FedDSA（Decouple-Share-Align）
-- **状态**：⏳ 待执行
+- **状态**：✅ 已完成（发现多个bug）
 
 ## 目的
 验证 FedDSA 代码能正常运行：损失下降、无报错、准确率超过随机水平（>14%）、风格仓库能正常增长。
@@ -37,19 +37,30 @@ cd /home/lry/code/federated-learning/PFLlib/system && /home/lry/conda/envs/pflli
 
 | 指标 | 值 |
 |------|---|
-| 平均准确率 | |
-| art_painting | |
-| cartoon | |
-| photo | |
-| sketch | |
-| 域间标准差 | |
-| 最佳轮次 | |
+| 平均准确率 | 21.2% |
+| art_painting | 14.3% |
+| cartoon | 28.5% |
+| photo | 20.1% |
+| sketch | 21.0% |
+| 域间标准差 | 0.051 |
+| 最佳轮次 | eval #5 (round 10) |
+| 训练耗时 | 1085s (~97s/round) |
 
 > 结果自动生成到 results/metrics.json
 
-## 结论（必填！写发现和判断，不是只贴数字）
+## 结论
+
+Sanity check通过（无报错、loss下降、准确率超过随机14.3%），但发现以下**4个bug**需修复后才能进入正式实验：
+
+1. **[CRITICAL] 风格仓库始终只有1条**：cosine去重阈值0.95太严格，共享backbone下不同域的μ向量相似度天然>0.95。应改为按client_id管理slot。
+2. **[HIGH] train_loss报的是错误路径**：基类`train_metrics()`走`model(x)`即base→head路径，但FedDSA的head从未训练。需重写`train_metrics()`。
+3. **[HIGH] 未使用预训练backbone**：PACS只有~10K图片，从头训练ResNet-18非常困难。竞争方法(FDSE/FedBN)都用pretrained。
+4. **[MEDIUM] 辅助损失在早期过于激进**：Round 0特征是随机的就施加正交+HSIC+InfoNCE，Round 2准确率从20%暴跌到10%。需要辅助损失warmup。
+
+修复已提交，下次实验(EXP-002)使用修复后代码+预训练backbone。
 
 ## 问题与备注
 - 两张GPU使用率较高（GPU0 ~20GB/24GB，GPU1 ~18GB/24GB），选择GPU 1
 - 已修复 main.py 中 `-tau` 参数重复定义的 argparse 冲突
 - PACS 原始数据来自 flgo 包自带数据（符号链接到 PFLlib/dataset/PACS/rawdata/PACS）
+- GPU内存: 643MB allocated on cuda:0（模型较小，内存不是瓶颈）

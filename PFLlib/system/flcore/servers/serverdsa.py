@@ -237,24 +237,20 @@ class FedDSA(Server):
             client.set_semantic_head_params(copy.deepcopy(avg_params))
 
     def collect_styles(self, active_clients):
-        """Collect style prototypes from active clients and manage the bank."""
+        """Collect style prototypes — one slot per client, updated each round."""
         for client in active_clients:
             if client.style_proto_mu is not None:
                 mu = client.style_proto_mu.detach().cpu()
                 sigma = client.style_proto_sigma.detach().cpu()
 
-                # Check for duplicates via cosine similarity
-                is_dup = False
-                for existing_mu, _, _ in self.style_bank:
-                    cos_sim = F.cosine_similarity(
-                        mu.unsqueeze(0), existing_mu.unsqueeze(0)
-                    ).item()
-                    if cos_sim > self.style_dedup_threshold:
-                        # Update existing entry instead of skipping
-                        is_dup = True
+                # Per-client slot: update existing or insert new
+                updated = False
+                for i, (_, _, cid) in enumerate(self.style_bank):
+                    if cid == client.id:
+                        self.style_bank[i] = (mu, sigma, client.id)
+                        updated = True
                         break
-
-                if not is_dup:
+                if not updated:
                     self.style_bank.append((mu, sigma, client.id))
 
         # Trim bank if too large (keep most recent)
