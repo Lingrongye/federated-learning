@@ -1,0 +1,27 @@
+experiment:
+  id: "EXP-004"
+  name: "FedBN Baseline on PACS (pretrained)"
+  date: "2026-04-05"
+  purpose: "基线对比：FedBN(BN层本地化)在相同配置下的准确率"
+
+dataset:
+  name: "PACS"
+  num_clients: 4
+  num_classes: 7
+  domains: ["art_painting", "cartoon", "photo", "sketch"]
+
+model:
+  backbone: "ResNet18"
+  pretrained: true
+
+training:
+  global_rounds: 50
+  local_epochs: 5
+  batch_size: 32
+  lr: 0.005
+  eval_gap: 5
+
+method:
+  name: "FedBN"
+
+notes: "FedBN是FedDSA的直接前身(BN本地化原则)，重要对比项"

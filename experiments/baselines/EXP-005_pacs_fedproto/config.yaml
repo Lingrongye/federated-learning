@@ -1,0 +1,28 @@
+experiment:
+  id: "EXP-005"
+  name: "FedProto Baseline on PACS (pretrained)"
+  date: "2026-04-05"
+  purpose: "基线对比：FedProto(原型学习基础方法)在相同配置下的准确率"
+
+dataset:
+  name: "PACS"
+  num_clients: 4
+  num_classes: 7
+  domains: ["art_painting", "cartoon", "photo", "sketch"]
+
+model:
+  backbone: "ResNet18"
+  pretrained: true
+
+training:
+  global_rounds: 50
+  local_epochs: 5
+  batch_size: 32
+  lr: 0.005
+  eval_gap: 5
+
+method:
+  name: "FedProto"
+  lamda: 1.0
+
+notes: "FedProto是原型学习FL的开山之作，FedDSA在此基础上改进"

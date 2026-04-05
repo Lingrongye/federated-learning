@@ -1,0 +1,27 @@
+experiment:
+  id: "EXP-003"
+  name: "FedAvg Baseline on PACS (pretrained)"
+  date: "2026-04-05"
+  purpose: "基线对比：FedAvg在相同配置下的准确率，用于衡量FedDSA的实际提升"
+
+dataset:
+  name: "PACS"
+  num_clients: 4
+  num_classes: 7
+  domains: ["art_painting", "cartoon", "photo", "sketch"]
+
+model:
+  backbone: "ResNet18"
+  pretrained: true
+
+training:
+  global_rounds: 50
+  local_epochs: 5
+  batch_size: 32
+  lr: 0.005
+  eval_gap: 5
+
+method:
+  name: "FedAvg"
+
+notes: "与EXP-002(FedDSA)完全相同的公共参数，仅算法不同"
