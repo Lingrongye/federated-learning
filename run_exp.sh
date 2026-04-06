@@ -102,7 +102,7 @@ cd "${PROJECT_DIR}/PFLlib/system"
 CUDA_VISIBLE_DEVICES=${GPU_ID} ${PYTHON} ${MAIN_PY} \
     ${PYTHON_ARGS} \
     -did ${GPU_ID} \
-    -edir "${EXP_DIR}"
+    -edir "${EXP_DIR}" || true
 EXIT_CODE=$?
 
 FINISH_TIME=$(date '+%Y-%m-%d %H:%M:%S')

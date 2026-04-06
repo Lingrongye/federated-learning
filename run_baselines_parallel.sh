@@ -41,8 +41,8 @@ run_one() {
     echo "[$(date '+%H:%M:%S')] START $name"
 
     cd $PROJECT/PFLlib/system
-    CUDA_VISIBLE_DEVICES=0 $PYTHON main.py $COMMON $args -did 0 -edir "$edir" 2>&1
-    local exit_code=$?
+    CUDA_VISIBLE_DEVICES=0 $PYTHON main.py $COMMON $args -did 0 -edir "$edir" 2>&1 || true
+    local exit_code=${PIPESTATUS[0]:-$?}
 
     echo "[$(date '+%H:%M:%S')] DONE $name (exit=$exit_code)"
 
