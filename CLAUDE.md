@@ -755,14 +755,22 @@ rr exec "tail -20 /home/lry/code/federated-learning/experiments/sanity/EXP-001_p
 
 ### 17.4 跑实验完整流程
 
+**强制规则：本地commit后必须在服务器git pull，确认同步后才能启动实验。绝不能跳过pull步骤。**
+
 ```
-1. 本地修改代码 → git commit → git push
-2. rr exec "git pull"  拉取代码到服务器
-3. rr exec "nvidia-smi" 检查GPU空闲
-4. rr exec "nohup python main.py ... &" 后台启动实验
-5. rr exec "tail -20 <log>"  查看进度
-6. 实验结束后: rr exec "git add && git commit && git push"  提交结果
+1. 本地修改代码/配置 → git commit → git push
+2. 服务器 git pull （必须！确认Fast-forward成功）
+3. 检查GPU空闲
+4. 后台启动实验（nohup）
+5. 定期查看日志进度
+6. 实验结束后: 服务器 git add → git commit → git push 提交结果
 7. 本地 git pull 拉取结果分析
+```
+
+**seetacloud服务器注意**：GitHub需要代理，pull前先开clash：
+```bash
+source /root/clashctl/scripts/cmd/clashctl.sh && clashctl on > /dev/null 2>&1
+cd /root/autodl-tmp/federated-learning && git pull origin main
 ```
 
 ### 17.5 .gitignore 与大文件排除
