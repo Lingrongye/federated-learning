@@ -1,0 +1,43 @@
+experiment:
+  id: "EXP-006"
+  name: "FedDSA in FDSE framework (AlexNet, from scratch)"
+  date: "2026-04-06"
+  purpose: "在FDSE框架下公平对比：FedDSA用AlexNet from scratch，与论文报告的基线数据直接可比"
+
+dataset:
+  name: "PACS"
+  num_clients: 4
+  num_classes: 7
+  domains: ["art_painting", "cartoon", "photo", "sketch"]
+  train_holdout: 0.2
+
+model:
+  backbone: "AlexNet (same as FDSE baselines)"
+  pretrained: false
+  feat_dim: 1024
+  proj_dim: 128
+
+training:
+  global_rounds: 500
+  local_epochs: 5
+  batch_size: 50
+  lr: 0.1
+  lr_decay: 0.9998
+  weight_decay: 1e-3
+  clip_grad: 10
+  seeds: [2]
+
+method:
+  name: "FedDSA"
+  lambda_orth: 1.0
+  lambda_hsic: 0.1
+  lambda_sem: 1.0
+  tau: 0.1
+  warmup_rounds: 10
+  style_dispatch_num: 5
+
+framework: "FDSE (flgo)"
+run_command: |
+  cd FDSE_CVPR25 && python run_single.py --task PACS_c4 --algorithm feddsa --gpu 0 --config ./config/pacs/feddsa.yml --logger PerRunLogger --seed 2
+
+notes: "与EXP-003~005(PFLlib pretrained)不同，本实验使用AlexNet from scratch，结果可直接对比FDSE论文Table"

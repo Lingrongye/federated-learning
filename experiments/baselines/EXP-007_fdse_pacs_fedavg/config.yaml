@@ -1,0 +1,32 @@
+experiment:
+  id: "EXP-007"
+  name: "FedAvg in FDSE framework (AlexNet, from scratch)"
+  date: "2026-04-06"
+  purpose: "FDSE框架基线：FedAvg (FDSE论文报告PACS 74.3%)"
+
+dataset:
+  name: "PACS"
+  num_clients: 4
+  num_classes: 7
+  train_holdout: 0.2
+
+model:
+  backbone: "AlexNet"
+  pretrained: false
+
+training:
+  global_rounds: 500
+  local_epochs: 5
+  batch_size: 50
+  lr: 0.1
+  lr_decay: 0.9998
+  weight_decay: 1e-3
+  clip_grad: 10
+  seeds: [2]
+
+method:
+  name: "FedAvg"
+
+framework: "FDSE (flgo)"
+run_command: |
+  cd FDSE_CVPR25 && python run_single.py --task PACS_c4 --algorithm fedavg --gpu 0 --config ./config/pacs/fedavg.yml --logger PerRunLogger --seed 2
