@@ -17,4 +17,14 @@
 |------|---|
 | mean_local_test_accuracy | |
 
+## 运行命令
+```bash
+cd /root/autodl-tmp/federated-learning/FDSE_CVPR25 && \
+nohup /root/miniconda3/bin/python run_single.py \
+    --task PACS_c4 --algorithm fdse --gpu 0 \
+    --config ./config/pacs/fdse.yml \
+    --logger PerRunLogger --seed 2 \
+    > /tmp/exp010.out 2>&1 &
+```
+
 ## 结论

@@ -37,5 +37,17 @@
 
 ## 结论
 
+## 运行命令
+```bash
+cd /root/autodl-tmp/federated-learning/FDSE_CVPR25 && \
+nohup /root/miniconda3/bin/python run_single.py \
+    --task PACS_c4 --algorithm feddsa --gpu 0 \
+    --config ./config/pacs/feddsa.yml \
+    --logger PerRunLogger --seed 2 \
+    > /tmp/exp006.out 2>&1 &
+```
+- **服务器**���seetacloud (RTX 3080 Ti)
+- **Python**：/root/miniconda3/bin/python
+
 ## 问题与备注
 - 已在Round 0成功运行，mean_local_test_accuracy=0.1601 (随机水平)

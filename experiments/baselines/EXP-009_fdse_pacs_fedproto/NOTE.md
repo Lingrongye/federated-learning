@@ -17,4 +17,15 @@ FedProto原型学习基线，在相同框架下对比FedDSA。
 |------|---|
 | mean_local_test_accuracy | |
 
+## 运行命令
+```bash
+cd /root/autodl-tmp/federated-learning/FDSE_CVPR25 && \
+nohup /root/miniconda3/bin/python run_single.py \
+    --task PACS_c4 --algorithm fedproto --gpu 0 \
+    --config ./config/pacs/fedavg.yml \
+    --logger PerRunLogger --seed 2 \
+    > /tmp/exp009.out 2>&1 &
+```
+注：FedProto无独立yml，复用fedavg.yml(lr=0.1)，算法内部自带lmbd=0.1
+
 ## 结论

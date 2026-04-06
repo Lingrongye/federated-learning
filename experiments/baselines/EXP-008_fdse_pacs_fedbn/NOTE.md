@@ -17,4 +17,14 @@ FDSE论文报告FedBN在PACS上81.6%，复现验证。
 |------|---|
 | mean_local_test_accuracy | |
 
+## 运行命令
+```bash
+cd /root/autodl-tmp/federated-learning/FDSE_CVPR25 && \
+nohup /root/miniconda3/bin/python run_single.py \
+    --task PACS_c4 --algorithm fedbn --gpu 0 \
+    --config ./config/pacs/fedbn.yml \
+    --logger PerRunLogger --seed 2 \
+    > /tmp/exp008.out 2>&1 &
+```
+
 ## 结论
