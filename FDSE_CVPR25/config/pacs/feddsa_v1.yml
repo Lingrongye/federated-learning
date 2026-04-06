@@ -1,0 +1,21 @@
+algo_para:
+- 0.1    # lambda_orth (降低)
+- 0.01   # lambda_hsic (降低)
+- 0.5    # lambda_sem (降低)
+- 0.1    # tau
+- 10     # warmup_rounds
+- 5      # style_dispatch_num
+- 128    # proj_dim
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
