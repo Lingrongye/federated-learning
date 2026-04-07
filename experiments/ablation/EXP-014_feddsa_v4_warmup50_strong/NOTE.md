@@ -6,7 +6,7 @@
 - **方法**：FedDSA V4: warmup=50 + 原版强权重 (1.0/0.1/1.0)
 - **模型**：AlexNet from scratch
 - **框架**：FDSE (flgo)
-- **状态**：⏳ 待执行
+- **状态**：✅ 已完成
 
 ## 目的
 EXP-013(V3 长warmup)显示warmup=50能显著提高稳定性(drops从14降到3)，best达81.68%接近FDSE 82.16%。
@@ -41,9 +41,23 @@ nohup /root/miniconda3/bin/python run_single.py \
 
 | 指标 | 值 |
 |------|---|
-| Best acc | |
-| Last acc | |
-| Drops>5% | |
-| 与FDSE差距 | |
+| Best acc | **79.93%** @Round 48 |
+| Last acc | 77.31% |
+| Drops>5% | 6 |
+| 最弱域@best | 66.67% |
+| 最强域@best | 87.76% |
+| 稳定性(last20 std) | 0.0030 |
+| 与FDSE差距 | **-2.23%** |
+| 总轮次 | 200 |
 
 ## 结论
+
+**假设未得到验证：V4 (warmup=50 + 强权重) Best仅79.93%，低于V3(warmup=50+弱权重)的81.68%。**
+
+核心发现：
+1. **强权重反而不好**——V3(弱权重 0.5/0.05/0.5) Best=81.68% > V4(强权重 1.0/0.1/1.0) Best=79.93%
+2. Drops=6(vs原版14)，稳定性有提升但Best下降
+3. 这提示：HSIC可能是罪魁祸首，强λ_hsic=0.1让训练难以收敛
+4. **验证方式**：EXP-017 (V4去HSIC) Best=82.24% **超越FDSE！** 证实了HSIC有害
+
+V4不是最优，EXP-017才是。
