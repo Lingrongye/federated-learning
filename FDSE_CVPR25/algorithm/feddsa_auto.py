@@ -40,10 +40,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             c.tau = self.tau
             c.warmup_rounds = self.warmup_rounds
             c.proj_dim = self.proj_dim
-            # Initialize learnable log-variance parameters (per client)
-            c.log_sigma_task_aug = nn.Parameter(torch.zeros(1))
-            c.log_sigma_orth = nn.Parameter(torch.zeros(1))
-            c.log_sigma_sem = nn.Parameter(torch.zeros(1))
+            # Store initial values (will be converted to device-specific Parameters in train)
+            c._log_sigma_init = 0.0
 
     def _init_agg_keys(self):
         all_keys = list(self.model.state_dict().keys())
@@ -173,13 +171,14 @@ class Client(flgo.algorithm.fedbase.BasicClient):
     def train(self, model, *args, **kwargs):
         model.train()
         device = next(model.parameters()).device
-        # Move log_sigma to device
-        self.log_sigma_task_aug = self.log_sigma_task_aug.to(device)
-        self.log_sigma_orth = self.log_sigma_orth.to(device)
-        self.log_sigma_sem = self.log_sigma_sem.to(device)
-        self.log_sigma_task_aug.requires_grad_(True)
-        self.log_sigma_orth.requires_grad_(True)
-        self.log_sigma_sem.requires_grad_(True)
+        # Create learnable log_sigma as leaf tensors on device
+        # Load from previous round if exists
+        init_task_aug = getattr(self, '_log_sigma_task_aug_val', 0.0)
+        init_orth = getattr(self, '_log_sigma_orth_val', 0.0)
+        init_sem = getattr(self, '_log_sigma_sem_val', 0.0)
+        self.log_sigma_task_aug = torch.tensor([init_task_aug], device=device, requires_grad=True)
+        self.log_sigma_orth = torch.tensor([init_orth], device=device, requires_grad=True)
+        self.log_sigma_sem = torch.tensor([init_sem], device=device, requires_grad=True)
 
         # Include log_sigma parameters in optimizer
         params = list(model.parameters()) + [
@@ -279,6 +278,11 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             self._local_style_stats = (mu, var.clamp(min=1e-6).sqrt())
         else:
             self._local_style_stats = None
+
+        # Save log_sigma values for next round
+        self._log_sigma_task_aug_val = self.log_sigma_task_aug.detach().cpu().item()
+        self._log_sigma_orth_val = self.log_sigma_orth.detach().cpu().item()
+        self._log_sigma_sem_val = self.log_sigma_sem.detach().cpu().item()
 
     def _style_augment(self, h):
         idx = np.random.randint(0, len(self.local_style_bank))
