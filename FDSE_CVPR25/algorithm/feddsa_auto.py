@@ -279,10 +279,11 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         else:
             self._local_style_stats = None
 
-        # Save log_sigma values for next round
-        self._log_sigma_task_aug_val = self.log_sigma_task_aug.detach().cpu().item()
-        self._log_sigma_orth_val = self.log_sigma_orth.detach().cpu().item()
-        self._log_sigma_sem_val = self.log_sigma_sem.detach().cpu().item()
+        # Save log_sigma values for next round (with clamping to prevent collapse)
+        # Clamp to [-2, 2]: prevents weight from going too extreme (exp(-2)~0.13 to exp(2)~7.4)
+        self._log_sigma_task_aug_val = float(self.log_sigma_task_aug.detach().cpu().clamp(-2, 2).item())
+        self._log_sigma_orth_val = float(self.log_sigma_orth.detach().cpu().clamp(-2, 2).item())
+        self._log_sigma_sem_val = float(self.log_sigma_sem.detach().cpu().clamp(-2, 2).item())
 
     def _style_augment(self, h):
         idx = np.random.randint(0, len(self.local_style_bank))
