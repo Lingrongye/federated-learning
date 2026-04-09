@@ -5,7 +5,7 @@
 - **类型**:bug fix ablation
 - **算法**:feddsa_augdown
 - **配置**:feddsa_exp047a.yml
-- **状态**:⏳ 待执行
+- **状态**:✅ 已完成
 
 ## 代码证据(Bug)
 `FDSE_CVPR25/algorithm/feddsa.py` L320-323:
@@ -46,8 +46,13 @@ nohup python run_single.py --task PACS_c4 --algorithm feddsa_augdown --gpu 0 \
 ## 结果
 | 指标 | EXP-017 (baseline s2) | EXP-047A |
 |---|---|---|
-| Best | 82.24 | |
-| Last | ~75.46 | |
-| Gap | 6.78 | |
+| Best | 82.24 | 81.33 |
+| Last | 75.46 | 73.83 |
+| Gap | 6.78 | **7.50** |
 
 ## 结论
+- ❌ **假设不成立**:ramp-down loss_aug 反而让 gap 从 6.78 增加到 7.50
+- Best 降了 0.91,Last 降了 1.63,全面劣化
+- **分析**:style augmentation 在后期仍有正向泛化作用,降权导致模型域鲁棒性下降
+- **判定**:`loss_aug` 没有 `aux_w` 不是 bug 而是合理设计;Aug 对训练后期仍必要
+- 与 EXP-047D 共同否定了"后期 aug 有害"的假设

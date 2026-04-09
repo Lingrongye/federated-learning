@@ -5,7 +5,7 @@
 - **类型**:critical bug fix
 - **算法**:feddsa_fixbn
 - **配置**:feddsa_exp048.yml (与 EXP-017 完全一致的 algo_para)
-- **状态**:⏳ 待执行
+- **状态**:✅ 已完成 (多 seed 验证见 EXP-050)
 
 ## Bug 描述(已验证)
 
@@ -85,8 +85,15 @@ nohup python run_single.py --task PACS_c4 --algorithm feddsa_fixbn --gpu 0 \
 ## 结果
 | 指标 | EXP-017 (buggy) | EXP-048 (fixed) | Delta |
 |---|---|---|---|
-| Best | 82.24 | | |
-| Last | 75.46 | | |
-| Gap | 6.78 | | |
+| Best | 82.24 | 80.73 | **-1.51** |
+| Last | 75.46 | 76.27 | **+0.81** |
+| Gap | 6.78 | 4.46 | **-2.32 (改善 34%)** |
 
 ## 结论
+- **假设部分成立**:Gap 确实从 6.78 缩到 4.46(改善 34%),但远没到"<3"
+- **Best 反而下降 1.51%**:聚合 BN running stats 让 server model 测试更"正确"但偏向均值化,削弱了单 seed 峰值
+- **Last 提升 0.81%**:train/test 匹配改善了后期稳定性
+- **总结**:BN bug 的影响是"trade-off"而非单方面损失:
+  - 旧版:broken BN 充当隐性正则化,Best 高但不稳定
+  - 新版:BN 正常,Best 低但更稳定
+- **不建议直接替换原版**:需要多 seed 验证(见 EXP-050),如果均值 > 原版 80.74 才考虑
