@@ -39,11 +39,27 @@ nohup /root/miniconda3/bin/python run_single.py \
     --logger PerRunLogger --seed 333 > /tmp/exp043_s333.out 2>&1 &
 ```
 
-## 结果
+## 结果 (R200)
 | seed | Best | Last | Gap |
 |---|---|---|---|
-| 15 | | | |
-| 333 | | | |
-| mean | | | |
+| 15 | 79.00 | 76.64 | 2.36 |
+| 333 | 79.93 | 77.92 | 2.01 |
+| **mean** | **79.46 ± 0.47** | 77.28 | 2.18 |
+
+> 注:首次启动时服务器 01:12 挂掉,只跑了 13 轮。本次为重启后完整结果。
 
 ## 结论
+- **FDSE R200 均值 79.46** << FedDSA R200 均值 81.29(差 **1.83%**)
+- 与 FDSE 原论文 R500 5-seed 均值 82.17 ± 1.49 相比,R200 预算下精度下降约 2.7%
+- **关键发现**:同训练预算下 FedDSA 稳定击败 FDSE
+- **尚需**:补跑 FDSE R500 多seed 匹配论文配置,作为完整对比
+
+## ⚠️ 与 FDSE 论文对比方法论差异
+| 维度 | FDSE 论文 | 本实验 |
+|---|---|---|
+| Rounds | **500** | 200 |
+| Seeds | **5** (mean±std) | 2 (+s2 原 R500) |
+| LR 调优 | 各方法独立 grid | 固定 0.05 |
+| 度量 | AVG + ALL | AVG only |
+| Backbone | AlexNet ✅ | AlexNet ✅ |
+| 数据分区 | 4 clients = 4 domains | 4 clients = 4 domains ✅ |

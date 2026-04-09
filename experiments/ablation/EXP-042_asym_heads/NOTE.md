@@ -3,7 +3,7 @@
 ## 基本信息
 - **方法**：semantic_head深(3层+残差)，style_head浅(1层+L2norm)
 - **算法**：feddsa_asym
-- **状态**：⏳ 待执行
+- **状态**:❌ 失败(191/200, log 恢复)
 
 ## 目的
 原版两个head对称(都2层)，但任务难度不同：
@@ -29,8 +29,15 @@ nohup /root/miniconda3/bin/python run_single.py \
     --logger PerRunLogger --seed 2 > /tmp/exp042.out 2>&1 &
 ```
 
-## 结果
+## 结果 (191/200, log 恢复)
 | 指标 | 值 |
 |------|---|
+| Best acc | 79.16 |
+| Last acc | **63.37** ← 严重崩塌 |
+| Gap | **15.79** |
 
 ## 结论
+- **失败**:Best 79.16 < 原版 82.24 (-3.08%),且 Last 崩到 63.37
+- **深 semantic head + 残差**反而让模型不稳定,训练后期大幅漂移
+- L2 归一化风格向量压缩了表达空间,影响风格库多样性
+- **判定**:非对称架构死路,放弃该方向

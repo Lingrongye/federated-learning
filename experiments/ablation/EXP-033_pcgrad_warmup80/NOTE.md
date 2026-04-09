@@ -4,7 +4,7 @@
 - **日期**：2026-04-08
 - **类型**：ablation (PCGrad + 长warmup)
 - **方法**：feddsa_pcgrad with warmup=80
-- **状态**：⏳ 待执行
+- **状态**:✅ 已完成(200/200,log 恢复)
 
 ## 目的
 基于EXP-032，进一步延长warmup让backbone更充分预训练。
@@ -30,8 +30,14 @@ nohup /root/miniconda3/bin/python run_single.py \
     > /tmp/exp033.out 2>&1 &
 ```
 
-## 结果
+## 结果 (log 恢复)
 | 指标 | 值 |
 |------|---|
+| Best acc | 80.18 |
+| Last acc | 75.09 |
+| Gap | 5.09 |
 
 ## 结论
+- vs EXP-032 (warmup=50 同 PCGrad+orth2, 80.82): **-0.64%**, 长 warmup **反而更差**
+- 长 warmup 没帮助:decouple/对齐 loss 延后引入的损失大于 backbone 预训练收益
+- **判定**:warmup=50 已是足够,不需要更长
