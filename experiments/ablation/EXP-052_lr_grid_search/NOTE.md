@@ -2,7 +2,7 @@
 
 ## 基本信息
 - **目的**:FDSE 论文对每个方法独立 grid search LR ∈ {0.001, 0.01, 0.05, 0.1, 0.5}。我们之前固定 LR=0.1,可能不是最优。
-- **状态**:⏳ 待执行
+- **状态**:⏳ PACS 在跑; EXP-055 Office ✅ 已完成
 
 ## 实验矩阵
 | Exp | 数据集 | LR | decay | Config | Seed |
@@ -60,7 +60,7 @@ nohup python run_single.py --task office_caltech10_c4 --algorithm feddsa --gpu 0
 | EXP-053 | PACS | LR=0.2 | | | | | |
 | EXP-054 | PACS | decay=0.998 | | | | | |
 | baseline | Office | LR=0.1 | 84.13 | 89.95 | 80.55 | 85.86 | 4.09 |
-| EXP-055 | Office | LR=0.05 | | | | | |
+| **EXP-055** | **Office** | **LR=0.05** | **86.72** | **90.82** | **85.72** | **90.11** | **0.71** |
 
 ## 决策规则
 - 如果某 LR 的 AVG Best > 当前 82.24 (PACS) 或 89.95 (Office) → 用新 LR 跑 multi-seed
