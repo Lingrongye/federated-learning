@@ -1,0 +1,17 @@
+algo_para:
+- 0.05   # lmbd (FDSE论文 Office 最优值)
+- 0.5    # tau
+- 0.05   # beta
+batch_size: 50
+clip_grad: 10
+learning_rate: 0.1
+learning_rate_decay: 0.9998
+local_test: true
+log_file: true
+lr_scheduler: 0
+no_log_console: true
+num_epochs: 1
+num_rounds: 200        # R200 同预算对比
+proportion: 1.0
+train_holdout: 0.2
+weight_decay: 1e-3

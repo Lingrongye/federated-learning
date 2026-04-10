@@ -5,7 +5,7 @@
 - **类型**:hard ablation
 - **算法**:feddsa_noaug_late
 - **配置**:feddsa_exp047d.yml
-- **状态**:⏳ 待执行
+- **状态**:✅ 已完成
 
 ## 目的
 EXP-047A 的硬消融对照:**完全停止** style augmentation 从 round 150 开始。
@@ -34,8 +34,14 @@ nohup python run_single.py --task PACS_c4 --algorithm feddsa_noaug_late --gpu 0 
 ## 结果
 | 指标 | EXP-017 baseline | EXP-047D |
 |---|---|---|
-| Best | 82.24 | |
-| Last | ~75.46 | |
-| Gap | 6.78 | |
+| Best | 82.24 | **82.32** |
+| Last | 75.46 | 73.81 |
+| Gap | 6.78 | **8.51** |
 
 ## 结论
+- Best 82.32 ≈ 基线(微高 0.08,无意义)
+- ❌ **Last 降到 73.81**(比基线 75.46 还低 1.65)
+- ❌ **Gap 增到 8.51**,比基线 6.78 更差
+- **解读**:round 150 后关闭 aug → 最后 50 轮模型丧失跨域泛化 → Last 反而崩
+- 与 EXP-047A 共同结论:**style augmentation 在全程都有正向作用,不可缩减**
+- Aug 导致的"震荡"不是 bug,而是泛化能力的代价;停掉 aug 反而更差
