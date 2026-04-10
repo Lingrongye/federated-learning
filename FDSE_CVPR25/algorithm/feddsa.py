@@ -294,7 +294,7 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             # Forward
             h = model.encode(x)            # [B, 1024]
             z_sem = model.get_semantic(h)   # [B, proj_dim]
-            z_sty = model.get_style(h.detach())  # [B, proj_dim] detach: orth梯度不污染encoder
+            z_sty = model.get_style(h)     # [B, proj_dim] orth梯度回传encoder是必要的(EXP-058验证)
 
             # Loss 1: Task CE on semantic path
             output = model.head(z_sem)
