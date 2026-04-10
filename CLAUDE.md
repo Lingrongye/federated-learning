@@ -664,56 +664,30 @@ Windows 本地 (D:\桌面文件\联邦学习\)
   ├── Claude Code / Cursor 编辑代码
   ├── Git 仓库 → https://github.com/Lingrongye/federated-learning
   └── WSL (Ubuntu 20.04)
-       └── rr CLI: /home/lingrongye/go/bin/rr
-       └── SSH: Host lab-lry (密钥 ~/.ssh/id_ed25519)
+       └── SSH 直连各服务器
                 ↓
-服务器 (lab-lry: 222.201.145.9:22, user lry)
-  ├── GPU: 双卡 RTX 3090 (各24GB)
-  ├── 项目目录: /home/lry/code/federated-learning (同一个Git仓库)
-  ├── Conda环境: /home/lry/conda/envs/pfllib/bin/python
-  └── 共享服务器（其他用户: wjc, syy, tfs）
+服务器集群:
+  ├── seetacloud (主力): AutoDL 按量 GPU
+  │   ├── SSH: Host seetacloud (WSL ~/.ssh/config)
+  │   ├── 项目: /root/autodl-tmp/federated-learning
+  │   ├── Python: /root/miniconda3/bin/python
+  │   └── GitHub 代理: source /root/clashctl/scripts/cmd/clashctl.sh && clashctl on
+  │
+  ├── seetacloud2 (辅助): AutoDL 4090 24GB
+  │   ├── SSH: Host seetacloud2 (port 19385, connect.westb.seetacloud.com)
+  │   ├── 项目: /root/autodl-tmp/federated-learning (克隆实例)
+  │   ├── Python: /root/miniconda3/bin/python
+  │   └── GitHub 代理: 同上
+  │
+  └── lab-lry (备用): 实验室共享服务器
+      ├── SSH: Host lab-lry (222.201.145.9:22, user lry)
+      ├── GPU: 双卡 RTX 3090 (各24GB, 常被 wjc 占用)
+      └── 项目: /home/lry/code/federated-learning
 ```
 
 ### 17.2 代码同步方式：Git 双向同步
 
-**唯一同步方式是 Git commit + push/pull，不再使用 rr sync 同步代码。**
-
-本地和服务器都是同一个 Git 仓库的克隆，通过 GitHub 中转同步。
-
-#### 本地 → 服务器（推送代码修改）
-
-```bash
-# 1. 本地: commit 并 push
-git add <files>
-git commit -m "描述"
-git push origin main
-
-# 2. 服务器: pull 获取更新（通过 rr exec 远程执行）
-rr exec "cd /home/lry/code/federated-learning && git pull origin main"
-```
-
-**注意**：如果服务器有未提交的本地修改，pull 会冲突。需要先处理：
-```bash
-# 丢弃服务器本地修改（确认不需要保留时）
-rr exec "cd /home/lry/code/federated-learning && git checkout -- . && git pull origin main"
-
-# 如果有 untracked 文件冲突
-rr exec "cd /home/lry/code/federated-learning && git checkout -- . && git clean -fd <冲突目录> && git pull origin main"
-```
-
-#### 服务器 → 本地（拉取实验结果）
-
-实验在服务器上产生的文件（terminal.log、metrics.json 等），在服务器端 commit 后 push，本地 pull：
-
-```bash
-# 1. 服务器: commit 实验结果并 push
-rr exec "cd /home/lry/code/federated-learning && git add experiments/ && git commit -m '实验结果: EXP-XXX' && git push origin main"
-
-# 2. 本地: pull 获取结果
-git pull origin main
-```
-
-#### 同步流程图
+**唯一同步方式是 Git commit + push/pull。**
 
 ```
 [本地编辑代码] → git commit → git push → GitHub
@@ -729,60 +703,77 @@ git pull origin main
 
 ### 17.3 在服务器上执行命令
 
-Claude Code 通过 WSL 中的 rr CLI 远程执行服务器命令。
-
-**rr 路径**：`/home/lingrongye/go/bin/rr`
-
-**Claude Code 执行方式**：
-```bash
-wsl bash -lc 'cd "/mnt/d/桌面文件/联邦学习" && /home/lingrongye/go/bin/rr exec "<服务器命令>"'
-```
-
-**常用命令模板**：
+**Claude Code 通过 WSL SSH 直连服务器执行命令（不使用 rr）。**
 
 ```bash
-# 查看 GPU 状态
-rr exec "nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv,noheader"
+# 执行方式
+wsl bash -lc "ssh seetacloud '<命令>'"
+wsl bash -lc "ssh seetacloud2 '<命令>'"
 
-# 查看服务器 Git 状态
-rr exec "cd /home/lry/code/federated-learning && git status"
+# 执行脚本（推荐，避免引号转义问题）
+wsl bash -lc 'ssh seetacloud bash < "/mnt/d/桌面文件/联邦学习/rr/脚本.sh"'
 
-# 服务器 Git pull
-rr exec "cd /home/lry/code/federated-learning && git pull origin main"
-
-# 服务器 commit + push 实验结果
-rr exec "cd /home/lry/code/federated-learning && git add experiments/ && git commit -m '结果: EXP-XXX' && git push origin main"
-
-# 跑实验（指定GPU）
-rr exec "cd /home/lry/code/federated-learning/PFLlib/system && CUDA_VISIBLE_DEVICES=1 nohup /home/lry/conda/envs/pfllib/bin/python main.py -algo FedDSA -data PACS ... > /dev/null 2>&1 &"
-
-# 查看后台进程
-rr exec "ps aux | grep main.py | grep -v grep"
-
-# 查看实时日志
-rr exec "tail -20 /home/lry/code/federated-learning/experiments/sanity/EXP-001_pacs_feddsa_sanity/terminal.log"
+# 常用命令
+wsl bash -lc "ssh seetacloud 'nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader'"
+wsl bash -lc "ssh seetacloud 'ps -eo pid,etime,cmd | grep run_single | grep -v grep'"
+wsl bash -lc "ssh seetacloud 'cd /root/autodl-tmp/federated-learning && git log --oneline -3'"
 ```
-
-**注意**：rr exec 不同步文件，仅远程执行命令。代码同步统一走 Git。
 
 ### 17.4 跑实验完整流程
 
-**强制规则：本地commit后必须在服务器git pull，确认同步后才能启动实验。绝不能跳过pull步骤。**
+**强制规则：本地 commit 后必须在服务器 git pull，确认同步后才能启动实验。**
 
 ```
-1. 本地修改代码/配置 → git commit → git push
-2. 服务器 git pull （必须！确认Fast-forward成功）
-3. 检查GPU空闲
-4. 后台启动实验（nohup）
-5. 定期查看日志进度
-6. 实验结束后: 服务器 git add → git commit → git push 提交结果
-7. 本地 git pull 拉取结果分析
+1. 本地: 写代码/config/NOTE.md → git commit → git push
+2. 服务器: 开代理 → git pull （必须确认 Fast-forward 成功）
+3. 服务器: 检查 GPU 空闲 (nvidia-smi)
+4. 服务器: nohup 后台启动实验
+5. 定期: 通过 log 文件检查进度
+6. 实验完成: 收集结果到 EXP 目录 (collect_results.py)
+7. 服务器: git add → git commit → git push
+8. 本地: git pull → 更新 NOTE.md 回填结果
 ```
 
-**seetacloud服务器注意**：GitHub需要代理，pull前先开clash：
+**seetacloud 服务器 GitHub 代理**：
 ```bash
 source /root/clashctl/scripts/cmd/clashctl.sh && clashctl on > /dev/null 2>&1
-cd /root/autodl-tmp/federated-learning && git pull origin main
+cd /root/autodl-tmp/federated-learning && git pull --no-rebase origin main
+```
+
+### 17.4.1 实验输出结构
+
+**flgo 框架默认输出**（不可改）：
+- JSON: `FDSE_CVPR25/task/{TASK}/record/{algo}_{params}_{seed}.json`
+- LOG: `FDSE_CVPR25/task/{TASK}/log/{timestamp}{algo}_{params}_{seed}.log`
+
+**实验目录结构**（每个 EXP 自包含）：
+```
+experiments/ablation/EXP-052_lr_grid_search/
+├── NOTE.md              ← 实验说明+配置+结论
+├── results/             ← 收集的 json (用 collect_results.py)
+└── logs/                ← 收集的 log
+```
+
+**收集结果命令**（实验完成后执行）：
+```bash
+cd /root/autodl-tmp/federated-learning/FDSE_CVPR25
+python collect_results.py --exp EXP-052 --task PACS_c4 --algorithm feddsa --seed 2
+```
+
+### 17.4.2 启动实验的标准模板
+
+```bash
+cd /root/autodl-tmp/federated-learning/FDSE_CVPR25
+PY=/root/miniconda3/bin/python
+EXP_DIR=../../experiments/ablation/EXP-052_lr_grid_search
+
+# 确保输出目录存在
+mkdir -p $EXP_DIR/results $EXP_DIR/logs
+
+# 启动实验，stdout 输出到实验目录
+nohup $PY run_single.py --task PACS_c4 --algorithm feddsa --gpu 0 \
+  --config ./config/pacs/feddsa_lr005.yml --logger PerRunLogger --seed 2 \
+  > $EXP_DIR/terminal_s2.log 2>&1 &
 ```
 
 ### 17.5 .gitignore 与大文件排除
