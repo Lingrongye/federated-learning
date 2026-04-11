@@ -65,3 +65,5 @@ wandb/
 *.pth
 *.pt
 *.ckpt
+# Log files with | in name (Windows incompatible)
+FDSE_CVPR25/task/*/log/*|*
