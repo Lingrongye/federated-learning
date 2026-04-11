@@ -3,7 +3,7 @@
 ## 基本信息
 - **日期**:2026-04-11
 - **算法**:feddsa_consensus
-- **状态**:✅ 单元测试通过,⏳ 实验待执行
+- **状态**:✅ seed=2 完成, ⏳ seed=15/333 在跑 (SC2)
 
 ## 动机
 
@@ -90,10 +90,28 @@ nohup python run_single.py --task PACS_c4 --algorithm feddsa_consensus --gpu 0 \
 **如果 Office AVG 显著提升 (≥ 90.5)** → H2 部分成立,需要组合其他机制
 **如果 Office AVG < 90** → H2 也不成立,问题可能更深(FDSE 的 layer decomposition?)
 
-## 结果
-| 数据集 | ALL Best | AVG Best | AVG Last | Gap | vs baseline |
-|---|---|---|---|---|---|
-| PACS | | | | | |
-| Office | | | | | |
+## 结果 (seed=2)
+| 数据集 | AVG Best | Last | Gap | vs baseline |
+|---|---|---|---|---|
+| PACS | **83.04** | 67.58 | 15.46 | **+0.80** ✅ (最好! > FDSE 80.81) |
+| Office | **89.40** | 88.20 | 1.20 | -0.55 (最接近 baseline 的变体) |
 
-## 结论
+## seed=2 观察
+- **PACS 反超 baseline 和 FDSE!** 83.04 > baseline 82.24 > FDSE 80.81
+- Office 仍然 -0.55, 但是所有 6 个变体(Gated/NoAug/SoftBeta/AugSched/Cons/Cons+KL)里**最好的**
+- 与假设 H2 一致:aggregation conflict 是关键
+- 但 gap 较大 (PACS 15.46),last 严重掉落 → 最后期间训练不稳
+
+## 多seed 跑中 (SC2 PID 60662-60989)
+- PACS s15, s333
+- Office s15, s333
+
+## 假设判断
+- **Office -0.55 < baseline** → Consensus 单独不够
+- **需要叠加** Consistency Reg (EXP-066 Consensus+KL) 或其他机制
+- PACS 上 Consensus 比 KL 强 — 说明 KL 对 PACS 是多余的约束
+
+## 结论 (pending multi-seed)
+- **PACS seed=2 突破性结果**: Consensus 超越 baseline+FDSE
+- 待多 seed 验证是否稳健
+- Office 仍需进一步改进

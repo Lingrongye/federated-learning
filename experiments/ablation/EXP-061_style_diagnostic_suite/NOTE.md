@@ -4,7 +4,7 @@
 - **日期**:2026-04-11
 - **目的**:系统性验证 GPT-5.4 review 的核心诊断——Office 负迁移源自 Beta(0.1,0.1) 过激 AdaIN
 - **共 3 个变体 + EXP-060 gated = 4 维度对照**
-- **状态**:⏳ 待执行
+- **状态**:✅ 已完成 (seed=2, 两个数据集)
 
 ## 假设
 **H1**: FedDSA 在 Office 上输 FDSE,根本原因是 Beta(0.1,0.1) 对低风格差域制造 off-manifold 噪声。
@@ -76,30 +76,37 @@ done
 
 ### Office-Caltech10 (seed=2, AVG Best)
 
-| Method | ALL Best | AVG Best | AVG Last | Gap | vs baseline |
-|---|---|---|---|---|---|
-| FedDSA baseline | 84.13 | 89.95 | 85.86 | 4.09 | — |
-| FDSE R200 | 88.10 | 92.39 | 91.90 | 0.49 | — |
-| EXP-060 Gated | | | | | |
-| EXP-061 NoAug | | | | | |
-| EXP-062 SoftBeta | | | | | |
-| EXP-063 AugSchedule | | | | | |
+| Method | AVG Best | Last | Gap | vs baseline 89.95 |
+|---|---|---|---|---|
+| FedDSA baseline | 89.95 | 85.86 | 4.09 | — |
+| FDSE R200 | **92.39** | 91.90 | 0.49 | +2.44 |
+| EXP-060 Gated | 87.98 | 86.93 | 1.10 | **-1.97** ❌ |
+| EXP-061 NoAug | **88.58** | 88.32 | 0.26 | -1.37 ❌ |
+| EXP-062 SoftBeta | 88.39 | 87.72 | 0.67 | -1.56 ❌ |
+| EXP-063 AugSchedule | 88.43 | 87.04 | 1.39 | -1.52 ❌ |
 
 ### PACS (seed=2, AVG Best)
 
-| Method | ALL Best | AVG Best | AVG Last | Gap | vs baseline |
-|---|---|---|---|---|---|
-| FedDSA baseline | 83.75 | 82.24 | 75.46 | 6.78 | — |
-| FDSE R200 | 82.04 | 80.81 | 78.09 | 2.72 | — |
-| EXP-060 Gated | | | | | |
-| EXP-061 NoAug | | | | | |
-| EXP-062 SoftBeta | | | | | |
-| EXP-063 AugSchedule | | | | | |
+| Method | AVG Best | Last | Gap | vs baseline 82.24 |
+|---|---|---|---|---|
+| FedDSA baseline | 82.24 | 75.46 | 6.78 | — |
+| FDSE R200 | 80.81 | 78.09 | 2.72 | -1.43 |
+| EXP-060 Gated | 81.37 | 76.11 | 5.26 | -0.87 |
+| **EXP-061 NoAug** | **82.34** | 75.70 | 6.64 | **+0.10** ✅ |
+| EXP-062 SoftBeta | 80.90 | 76.77 | 4.13 | -1.34 |
+| **EXP-063 AugSchedule** | **82.29** | 76.00 | 6.29 | **+0.05** ✅ |
 
-## 决策树
+## 决策树回答
 
-- **最佳 Office 表现 > 90** → 找到了 fix,补多 seed 验证
-- **最佳表现 88-90** → 方向对但不够,考虑组合 (gated + augschedule)
-- **最佳表现 < 89.95** → H1 部分或完全错误,需转向 aggregation 改进
+**❌ H1 (Beta(0.1,0.1) 是 Office 负迁移源头) 被证伪**:
+- NoAug (完全禁用 style aug): Office 88.58 **< baseline 89.95**
+- 禁用 aug 反而更差 → style aug 不是 Office 失败的原因
+
+**→ 问题不在 style augmentation,而在 aggregation/normalization 层面**
+**→ 下一步转向 EXP-064 Consensus aggregation 和 EXP-066 Consensus+KL**
 
 ## 结论
+- 4 个 style-side fix (Gated, NoAug, SoftBeta, AugSched) 在 Office 上**全部失败**(都 < baseline)
+- PACS 上 NoAug 和 AugSched 微胜 baseline (+0.05~0.10),但 Gated 和 SoftBeta 更差
+- **style aug 在两个数据集上都是有价值的**,不能简单去掉
+- **Office 劣势源自更深层的机制**(aggregation conflict),需要 FDSE 风格的 consensus aggregation 来解决

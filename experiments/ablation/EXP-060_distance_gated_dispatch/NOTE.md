@@ -4,7 +4,7 @@
 - **日期**:2026-04-11
 - **类型**:核心方法改进 (GPT-5.4 research review 的 top priority)
 - **算法**:feddsa_gated (只改 Server.pack 的 dispatch 逻辑)
-- **状态**:⏳ 待执行
+- **状态**:✅ 已完成 (seed=2)
 
 ## 动机 (来自 research review)
 
@@ -81,15 +81,15 @@ nohup python run_single.py --task office_caltech10_c4 --algorithm feddsa_gated -
 2. **假设B**: Office 上距离小,很少风格通过 gate → 减少负迁移 → 性能提升
 3. **假设C**: gated 后 Office 至少和 FedBN (88.99) 相当
 
-## 结果
+## 结果 (seed=2)
 | 数据集 | ALL Best | AVG Best | AVG Last | Gap | vs baseline |
 |---|---|---|---|---|---|
-| PACS | | | | | |
-| Office | | | | | |
-
-## 诊断 log
-log 会输出每轮 style distance 的 max/mean/min,看:
-- PACS 和 Office 的距离分布差多少倍
-- threshold 设置是否合理
+| PACS | - | **81.37** | 76.11 | 5.26 | **-0.87** ❌ |
+| Office | - | **87.98** | 86.93 | 1.10 | **-1.97** ❌ |
 
 ## 结论
+- **假设被证伪**:distance-gated dispatch 在 PACS 和 Office 上都比 baseline 更差
+- **PACS**: -0.87 (符合预期,gate 对大风格差不应该有大影响,略降)
+- **Office**: -1.97 (反驳了"gate 能减少负迁移"假设)
+- 说明 style sharing 即使在 Office 上也**有一定价值**,完全关掉反而更差
+- 配合 EXP-061 NoAug 的结果(关 aug 是 88.58)可知:问题不是 style sharing 本身,而是其他机制

@@ -33,6 +33,31 @@
 - R=200, E=1, B=50, LR=0.05
 - 3 seeds (2, 15, 333)
 
+## ⚠️ 数据下载状态 (2026-04-11)
+
+### 已下载并 unzip ✅ (正确格式)
+- **infograph/** 53,201 images (class folder format)
+- **quickdraw/** 172,500 images
+- **real/** 175,327 images
+- **sketch/** 70,386 images
+
+### 问题:clipart 和 painting 需要不同 URL
+代码发现 `task/domainnet_c6/config.py` L46:
+```python
+url = v.format(self.domain) if self.domain in ['infograph','quickdraw','real','sketch']
+      else v.format(f"groundtruth/{self.domain}")
+```
+
+- 上面 4 个 domain: `multi-source/{d}.zip` (class folder format)
+- clipart, painting: `multi-source/groundtruth/{d}.zip` (class folder format)
+
+**之前下错了** clipart.zip 和 painting.zip (用了非 groundtruth URL,得到 trunk 格式).
+
+### 目前正在重新下载 clipart.zip (1.27 GB) 和 painting.zip (3.68 GB)
+curl 并发下载仍然极慢,总时间不定。
+
+**如果 clipart/painting 无法下载完成,考虑用 4-domain subset** (infograph + quickdraw + real + sketch) 做 regime test。4 个域仍包含 high-style-gap (quickdraw, sketch) 和 low-style-gap (real, infograph) 两类,足够验证 regime-dependent claim。
+
 ## 运行命令
 ```bash
 # FedDSA
