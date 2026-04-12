@@ -3,7 +3,7 @@
 ## 基本信息
 - **日期**:2026-04-11
 - **算法**:feddsa_consensus
-- **状态**:✅ seed=2 完成, ⏳ seed=15/333 在跑 (SC2)
+- **状态**:✅ 3-seed 全部完成 (SC2)
 
 ## 动机
 
@@ -102,16 +102,29 @@ nohup python run_single.py --task PACS_c4 --algorithm feddsa_consensus --gpu 0 \
 - 与假设 H2 一致:aggregation conflict 是关键
 - 但 gap 较大 (PACS 15.46),last 严重掉落 → 最后期间训练不稳
 
-## 多seed 跑中 (SC2 PID 60662-60989)
-- PACS s15, s333
-- Office s15, s333
+## 3-seed 完整结果 (✅ COMPLETE)
 
-## 假设判断
-- **Office -0.55 < baseline** → Consensus 单独不够
-- **需要叠加** Consistency Reg (EXP-066 Consensus+KL) 或其他机制
-- PACS 上 Consensus 比 KL 强 — 说明 KL 对 PACS 是多余的约束
+### PACS
 
-## 结论 (pending multi-seed)
-- **PACS seed=2 突破性结果**: Consensus 超越 baseline+FDSE
-- 待多 seed 验证是否稳健
-- Office 仍需进一步改进
+| seed | AVG Best | Last | vs baseline 81.29 |
+|---|---|---|---|
+| 2 | **83.04** | 67.58 | +1.75 |
+| 15 | 79.39 | 75.89 | -1.90 |
+| 333 | 79.80 | 70.37 | -1.49 |
+| **Mean ± Std** | **80.74 ± 1.63** | | **-0.55** |
+
+### Office-Caltech10
+
+| seed | AVG Best | Last | vs baseline 89.13 |
+|---|---|---|---|
+| 2 | 89.40 | 88.20 | +0.27 |
+| 15 | **90.11** | 89.10 | +0.98 |
+| 333 | **89.99** | 88.10 | +0.86 |
+| **Mean ± Std** | **89.83 ± 0.40** | | **+0.70** |
+
+## 结论 (multi-seed verified)
+
+- **PACS seed=2 的 83.04 是单 seed 假象**:s15/s333 均 < baseline。Multi-seed mean 80.74 < baseline 81.29
+- **Consensus 在 PACS 上实际有害**:强制"最小冲突聚合"限制了各域自由发展
+- **Office 上 Consensus 大幅提升稳定性**:std 从 2.42 → 0.40 (6x 降低), mean +0.70
+- **H2 结论**:Consensus 解决了 Office 的 aggregation 不稳定,但不是 PACS 的问题

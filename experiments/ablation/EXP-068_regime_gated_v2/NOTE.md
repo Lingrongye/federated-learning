@@ -77,18 +77,43 @@ for S in 2 15 333; do
 done
 ```
 
-## 结果(待填)
+## 结果 (3-seed COMPLETE)
 
-### 3-seed
+### Office-Caltech10 (✅ DONE)
 
-| Dataset | s=2 | s=15 | s=333 | Mean ± Std | vs baseline |
-|---|---|---|---|---|---|
-| PACS | - | - | - | - | - |
-| Office | - | - | - | - | - |
+| seed | AVG Best | Last | vs baseline 89.13 | vs Consensus 89.83 |
+|---|---|---|---|---|
+| 2 | 89.48 | 88.69 | +0.35 | -0.35 |
+| 15 | **90.22** | 89.55 | +1.09 | +0.11 |
+| 333 | 89.77 | 87.43 | +0.64 | -0.22 |
+| **Mean ± Std** | **89.82 ± 0.30** | | **+0.69** | **-0.01** |
 
-### Regime score r (style_head 投影空间)
+### PACS (✅ DONE)
 
-| Dataset | r range | 是否 discriminative? |
+| seed | AVG Best | Last | vs baseline 81.29 | vs Consensus 80.74 |
+|---|---|---|---|---|
+| 2 | 80.64 | 74.73 | -1.65 | -2.40 |
+| 15 | 78.89 | 66.66 | -2.40 | -0.50 |
+| 333 | 78.19 | 71.00 | -3.10 | -1.61 |
+| **Mean ± Std** | **79.24 ± 1.01** | | **-2.05** | **-1.50** |
+
+### Regime score r (style_head 投影空间) — FIX A VALIDATED ✅
+
+| Dataset | round 10 | round 20 | round 40 | round 60 | round 100 | round 200 |
+|---|---|---|---|---|---|---|
+| PACS avg | 2.92 | 4.67 | **8.36** | **12.24** | 4.26 | ~3 |
+| Office avg | ~2.8 | ~2.8 | ~2.8 | ~2.5 | ~2.3 | **3.12** |
+
+**Fix A 验证成功**: PACS r 峰值 12.24 vs Office r 3.12 = **3.6x ratio** (v1 仅 1.0x)
+**Fix A 发现**: r 在 round 60 达峰后下降,因为 farthest dispatch 的负反馈使 style_head 趋同
+
+### Farthest dispatch 效果 (Fix B)
+
+| 方法 | PACS Mean | Office Mean |
 |---|---|---|
-| PACS | - | - |
-| Office | - | - |
+| EXP-064 Consensus (random) | 80.74 | 89.83 |
+| EXP-067 v1 (nearest) | 79.46 | 89.72 |
+| **EXP-068 v2 (farthest)** | **79.24** | **89.82** |
+
+**结论**: Dispatch 方向 (nearest/farthest) 对准确率影响 < 1%, 不是关键变量。
+PACS 的瓶颈不在 dispatch,而在 Consensus QP 聚合本身对高 gap 域有害。

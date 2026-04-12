@@ -201,15 +201,32 @@ done
 - **EXP-067 若成功 + 考虑 graph-paper 升级**:把 "KNN dispatch" 扩展为 "graph geodesic style transport",把 "regime score" 扩展为 "graph-level structural signal"
 - **若不够,再谈方向 D 的 prototype stability 重构**(GPT-5.4 推荐但 novelty 只有 5/10)
 
-## 结果(待填)
+## 结果 (3-seed COMPLETE)
 
-### seed=2 初步
+### Office-Caltech10 (✅ DONE)
 
-| Dataset | AVG Best | Last | Gap | vs baseline | log 中观察的 r |
-|---|---|---|---|---|---|
-| PACS | - | - | - | - | - |
-| Office | - | - | - | - | - |
+| seed | AVG Best | Last | vs baseline 89.13 | vs Consensus 89.83 |
+|---|---|---|---|---|
+| 2 | 88.91 | 87.79 | -0.22 | -0.92 |
+| 15 | 90.03 | 89.55 | +0.90 | -0.08 |
+| 333 | 90.22 | 88.28 | +1.09 | +0.23 |
+| **Mean ± Std** | **89.72 ± 0.58** | | **+0.59** | **-0.11** |
 
-### multi-seed
+### PACS (✅ DONE)
 
-(待 seed=2 跑完再启动)
+| seed | AVG Best | Last | vs baseline 81.29 | vs Consensus 80.74 |
+|---|---|---|---|---|
+| 2 | 81.11 | 70.49 | -1.18 | -1.93 |
+| 15 | 78.70 | 72.62 | -2.59 | -0.69 |
+| 333 | 78.57 | 74.27 | -2.72 | -1.23 |
+| **Mean ± Std** | **79.46 ± 1.17** | | **-1.83** | **-1.28** |
+
+### Regime score r (backbone feature space, not discriminative!)
+
+| Dataset | round 10 | round 20 | round 100 | round 200 |
+|---|---|---|---|---|
+| PACS avg | ~2.4 | ~2.0 | - | ~2.0 |
+| Office avg | ~2.8 | ~2.8 | ~2.3 | ~2.1 |
+
+**关键发现**: PACS r ≈ Office r (均 ~2.0-2.2), backbone BN 后的激活统计量不 discriminative。
+**结论**: KNN (nearest) dispatch 在 PACS 有害 (-1.28), Office 中性 (-0.11)。问题不在 dispatch。
