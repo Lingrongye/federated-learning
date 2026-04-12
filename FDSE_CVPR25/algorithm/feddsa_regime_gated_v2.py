@@ -207,6 +207,9 @@ class Client(RGClient):
                         break
                     batch_data = self.calculator.to_device(batch_data)
                     x = batch_data[0]
+                    # Ensure model on same device as data (train() decorator
+                    # may have moved it back to CPU)
+                    model = model.to(x.device)
                     h = model.encode(x)
                     z_sty = model.get_style(h)  # [B, proj_dim]
                     b = z_sty.size(0)
