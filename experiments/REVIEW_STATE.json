@@ -1,0 +1,16 @@
+{
+  "round": 2,
+  "status": "completed",
+  "last_score": 6.0,
+  "last_verdict": "Almost, not ready",
+  "threshold_met": true,
+  "pending_experiments": [],
+  "implementation_notes": [
+    "Dual bank: z_sty for gap, h for AdaIN",
+    "Domain-ID linear probe validation",
+    "Support both EMA z-score and rank normalization",
+    "Add DSU baseline (EXP-072f)",
+    "Strict 2x2 factorial for M1+M3"
+  ],
+  "timestamp": "2026-04-14T09:20:00"
+}
