@@ -1,0 +1,31 @@
+2026-04-10 15:46:21,558 fflow.py init [line:848] INFO PROCESS ID:	1714
+2026-04-10 15:46:21,558 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-10 15:46:21,558 fflow.py init [line:852] INFO BENCHMARK:	task.PACS_c4
+2026-04-10 15:46:21,558 fflow.py init [line:853] INFO TASK:			task/PACS_c4
+2026-04-10 15:46:21,558 fflow.py init [line:854] INFO MODEL:		task.PACS_c4.model.default_model
+2026-04-10 15:46:21,558 fflow.py init [line:855] INFO ALGORITHM:	fedavg
+2026-04-10 15:46:21,560 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'flgo.algorithm.fedbase.BasicServer'>, 4 <class 'flgo.algorithm.fedbase.BasicClient'>
+2026-04-10 15:46:21,916 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-10 15:46:21,917 fflow.py init [line:931] INFO Ready to start.
+2026-04-10 15:46:21,917 fedbase.py run [line:300] INFO --------------Initial Evaluation--------------
+2026-04-10 15:46:30,080 __init__.py log_once [line:227] INFO local_val_accuracy            0.1652
+2026-04-10 15:46:30,080 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.1538
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0360
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.1018
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.2036
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO local_val_loss                1.9440
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO mean_local_val_loss           1.9442
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO std_local_val_loss            0.0011
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO min_local_val_loss            1.9426
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO max_local_val_loss            1.9457
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO local_test_accuracy           0.1445
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO mean_local_test_accuracy      0.1353
+2026-04-10 15:46:30,081 __init__.py log_once [line:227] INFO std_local_test_accuracy       0.0350
+2026-04-10 15:46:30,082 __init__.py log_once [line:227] INFO min_local_test_accuracy       0.0940
+2026-04-10 15:46:30,082 __init__.py log_once [line:227] INFO max_local_test_accuracy       0.1862
+2026-04-10 15:46:30,082 __init__.py log_once [line:227] INFO local_test_loss               1.9450
+2026-04-10 15:46:30,082 __init__.py log_once [line:227] INFO mean_local_test_loss          1.9455
+2026-04-10 15:46:30,082 __init__.py log_once [line:227] INFO std_local_test_loss           0.0023
+2026-04-10 15:46:30,082 __init__.py log_once [line:227] INFO min_local_test_loss           1.9429
+2026-04-10 15:46:30,082 __init__.py log_once [line:227] INFO max_local_test_loss           1.9479
+2026-04-10 15:46:30,082 fedbase.py run [line:303] INFO Eval Time Cost:               8.1652s
