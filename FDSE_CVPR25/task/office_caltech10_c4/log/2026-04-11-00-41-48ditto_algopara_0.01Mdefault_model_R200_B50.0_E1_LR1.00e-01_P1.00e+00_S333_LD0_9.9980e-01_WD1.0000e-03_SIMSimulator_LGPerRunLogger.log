@@ -1,0 +1,7 @@
+2026-04-11 00:41:48,374 fflow.py init [line:848] INFO PROCESS ID:	20544
+2026-04-11 00:41:48,374 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-11 00:41:48,374 fflow.py init [line:852] INFO BENCHMARK:	benchmark.office_caltech10_classification
+2026-04-11 00:41:48,374 fflow.py init [line:853] INFO TASK:			task/office_caltech10_c4
+2026-04-11 00:41:48,374 fflow.py init [line:854] INFO MODEL:		benchmark.office_caltech10_classification.model.default_model
+2026-04-11 00:41:48,374 fflow.py init [line:855] INFO ALGORITHM:	ditto
+2026-04-11 00:41:48,376 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'flgo.algorithm.ditto.Server'>, 4 <class 'flgo.algorithm.ditto.Client'>
