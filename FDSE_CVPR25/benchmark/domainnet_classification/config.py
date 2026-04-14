@@ -55,10 +55,13 @@ class DomainDataset(torchvision.datasets.VisionDataset):
     def download_data(self):
         for k,v in self.url_temp.items():
             file_name = k.format(self.domain)
-            url = v.format(self.domain) if self.domain in ['infograph', 'quickdraw', 'real', 'sketch'] else v.format(f"groundtruth/{self.domain}")
             if file_name.endswith('.zip'):
+                # Only zip files use groundtruth/ prefix for clipart and painting
+                url = v.format(self.domain) if self.domain in ['infograph', 'quickdraw', 'real', 'sketch'] else v.format(f"groundtruth/{self.domain}")
                 download_and_extract_archive(url, self.root, remove_finished=True)
             else:
+                # txt files always use plain domain name
+                url = v.format(self.domain)
                 download_url(url, self.root)
 
     def __getitem__(self, item):

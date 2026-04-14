@@ -451,6 +451,7 @@ class Client(flgo.algorithm.fedbase.BasicClient):
 model_map = {
     'PACS': lambda: FedDSAModel(num_classes=7, feat_dim=1024, proj_dim=128),
     'office': lambda: FedDSAModel(num_classes=10, feat_dim=1024, proj_dim=128),
+    'domainnet': lambda: FedDSAModel(num_classes=10, feat_dim=1024, proj_dim=128),
 }
 
 
