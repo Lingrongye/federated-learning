@@ -82,6 +82,7 @@ class StyleModulator(nn.Module):
         """delta_sty: [B, dim] or [1, dim] normalized style difference."""
         params = self.film_net(delta_sty)
         gamma, beta = params.chunk(2, dim=-1)
+        gamma = torch.tanh(gamma)  # constrain to [-1, 1] for stability
         gate = torch.sigmoid(self.gate_linear(delta_sty))  # [B, 1]
         return gamma, beta, gate
 
@@ -199,7 +200,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.private_keys = set()
         for k in all_keys:
             if 'style_head' in k and self.adaptive_mode not in (5, 6):
-                # M5/M6: style_head shared so z_sty is in a common space across clients
+                # style_head private by default; M5/M6 skip this (style_head shared)
                 self.private_keys.add(k)
             elif 'bn' in k.lower() and ('running_' in k or 'num_batches_tracked' in k):
                 self.private_keys.add(k)
@@ -414,7 +415,7 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             global_dict = global_model.state_dict()
             for key in new_dict.keys():
                 if 'style_head' in key and self.adaptive_mode not in (5, 6):
-                    # M5/M6: style_head is shared, load global weights
+                    # style_head private by default; M5/M6 load global weights
                     continue
                 if 'bn' in key.lower() and ('running_' in key or 'num_batches_tracked' in key):
                     continue
@@ -523,7 +524,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             loss_film = torch.tensor(0.0, device=x.device)
             if self.adaptive_mode == 6 and self.sty_intra_protos and self.sty_cross_protos \
                and self.current_round >= self.warmup_rounds:
-                z_sem_film = self._delta_film_augment(model, z_sem, y)
+                # Pass live z_sty so gradient flows to style_head via delta_s
+                z_sem_film = self._delta_film_augment(model, z_sem, z_sty, y)
                 if z_sem_film is not None:
                     output_film = model.head(z_sem_film)
                     loss_film = self.loss_fn(output_film, y)
@@ -772,17 +774,19 @@ class Client(flgo.algorithm.fedbase.BasicClient):
 
     # ---- M6: Delta-FiLM Augmentation ----
 
-    def _delta_film_augment(self, model, z_sem, y):
+    def _delta_film_augment(self, model, z_sem, z_sty_live, y):
         """M6: Cross-domain counterfactual style conditioning via Delta-FiLM.
-        Uses normalized style DIFFERENCE (ext - local) as FiLM condition.
+        Uses normalized style DIFFERENCE (ext - local_live) as FiLM condition.
+        z_sty_live is the CURRENT batch's z_sty (with grad) so gradient flows
+        through delta_s -> z_sty -> style_head -> encoder.
         Returns augmented z_sem or None if not enough protos.
         """
         device = z_sem.device
         B = z_sem.size(0)
 
-        # Collect cross-domain z_sty protos with class info
+        # Collect cross-domain z_sty protos (detached, from server)
         cross_list = [(cls, cid, p) for (cls, cid), p in self.sty_cross_protos.items()]
-        if not cross_list or not self.sty_intra_protos:
+        if not cross_list:
             return None
 
         z_sem_film = z_sem.clone()
@@ -791,31 +795,29 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         for i in range(B):
             label = y[i].item()
 
-            # Need local z_sty proto for this class
-            sty_local = self.sty_intra_protos.get(label)
-            if sty_local is None:
-                continue
-
             # Find same-class cross-domain z_sty protos
             candidates = [p for c, cid, p in cross_list if c == label]
             if not candidates:
                 continue
 
-            # Random pick one external style proto
-            sty_ext = candidates[np.random.randint(len(candidates))]
+            # Random pick one external style proto (detached, from server)
+            sty_ext = candidates[np.random.randint(len(candidates))].to(device).detach()
 
-            # Delta: direction of style shift from local to external domain
-            delta_s = sty_ext.to(device) - sty_local.to(device)
+            # Use LIVE z_sty from current batch (has grad!) as local reference
+            sty_local_live = z_sty_live[i]  # [proj_dim], with gradient
+
+            # Delta: direction of style shift (ext is fixed, local is live)
+            delta_s = sty_ext - sty_local_live  # gradient flows through sty_local_live!
             delta_norm = delta_s.norm()
             if delta_norm < 1e-6:
-                continue  # domains too similar, skip
-            delta_s = delta_s / delta_norm  # normalize to unit direction
+                continue
+            delta_s = delta_s / (delta_norm + 1e-8)  # normalize, keep grad
 
             # FiLM modulation via StyleModulator
             gamma, beta, gate = model.style_modulator(delta_s.unsqueeze(0))
-            gamma = gamma.squeeze(0)   # [proj_dim]
-            beta = beta.squeeze(0)     # [proj_dim]
-            gate = gate.squeeze()      # scalar
+            gamma = gamma.squeeze(0)
+            beta = beta.squeeze(0)
+            gate = gate.squeeze()
 
             # Residual FiLM: z_sem + gate * (gamma * z_sem + beta)
             z_sem_film[i] = z_sem[i] + gate * (gamma * z_sem[i] + beta)
