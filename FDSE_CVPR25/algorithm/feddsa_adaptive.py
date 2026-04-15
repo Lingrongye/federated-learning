@@ -100,25 +100,39 @@ class FedDSAModel(fuf.FModule):
 
 class Server(flgo.algorithm.fedbase.BasicServer):
     def initialize(self):
+        # Short keys used to keep record filename under 255 chars (Linux limit).
+        # lo=lambda_orth, lh=lambda_hsic, ls=lambda_sem, wr=warmup_rounds,
+        # sdn=style_dispatch_num, pd=proj_dim, am=aug_min, ax=aug_max,
+        # ns=noise_std, ed=ema_decay, md=adaptive_mode, fa=fixed_alpha_value
         self.init_algo_para({
-            'lambda_orth': 1.0,
-            'lambda_hsic': 0.0,
-            'lambda_sem': 1.0,
+            'lo': 1.0,   # lambda_orth
+            'lh': 0.0,   # lambda_hsic
+            'ls': 1.0,   # lambda_sem
             'tau': 0.1,
-            'warmup_rounds': 50,
-            'style_dispatch_num': 5,
-            'proj_dim': 128,
-            # Adaptive parameters (M1)
-            'aug_min': 0.05,
-            'aug_max': 0.8,
-            'noise_std': 0.05,
-            'ema_decay': 0.9,
-            # Mode: 0=fixed_alpha, 1=adaptive(M1), 2=M3-only, 3=M1+M3
-            'adaptive_mode': 1,
-            'fixed_alpha_value': 0.5,
+            'wr': 50,    # warmup_rounds
+            'sdn': 5,    # style_dispatch_num
+            'pd': 128,   # proj_dim
+            'am': 0.05,  # aug_min
+            'ax': 0.8,   # aug_max
+            'ns': 0.05,  # noise_std
+            'ed': 0.9,   # ema_decay
+            'md': 1,     # adaptive_mode: 0=fixed_alpha,1=M1,2=M3,3=M1+M3
+            'fa': 0.5,   # fixed_alpha_value
         })
+        # Readable aliases so all downstream code is unchanged
+        self.lambda_orth = float(self.lo)
+        self.lambda_hsic = float(self.lh)
+        self.lambda_sem = float(self.ls)
+        self.warmup_rounds = int(self.wr)
+        self.style_dispatch_num = int(self.sdn)
+        self.proj_dim = int(self.pd)
+        self.aug_min = float(self.am)
+        self.aug_max = float(self.ax)
+        self.noise_std = float(self.ns)
+        self.ema_decay = float(self.ed)
+        self.adaptive_mode = int(self.md)
+        self.fixed_alpha_value = float(self.fa)
         self.sample_option = 'full'
-        self.adaptive_mode = int(self.adaptive_mode)
 
         # Style bank: h-space stats for AdaIN augmentation
         self.style_bank = {}  # client_id -> (mu_h, sigma_h)
