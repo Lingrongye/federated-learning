@@ -51,10 +51,22 @@ nohup python run_single.py --task office_caltech10_c4 --algorithm feddsa_stylehe
 | PACS AVG (s2) | 82.24 | 待测 | 待测 |
 | Office AVG (s2) | 90.82 | 待测 | 待测 |
 
-## 结果
-| 数据集 | ALL Best | AVG Best | AVG Last | Gap |
-|---|---|---|---|---|
-| PACS | | | | |
-| Office | | | | |
+## 结果 (✅ COMPLETE, R200)
+
+### PACS 3-seed
+| Seed | AVG Best | AVG Last | vs baseline (82.24) |
+|---|---|---|---|
+| 2 | 80.02% | 76.61% | -2.22 |
+| 15 | 79.21% | 76.34% | -3.03 |
+| 333 | 79.86% | 75.43% | -2.38 |
+| **Mean** | **79.70%** | | **-2.54** |
+
+### Office seed=2
+| Seed | AVG Best | AVG Last | vs baseline (89.95) |
+|---|---|---|---|
+| 2 | 90.15% | 89.06% | +0.20 |
 
 ## 结论
+
+**z_sty 空间 AdaIN 不如 h 空间 AdaIN (PACS -2.54%)**。
+原因分析见下。Office 微涨但不显著。实验证明保持 h 空间 AdaIN 是正确的设计。
