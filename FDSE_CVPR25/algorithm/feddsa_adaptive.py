@@ -69,6 +69,23 @@ class AlexNetEncoder(nn.Module):
         return x  # [B, 1024]
 
 
+class StyleModulator(nn.Module):
+    """M6: Delta-FiLM — maps style difference to modulation parameters."""
+    def __init__(self, dim=128):
+        super().__init__()
+        self.film_net = nn.Sequential(
+            nn.Linear(dim, dim), nn.ReLU(), nn.Linear(dim, dim * 2)
+        )
+        self.gate_linear = nn.Linear(dim, 1)
+
+    def forward(self, delta_sty):
+        """delta_sty: [B, dim] or [1, dim] normalized style difference."""
+        params = self.film_net(delta_sty)
+        gamma, beta = params.chunk(2, dim=-1)
+        gate = torch.sigmoid(self.gate_linear(delta_sty))  # [B, 1]
+        return gamma, beta, gate
+
+
 class FedDSAModel(fuf.FModule):
     def __init__(self, num_classes=7, feat_dim=1024, proj_dim=128):
         super().__init__()
@@ -80,6 +97,7 @@ class FedDSAModel(fuf.FModule):
             nn.Linear(feat_dim, proj_dim), nn.ReLU(), nn.Linear(proj_dim, proj_dim)
         )
         self.head = nn.Linear(proj_dim, num_classes)
+        self.style_modulator = StyleModulator(proj_dim)  # M6: shared via FedAvg
 
     def forward(self, x):
         h = self.encoder(x)
@@ -180,8 +198,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         all_keys = list(self.model.state_dict().keys())
         self.private_keys = set()
         for k in all_keys:
-            if 'style_head' in k and self.adaptive_mode != 5:
-                # M5: style_head shared so z_sty is in a common space across clients
+            if 'style_head' in k and self.adaptive_mode not in (5, 6):
+                # M5/M6: style_head shared so z_sty is in a common space across clients
                 self.private_keys.add(k)
             elif 'bn' in k.lower() and ('running_' in k or 'num_batches_tracked' in k):
                 self.private_keys.add(k)
@@ -203,12 +221,12 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         gap_normalized = self.client_gaps.get(client_id, 0.5)
 
         # Choose which protos to send based on mode
-        use_domain = self.adaptive_mode in (2, 3, 4, 5)
+        use_domain = self.adaptive_mode in (2, 3, 4, 5, 6)
 
         # M4/M5: split domain_protos into intra (own-domain) + cross (other-domain)
         intra_protos = {}
         cross_protos = {}
-        if self.adaptive_mode in (4, 5) and self.domain_protos:
+        if self.adaptive_mode in (4, 5, 6) and self.domain_protos:
             for (cls, cid), proto in self.domain_protos.items():
                 if cid == client_id:
                     intra_protos[cls] = proto
@@ -218,7 +236,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         # M5: split style_domain_protos the same way
         sty_intra_protos = {}
         sty_cross_protos = {}
-        if self.adaptive_mode == 5 and self.style_domain_protos:
+        if self.adaptive_mode in (5, 6) and self.style_domain_protos:
             for (cls, cid), proto in self.style_domain_protos.items():
                 if cid == client_id:
                     sty_intra_protos[cls] = proto
@@ -264,12 +282,12 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         if self.adaptive_mode in (1, 3):
             self._compute_gap_metrics()
 
-        # 4. Store domain protos (M3 / M4 / M5)
-        if self.adaptive_mode in (2, 3, 4, 5):
+        # 4. Store domain protos (M3 / M4 / M5 / M6)
+        if self.adaptive_mode in (2, 3, 4, 5, 6):
             self._store_domain_protos(protos_list)
 
-        # 5. Store style domain protos (M5)
-        if self.adaptive_mode == 5:
+        # 5. Store style domain protos (M5 / M6)
+        if self.adaptive_mode in (5, 6):
             sty_protos_list = res.get('sty_protos', [None] * len(self.received_clients))
             for cid, sty_protos in zip(self.received_clients, sty_protos_list):
                 if sty_protos is None:
@@ -395,8 +413,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             new_dict = self.model.state_dict()
             global_dict = global_model.state_dict()
             for key in new_dict.keys():
-                if 'style_head' in key and self.adaptive_mode != 5:
-                    # M5: style_head is shared, load global weights
+                if 'style_head' in key and self.adaptive_mode not in (5, 6):
+                    # M5/M6: style_head is shared, load global weights
                     continue
                 if 'bn' in key.lower() and ('running_' in key or 'num_batches_tracked' in key):
                     continue
@@ -423,7 +441,7 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             'style_stats': self._local_style_stats,        # h-space (for AdaIN bank)
             'style_gap_stats': self._local_style_gap_stats, # z_sty-space (for gap metric)
         }
-        if self.adaptive_mode == 5:
+        if self.adaptive_mode in (5, 6):
             result['sty_protos'] = getattr(self, '_local_sty_protos', None)
         return result
 
@@ -485,32 +503,40 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             loss_dual_intra = torch.tensor(0.0, device=x.device)
             loss_dual_cross = torch.tensor(0.0, device=x.device)
 
-            if self.adaptive_mode in (4, 5) and self.intra_protos and self.cross_protos:
-                # M4/M5: Dual alignment (intra-domain + cross-domain)
+            if self.adaptive_mode in (4, 5, 6) and self.intra_protos and self.cross_protos:
+                # M4/M5/M6: Dual alignment (intra-domain + cross-domain)
                 loss_dual_intra, loss_dual_cross = self._dual_alignment_loss(z_sem, y)
-            elif self.adaptive_mode in (4, 5) and self.global_protos and len(self.global_protos) >= 2:
-                # M4/M5 fallback: use global protos until domain-level protos available
+            elif self.adaptive_mode in (4, 5, 6) and self.global_protos and len(self.global_protos) >= 2:
+                # M4/M5/M6 fallback: use global protos until domain-level protos available
                 loss_sem = self._infonce_global(z_sem, y)
             elif use_domain_protos and self.domain_protos and len(self.domain_protos) >= 2:
                 loss_sem = self._infonce_domain_aware(z_sem, y)
             elif self.global_protos and len(self.global_protos) >= 2:
                 loss_sem = self._infonce_global(z_sem, y)
 
-            # M5: style domain contrastive loss
+            # M5/M6: style domain contrastive loss
             loss_sty_con = torch.tensor(0.0, device=x.device)
-            if self.adaptive_mode == 5 and self.sty_intra_protos and self.sty_cross_protos:
+            if self.adaptive_mode in (5, 6) and self.sty_intra_protos and self.sty_cross_protos:
                 loss_sty_con = self._style_domain_contrastive(z_sty, y)
 
-            if self.adaptive_mode in (4, 5):
+            # M6: Delta-FiLM augmentation (training only)
+            loss_film = torch.tensor(0.0, device=x.device)
+            if self.adaptive_mode == 6 and self.sty_intra_protos and self.sty_cross_protos \
+               and self.current_round >= self.warmup_rounds:
+                z_sem_film = self._delta_film_augment(model, z_sem, y)
+                if z_sem_film is not None:
+                    output_film = model.head(z_sem_film)
+                    loss_film = self.loss_fn(output_film, y)
+
+            if self.adaptive_mode in (4, 5, 6):
                 loss = loss_task + loss_aug + \
                        aux_w * self.lambda_orth * loss_orth + \
                        aux_w * self.lambda_hsic * loss_hsic + \
                        aux_w * self.lambda_intra * loss_dual_intra + \
                        aux_w * self.lambda_cross * loss_dual_cross + \
                        aux_w * self.lambda_sty_contrast * loss_sty_con + \
-                       aux_w * self.lambda_sem * loss_sem
-                # Note: loss_sem is fallback global InfoNCE when dual protos unavailable;
-                # loss_dual_intra/cross are 0 in that case, loss_sem handles alignment
+                       aux_w * self.lambda_sem * loss_sem + \
+                       aux_w * loss_film
             else:
                 loss = loss_task + loss_aug + \
                        aux_w * self.lambda_orth * loss_orth + \
@@ -539,8 +565,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
                             proto_sum[c] += z_det[i]
                             proto_count[c] += 1
 
-                    # M5: z_sty prototype accumulation
-                    if self.adaptive_mode == 5:
+                    # M5/M6: z_sty prototype accumulation
+                    if self.adaptive_mode in (5, 6):
                         z_sty_cpu = z_sty_det.cpu()
                         for i, label in enumerate(y):
                             c = label.item()
@@ -581,8 +607,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         self._local_protos = {c: proto_sum[c] / proto_count[c] for c in proto_sum}
         self._local_proto_counts = proto_count
 
-        # M5: z_sty prototypes
-        if self.adaptive_mode == 5 and sty_proto_sum:
+        # M5/M6: z_sty prototypes
+        if self.adaptive_mode in (5, 6) and sty_proto_sum:
             self._local_sty_protos = {c: sty_proto_sum[c] / sty_proto_count[c] for c in sty_proto_sum}
         else:
             self._local_sty_protos = None
@@ -743,6 +769,59 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         if count > 0:
             loss = loss / count
         return loss
+
+    # ---- M6: Delta-FiLM Augmentation ----
+
+    def _delta_film_augment(self, model, z_sem, y):
+        """M6: Cross-domain counterfactual style conditioning via Delta-FiLM.
+        Uses normalized style DIFFERENCE (ext - local) as FiLM condition.
+        Returns augmented z_sem or None if not enough protos.
+        """
+        device = z_sem.device
+        B = z_sem.size(0)
+
+        # Collect cross-domain z_sty protos with class info
+        cross_list = [(cls, cid, p) for (cls, cid), p in self.sty_cross_protos.items()]
+        if not cross_list or not self.sty_intra_protos:
+            return None
+
+        z_sem_film = z_sem.clone()
+        augmented = False
+
+        for i in range(B):
+            label = y[i].item()
+
+            # Need local z_sty proto for this class
+            sty_local = self.sty_intra_protos.get(label)
+            if sty_local is None:
+                continue
+
+            # Find same-class cross-domain z_sty protos
+            candidates = [p for c, cid, p in cross_list if c == label]
+            if not candidates:
+                continue
+
+            # Random pick one external style proto
+            sty_ext = candidates[np.random.randint(len(candidates))]
+
+            # Delta: direction of style shift from local to external domain
+            delta_s = sty_ext.to(device) - sty_local.to(device)
+            delta_norm = delta_s.norm()
+            if delta_norm < 1e-6:
+                continue  # domains too similar, skip
+            delta_s = delta_s / delta_norm  # normalize to unit direction
+
+            # FiLM modulation via StyleModulator
+            gamma, beta, gate = model.style_modulator(delta_s.unsqueeze(0))
+            gamma = gamma.squeeze(0)   # [proj_dim]
+            beta = beta.squeeze(0)     # [proj_dim]
+            gate = gate.squeeze()      # scalar
+
+            # Residual FiLM: z_sem + gate * (gamma * z_sem + beta)
+            z_sem_film[i] = z_sem[i] + gate * (gamma * z_sem[i] + beta)
+            augmented = True
+
+        return z_sem_film if augmented else None
 
     # ---- Domain-Aware InfoNCE (M3) ----
 
