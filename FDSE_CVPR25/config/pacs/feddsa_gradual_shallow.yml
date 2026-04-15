@@ -1,0 +1,28 @@
+# EXP-075: Gradual training + shallow augmentation (conv3) + M3 domain-aware protos
+# Key fix: sigmoid ramp-up replaces hard warmup, AdaIN at conv3 not h-space
+algo_para:
+- 1.0    # lo: lambda_orth
+- 0.0    # lh: lambda_hsic
+- 1.0    # ls: lambda_sem (InfoNCE)
+- 0.2    # tau: InfoNCE temperature
+- 5      # sdn: style_dispatch_num
+- 128    # pd: proj_dim
+- 15     # tma: t_mid_aug (aug ramp center at round 15)
+- 8      # twa: tau_w_aug (aug ramp width)
+- 40     # tml: t_mid_align (align ramp center at round 40)
+- 10     # twl: tau_w_align (align ramp width)
+- 1      # al: aug_level (1=shallow/conv3)
+- 10     # gli: grad_log_interval
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
