@@ -722,17 +722,27 @@ wsl bash -lc "ssh seetacloud 'cd /root/autodl-tmp/federated-learning && git log 
 ### 17.4 跑实验完整流程
 
 **强制规则：本地 commit 后必须在服务器 git pull，确认同步后才能启动实验。**
+**强制规则：新增/修改算法代码后，必须先经过以下验证才能启动实验。**
 
 ```
-1. 本地: 写代码/config/NOTE.md → git commit → git push
-2. 服务器: 开代理 → git pull （必须确认 Fast-forward 成功）
-3. 服务器: 检查 GPU 空闲 (nvidia-smi)
-4. 服务器: nohup 后台启动实验
-5. 定期: 通过 log 文件检查进度
-6. 实验完成: 收集结果到 EXP 目录 (collect_results.py)
-7. 服务器: git add → git commit → git push
-8. 本地: git pull → 更新 NOTE.md 回填结果
+0. 本地: 写代码 → python -c "import ast; ast.parse(...)" 语法检查
+1. 本地: 写单元测试 (test_*.py) → 验证梯度流/数据流/边界情况 → ALL PASS
+2. 本地: codex exec 代码审查 → 确认无 bug/设计缺陷 → 修复所有 Important+ issues
+3. 本地: 写 config + NOTE.md → git commit → git push
+4. 服务器: 开代理 → git pull （必须确认 Fast-forward 成功）
+5. 服务器: 检查 GPU 空闲 (nvidia-smi)
+6. 服务器: nohup 后台启动实验
+7. 定期: 通过 log 文件检查进度
+8. 实验完成: 收集结果到 EXP 目录 (collect_results.py)
+9. 服务器: git add → git commit → git push
+10. 本地: git pull → 更新 NOTE.md 回填结果
 ```
+
+**实验前验证清单 (steps 0-2)**:
+- [ ] `ast.parse()` 语法检查通过
+- [ ] 单元测试覆盖: 模型前向/损失计算/梯度流向/边界情况/数值稳定性
+- [ ] Codex 代码审查: 无 Critical/Important 未修复的 issue
+- [ ] Config 参数数量和顺序与 algo_para 解析一致
 
 **seetacloud 服务器 GitHub 代理**：
 ```bash
