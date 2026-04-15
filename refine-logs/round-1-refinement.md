@@ -1,6 +1,76 @@
-# Round 1 Refinement
+# Round 1 Refinement: Decoupled Dual Alignment (M4)
 
 ## Problem Anchor (verbatim)
+- Bottom-line problem: M3 flat SupCon conflates intra-domain stability and cross-domain generalization
+- Must-solve bottleneck: Single loss cannot distinguish own-domain pull vs cross-domain pull
+- Non-goals: No Decouple/Share changes, no new trainable modules, no FedDAP comparison
+- Constraints: feddsa_adaptive.py, AlexNet, z_sem 128d, tau=0.2
+- Success condition: PACS 3-seed mean > 81.29%, stable training
+
+## Anchor Check
+- Original bottleneck: flat SupCon treats all domain protos equally -> STILL ADDRESSED
+- Rejected: "compare FedDAP" (user says no), "stronger backbone" (constraint)
+
+## Simplicity Check
+- Dominant contribution: dual alignment (L_intra + L_cross) in decoupled z_sem space
+- REMOVED from core: cosine-weighted fusion (becomes optional ablation)
+- Result: simpler method, sharper claim
+
+## Changes from Round 0
+1. Dropped cosine weighting from core (GPT-5.4: "test dual alone first")
+2. Fully specified L_cross formula (positives/negatives/tau/normalization/stop-grad)
+3. Added geometric diagnostic plan (cosine histograms, silhouette scores)
+4. Strengthened validation with existing baselines (FedDSA/M3/FedProto/FedBN)
+
+## Revised Core Method
+
+### L_intra (Intra-Domain Stability)
+```
+L_intra = (1/B) * sum_i [1 - cos(z_sem_i, P^(y_i, d_m))]
+```
+Pull toward OWN domain prototype. Strong stability anchor.
+
+### L_cross (Cross-Domain Contrastive Generalization)
+```
+proto_matrix = stack(P^(c,d') for all c, all d' != d_m)  [own domain excluded]
+sim = cos(norm(z_sem_i), norm(proto_matrix)) / tau   [tau=0.2]
+pos = {j: label_j == y_i}   [same class, other domains]
+neg = {j: label_j != y_i}   [different class]
+L_cross = -(1/B) * sum_i [(1/|pos_i|) * sum_{p in pos_i} log(exp(sim_p) / sum_all exp(sim_j))]
+```
+Multi-positive InfoNCE over cross-domain protos only.
+
+### Total Loss
+```
+L = L_CE + L_CE_aug + lambda_orth * L_orth + lambda_intra * L_intra + lambda_cross * L_cross
+```
+
+### Key Details
+- Prototypes: stop-grad, L2-normalized, updated each round
+- Own domain excluded from L_cross (no double-counting with L_intra)
+- lambda_intra > lambda_cross (stability > generalization)
+- Missing (class, domain) pairs gracefully skipped
+- tau=0.2 (validated stable in EXP-074)
+
+### Why Dual > Flat in Decoupled Space
+In z_sem: cosine = pure semantic agreement (style removed by orthogonal constraint)
+- L_intra: clean same-domain semantic distance
+- L_cross: clean cross-domain semantic contrast
+- In entangled h: both confounded by style differences
+
+### Validation Plan
+| Experiment | Proves | Baselines |
+|---|---|---|
+| M4 vs M3 vs FedDSA | dual > flat > global | PACS 3-seed |
+| L_intra only vs L_cross only vs both | Complementary roles | Ablation |
+| Dual in z_sem vs dual in h | Decoupled advantage | Same loss, diff space |
+| lambda sweep | Optimal balance | Grid |
+| Cosine histograms | Geometric evidence | Diagnostic |
+
+Seeds: 2, 333, 42. Mean +/- std. PACS primary.
+
+### Compute
+~60 lines code, ~36h GPU, 1d code + 2d experiments
 跨域FL中，特征空间语义和风格纠缠→直接聚合产生模糊原型。现有方法要么擦除风格、要么私有保留、要么在纠缠空间共享。没有方法先解耦再共享解耦后的风格作为增强资产。
 
 ## Anchor Check
