@@ -6,9 +6,10 @@ Key changes vs base FedDSA:
   M1: Adaptive augmentation strength — gap from z_sty stats → per-client alpha
   M3: Domain-aware prototype alignment — per-(class, client) protos + SupCon InfoNCE
   M4: Dual alignment — L_intra (own-domain cosine) + L_cross (cross-domain InfoNCE)
+  M5: M4 + style utilization — L_sty_contrast (domain-contrastive on z_sty)
 
 Modes controlled by algo_para:
-  adaptive_mode: 0=fixed_alpha, 1=adaptive (M1), 2=M3-only, 3=M1+M3 full, 4=M4 dual alignment
+  adaptive_mode: 0=fixed_alpha, 1=adaptive (M1), 2=M3-only, 3=M1+M3 full, 4=M4 dual, 5=M4+style
   fixed_alpha_value: used when adaptive_mode=0
 """
 import os
@@ -121,6 +122,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'fa': 0.5,   # fixed_alpha_value
             'li': 1.0,   # lambda_intra (M4 dual alignment)
             'lc': 0.5,   # lambda_cross (M4 dual alignment)
+            'lsc': 0.5,  # lambda_sty_contrast (M5 style contrastive)
         })
         # Readable aliases so all downstream code is unchanged
         self.lambda_orth = float(self.lo)
@@ -137,6 +139,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.fixed_alpha_value = float(self.fa)
         self.lambda_intra = float(self.li)
         self.lambda_cross = float(self.lc)
+        self.lambda_sty_contrast = float(self.lsc)
         self.sample_option = 'full'
 
         # Style bank: h-space stats for AdaIN augmentation
@@ -146,7 +149,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
 
         # Prototypes
         self.global_semantic_protos = {}  # class -> avg proto
-        self.domain_protos = {}  # (class, client_id) -> proto (M3)
+        self.domain_protos = {}  # (class, client_id) -> z_sem proto (M3/M4)
+        self.style_domain_protos = {}  # (class, client_id) -> z_sty proto (M5)
 
         # Gap metrics (EMA smoothed)
         self.client_gaps = {}  # client_id -> normalized gap [0,1]
@@ -170,12 +174,14 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             c.fixed_alpha_value = float(self.fixed_alpha_value)
             c.lambda_intra = float(self.lambda_intra)
             c.lambda_cross = float(self.lambda_cross)
+            c.lambda_sty_contrast = float(self.lambda_sty_contrast)
 
     def _init_agg_keys(self):
         all_keys = list(self.model.state_dict().keys())
         self.private_keys = set()
         for k in all_keys:
-            if 'style_head' in k:
+            if 'style_head' in k and self.adaptive_mode != 5:
+                # M5: style_head shared so z_sty is in a common space across clients
                 self.private_keys.add(k)
             elif 'bn' in k.lower() and ('running_' in k or 'num_batches_tracked' in k):
                 self.private_keys.add(k)
@@ -197,17 +203,27 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         gap_normalized = self.client_gaps.get(client_id, 0.5)
 
         # Choose which protos to send based on mode
-        use_domain = self.adaptive_mode in (2, 3, 4)
+        use_domain = self.adaptive_mode in (2, 3, 4, 5)
 
-        # M4: split domain_protos into intra (own-domain) + cross (other-domain)
+        # M4/M5: split domain_protos into intra (own-domain) + cross (other-domain)
         intra_protos = {}
         cross_protos = {}
-        if self.adaptive_mode == 4 and self.domain_protos:
+        if self.adaptive_mode in (4, 5) and self.domain_protos:
             for (cls, cid), proto in self.domain_protos.items():
                 if cid == client_id:
                     intra_protos[cls] = proto
                 else:
                     cross_protos[(cls, cid)] = proto
+
+        # M5: split style_domain_protos the same way
+        sty_intra_protos = {}
+        sty_cross_protos = {}
+        if self.adaptive_mode == 5 and self.style_domain_protos:
+            for (cls, cid), proto in self.style_domain_protos.items():
+                if cid == client_id:
+                    sty_intra_protos[cls] = proto
+                else:
+                    sty_cross_protos[(cls, cid)] = proto
 
         return {
             'model': copy.deepcopy(self.model),
@@ -215,6 +231,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'domain_protos': copy.deepcopy(self.domain_protos) if use_domain else {},
             'intra_protos': copy.deepcopy(intra_protos),
             'cross_protos': copy.deepcopy(cross_protos),
+            'sty_intra_protos': copy.deepcopy(sty_intra_protos),
+            'sty_cross_protos': copy.deepcopy(sty_cross_protos),
             'style_bank': dispatched_styles,
             'current_round': self.current_round,
             'gap_normalized': gap_normalized,
@@ -246,9 +264,18 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         if self.adaptive_mode in (1, 3):
             self._compute_gap_metrics()
 
-        # 4. Store domain protos (M3 / M4)
-        if self.adaptive_mode in (2, 3, 4):
+        # 4. Store domain protos (M3 / M4 / M5)
+        if self.adaptive_mode in (2, 3, 4, 5):
             self._store_domain_protos(protos_list)
+
+        # 5. Store style domain protos (M5)
+        if self.adaptive_mode == 5:
+            sty_protos_list = res.get('sty_protos', [None] * len(self.received_clients))
+            for cid, sty_protos in zip(self.received_clients, sty_protos_list):
+                if sty_protos is None:
+                    continue
+                for c, proto in sty_protos.items():
+                    self.style_domain_protos[(c, cid)] = proto
 
         # 5. Aggregate global protos (always, as fallback)
         self._aggregate_protos(protos_list, proto_counts_list)
@@ -342,10 +369,12 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         self.domain_protos = None
         self.intra_protos = {}
         self.cross_protos = {}
+        self.sty_intra_protos = {}
+        self.sty_cross_protos = {}
         self.gap_normalized = 0.5
 
     def reply(self, svr_pkg):
-        model, global_protos, domain_protos, style_bank, current_round, gap_normalized, intra_protos, cross_protos = self.unpack(svr_pkg)
+        model, global_protos, domain_protos, style_bank, current_round, gap_normalized, intra_protos, cross_protos, sty_intra, sty_cross = self.unpack(svr_pkg)
         self.current_round = current_round
         self.global_protos = global_protos
         self.domain_protos = domain_protos
@@ -353,6 +382,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         self.gap_normalized = gap_normalized
         self.intra_protos = intra_protos
         self.cross_protos = cross_protos
+        self.sty_intra_protos = sty_intra
+        self.sty_cross_protos = sty_cross
         self.train(model)
         return self.pack()
 
@@ -364,7 +395,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             new_dict = self.model.state_dict()
             global_dict = global_model.state_dict()
             for key in new_dict.keys():
-                if 'style_head' in key:
+                if 'style_head' in key and self.adaptive_mode != 5:
+                    # M5: style_head is shared, load global weights
                     continue
                 if 'bn' in key.lower() and ('running_' in key or 'num_batches_tracked' in key):
                     continue
@@ -379,16 +411,21 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             svr_pkg.get('gap_normalized', 0.5),
             svr_pkg.get('intra_protos', {}),
             svr_pkg.get('cross_protos', {}),
+            svr_pkg.get('sty_intra_protos', {}),
+            svr_pkg.get('sty_cross_protos', {}),
         )
 
     def pack(self):
-        return {
+        result = {
             'model': copy.deepcopy(self.model.to('cpu')),
             'protos': self._local_protos,
             'proto_counts': self._local_proto_counts,
             'style_stats': self._local_style_stats,        # h-space (for AdaIN bank)
             'style_gap_stats': self._local_style_gap_stats, # z_sty-space (for gap metric)
         }
+        if self.adaptive_mode == 5:
+            result['sty_protos'] = getattr(self, '_local_sty_protos', None)
+        return result
 
     @fuf.with_multi_gpus
     def train(self, model, *args, **kwargs):
@@ -405,6 +442,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         # Online accumulators
         proto_sum = {}
         proto_count = {}
+        sty_proto_sum = {}   # M5: z_sty class prototypes
+        sty_proto_count = {}
         # h-space style stats (for style bank / AdaIN)
         h_style_sum = None
         h_style_sq_sum = None
@@ -446,23 +485,32 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             loss_dual_intra = torch.tensor(0.0, device=x.device)
             loss_dual_cross = torch.tensor(0.0, device=x.device)
 
-            if self.adaptive_mode == 4 and self.intra_protos and self.cross_protos:
-                # M4: Dual alignment (intra-domain + cross-domain)
+            if self.adaptive_mode in (4, 5) and self.intra_protos and self.cross_protos:
+                # M4/M5: Dual alignment (intra-domain + cross-domain)
                 loss_dual_intra, loss_dual_cross = self._dual_alignment_loss(z_sem, y)
-            elif self.adaptive_mode == 4 and self.global_protos and len(self.global_protos) >= 2:
-                # M4 fallback: use global protos until domain-level protos available
+            elif self.adaptive_mode in (4, 5) and self.global_protos and len(self.global_protos) >= 2:
+                # M4/M5 fallback: use global protos until domain-level protos available
                 loss_sem = self._infonce_global(z_sem, y)
             elif use_domain_protos and self.domain_protos and len(self.domain_protos) >= 2:
                 loss_sem = self._infonce_domain_aware(z_sem, y)
             elif self.global_protos and len(self.global_protos) >= 2:
                 loss_sem = self._infonce_global(z_sem, y)
 
-            if self.adaptive_mode == 4 and (loss_dual_intra.item() > 0 or loss_dual_cross.item() > 0):
+            # M5: style domain contrastive loss
+            loss_sty_con = torch.tensor(0.0, device=x.device)
+            if self.adaptive_mode == 5 and self.sty_intra_protos and self.sty_cross_protos:
+                loss_sty_con = self._style_domain_contrastive(z_sty, y)
+
+            if self.adaptive_mode in (4, 5):
                 loss = loss_task + loss_aug + \
                        aux_w * self.lambda_orth * loss_orth + \
                        aux_w * self.lambda_hsic * loss_hsic + \
                        aux_w * self.lambda_intra * loss_dual_intra + \
-                       aux_w * self.lambda_cross * loss_dual_cross
+                       aux_w * self.lambda_cross * loss_dual_cross + \
+                       aux_w * self.lambda_sty_contrast * loss_sty_con + \
+                       aux_w * self.lambda_sem * loss_sem
+                # Note: loss_sem is fallback global InfoNCE when dual protos unavailable;
+                # loss_dual_intra/cross are 0 in that case, loss_sem handles alignment
             else:
                 loss = loss_task + loss_aug + \
                        aux_w * self.lambda_orth * loss_orth + \
@@ -481,7 +529,7 @@ class Client(flgo.algorithm.fedbase.BasicClient):
                     h_det = h.detach()
                     z_sty_det = z_sty.detach()
 
-                    # Prototype accumulation
+                    # Prototype accumulation (z_sem)
                     for i, label in enumerate(y):
                         c = label.item()
                         if c not in proto_sum:
@@ -490,6 +538,18 @@ class Client(flgo.algorithm.fedbase.BasicClient):
                         else:
                             proto_sum[c] += z_det[i]
                             proto_count[c] += 1
+
+                    # M5: z_sty prototype accumulation
+                    if self.adaptive_mode == 5:
+                        z_sty_cpu = z_sty_det.cpu()
+                        for i, label in enumerate(y):
+                            c = label.item()
+                            if c not in sty_proto_sum:
+                                sty_proto_sum[c] = z_sty_cpu[i].clone()
+                                sty_proto_count[c] = 1
+                            else:
+                                sty_proto_sum[c] += z_sty_cpu[i]
+                                sty_proto_count[c] += 1
 
                     b = h_det.size(0)
 
@@ -520,6 +580,12 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         # Store for pack()
         self._local_protos = {c: proto_sum[c] / proto_count[c] for c in proto_sum}
         self._local_proto_counts = proto_count
+
+        # M5: z_sty prototypes
+        if self.adaptive_mode == 5 and sty_proto_sum:
+            self._local_sty_protos = {c: sty_proto_sum[c] / sty_proto_count[c] for c in sty_proto_sum}
+        else:
+            self._local_sty_protos = None
 
         # h-space style stats
         if h_style_n > 1:
@@ -624,6 +690,59 @@ class Client(flgo.algorithm.fedbase.BasicClient):
                 loss_cross = loss_cross / cross_count
 
         return loss_intra, loss_cross
+
+    # ---- M5: Style Domain Contrastive ----
+
+    def _style_domain_contrastive(self, z_sty, y):
+        """M5: Domain-contrastive loss on z_sty.
+        Same-domain same-class z_sty protos = positive (pull together).
+        Cross-domain z_sty protos = negative (push apart).
+        Effect: reinforces style head to capture domain-specific information.
+        """
+        device = z_sty.device
+
+        # Build: own-domain z_sty protos are positive, cross-domain are negative
+        # For each sample z_sty_i with label y_i:
+        #   positive = sty_intra_protos[y_i] (same domain, same class)
+        #   negatives = all sty_cross_protos (any class, other domains)
+
+        # Gather all cross-domain style protos as negatives
+        neg_entries = []
+        for key in sorted(self.sty_cross_protos.keys()):
+            neg_entries.append(self.sty_cross_protos[key])
+
+        if len(neg_entries) == 0:
+            return torch.tensor(0.0, device=device)
+
+        neg_matrix = torch.stack([p.to(device) for p in neg_entries])  # [N_neg, 128]
+
+        B = z_sty.size(0)
+        loss = torch.tensor(0.0, device=device)
+        count = 0
+
+        for i in range(B):
+            label = y[i].item()
+            if label not in self.sty_intra_protos:
+                continue
+
+            pos_proto = self.sty_intra_protos[label].to(device)  # [128]
+
+            # Cosine similarity
+            z_n = F.normalize(z_sty[i:i+1], dim=1)    # [1, 128]
+            pos_n = F.normalize(pos_proto.unsqueeze(0), dim=1)  # [1, 128]
+            neg_n = F.normalize(neg_matrix, dim=1)      # [N_neg, 128]
+
+            pos_sim = (z_n @ pos_n.T).view(-1)[0] / self.tau  # scalar
+            neg_sims = (z_n @ neg_n.T).view(-1) / self.tau  # [N_neg], safe for any N_neg
+
+            # InfoNCE: log(exp(pos) / (exp(pos) + sum(exp(neg))))
+            all_logits = torch.cat([pos_sim.unsqueeze(0), neg_sims])  # [1 + N_neg]
+            loss = loss + (-pos_sim + torch.logsumexp(all_logits, dim=0))
+            count += 1
+
+        if count > 0:
+            loss = loss / count
+        return loss
 
     # ---- Domain-Aware InfoNCE (M3) ----
 
