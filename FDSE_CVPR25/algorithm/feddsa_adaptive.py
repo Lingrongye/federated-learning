@@ -449,12 +449,15 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             if self.adaptive_mode == 4 and self.intra_protos and self.cross_protos:
                 # M4: Dual alignment (intra-domain + cross-domain)
                 loss_dual_intra, loss_dual_cross = self._dual_alignment_loss(z_sem, y)
+            elif self.adaptive_mode == 4 and self.global_protos and len(self.global_protos) >= 2:
+                # M4 fallback: use global protos until domain-level protos available
+                loss_sem = self._infonce_global(z_sem, y)
             elif use_domain_protos and self.domain_protos and len(self.domain_protos) >= 2:
                 loss_sem = self._infonce_domain_aware(z_sem, y)
             elif self.global_protos and len(self.global_protos) >= 2:
                 loss_sem = self._infonce_global(z_sem, y)
 
-            if self.adaptive_mode == 4:
+            if self.adaptive_mode == 4 and (loss_dual_intra.item() > 0 or loss_dual_cross.item() > 0):
                 loss = loss_task + loss_aug + \
                        aux_w * self.lambda_orth * loss_orth + \
                        aux_w * self.lambda_hsic * loss_hsic + \
@@ -581,7 +584,7 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             label = y[i].item()
             if label in self.intra_protos:
                 proto = self.intra_protos[label].to(device)
-                sim = F.cosine_similarity(z_sem[i:i+1], proto.unsqueeze(0))
+                sim = F.cosine_similarity(z_sem[i:i+1], proto.unsqueeze(0)).squeeze()
                 loss_intra = loss_intra + (1.0 - sim)
                 intra_count += 1
         if intra_count > 0:
