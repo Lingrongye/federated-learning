@@ -3,11 +3,12 @@ FedDSA-Adaptive: Adaptive Augmentation + Domain-Aware Prototypes
 Merges feddsa.py (base) + feddsa_domain_aware.py (M3) + new adaptive aug (M1).
 
 Key changes vs base FedDSA:
-  M1: Adaptive augmentation strength — gap from z_sty stats → per-client α
+  M1: Adaptive augmentation strength — gap from z_sty stats → per-client alpha
   M3: Domain-aware prototype alignment — per-(class, client) protos + SupCon InfoNCE
+  M4: Dual alignment — L_intra (own-domain cosine) + L_cross (cross-domain InfoNCE)
 
 Modes controlled by algo_para:
-  adaptive_mode: 0=fixed_alpha, 1=adaptive (M1), 2=M3-only, 3=M1+M3 full
+  adaptive_mode: 0=fixed_alpha, 1=adaptive (M1), 2=M3-only, 3=M1+M3 full, 4=M4 dual alignment
   fixed_alpha_value: used when adaptive_mode=0
 """
 import os
@@ -116,8 +117,10 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'ax': 0.8,   # aug_max
             'ns': 0.05,  # noise_std
             'ed': 0.9,   # ema_decay
-            'md': 1,     # adaptive_mode: 0=fixed_alpha,1=M1,2=M3,3=M1+M3
+            'md': 1,     # adaptive_mode: 0=fixed_alpha,1=M1,2=M3,3=M1+M3,4=M4-dual
             'fa': 0.5,   # fixed_alpha_value
+            'li': 1.0,   # lambda_intra (M4 dual alignment)
+            'lc': 0.5,   # lambda_cross (M4 dual alignment)
         })
         # Readable aliases so all downstream code is unchanged
         self.lambda_orth = float(self.lo)
@@ -132,6 +135,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.ema_decay = float(self.ed)
         self.adaptive_mode = int(self.md)
         self.fixed_alpha_value = float(self.fa)
+        self.lambda_intra = float(self.li)
+        self.lambda_cross = float(self.lc)
         self.sample_option = 'full'
 
         # Style bank: h-space stats for AdaIN augmentation
@@ -163,6 +168,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             c.noise_std = self.noise_std
             c.adaptive_mode = int(self.adaptive_mode)
             c.fixed_alpha_value = float(self.fixed_alpha_value)
+            c.lambda_intra = float(self.lambda_intra)
+            c.lambda_cross = float(self.lambda_cross)
 
     def _init_agg_keys(self):
         all_keys = list(self.model.state_dict().keys())
@@ -190,12 +197,24 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         gap_normalized = self.client_gaps.get(client_id, 0.5)
 
         # Choose which protos to send based on mode
-        use_domain = self.adaptive_mode in (2, 3)
+        use_domain = self.adaptive_mode in (2, 3, 4)
+
+        # M4: split domain_protos into intra (own-domain) + cross (other-domain)
+        intra_protos = {}
+        cross_protos = {}
+        if self.adaptive_mode == 4 and self.domain_protos:
+            for (cls, cid), proto in self.domain_protos.items():
+                if cid == client_id:
+                    intra_protos[cls] = proto
+                else:
+                    cross_protos[(cls, cid)] = proto
 
         return {
             'model': copy.deepcopy(self.model),
             'global_protos': copy.deepcopy(self.global_semantic_protos),
             'domain_protos': copy.deepcopy(self.domain_protos) if use_domain else {},
+            'intra_protos': copy.deepcopy(intra_protos),
+            'cross_protos': copy.deepcopy(cross_protos),
             'style_bank': dispatched_styles,
             'current_round': self.current_round,
             'gap_normalized': gap_normalized,
@@ -227,8 +246,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         if self.adaptive_mode in (1, 3):
             self._compute_gap_metrics()
 
-        # 4. Store domain protos (M3)
-        if self.adaptive_mode in (2, 3):
+        # 4. Store domain protos (M3 / M4)
+        if self.adaptive_mode in (2, 3, 4):
             self._store_domain_protos(protos_list)
 
         # 5. Aggregate global protos (always, as fallback)
@@ -321,15 +340,19 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         self.local_style_bank = None
         self.global_protos = None
         self.domain_protos = None
+        self.intra_protos = {}
+        self.cross_protos = {}
         self.gap_normalized = 0.5
 
     def reply(self, svr_pkg):
-        model, global_protos, domain_protos, style_bank, current_round, gap_normalized = self.unpack(svr_pkg)
+        model, global_protos, domain_protos, style_bank, current_round, gap_normalized, intra_protos, cross_protos = self.unpack(svr_pkg)
         self.current_round = current_round
         self.global_protos = global_protos
         self.domain_protos = domain_protos
         self.local_style_bank = style_bank
         self.gap_normalized = gap_normalized
+        self.intra_protos = intra_protos
+        self.cross_protos = cross_protos
         self.train(model)
         return self.pack()
 
@@ -354,6 +377,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             svr_pkg['style_bank'],
             svr_pkg['current_round'],
             svr_pkg.get('gap_normalized', 0.5),
+            svr_pkg.get('intra_protos', {}),
+            svr_pkg.get('cross_protos', {}),
         )
 
     def pack(self):
@@ -416,17 +441,30 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             # Loss 3: Decoupling (orthogonal + HSIC)
             loss_orth, loss_hsic = self._decouple_loss(z_sem, z_sty)
 
-            # Loss 4: Semantic alignment (domain-aware or global)
+            # Loss 4: Semantic alignment
             loss_sem = torch.tensor(0.0, device=x.device)
-            if use_domain_protos and self.domain_protos and len(self.domain_protos) >= 2:
+            loss_dual_intra = torch.tensor(0.0, device=x.device)
+            loss_dual_cross = torch.tensor(0.0, device=x.device)
+
+            if self.adaptive_mode == 4 and self.intra_protos and self.cross_protos:
+                # M4: Dual alignment (intra-domain + cross-domain)
+                loss_dual_intra, loss_dual_cross = self._dual_alignment_loss(z_sem, y)
+            elif use_domain_protos and self.domain_protos and len(self.domain_protos) >= 2:
                 loss_sem = self._infonce_domain_aware(z_sem, y)
             elif self.global_protos and len(self.global_protos) >= 2:
                 loss_sem = self._infonce_global(z_sem, y)
 
-            loss = loss_task + loss_aug + \
-                   aux_w * self.lambda_orth * loss_orth + \
-                   aux_w * self.lambda_hsic * loss_hsic + \
-                   aux_w * self.lambda_sem * loss_sem
+            if self.adaptive_mode == 4:
+                loss = loss_task + loss_aug + \
+                       aux_w * self.lambda_orth * loss_orth + \
+                       aux_w * self.lambda_hsic * loss_hsic + \
+                       aux_w * self.lambda_intra * loss_dual_intra + \
+                       aux_w * self.lambda_cross * loss_dual_cross
+            else:
+                loss = loss_task + loss_aug + \
+                       aux_w * self.lambda_orth * loss_orth + \
+                       aux_w * self.lambda_hsic * loss_hsic + \
+                       aux_w * self.lambda_sem * loss_sem
 
             loss.backward()
             if self.clip_grad > 0:
@@ -528,6 +566,61 @@ class Client(flgo.algorithm.fedbase.BasicClient):
 
         h_aug = alpha * h_adain + (1 - alpha) * h
         return h_aug
+
+    # ---- M4: Dual Alignment (intra-domain + cross-domain) ----
+
+    def _dual_alignment_loss(self, z_sem, y):
+        """M4: Decomposed alignment — L_intra (own-domain cosine) + L_cross (cross-domain InfoNCE)."""
+        device = z_sem.device
+        B = z_sem.size(0)
+
+        # --- L_intra: pull toward own-domain prototype ---
+        loss_intra = torch.tensor(0.0, device=device)
+        intra_count = 0
+        for i in range(B):
+            label = y[i].item()
+            if label in self.intra_protos:
+                proto = self.intra_protos[label].to(device)
+                sim = F.cosine_similarity(z_sem[i:i+1], proto.unsqueeze(0))
+                loss_intra = loss_intra + (1.0 - sim)
+                intra_count += 1
+        if intra_count > 0:
+            loss_intra = loss_intra / intra_count
+
+        # --- L_cross: InfoNCE with cross-domain protos (own domain excluded) ---
+        loss_cross = torch.tensor(0.0, device=device)
+
+        # Build cross-domain prototype matrix
+        cross_entries = []
+        cross_classes = []
+        for (cls, cid) in sorted(self.cross_protos.keys()):
+            cross_entries.append(self.cross_protos[(cls, cid)])
+            cross_classes.append(cls)
+
+        if len(cross_entries) >= 2:
+            proto_matrix = torch.stack([p.to(device) for p in cross_entries])
+            proto_labels = torch.tensor(cross_classes, device=device)
+
+            z_n = F.normalize(z_sem, dim=1)
+            p_n = F.normalize(proto_matrix, dim=1)
+            logits = z_n @ p_n.T / self.tau  # tau=0.2
+
+            cross_count = 0
+            for i in range(B):
+                label = y[i].item()
+                pos_mask = (proto_labels == label)
+                n_pos = pos_mask.sum().item()
+                if n_pos == 0:
+                    continue
+                log_denom = torch.logsumexp(logits[i], dim=0)
+                pos_logits = logits[i][pos_mask]
+                loss_cross = loss_cross + (-pos_logits + log_denom).sum() / n_pos
+                cross_count += 1
+
+            if cross_count > 0:
+                loss_cross = loss_cross / cross_count
+
+        return loss_intra, loss_cross
 
     # ---- Domain-Aware InfoNCE (M3) ----
 

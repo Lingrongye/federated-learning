@@ -1,0 +1,31 @@
+# M4: Dual Alignment (intra-domain + cross-domain) in decoupled z_sem space
+# adaptive_mode=4, tau=0.2, lambda_intra=1.0, lambda_cross=0.5
+algo_para:
+- 1.0    # lambda_orth (lo)
+- 0.0    # lambda_hsic (lh)
+- 1.0    # lambda_sem (ls, unused in mode=4 but kept for compat)
+- 0.2    # tau
+- 50     # warmup_rounds (wr)
+- 5      # style_dispatch_num (sdn)
+- 128    # proj_dim (pd)
+- 0.05   # aug_min (am)
+- 0.8    # aug_max (ax)
+- 0.05   # noise_std (ns)
+- 0.9    # ema_decay (ed)
+- 4      # adaptive_mode (md): 4=M4 dual alignment
+- 0.5    # fixed_alpha_value (fa, unused in mode=4)
+- 1.0    # lambda_intra (li)
+- 0.5    # lambda_cross (lc)
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
