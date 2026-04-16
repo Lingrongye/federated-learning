@@ -1,0 +1,30 @@
+# EXP-077a: MSE Anchor + standard InfoNCE (FPL-inspired)
+# mode=4, tau=0.05 (lowered), lambda_mse=1.0
+# R50 quick validation — check if cos_sim stays positive
+algo_para:
+- 1.0    # lo: lambda_orth
+- 0.0    # lh: lambda_hsic
+- 1.0    # ls: lambda_sem (InfoNCE)
+- 0.05   # tau (lowered from 0.2 — FPL uses 0.02)
+- 5      # sdn: style_dispatch_num
+- 128    # pd: proj_dim
+- 4      # sm: schedule_mode = 4 (MSE anchor)
+- 60     # bp: unused
+- 30     # bw: unused
+- 80     # cr: unused
+- 5      # gli: grad_log_interval (every 5 rounds for R50)
+- 1.0    # lm: lambda_mse
+- 0.25   # al: alpha_sparsity (unused in mode 4)
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 50
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

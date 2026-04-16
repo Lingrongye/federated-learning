@@ -115,11 +115,14 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'tau': 0.2,   # InfoNCE temperature
             'sdn': 5,     # style_dispatch_num
             'pd': 128,    # proj_dim
-            'sm': 0,      # schedule_mode: 0=orth_only, 1=bell, 2=cutoff, 3=always_on
+            'sm': 0,      # schedule_mode: 0=orth_only, 1=bell, 2=cutoff, 3=always_on,
+                          #   4=mse_anchor, 5=alpha_sparsity, 6=mse+alpha, 7=detach_aug
             'bp': 60,     # bell_peak (round where bell peaks)
             'bw': 30,     # bell_width (gaussian sigma)
             'cr': 80,     # cutoff_round (for mode 2)
             'gli': 10,    # grad_log_interval (0=off)
+            'lm': 1.0,    # lambda_mse (MSE anchor weight, modes 4/6)
+            'al': 0.25,   # alpha_sparsity (power for cos_sim, modes 5/6)
         })
         # Readable aliases
         self.lambda_orth = float(self.lo)
@@ -133,6 +136,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.bell_width = float(self.bw)
         self.cutoff_round = int(self.cr)
         self.grad_log_interval = int(self.gli)
+        self.lambda_mse = float(self.lm)
+        self.alpha_sparsity = float(self.al)
         self.sample_option = 'full'
 
         # Style bank
@@ -156,6 +161,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             c.bell_width = self.bell_width
             c.cutoff_round = self.cutoff_round
             c.grad_log_interval = self.grad_log_interval
+            c.lambda_mse = self.lambda_mse
+            c.alpha_sparsity = self.alpha_sparsity
 
     def _init_agg_keys(self):
         """Classify model keys into: shared (FedAvg), private (style_head+BN)."""
@@ -340,8 +347,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         elif mode == 2:
             # cutoff: full weight until cutoff_round, then off
             return 1.0 if t <= self.cutoff_round else 0.0
-        elif mode == 3:
-            # always-on: full weight from R0 (original but without ramp)
+        elif mode in (3, 4, 5, 6, 7):
+            # always-on variants: full aux weight, loss type varies in train()
             return 1.0
         else:
             return 0.0
@@ -395,32 +402,56 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             loss_task = self.loss_fn(output, y)
 
             # Loss 2: Style-augmented CE (controlled by w_aux)
+            # Mode 7: augmented features go to contrastive ONLY, not CE (PARDON insight)
             loss_aug = torch.tensor(0.0, device=x.device)
-            if (w_aux > 1e-4
-                    and self.local_style_bank is not None
-                    and len(self.local_style_bank) > 0):
+            z_sem_aug = None
+            has_aug = (w_aux > 1e-4
+                       and self.local_style_bank is not None
+                       and len(self.local_style_bank) > 0)
+            if has_aug:
                 h_aug = self._style_augment(h)
                 z_sem_aug = model.get_semantic(h_aug)
-                output_aug = model.head(z_sem_aug)
-                loss_aug = self.loss_fn(output_aug, y)
+                if self.schedule_mode != 7:
+                    # Normal modes: augmented features go through CE
+                    output_aug = model.head(z_sem_aug)
+                    loss_aug = self.loss_fn(output_aug, y)
+                # Mode 7: z_sem_aug computed but NOT sent through CE
 
             # Loss 3: Decoupling — ALWAYS full weight from R0
             loss_orth, loss_hsic = self._decouple_loss(z_sem, z_sty)
 
-            # Loss 4: InfoNCE alignment (controlled by w_aux)
+            # Loss 4: Alignment (controlled by w_aux, type depends on mode)
             loss_sem = torch.tensor(0.0, device=x.device)
+            loss_mse_anchor = torch.tensor(0.0, device=x.device)
+            use_alpha = self.schedule_mode in (5, 6, 7)
+            use_mse = self.schedule_mode in (4, 6, 7)
             if w_aux > 1e-4 and self.global_protos and len(self.global_protos) >= 2:
-                loss_sem = self._infonce_loss(z_sem, y)
+                # Choose InfoNCE variant
+                # For mode 7: use z_sem + z_sem_aug concatenated for richer contrastive
+                z_for_contrast = z_sem
+                y_for_contrast = y
+                if self.schedule_mode == 7 and z_sem_aug is not None:
+                    z_for_contrast = torch.cat([z_sem, z_sem_aug], dim=0)
+                    y_for_contrast = torch.cat([y, y], dim=0)
+
+                if use_alpha:
+                    loss_sem = self._infonce_alpha_loss(z_for_contrast, y_for_contrast)
+                else:
+                    loss_sem = self._infonce_loss(z_for_contrast, y_for_contrast)
+
+                if use_mse:
+                    loss_mse_anchor = self._mse_anchor_loss(z_sem, y)
 
             # Total loss:
             # L_orth: ALWAYS full weight (key change from original)
-            # L_aug + L_InfoNCE: controlled by w_aux schedule
+            # L_aug + L_InfoNCE + L_MSE: controlled by w_aux schedule
             loss = (
                 loss_task
                 + w_aux * loss_aug
                 + self.lambda_orth * loss_orth
                 + self.lambda_hsic * loss_hsic
                 + w_aux * self.lambda_sem * loss_sem
+                + w_aux * self.lambda_mse * loss_mse_anchor
             )
 
             # Gradient conflict logging (last batch of last epoch)
@@ -585,6 +616,53 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         valid_t = torch.tensor(valid, device=z_sem.device)
         targets_t = torch.tensor(targets, device=z_sem.device, dtype=torch.long)
         return F.cross_entropy(logits[valid_t], targets_t)
+
+    def _infonce_alpha_loss(self, z_sem, y):
+        """Alpha-sparsity InfoNCE (FedPLVM-inspired).
+        cos_sim^alpha weakens positive-pair gradients, focuses on hard negatives.
+        Requires cos_sim >= 0, so we clamp after normalization."""
+        available = sorted([c for c, p in self.global_protos.items() if p is not None])
+        if len(available) < 2:
+            return torch.tensor(0.0, device=z_sem.device)
+
+        proto_matrix = torch.stack([self.global_protos[c].to(z_sem.device) for c in available])
+        class_to_idx = {c: i for i, c in enumerate(available)}
+
+        z_n = F.normalize(z_sem, dim=1)
+        p_n = F.normalize(proto_matrix, dim=1)
+        cos_sim = (z_n @ p_n.T).clamp(min=0)  # clamp negatives to 0 for pow safety
+        logits = cos_sim.pow(self.alpha_sparsity) / self.tau
+
+        targets = []
+        valid = []
+        for i in range(y.size(0)):
+            label = y[i].item()
+            if label in class_to_idx:
+                targets.append(class_to_idx[label])
+                valid.append(i)
+
+        if len(valid) == 0:
+            return torch.tensor(0.0, device=z_sem.device)
+
+        valid_t = torch.tensor(valid, device=z_sem.device)
+        targets_t = torch.tensor(targets, device=z_sem.device, dtype=torch.long)
+        return F.cross_entropy(logits[valid_t], targets_t)
+
+    def _mse_anchor_loss(self, z_sem, y):
+        """MSE anchor loss (FPL-inspired): pull z_sem toward own-class global proto.
+        Acts as a stable 'gravitational center' preventing feature drift."""
+        targets = []
+        valid = []
+        for i in range(y.size(0)):
+            label = y[i].item()
+            if label in self.global_protos and self.global_protos[label] is not None:
+                targets.append(self.global_protos[label])
+                valid.append(i)
+        if not valid:
+            return torch.tensor(0.0, device=z_sem.device)
+        target_matrix = torch.stack(targets).to(z_sem.device).detach()
+        valid_t = torch.tensor(valid, device=z_sem.device)
+        return F.mse_loss(z_sem[valid_t], target_matrix)
 
 
 # ============================================================
