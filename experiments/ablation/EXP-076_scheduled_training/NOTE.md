@@ -120,6 +120,20 @@
 2. bell/cutoff 部分 seed 稳定，部分崩 — 调度有帮助但不如安全阀可靠
 3. always_on s=2 崩了 (-4.0) — 验证了"持续 InfoNCE 必崩"
 
+## Office-Caltech10 验证（排除 PACS 巧合）
+
+为验证 orth_only 不是 PACS 上的偶然，在 Office（低域差异）上也跑了验证。
+
+| Config | 服务器 | 数据集 | Seeds | 状态 |
+|--------|--------|--------|-------|------|
+| orth_only | SC4 | Office | 2, 333 | 🔄 刚启动 |
+| mse_alpha (mode=6) | SC4 | Office | 2, 333 | 🔄 刚启动 |
+
+Office 对照基线：FedAvg 85.67%, FedBN 88.65%, FedDSA 89.13%, FDSE 90.58%
+
+### Office 结果
+> 待回填（预计 1-2h，Office E=1 跑得快）
+
 ## 对照基线
-- 原始 FedDSA (tau=0.2): peak 80.93%, final 80.93% (单 seed)
-- FDSE R200: ~80.36% (3-seed mean)
+- 原始 FedDSA (tau=0.2): PACS peak 80.93%, final 80.93% (单 seed)
+- FDSE R200: PACS ~80.36%, Office ~90.58% (3-seed mean)

@@ -134,5 +134,19 @@ EXP-077 R50 快速验证确认两个最有效的修复方案：
 | 333 | | | | | |
 | 42 | | | | | |
 
+## Office-Caltech10 扩展验证
+
+为排除 PACS 上的 seed 运气，在 Office（低域差异）上同步验证 orth_only 和 mse_alpha。
+
+| Config | 服务器 | 数据集 | Seeds | 状态 |
+|--------|--------|--------|-------|------|
+| orth_only (mode=0) | SC4 | Office | 2, 333 | 🔄 运行中 |
+| mse_alpha (mode=6) | SC4 | Office | 2, 333 | 🔄 运行中 |
+
+Office 对照基线: FedAvg 85.67%, FedBN 88.65%, FedDSA 89.13%, FDSE 90.58%
+
+### Office 结果
+> 待回填
+
 ## 结论
 > 待实验完成后填入

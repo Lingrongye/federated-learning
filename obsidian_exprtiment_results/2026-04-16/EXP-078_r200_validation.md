@@ -50,14 +50,14 @@ mode 7 (078d, detach aug):
 
 ### 关键对比: 为什么 mode 6 最好
 
-|             | mode 4  | mode 6         | mode 7         |
-| ----------- | ------- | -------------- | -------------- |
-| InfoNCE 类型  | 标准      | alpha-sparsity | alpha-sparsity |
-| MSE 锚点      | 有       | 有              | 有              |
-| 增强走 CE?     | 是       | 是              | **否**          |
-| R50 Acc     | 79.8    | **82.2**       | 80.4           |
-| R50 cos_sim | +0.678  | +0.365         | +0.362         |
-| 评价          | cos最高最稳 | **Acc最高无下降**   | 增强不走CE反而低      |
+| | mode 4 | mode 6 | mode 7 |
+|--|--------|--------|--------|
+| InfoNCE 类型 | 标准 | alpha-sparsity | alpha-sparsity |
+| MSE 锚点 | 有 | 有 | 有 |
+| 增强走 CE? | 是 | 是 | **否** |
+| R50 Acc | 79.8 | **82.2** | 80.4 |
+| R50 cos_sim | +0.678 | +0.365 | +0.362 |
+| 评价 | cos最高最稳 | **Acc最高无下降** | 增强不走CE反而低 |
 
 mode 4 的 cos 最高(+0.678)说明MSE让梯度方向高度一致，但Acc较低，可能是标准InfoNCE的正例梯度太强限制了学习空间。mode 6 的alpha-sparsity弱化正例梯度，让模型更自由地找到好的分类边界，所以Acc最高。
 
@@ -133,6 +133,20 @@ EXP-077 R50 快速验证确认两个最有效的修复方案：
 | 2 | | | | | |
 | 333 | | | | | |
 | 42 | | | | | |
+
+## Office-Caltech10 扩展验证
+
+为排除 PACS 上的 seed 运气，在 Office（低域差异）上同步验证 orth_only 和 mse_alpha。
+
+| Config | 服务器 | 数据集 | Seeds | 状态 |
+|--------|--------|--------|-------|------|
+| orth_only (mode=0) | SC4 | Office | 2, 333 | 🔄 运行中 |
+| mse_alpha (mode=6) | SC4 | Office | 2, 333 | 🔄 运行中 |
+
+Office 对照基线: FedAvg 85.67%, FedBN 88.65%, FedDSA 89.13%, FDSE 90.58%
+
+### Office 结果
+> 待回填
 
 ## 结论
 > 待实验完成后填入
