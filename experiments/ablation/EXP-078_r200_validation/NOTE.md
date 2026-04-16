@@ -1,10 +1,65 @@
-# EXP-078 | R200 完整验证 — MSE 锚点 + Alpha-Sparsity
+# EXP-078 | R200 完整验证 — MSE 锚点 + Alpha-Sparsity + Detach Aug
 
 ## 基本信息
 - **日期**: 2026-04-16
-- **算法**: feddsa_scheduled.py (modes 4, 6)
-- **服务器**: SC2 (078a) + Lab-lry GPU1 (078c)
-- **状态**: 🔄 刚启动
+- **算法**: feddsa_scheduled.py (modes 4, 6, 7)
+- **服务器**: SC2 (078a) + Lab-lry GPU1 (078c) + SC4 (078d)
+- **状态**: 🔄 运行中
+
+## 核心设计解释
+
+### 所有 mode 的共同点
+**L_orth = 1.0 × cos²(z_sem, z_sty) 从 R0 开始全权重。** 这是与原始 FedDSA 最关键的区别——原版 L_orth 随 aux_w 从 0 渐增，导致前 50 轮正交约束几乎不生效。
+
+### 各 mode 的损失公式
+
+```
+mode 4 (078a, MSE anchor):
+  L = CE(z_sem) + CE(z_sem_aug) + L_orth
+    + 标准InfoNCE(z_sem vs protos, tau=0.05) 
+    + MSE(z_sem, 同类proto)                    ← FPL的安全阀
+  
+  MSE锚点作用: 像引力中心，防止z_sem被InfoNCE拉偏
+  R50结果: cos_sim=+0.678 (最高), 说明MSE让CE和InfoNCE高度协作
+
+mode 6 (078c, MSE + alpha-sparsity):
+  L = CE(z_sem) + CE(z_sem_aug) + L_orth
+    + AlphaInfoNCE(z_sem vs protos, tau=0.07, alpha=0.25)
+    + MSE(z_sem, 同类proto)
+  
+  Alpha-sparsity作用: cos^0.25 让正例梯度自动变小
+    → 正例(高sim)梯度 ∝ 0.25 × sim^(-0.75) → sim越高梯度越小
+    → CE已经在拉正例了，alpha不再重复拉，只专注推负例
+    → 与CE互补而非冲突
+  R50结果: max=82.2%, cos=+0.365, drop=0.0 — 最佳!
+
+mode 7 (078d, detach aug):
+  L = CE(z_sem) + L_orth                        ← CE只用原始特征
+    + AlphaInfoNCE([z_sem; z_sem_aug], tau=0.07) ← 增强特征只走对比
+    + MSE(z_sem, 同类proto)
+  
+  设计意图: 增强特征不干扰分类器，只给对比学习提供
+  "同一内容不同风格"的额外样本。如果解耦不完美，
+  z_sem和z_sem_aug有差异，InfoNCE会倒逼semantic_head
+  更好地滤掉风格。
+  
+  但R50结果(80.4%) < mode 6(82.2%)，说明在安全阀够强
+  的情况下，增强走CE反而更好——安全阀修复后，增强走CE
+  不再有害。
+```
+
+### 关键对比: 为什么 mode 6 最好
+
+| | mode 4 | mode 6 | mode 7 |
+|--|--------|--------|--------|
+| InfoNCE 类型 | 标准 | alpha-sparsity | alpha-sparsity |
+| MSE 锚点 | 有 | 有 | 有 |
+| 增强走 CE? | 是 | 是 | **否** |
+| R50 Acc | 79.8 | **82.2** | 80.4 |
+| R50 cos_sim | +0.678 | +0.365 | +0.362 |
+| 评价 | cos最高最稳 | **Acc最高无下降** | 增强不走CE反而低 |
+
+mode 4 的 cos 最高(+0.678)说明MSE让梯度方向高度一致，但Acc较低，可能是标准InfoNCE的正例梯度太强限制了学习空间。mode 6 的alpha-sparsity弱化正例梯度，让模型更自由地找到好的分类边界，所以Acc最高。
 
 ## 动机
 
