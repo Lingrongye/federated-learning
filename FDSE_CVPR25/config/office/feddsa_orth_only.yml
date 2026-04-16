@@ -1,0 +1,30 @@
+# EXP-076 Office: orth_only — verify decoupling on low-gap dataset
+# mode=0: L_orth full from R0, NO aug, NO InfoNCE
+# Office uses E=1 (not E=5 like PACS)
+algo_para:
+- 1.0    # lo: lambda_orth
+- 0.0    # lh: lambda_hsic
+- 1.0    # ls: unused in mode 0
+- 0.2    # tau: unused in mode 0
+- 5      # sdn: unused in mode 0
+- 128    # pd: proj_dim
+- 0      # sm: schedule_mode = 0 (orth_only)
+- 60     # bp: unused
+- 30     # bw: unused
+- 80     # cr: unused
+- 10     # gli: grad_log_interval
+- 1.0    # lm: unused
+- 0.25   # al: unused
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
