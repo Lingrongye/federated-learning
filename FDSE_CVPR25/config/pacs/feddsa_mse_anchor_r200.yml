@@ -1,0 +1,30 @@
+# EXP-078a: MSE Anchor R200 full validation
+# mode=4, tau=0.05, lambda_mse=1.0
+# R50 result: max=80.1%, cos=+0.678, drop=0.3%
+algo_para:
+- 1.0    # lo
+- 0.0    # lh
+- 1.0    # ls
+- 0.05   # tau
+- 5      # sdn
+- 128    # pd
+- 4      # sm: mode=4
+- 60     # bp
+- 30     # bw
+- 80     # cr
+- 10     # gli
+- 1.0    # lm: lambda_mse
+- 0.25   # al: unused
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
