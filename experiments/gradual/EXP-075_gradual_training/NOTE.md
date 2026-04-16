@@ -51,16 +51,29 @@ Seeds: 2, 333, 42
 - FDSE: ~80.36% (R200), ~82.17% (R500)
 - FedBN: ~79.47%
 
-## 结果 (待填)
+## 结果 (SC4, r52-53/200 interim)
 
-### PACS 3-seed
+### PACS 3-seed (interim @ round 53)
 
-| Config | s=2 | s=333 | s=42 | Mean±Std | Peak→Final |
+| Config | s=2 max | s=333 max | s=42 max | 稳定性 (last vs max) |
+|---|---|---|---|---|
+| **gradual_noaug** | **81.19** (last=81.06) | 77.45 | **80.11** (last=80.11) | **极稳 -0.13** |
+| gradual_deep | 80.54 (last=79.98) | **79.23** | **81.53** (last=80.78) | 稳定 -0.75 |
+| gradual_shallow | 79.48 (last=78.78) | 78.34 | 79.80 (last=78.68) | 轻微降 -1.0 |
+| gradual_syncramp | **81.60** (last=79.63) | 78.42 (last=**58.09!**) | 80.45 | **s333 崩了!** |
+
+### 关键发现 (interim)
+
+1. **gradual_noaug (无增强,只有渐进对齐) 最稳定**: s2 max=81.19, last=81.06, drop 仅 0.13%
+2. **syncramp s333 崩了**: 同步 ramp 不如分离 ramp, 暴跌到 58%
+3. **AdaIN 增强是不稳定源**: noaug > deep > shallow > syncramp (增强越少越稳)
+4. **deep(h-space) > shallow(conv3)**: 意外发现, 可能 conv3 384-ch 统计量太粗糙
+
+### 梯度冲突日志
+
+| Config | r10 cos_sim | r30 cos_sim | r50 cos_sim | r100 cos_sim | 趋势 |
 |---|---|---|---|---|---|
-| gradual_shallow | - | - | - | - | - |
-| gradual_deep | - | - | - | - | - |
-| gradual_noaug | - | - | - | - | - |
-| gradual_syncramp | - | - | - | - | - |
+| (待收集 — 需等实验完成后从 log 中提取) |
 
 ### 梯度冲突日志
 
