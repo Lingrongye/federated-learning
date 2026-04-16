@@ -1,0 +1,27 @@
+# EXP-080: orth_only + HSIC non-linear independence
+# Test if HSIC further improves decoupling beyond cosine orth
+algo_para:
+- 1.0    # lo: lambda_orth
+- 0.1    # lh: lambda_hsic (non-linear independence)
+- 1.0    # ls
+- 0.2    # tau
+- 5      # sdn
+- 128    # pd
+- 0      # sm = orth_only (no InfoNCE/aug)
+- 60
+- 30
+- 80
+- 10     # gli
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
