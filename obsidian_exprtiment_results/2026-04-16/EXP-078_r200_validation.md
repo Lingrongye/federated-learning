@@ -31,18 +31,23 @@ EXP-077 R50 快速验证确认两个最有效的修复方案：
 
 ## 训练配置
 
-| 参数 | 078a | 078c |
-|------|------|------|
-| tau | 0.05 | 0.07 |
-| lambda_sem | 1.0 | 1.0 |
-| lambda_mse | 1.0 | 1.0 |
-| alpha_sparsity | — | 0.25 |
-| lambda_orth | 1.0 (从 R0 全开) | 1.0 (从 R0 全开) |
-| 风格增强 | 有 (AdaIN, warmup 后) | 有 |
-| R | 200 | 200 |
-| E | 5 | 5 |
-| LR | 0.1 | 0.1 |
-| Seeds | 2, 333, 42 | 2, 333, 42 |
+| 参数 | 078a | 078c | 078d |
+|------|------|------|------|
+| mode | 4 | 6 | 7 |
+| tau | 0.05 | 0.07 | 0.07 |
+| lambda_sem | 1.0 | 1.0 | 1.0 |
+| lambda_mse | 1.0 | 1.0 | 1.0 |
+| alpha_sparsity | — | 0.25 | 0.25 |
+| lambda_orth | 1.0 (从 R0 全开) | 1.0 (从 R0 全开) | 1.0 (从 R0 全开) |
+| 风格增强 | 有 (走 CE) | 有 (走 CE) | 有 (**只走对比，不走 CE**) |
+| R | 200 | 200 | 200 |
+| Seeds | 2, 333, 42 | 2, 333, 42 | 2, 333, 42 |
+
+### 078d 特殊设计 (mode=7, PARDON-inspired)
+- 增强特征 z_sem_aug 与原始 z_sem concat 后一起送入 alpha-sparsity InfoNCE
+- CE loss 只用原始特征，不用增强特征
+- + MSE 锚点 + alpha-sparsity（双安全阀）
+- R50 验证: max=80.4%, cos=+0.362, drop=-0.3%
 
 ## 部署
 
@@ -50,6 +55,7 @@ EXP-077 R50 快速验证确认两个最有效的修复方案：
 |--------|--------|-------|
 | SC2 | feddsa_mse_anchor_r200.yml (078a) | 2, 333, 42 |
 | Lab-lry GPU1 | feddsa_mse_alpha_r200.yml (078c) | 2, 333, 42 |
+| SC4 | feddsa_detach_aug_r200.yml (078d) | 2, 333, 42 |
 
 ## 成功标准
 - R200 final ≥ 81% (3-seed mean)
