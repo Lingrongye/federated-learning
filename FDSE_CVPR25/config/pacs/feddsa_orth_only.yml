@@ -1,0 +1,28 @@
+# EXP-076a: True Decouple Only — L_orth full from R0, NO aug, NO InfoNCE
+# First proper test of orthogonal decoupling in isolation
+# schedule_mode=0 (orth_only)
+algo_para:
+- 1.0    # lo: lambda_orth (FULL from R0)
+- 0.0    # lh: lambda_hsic
+- 1.0    # ls: lambda_sem (unused in mode 0)
+- 0.2    # tau (unused in mode 0)
+- 5      # sdn: style_dispatch_num (unused in mode 0)
+- 128    # pd: proj_dim
+- 0      # sm: schedule_mode = 0 (orth_only)
+- 60     # bp: bell_peak (unused)
+- 30     # bw: bell_width (unused)
+- 80     # cr: cutoff_round (unused)
+- 10     # gli: grad_log_interval
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
