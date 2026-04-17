@@ -44,31 +44,23 @@ def main():
 
     # Task config
     if args.task == 'office_caltech10_c4':
-        from task.office_caltech10_c4 import config as cfg
-        DOMAINS = ['Caltech', 'Amazon', 'DSLR', 'Webcam']
-        # Office 的数据加载 — 看 config 里
+        from benchmark.office_caltech10_classification import config as cfg
+        DOMAINS_MAP = {'Caltech': 'Caltech', 'Amazon': 'amazon', 'DSLR': 'dslr', 'Webcam': 'webcam'}
+        DOMAINS = list(DOMAINS_MAP.keys())
+        DSCls = cfg.OCDomainDataset
+        ROOT = '/root/miniconda3/lib/python3.10/site-packages/flgo/benchmark/RAW_DATA/office_caltech10'
     else:
-        from task.PACS_c4 import config as cfg
-        DOMAINS = ['Art', 'Cartoon', 'Photo', 'Sketch']
+        from benchmark.pacs_classification import config as cfg
+        DOMAINS_MAP = {'Art': 'art_painting', 'Cartoon': 'cartoon', 'Photo': 'photo', 'Sketch': 'sketch'}
+        DOMAINS = list(DOMAINS_MAP.keys())
+        DSCls = cfg.PACSDomainDataset
+        ROOT = '/root/miniconda3/lib/python3.10/site-packages/flgo/benchmark/RAW_DATA/PACS'
 
-    # 加载每个 client 的 train + test
-    # Office 每 client 1 个 domain，数据从 cfg.train_data / test_data 索引
-    # 这里偷懒重新构建 per-client train/test（seed=42 split 80/20）
-    if args.task == 'office_caltech10_c4':
-        from task.office_caltech10_c4 import config as cfg
-        # Office 没有 domain split 暴露，fallback 用 task/data.json
-        # 这里只做 global test 上 FC vs Proto
-        print('[WARN] Office per-domain split 需从 task data.json 还原，暂只做 global')
-        return
-
-    from task.PACS_c4 import config as cfg_pacs
-    ROOT = '/root/miniconda3/lib/python3.10/site-packages/flgo/benchmark/RAW_DATA/PACS'
     tf = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()])
-
     domain_ds = {}
     for d in DOMAINS:
-        dname = {'Art': 'art_painting', 'Cartoon': 'cartoon', 'Photo': 'photo', 'Sketch': 'sketch'}[d]
-        domain_ds[d] = cfg_pacs.PACSDomainDataset(ROOT, domain=dname, transform=tf)
+        domain_ds[d] = DSCls(ROOT, domain=DOMAINS_MAP[d], transform=tf)
+        print(f'  loaded {d}: {len(domain_ds[d])} images')
 
     random.seed(42)
     train_by_c = []
@@ -81,14 +73,23 @@ def main():
         test_by_c.append(Subset(ds, idx[split:]))
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    n_classes = len(cfg_pacs.PACSDomainDataset.classes)
+    n_classes = len(DSCls.classes)
 
     # Step 1: 对每 client 构造 local proto（用 train set 提 z_sem 按 class 均值）
     all_client_protos = []  # [ {class: avg_z_sem} per client ]
     client_models = []
     for cid, domain in enumerate(DOMAINS):
         state = torch.load(os.path.join(ckpt, f'client_{cid}.pt'), map_location=device)
-        net = cfg_pacs.get_model().to(device)
+        net = cfg.get_model().to(device) if hasattr(cfg, 'get_model') else None
+        if net is None:
+            # fallback: 看 benchmark 里的 init func
+            for name in ['init_global_module', 'get_model', 'model_fn']:
+                fn = getattr(cfg, name, None)
+                if fn is not None:
+                    net = fn().to(device); break
+        if net is None:
+            print(f'[ERROR] 找不到 model 构造函数')
+            return
         net.load_state_dict(state, strict=False)
         net.eval()
         client_models.append(net)
