@@ -9,6 +9,10 @@ class Server(fab.BasicServer):
         tune_key, tune_direction = self.gv.logger.get_es_key(), self.gv.logger.get_es_direction()
         tune_key = tune_key.split('_')[-1]
         for c in self.clients: c.tune_key, c.tune_direction = tune_key, tune_direction
+        # 兜底：确保所有 client 都有 model（避免 PACS task 下 log_once 崩）
+        for c in self.clients:
+            if getattr(c, 'model', None) is None:
+                c.model = copy.deepcopy(self.model)
         self.gv.logger.time_start('Total Time Cost')
         # evaluating initial model performance
         self.gv.logger.info("--------------Initial Evaluation--------------")
