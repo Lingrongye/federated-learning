@@ -1,66 +1,65 @@
 # EXP-079 | Seed 对齐补跑 — s=15 for orth_only / mse_alpha
 
 ## 基本信息
-- **日期**: 2026-04-16 启动 / 2026-04-17 结果
+- **日期**: 2026-04-16 启动 / 2026-04-17 回填
 - **算法**: feddsa_scheduled (mode 0 / mode 6)
 - **服务器**: SC2 GPU 0
-- **状态**: 🔄 运行中
+- **状态**: ✅ R200 全部完成
 
 ## 动机
 
-今日 EXP-076/078 的 orth_only / mse_alpha 用了 seeds {2, 333, 42}，而所有基线（FDSE 论文、EXP-051 Office FedDSA/FDSE 复现、EXP-049 FDSE 5-seed）使用的是 **FDSE 官方源码 `run.py` 默认 seeds {2, 15, 333}**。seed 不对齐导致对比不公平。
-
-本实验补跑 s=15，让我们今日实验的 seed 集扩展为 {2, 15, 333, 42} 或提取公共 {2, 15, 333} 3-seed 直接对齐基线。
+EXP-076/078 的 orth_only / mse_alpha 用 seeds {2, 333, 42}，与 FDSE 官方默认 {2, 15, 333} 不对齐。补 s=15 让公共 seed 集变成 {2, 15, 333}，与基线严格对齐。
 
 ## 变体通俗解释
 
-- **orth_only (mode=0)**: 纯 CE + 正交约束（L_orth=1.0 从 R0），**无增强无 InfoNCE**。这是今日最稳定方案。
-- **mse_alpha (mode=6)**: CE + L_orth + alpha-sparsity InfoNCE (tau=0.07, alpha=0.25) + MSE 锚点。EXP-077 R50 最佳但 R200 长期失效。
+- **orth_only (mode=0)**: 纯 CE + L_orth（正交约束从 R0 全开）
+- **mse_alpha (mode=6)**: CE + L_orth + alpha-sparsity InfoNCE + MSE 锚点
 
-## 实验矩阵 (4 runs)
+## 结果（R200 完整，ALL Best/Last \| AVG Best/Last）
 
-| # | Config | 数据集 | Seed | 算法文件 |
-|---|--------|--------|------|---------|
-| 1 | feddsa_orth_only.yml | PACS_c4 | 15 | feddsa_scheduled (mode=0) |
-| 2 | feddsa_mse_alpha_r200.yml | PACS_c4 | 15 | feddsa_scheduled (mode=6) |
-| 3 | feddsa_orth_only.yml | office_caltech10_c4 | 15 | feddsa_scheduled (mode=0) |
-| 4 | feddsa_mse_alpha.yml | office_caltech10_c4 | 15 | feddsa_scheduled (mode=6) |
+### PACS s=15
 
-## 预期结果
+| Config | R | ALL Best | ALL Last | AVG Best | AVG Last | drop (AVG) |
+|--------|---|---------|---------|---------|---------|-----------|
+| orth_only LR=0.1 | 201 | 81.94 | 76.82 | 80.29 | 73.77 | **6.52** ❌ |
+| mse_alpha LR=0.1 | 201 | 80.94 | 74.92 | 79.15 | 72.16 | **6.99** ❌ |
 
-基于今日 s=2/333/42 的 3-seed mean 推测 s=15 应当落在类似区间：
+### Office s=15
 
-| Config | 数据集 | 预期 AVG Best | 预期 AVG Last |
-|--------|--------|--------------|--------------|
-| orth_only | PACS | 80-82 | 79-81 |
-| mse_alpha | PACS | 80-82 | 76-78 (会下降) |
-| orth_only | Office | 88-90 | 88-89 |
-| mse_alpha | Office | 86-88 | 86-87 |
+| Config | R | ALL Best | ALL Last | AVG Best | AVG Last | drop (AVG) |
+|--------|---|---------|---------|---------|---------|-----------|
+| orth_only LR=0.1 | 201 | 81.37 | 80.56 | 88.43 | 86.07 | 2.36 |
+| **mse_alpha LR=0.1** | 201 | **83.35** | **82.95** | **89.55** | **89.28** | **0.27** ★ |
 
-## 成功标准
+## 3-seed {2, 15, 333} 合并（含 EXP-076 s=2/333 + 本次 s=15）
 
-- 补 s=15 后，**公共 seed 集 {2, 333}** → **3-seed {2, 15, 333}** 对比基线 EXP-049/051
-- orth_only 3-seed mean (2,15,333) ≥ FDSE 3-seed mean (EXP-049 PACS 80.24, EXP-051 Office 90.58 AVG Best)
+### PACS R200 3-seed mean
 
-## 结果（待填）
+| 方法 | ALL Best | ALL Last | AVG Best | AVG Last |
+|------|---------|---------|---------|---------|
+| **orth_only LR=0.1** | 82.98 | 75.08 | 81.35 | **72.21** ❌ |
+| mse_alpha | 82.38 | 76.82 | 80.53 | 74.23 |
+| FDSE (EXP-049) | **81.57** | **79.60** | **79.91** | **77.55** |
 
-### PACS
-| Config | s | R | ALL Best | ALL Last | AVG Best | AVG Last | drop |
-|--------|---|---|----------|---------|----------|---------|------|
-| orth_only | 15 | - | - | - | - | - | - |
-| mse_alpha | 15 | - | - | - | - | - | - |
+→ **LR=0.1 下 orth_only 不稳**；LR=0.05 版本（EXP-080）才能稳超 FDSE
 
-### Office-Caltech10
-| Config | s | R | ALL Best | ALL Last | AVG Best | AVG Last | drop |
-|--------|---|---|----------|---------|----------|---------|------|
-| orth_only | 15 | - | - | - | - | - | - |
-| mse_alpha | 15 | - | - | - | - | - | - |
+### Office R200 3-seed mean
 
-## 合并后的 3-seed 对比 {2, 15, 333}（待填）
+| 方法 | ALL Best | ALL Last | AVG Best | AVG Last |
+|------|---------|---------|---------|---------|
+| orth_only | 82.42 | 81.62 | 88.64 | 87.34 |
+| mse_alpha | 82.68 | 81.48 | 87.93 | 87.25 |
+| **FDSE** | **86.38** | **85.05** | **90.58** | **89.22** |
 
-| 方法 | 数据集 | ALL Best 3-seed | AVG Best 3-seed | vs FDSE |
-|------|--------|----------------|----------------|---------|
-| orth_only | PACS | - | - | - |
-| orth_only | Office | - | - | - |
-| FDSE (基线) | PACS | - | 80.24 (EXP-049) | baseline |
-| FDSE (基线) | Office | 86.38 | 90.58 (EXP-051) | baseline |
+## 关键发现
+
+1. **s=15 没救回 PACS orth_only LR=0.1** — 3-seed {2,15,333} AVG Last 72.21 仍远低于 FDSE 77.55
+2. **Office mse_alpha s=15 drop 仅 0.27** — Office E=1 场景下 InfoNCE 变体可用，与 PACS E=5 的全面失败形成鲜明对比
+3. **3-seed 严格同 seed 对比已可做** — 后续所有 PACS/Office 实验可直接对比 FDSE EXP-049/051
+4. **LR=0.1 本身是问题的一部分** — 见 EXP-080，LR=0.05 才是真正突破
+
+## 下一步
+
+- LR=0.05 × PACS s=15/333 已在 EXP-080 完成
+- Office LR=0.05 × s=2/15/333 也在 EXP-080 完成
+- 本 EXP 结果用于 baseline 参考
