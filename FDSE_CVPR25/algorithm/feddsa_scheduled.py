@@ -148,6 +148,11 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.global_semantic_protos = {}
         # Gradient conflict log
         self.grad_conflict_log = {}
+        # Best checkpoint tracking (for save_errors)
+        self._best_avg_acc = -1.0
+        self._best_round = 0
+        self._best_global_state = None
+        self._best_client_states = None
 
         self._init_agg_keys()
 
@@ -234,35 +239,79 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                 f"mean_cos={mean_cos:.4f} per_client={entries}"
             )
 
-        # 最后一轮：保存所有 client 模型供误分类可视化
-        if int(getattr(self, 'save_errors', 0)) == 1 and self.current_round >= self.num_rounds:
-            self._save_checkpoints()
+        # 追踪 best（每轮）+ 最后一轮保存 best checkpoint
+        if int(getattr(self, 'save_errors', 0)) == 1:
+            self._track_best()
+            if self.current_round >= self.num_rounds:
+                self._save_best_checkpoints()
 
-    def _save_checkpoints(self):
-        """Save global + per-client models for later misclassification analysis."""
-        import os, torch, time
-        tag = f"feddsa_{getattr(self, 'option', {}).get('seed', 'unknown')}_R{self.num_rounds}_{int(time.time())}"
+    def _track_best(self):
+        """每轮聚合后缓存 best AVG acc 对应的模型快照。
+        读取 flgo logger.output 拿最新 test metrics（上一轮的结果）。"""
+        try:
+            output = getattr(self.gv.logger, 'output', None)
+            if not output or 'mean_local_test_accuracy' not in output:
+                return
+            history = output['mean_local_test_accuracy']
+            if not history:
+                return
+            current = float(history[-1]) * 100
+            if current > self._best_avg_acc:
+                import copy
+                self._best_avg_acc = current
+                self._best_round = len(history)  # round index (1-based)
+                self._best_global_state = copy.deepcopy(self.model.state_dict())
+                self._best_client_states = [
+                    copy.deepcopy(c.model.state_dict()) if getattr(c, 'model', None) is not None else None
+                    for c in self.clients
+                ]
+        except Exception as e:
+            try:
+                self.gv.logger.info(f"[TrackBest] skip: {e}")
+            except Exception:
+                pass
+
+    def _save_best_checkpoints(self):
+        """训练结束时把 best round 的模型快照写到 ~/fl_checkpoints/"""
+        import os, torch, time, json
+        if self._best_global_state is None:
+            # 兜底：best 未追踪到（比如 test 没跑过），就存最后一轮
+            self._best_global_state = self.model.state_dict()
+            self._best_client_states = [
+                c.model.state_dict() if getattr(c, 'model', None) is not None else None
+                for c in self.clients
+            ]
+            self._best_round = self.current_round
+            fallback = True
+        else:
+            fallback = False
+        seed = getattr(self, 'option', {}).get('seed', 'unknown')
+        tag = f"feddsa_s{seed}_R{self.num_rounds}_best{self._best_round}_{int(time.time())}"
         save_dir = os.path.expanduser(f'~/fl_checkpoints/{tag}')
         os.makedirs(save_dir, exist_ok=True)
-        torch.save(self.model.state_dict(), os.path.join(save_dir, 'global_model.pt'))
-        saved_clients = 0
-        for cid, client in enumerate(self.clients):
-            if getattr(client, 'model', None) is not None:
-                torch.save(client.model.state_dict(), os.path.join(save_dir, f'client_{cid}.pt'))
-                saved_clients += 1
-        self.gv.logger.info(f"[SaveCheckpoint] saved global + {saved_clients} client models to {save_dir}")
-        # 记录配置信息
+        torch.save(self._best_global_state, os.path.join(save_dir, 'global_model.pt'))
+        saved = 0
+        for cid, state in enumerate(self._best_client_states):
+            if state is not None:
+                torch.save(state, os.path.join(save_dir, f'client_{cid}.pt'))
+                saved += 1
         meta = {
-            'round': self.current_round,
+            'best_round': self._best_round,
+            'best_avg_acc': self._best_avg_acc,
             'num_rounds': self.num_rounds,
             'num_clients': len(self.clients),
             'schedule_mode': int(self.schedule_mode),
             'lambda_orth': float(self.lambda_orth),
             'tau': float(self.tau),
+            'seed': seed,
+            'is_last_round_fallback': fallback,
         }
-        import json
         with open(os.path.join(save_dir, 'meta.json'), 'w') as f:
             json.dump(meta, f, indent=2)
+        self.gv.logger.info(
+            f"[SaveBest] best@R{self._best_round} avg={self._best_avg_acc:.4f} "
+            f"global+{saved} clients -> {save_dir} (fallback={fallback})"
+        )
 
     def _aggregate_shared(self, models):
         if len(models) == 0:
