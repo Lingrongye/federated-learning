@@ -124,6 +124,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'lm': 1.0,    # lambda_mse (MSE anchor weight, modes 4/6)
             'al': 0.25,   # alpha_sparsity (power for cos_sim, modes 5/6)
             'se': 0,      # save_errors: 0=off, 1=save client checkpoints on last round
+            'sas': 0,     # style-aware semantic head aggregation: 0=off, 1=on
+            'sas_tau': 0.3,  # softmax temperature for style similarity
         })
         # Readable aliases
         self.lambda_orth = float(self.lo)
@@ -140,7 +142,12 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.lambda_mse = float(self.lm)
         self.alpha_sparsity = float(self.al)
         self.save_errors = int(self.se)
+        self.style_aware_sem = int(self.sas)
+        self.style_aware_tau = float(self.sas_tau)
         self.sample_option = 'full'
+
+        # 方案 A：per-client semantic_head states (最近一轮上传的)
+        self.client_sem_states = {}
 
         # Style bank
         self.style_bank = {}
@@ -183,9 +190,10 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.shared_keys = [k for k in all_keys if k not in self.private_keys]
 
     def pack(self, client_id, mtype=0):
-        """Send global model + protos + styles."""
+        """Send global model + protos + styles.
+        方案 A (sas=1): 对 semantic_head 做 style-similarity 加权的 per-client personalization。
+        """
         dispatched_styles = None
-        # Only dispatch styles if schedule allows augmentation
         if self.schedule_mode != 0 and len(self.style_bank) > 0:
             available = {cid: s for cid, s in self.style_bank.items() if cid != client_id}
             if len(available) == 0:
@@ -196,12 +204,77 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                 chosen = np.random.choice(keys, n, replace=False)
                 dispatched_styles = [available[k] for k in chosen]
 
+        model_to_send = copy.deepcopy(self.model)
+
+        # 方案 A：用 style similarity 个性化 semantic_head
+        if self.style_aware_sem == 1 and len(self.client_sem_states) >= 2 and client_id in self.style_bank:
+            personalized_sem = self._compute_style_weighted_sem(client_id)
+            if personalized_sem is not None:
+                model_state = model_to_send.state_dict()
+                for k, v in personalized_sem.items():
+                    if k in model_state:
+                        model_state[k] = v.to(model_state[k].device)
+                model_to_send.load_state_dict(model_state)
+
         return {
-            'model': copy.deepcopy(self.model),
+            'model': model_to_send,
             'global_protos': copy.deepcopy(self.global_semantic_protos),
             'style_bank': dispatched_styles,
             'current_round': self.current_round,
         }
+
+    def _compute_style_weighted_sem(self, target_cid):
+        """对 target client 计算其他 client 的 style-similarity 加权 semantic_head。
+        返回 dict of semantic_head params (averaged)."""
+        import torch as _t
+        target_style = self.style_bank.get(target_cid)
+        if target_style is None:
+            return None
+        # target style: (mu, sigma) tuple or dict. 取 μ 作为 style vector
+        if isinstance(target_style, (tuple, list)):
+            target_vec = target_style[0].flatten().cpu()
+        elif isinstance(target_style, dict):
+            target_vec = target_style.get('mu', next(iter(target_style.values()))).flatten().cpu()
+        else:
+            target_vec = target_style.flatten().cpu()
+
+        sims = []
+        cids = []
+        for cid, sem_state in self.client_sem_states.items():
+            src_style = self.style_bank.get(cid)
+            if src_style is None:
+                continue
+            if isinstance(src_style, (tuple, list)):
+                src_vec = src_style[0].flatten().cpu()
+            elif isinstance(src_style, dict):
+                src_vec = src_style.get('mu', next(iter(src_style.values()))).flatten().cpu()
+            else:
+                src_vec = src_style.flatten().cpu()
+            if src_vec.shape != target_vec.shape:
+                continue
+            # cosine similarity
+            dot = (src_vec * target_vec).sum()
+            norm = src_vec.norm() * target_vec.norm() + 1e-8
+            sims.append((dot / norm).item())
+            cids.append(cid)
+
+        if len(sims) == 0:
+            return None
+
+        # softmax with temperature
+        sims_t = _t.tensor(sims, dtype=_t.float32) / max(self.style_aware_tau, 1e-3)
+        weights = _t.softmax(sims_t, dim=0)
+
+        # weighted average of sem states
+        accumulated = None
+        for w, cid in zip(weights.tolist(), cids):
+            sem = self.client_sem_states[cid]
+            if accumulated is None:
+                accumulated = {k: v.clone() * w for k, v in sem.items()}
+            else:
+                for k in accumulated:
+                    accumulated[k] += sem[k] * w
+        return accumulated
 
     def iterate(self):
         self.selected_clients = self.sample()
@@ -215,6 +288,13 @@ class Server(flgo.algorithm.fedbase.BasicServer):
 
         # Aggregate shared parameters (FedAvg)
         self._aggregate_shared(models)
+
+        # 方案 A：记录每个 client 上传的 semantic_head state（供 pack 时做 style-weighted mix）
+        if self.style_aware_sem == 1:
+            for cid, m in zip(self.received_clients, models):
+                m_state = m.state_dict()
+                sem_state = {k: v.clone().cpu() for k, v in m_state.items() if 'semantic_head' in k}
+                self.client_sem_states[cid] = sem_state
 
         # Collect style bank
         for cid, style in zip(self.received_clients, style_stats_list):
