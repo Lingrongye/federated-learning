@@ -1,0 +1,16 @@
+# EXP-087: Office Local baseline (standalone, 每 client 独立训练不聚合)
+# 对齐 FDSE Table 1 "Local" 行，作为 FL 下限基线
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 1
+num_epochs: 200
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
+early_stop: 20
