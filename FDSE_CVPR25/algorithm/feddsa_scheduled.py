@@ -123,6 +123,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'gli': 10,    # grad_log_interval (0=off)
             'lm': 1.0,    # lambda_mse (MSE anchor weight, modes 4/6)
             'al': 0.25,   # alpha_sparsity (power for cos_sim, modes 5/6)
+            'se': 0,      # save_errors: 0=off, 1=save client checkpoints on last round
         })
         # Readable aliases
         self.lambda_orth = float(self.lo)
@@ -138,6 +139,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.grad_log_interval = int(self.gli)
         self.lambda_mse = float(self.lm)
         self.alpha_sparsity = float(self.al)
+        self.save_errors = int(self.se)
         self.sample_option = 'full'
 
         # Style bank
@@ -231,6 +233,36 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                 f"[GradConflict] round={self.current_round} "
                 f"mean_cos={mean_cos:.4f} per_client={entries}"
             )
+
+        # 最后一轮：保存所有 client 模型供误分类可视化
+        if int(getattr(self, 'save_errors', 0)) == 1 and self.current_round >= self.num_rounds:
+            self._save_checkpoints()
+
+    def _save_checkpoints(self):
+        """Save global + per-client models for later misclassification analysis."""
+        import os, torch, time
+        tag = f"feddsa_{getattr(self, 'option', {}).get('seed', 'unknown')}_R{self.num_rounds}_{int(time.time())}"
+        save_dir = os.path.expanduser(f'~/fl_checkpoints/{tag}')
+        os.makedirs(save_dir, exist_ok=True)
+        torch.save(self.model.state_dict(), os.path.join(save_dir, 'global_model.pt'))
+        saved_clients = 0
+        for cid, client in enumerate(self.clients):
+            if getattr(client, 'model', None) is not None:
+                torch.save(client.model.state_dict(), os.path.join(save_dir, f'client_{cid}.pt'))
+                saved_clients += 1
+        self.gv.logger.info(f"[SaveCheckpoint] saved global + {saved_clients} client models to {save_dir}")
+        # 记录配置信息
+        meta = {
+            'round': self.current_round,
+            'num_rounds': self.num_rounds,
+            'num_clients': len(self.clients),
+            'schedule_mode': int(self.schedule_mode),
+            'lambda_orth': float(self.lambda_orth),
+            'tau': float(self.tau),
+        }
+        import json
+        with open(os.path.join(save_dir, 'meta.json'), 'w') as f:
+            json.dump(meta, f, indent=2)
 
     def _aggregate_shared(self, models):
         if len(models) == 0:
