@@ -156,63 +156,91 @@
 
 ---
 
-## 与基线对比（ALL + AVG 双指标，对齐 FDSE 论文 Table 1）
+## 与基线对比（统一规范：ALL + AVG × Best + Last，对齐 FDSE Table 1）
 
-### PACS R200（mean of seeds）
+> 📖 **指标统一定义**：所有 PACS / Office 对比都用以下四列
+> - **ALL Best** = 各轮 `local_test_accuracy`（样本加权）的最大值
+> - **ALL Last** = 第 200 轮 `local_test_accuracy`
+> - **AVG Best** = 各轮 `mean_local_test_accuracy`（客户端等权）的最大值
+> - **AVG Last** = 第 200 轮 `mean_local_test_accuracy`
+> - 每个数字都是同一 seed 集下多 seed 的 mean（seed 集在"seed"列标明）
 
-| 方法 | seed 集 | **ALL Best** | ALL Last | **AVG Best** | AVG Last | 来源 |
-|------|--------|-------------|---------|-------------|----------|------|
-| FedAvg (R200 复现) | 5-seed | — | — | ~72.1* | — | 论文参考值 |
-| FedBN (R200 复现) | 5-seed | — | — | ~79.5* | — | 论文参考值 |
-| **FDSE** (R200 复现) | 5-seed {2,15,333,4388,967} | — | — | **80.24 ± 0.75** | 75.57 | EXP-049 |
-| FedDSA 原版 (R200) | 5-seed | — | — | 80.74 ± 1.37 | 75.20 | EXP-046 |
-| **orth_only (今日)** | 3-seed {2,333,42} | ~90.7† | ~89 | **81.4** | 80.7 | EXP-076 |
-| always_on | 3-seed | ~90.82 | ~88.5 | 79.9 | 75.1 | EXP-076 (mode=3) |
-| mse_anchor (078a) | 3-seed | ~90.7 | ~89 | 81.0 | 76.7 | EXP-078a (R142 kill) |
-| **orth_only s=15 补跑** | 进行中 | 进行中 | 进行中 | 进行中 | 进行中 | EXP-079 (R3 / 200) |
-| **mse_alpha s=15 补跑** | 进行中 | 进行中 | 进行中 | 进行中 | 进行中 | EXP-079 (R2 / 200) |
+### PACS R200（所有数字均 seed mean）
 
-†PACS 今日实验 ALL 值从今晨服务器日志提取，代表 s=2/333/42 的均值（Photo 大域主导下 ALL 普遍 90+）
-*论文参考值
+| 方法 | seed 集 | ALL Best | ALL Last | AVG Best | AVG Last | 来源 |
+|------|--------|---------|---------|---------|---------|------|
+| **FDSE** | {2,15,333,4388,967} 5s | 81.78 | 76.47 | **80.24** | **75.57** | EXP-049 |
+| **orth_only** | {2,333,42} 3s | 83.45 | 76.49 | **81.69** | **73.87** ❌ | EXP-076 mode=0 (Lab-lry R200 JSON) |
+| bell_60_30 | {2,333,42} 3s (s=42 用 SC2 log) | — | — | **81.67** | **79.29** ★ | EXP-076 mode=1 |
+| cutoff_80 | {2,333,42} 3s | — | — | 80.40 | 78.06 | EXP-076 mode=2 |
+| always_on | {2,333,42} 3s | — | — | 79.86 | 75.09 | EXP-076 mode=3 |
+| 078c mse_alpha | {2,333,42} 3s | 82.81 | 77.76 | 80.90 | 75.21 | EXP-078c (Lab-lry R200 JSON) |
+| 078a mse_anchor | R142 kill | — | — | 81.00 | 76.70 | EXP-078a |
+| **orth_only s=15 补跑** | 进行中 R146 | — | — | 79.50 | 76.98 | EXP-079 (R149/200) |
+| **mse_alpha s=15 补跑** | 进行中 R146 | — | — | 79.15 | 76.24 | EXP-079 |
+| **orth_lr05 s=2** (新) | 单 seed R147 | — | — | **81.68** | **81.49** ★★★ | EXP-080 LR=0.05 |
+| **FDSE s=42 补跑** | 单 seed R148 | — | — | 79.75 | 77.19 | EXP-081（进行中）|
 
-**论文 R500 原始数据（仅对照，非同预算）**：FedAvg ALL 74.30 / AVG 72.10，FedBN ALL 81.58 / AVG 79.47，FDSE **ALL 83.81 / AVG 82.17**
+**论文 R500 原始值（仅对照）**：FDSE ALL 83.81 / AVG 82.17；FedBN ALL 81.58 / AVG 79.47；FedAvg ALL 74.30 / AVG 72.10
 
-### Office-Caltech10 R200（mean of seeds）
+### Office-Caltech10 R200（所有数字均 seed mean）
 
-| 方法 | seed 集 | **ALL Best** | ALL Last | **AVG Best** | AVG Last | 来源 |
-|------|--------|-------------|---------|-------------|----------|------|
-| FedAvg (R200 复现) | 3-seed | ~82.6* | — | ~86.3* | — | 论文参考值 |
-| FedBN (R200 复现) | 3-seed | ~83.1* | — | ~87.0* | — | 论文参考值 |
-| **FedDSA 原版 (R200)** | 3-seed {2,15,333} | **84.39 ± 2.40** | 81.61 | **89.13 ± 2.42** | 86.52 | EXP-051 |
-| **FDSE (R200 复现)** | 3-seed {2,15,333} | **86.38 ± 2.01** | 85.05 | **90.58 ± 2.22** | 89.22 | EXP-051 |
-| **orth_only (今日)** | 3-seed {2,333,42} | 待补提取‡ | — | **89.4** | 88.5 | EXP-076 |
-| mse_alpha (今日) | 3-seed {2,333,42} | 待补提取‡ | — | 87.8 | 86.8 | EXP-076 |
-| **orth_only s=15 补跑** | 进行中 (R18) | 80.00 | 80.00 | 68.31 | 68.31 | EXP-079 |
-| **mse_alpha s=15 补跑** | 进行中 (R15) | 73.33 | 66.07 | 60.90 | 44.09 | EXP-079 |
+| 方法 | seed 集 | ALL Best | ALL Last | AVG Best | AVG Last | 来源 |
+|------|--------|---------|---------|---------|---------|------|
+| FedDSA 原版 | {2,15,333} 3s | 84.39 | 81.61 | 89.13 | 86.52 | EXP-051 |
+| **FDSE** | {2,15,333} 3s | **86.38** | **85.05** | **90.58** | **89.22** | EXP-051 |
+| **orth_only** | {2,333,42} 3s | 待同步† | — | **89.4** | 88.5 | EXP-076 (SC4 已关) |
+| mse_alpha | {2,333,42} 3s | 待同步† | — | 87.8 | 86.8 | EXP-076 |
+| **orth_only s=15** ✅ DONE | s=15 单 | ~86.5‡ | 待提 | 88.43 | 86.07 | EXP-079 |
+| **mse_alpha s=15** ✅ DONE | s=15 单 | ~85.5‡ | 待提 | **89.55** ★ | 89.28 (drop 0.27 ★) | EXP-079 |
+| **orth_lr05** (新) | s=2 刚启 R1 | — | — | 进行中 | — | EXP-080 |
 
-‡Office 今日 orth_only/mse_alpha 的 ALL 数据在 SC4（已关机）的 log 里，git 未同步到 SC2；s=15 跑完后重新 git pull 一并提取
+†SC4 实例已关，git 未拉 record JSON；s=15 完成后会连同 record 一起补 ALL
+‡初步估值（待 JSON 同步确认）
 
-**论文 R500 原始数据（仅对照）**：FDSE **ALL 87.15 ± 2.06 / AVG 91.58 ± 2.01**
+**论文 R500 原始值**：FDSE ALL 87.15 / AVG 91.58；FedBN ALL 83.08 / AVG 87.01；FedAvg ALL 82.60 / AVG 86.26
 
-### 公共 seed {2, 333} 重算（同 seed 对比，去除 seed 干扰）
+---
 
-**Office-Caltech10（仅 s=2, s=333，两者均在基线与今日实验中）**：
+### 🎯 严格同 seed 对比（消除 seed 运气）
 
-| 方法 | s=2 ALL Best | s=333 ALL Best | **2-seed mean ALL Best** | s=2 AVG Best | s=333 AVG Best | **2-seed mean AVG Best** |
-|------|-------------|---------------|------------------------|-------------|---------------|------------------------|
-| FDSE | 88.10 | 84.12 | **86.11** | 92.39 | 88.11 | **90.25** |
-| FedDSA 原 | 84.13 | 82.12 | 83.12 | 89.95 | 86.35 | 88.15 |
-| **orth_only 今日** | 待提 | 待提 | — | 87.72 | 89.77 | **88.75** |
-| mse_alpha 今日 | 待提 | 待提 | — | 86.75 | 87.50 | 87.13 |
+#### PACS FDSE vs orth_only — 公共 seed {2, 333} 同 seed mean
 
-→ **同 seed 对比：Office orth_only AVG Best 88.75 vs FDSE 90.25，差 -1.5%**（vs 3-seed mean 差 -1.2% 略乐观）
+| 方法 | s=2 AVG Best/Last | s=333 AVG Best/Last | **2s mean AVG Best** | **2s mean AVG Last** |
+|------|------------------|--------------------|--------------------|--------------------|
+| FDSE | 80.81 / 78.09 | 79.93 / 77.92 | **80.37** | **78.01** |
+| orth_only | 80.11 / 77.52 | 83.65 / **65.34** 💥 | **81.88** | **71.43** ❌ |
 
-## 结论更新
+→ **同 seed {2,333}：peak 上 orth_only +1.51%，但 last 暴跌 -6.58%**（s=333 崩盘）
 
-1. **PACS AVG Best**：orth_only **81.4** > FDSE R200 复现 **80.24**（**+1.2%**）— 但 seed 不对齐，需 s=15 补齐后重算
-2. **Office AVG Best**：orth_only **89.4 < FDSE 90.58**（-1.2%）；同 seed {2,333} 重算后 orth_only 88.75 vs FDSE 90.25（-1.5%）
-3. **max-final gap**（稳定性）：orth_only 0.7（PACS）/ 0.9（Office），所有 InfoNCE 变体 ≥ 1.2，稳定性最佳
-4. **ALL vs AVG 差异**：Office 上 AVG >> ALL（因为 DSLR 157 样本在 AVG 中权重 1/4，在 ALL 中仅 ~5%），与论文 Table 1 一致
+#### PACS FDSE vs orth_only — 公共 seed {2, 333, 42}（待 EXP-081 FDSE s=42 完成）
+
+| 方法 | s=2 | s=333 | s=42 | **3s mean AVG Best** | **3s mean AVG Last** |
+|------|-----|-------|------|--------------------|--------------------|
+| FDSE | 80.81/78.09 | 79.93/77.92 | EXP-081 R148: 79.75/77.19 | 待 EXP-081 完成 | 待 |
+| orth_only | 80.11/77.52 | 83.65/65.34 | 81.30/78.74 | **81.69** | **73.87** |
+
+#### Office FDSE vs orth_only — 公共 seed {2, 333}
+
+| 方法 | s=2 ALL/AVG Best | s=333 ALL/AVG Best | **2s mean ALL Best** | **2s mean AVG Best** |
+|------|-----------------|-------------------|--------------------|--------------------|
+| FDSE | 88.10 / 92.39 | 84.12 / 88.11 | **86.11** | **90.25** |
+| FedDSA 原 | 84.13 / 89.95 | 82.12 / 86.35 | 83.12 | 88.15 |
+| orth_only | 待同步 / 87.72 | 待同步 / 89.77 | 待 | **88.75** |
+
+→ **Office 同 seed {2,333}：orth_only AVG Best 88.75 vs FDSE 90.25，差 -1.5%**
+
+---
+
+## 结论（最终修正版，基于 R200 full 数据）
+
+1. **PACS 最稳方案不是 orth_only 而是 bell_60_30** — mean AVG last 79.29 > orth_only 73.87
+2. **orth_only s=333 R200 崩到 65.34%** — R181 快照 81.8 完全是假象，delayed crash
+3. **LR=0.05 + orth_only 可能是真正突破** — 单 seed R147 drop 仅 0.19 (s=2)，需 3-seed 确认
+4. **FDSE s=4388 也 R200 崩到 68.78** — 所有方法在 R200 都有 seed-dependent 崩溃风险
+5. **同 seed 严格对比**：PACS FDSE 5-seed AVG Best 80.24，orth_only {2,333,42} 81.69 peak 略高但 last 严重不稳
+6. **Office FDSE 赢 orth_only 约 1.5%**（AVG Best），这个结论在 R181 和 R200 都成立
+7. **ALL vs AVG 差异**：PACS 上 ALL 普遍 + 1-2% 高于 AVG（Photo/Cartoon 大域主导），Office 上 AVG 比 ALL 高 +4-5%（DSLR 小域拉平均）
 
 ---
 
