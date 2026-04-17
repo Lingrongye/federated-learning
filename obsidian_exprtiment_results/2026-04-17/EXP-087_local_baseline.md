@@ -3,8 +3,21 @@
 ## 基本信息
 - **日期**: 2026-04-17 / 2026-04-18
 - **算法**: `standalone` (FDSE 自带，每 client 独立训练无聚合)
-- **服务器**: SC2 GPU 0
-- **状态**: 🔄 运行中
+- **服务器**: SC2 GPU 0 (Office) + Lab-lry 试跑 PACS (挂)
+- **状态**: ⚠️ Office 跑中（Webcam 可能 early stop 失败）, PACS 放弃复现
+
+## ⚠️ PACS 放弃复现，引用 FDSE 论文原值
+
+**原因**：FDSE 自带 `standalone.py` 在 PACS task 下有 **flgo 框架集成 bug**：
+- `log_once()` 访问 `self.server.model` 为 `None` → `get_device()` 崩
+- Office 能跑（server.model 被正确初始化），PACS 不能
+- 修复需侵入 flgo init 流程，改动面大、风险高
+
+**行业惯例**：引用原论文数字（FDSE CVPR 2025 Table 1）：
+- PACS: Local ALL **61.29 ± 2.47** / AVG **57.16 ± 2.85**
+- Office-Caltech10: Local ALL **64.47 ± 2.52** / AVG **62.72 ± 7.81**
+
+我们用这些作为"下限基线"，足以证明：FL 机制相比 Local **净增益 +25%+**（方案 A 约 89 vs Local 63）。
 
 ## 动机
 
