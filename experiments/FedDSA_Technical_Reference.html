@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>FedDSA Technical Reference</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {  background-color: #f8f8f8; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ef2929; } /* Alert */
+    code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #c4a000; } /* Attribute */
+    code span.bn { color: #0000cf; } /* BaseN */
+    code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4e9a06; } /* Char */
+    code span.cn { color: #000000; } /* Constant */
+    code span.co { color: #8f5902; font-style: italic; } /* Comment */
+    code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+    code span.dt { color: #204a87; } /* DataType */
+    code span.dv { color: #0000cf; } /* DecVal */
+    code span.er { color: #a40000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #0000cf; } /* Float */
+    code span.fu { color: #000000; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+    code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+    code span.ot { color: #8f5902; } /* Other */
+    code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+    code span.sc { color: #000000; } /* SpecialChar */
+    code span.ss { color: #4e9a06; } /* SpecialString */
+    code span.st { color: #4e9a06; } /* String */
+    code span.va { color: #000000; } /* Variable */
+    code span.vs { color: #4e9a06; } /* VerbatimString */
+    code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link href="data:text/css,body{font-family:&#39;Microsoft YaHei&#39;,sans-serif;max-width:900px;margin:auto;padding:20px;font-size:14px}h1{color:#e94560;border-bottom:2px solid #e94560;padding-bottom:5px}h2{color:#0f3460}h3{color:#16213e}code{background:#f5f5f5;padding:2px 5px;border-radius:3px}pre{background:#f5f5f5;padding:15px;border-left:4px solid #e94560;overflow-x:auto}table{border-collapse:collapse;width:100%}th{background:#0f3460;color:white;padding:8px}td{padding:6px;border:1px solid #ddd}tr:nth-child(even){background:#f8f9fa}" rel="stylesheet" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">FedDSA Technical Reference</h1>
+</header>
+<h1 id="feddsa-技术参考手册">FedDSA 技术参考手册</h1>
+<h2 id="一网络架构">一、网络架构</h2>
+<h3 id="整体架构图">1.1 整体架构图</h3>
+<pre><code>输入图片 x [B, 3, 224, 224]
+    |
+    v
++============================+
+|     AlexNet Encoder        |     ← 聚合 (FedAvg)
+|                            |
+|  Conv1(3→64, k=11, s=4)   |     BN1 ← 私有不聚合
+|  Conv2(64→192, k=5)       |     BN2 ← 私有不聚合
+|  Conv3(192→384, k=3)      |     BN3 ← 私有不聚合
+|  Conv4(384→256, k=3)      |     BN4 ← 私有不聚合
+|  Conv5(256→256, k=3)      |     BN5 ← 私有不聚合
+|  AvgPool → Flatten         |
+|  FC1(9216→1024) + BN6      |     BN6 ← 私有不聚合
+|  FC2(1024→1024) + BN7      |     BN7 ← 私有不聚合
++============================+
+    |
+    v
+  h [B, 1024]  (backbone 特征, 混合语义+风格)
+    |
+    +---------------------------+
+    |                           |
+    v                           v
++================+      +================+
+| Semantic Head  |      |  Style Head    |
+| (聚合 FedAvg)  |      | (私有不聚合)   |
+|                |      |                |
+| Linear(1024→128)|     | Linear(1024→128)|
+| ReLU           |      | ReLU           |
+| Linear(128→128)|      | Linear(128→128)|
++================+      +================+
+    |                           |
+    v                           v
+  z_sem [B, 128]          z_sty [B, 128]
+  (纯语义特征)              (纯风格特征)
+    |                           |
+    v                           +--→ 正交约束 L_orth
++================+              +--→ HSIC约束 L_hsic
+|  Classifier    |              +--→ 风格 gap 度量 (Adaptive M1)
+| (聚合 FedAvg)  |
+| Linear(128→7)  |
++================+
+    |
+    v
+  output [B, 7] (类别预测)</code></pre>
+<h3 id="各模块维度">1.2 各模块维度</h3>
+<table>
+<thead>
+<tr class="header">
+<th>模块</th>
+<th>输入维度</th>
+<th>输出维度</th>
+<th>参数量(约)</th>
+<th>聚合策略</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>AlexNet Encoder</td>
+<td>[B, 3, 224, 224]</td>
+<td>[B, 1024]</td>
+<td>~2.4M</td>
+<td>FedAvg (不含BN)</td>
+</tr>
+<tr class="even">
+<td>BN 层 (bn1-bn7)</td>
+<td>各层对应</td>
+<td>同输入</td>
+<td>~6K</td>
+<td>私有不聚合</td>
+</tr>
+<tr class="odd">
+<td>Semantic Head</td>
+<td>[B, 1024]</td>
+<td>[B, 128]</td>
+<td>148K</td>
+<td>FedAvg</td>
+</tr>
+<tr class="even">
+<td>Style Head</td>
+<td>[B, 1024]</td>
+<td>[B, 128]</td>
+<td>148K</td>
+<td>私有不聚合</td>
+</tr>
+<tr class="odd">
+<td>Classifier</td>
+<td>[B, 128]</td>
+<td>[B, 7]</td>
+<td>903</td>
+<td>FedAvg</td>
+</tr>
+</tbody>
+</table>
+<h3 id="为什么这样设计聚合策略">1.3 为什么这样设计聚合策略</h3>
+<pre><code>聚合 (FedAvg):  Encoder卷积权重 + Semantic Head + Classifier
+  → 这些是&quot;所有域共享的语义理解能力&quot;
+
+私有不聚合:  BN 层 + Style Head
+  → BN 层保留每个域自己的特征统计量 (FedBN 原则)
+  → Style Head 保留每个域自己的风格投影方向</code></pre>
+<hr />
+<h2 id="二三大核心模块">二、三大核心模块</h2>
+<h3 id="decouple-解耦">2.1 Decouple (解耦)</h3>
+<p><strong>目标</strong>: 让 z_sem 只包含语义信息, z_sty 只包含风格信息, 互不干扰。</p>
+<h4 id="正交约束-l_orth">正交约束 L_orth</h4>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>z_sem_n <span class="op">=</span> F.normalize(z_sem, dim<span class="op">=</span><span class="dv">1</span>)  <span class="co"># L2归一化</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>z_sty_n <span class="op">=</span> F.normalize(z_sty, dim<span class="op">=</span><span class="dv">1</span>)  <span class="co"># L2归一化</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>cos <span class="op">=</span> (z_sem_n <span class="op">*</span> z_sty_n).<span class="bu">sum</span>(dim<span class="op">=</span><span class="dv">1</span>) <span class="co"># 逐样本余弦相似度 [B]</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>loss_orth <span class="op">=</span> (cos <span class="op">**</span> <span class="dv">2</span>).mean()         <span class="co"># 平方后取均值</span></span></code></pre></div>
+<p><strong>公式</strong>:</p>
+<pre><code>L_orth = (1/B) * sum_i [ (cos(z_sem_i, z_sty_i))^2 ]</code></pre>
+<p><strong>直觉</strong>: 如果 z_sem 和 z_sty 正交(余弦=0), loss=0。 如果它们有相关性(余弦!=0), loss &gt; 0, 梯度会推它们变正交。 平方是因为我们不关心正相关还是负相关, 都要惩罚。</p>
+<h4 id="hsic-核独立性约束-l_hsic">HSIC 核独立性约束 L_hsic</h4>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _hsic(<span class="va">self</span>, x, y):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> x.size(<span class="dv">0</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    Kx <span class="op">=</span> gaussian_kernel(x)  <span class="co"># 高斯核矩阵 [n, n]</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    Ky <span class="op">=</span> gaussian_kernel(y)  <span class="co"># 高斯核矩阵 [n, n]</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    H <span class="op">=</span> I <span class="op">-</span> (<span class="dv">1</span><span class="op">/</span>n) <span class="op">*</span> <span class="dv">11</span><span class="op">^</span>T     <span class="co"># 中心化矩阵</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> trace(Kx <span class="op">@</span> H <span class="op">@</span> Ky <span class="op">@</span> H) <span class="op">/</span> n<span class="op">^</span><span class="dv">2</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> gaussian_kernel(x):</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    dist <span class="op">=</span> <span class="op">||</span>x_i <span class="op">-</span> x_j<span class="op">||^</span><span class="dv">2</span>        <span class="co"># 欧氏距离平方矩阵</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    median <span class="op">=</span> median(dist[dist<span class="op">&gt;</span><span class="dv">0</span>])  <span class="co"># 中位数带宽</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    bw <span class="op">=</span> median <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> log(n<span class="op">+</span><span class="dv">1</span>))   <span class="co"># 自适应带宽</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> exp(<span class="op">-</span>dist <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> bw))   <span class="co"># 高斯核</span></span></code></pre></div>
+<p><strong>直觉</strong>: HSIC 测量两个变量的<strong>非线性依赖性</strong>。 正交只能捕捉线性相关, HSIC 能捕捉任何统计依赖。 当前实验中 lambda_hsic=0.0 (关闭), 仅用正交约束。</p>
+<h3 id="share-风格共享">2.2 Share (风格共享)</h3>
+<p><strong>目标</strong>: 用其他域的风格统计量做 AdaIN 增强, 让模型见到跨域变体。</p>
+<h4 id="风格仓库收集">风格仓库收集</h4>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 每轮训练结束后, 客户端上传 h 空间的统计量</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>mu <span class="op">=</span> style_sum <span class="op">/</span> style_n           <span class="co"># h 在 batch 维度的均值 [1024]</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>var <span class="op">=</span> style_sq_sum <span class="op">/</span> style_n <span class="op">-</span> mu<span class="op">^</span><span class="dv">2</span>  <span class="co"># 方差 = E[X^2] - (E[X])^2</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>sigma <span class="op">=</span> sqrt(var.clamp(<span class="bu">min</span><span class="op">=</span><span class="fl">1e-6</span>))    <span class="co"># 标准差 [1024]</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 服务器保存: style_bank[client_id] = (mu, sigma)</span></span></code></pre></div>
+<p><strong>注意</strong>: 存的是 h (backbone 输出, 1024维), 不是 z_sty (style head 输出, 128维)。 因为 AdaIN 需要在 h 空间操作(去风格-加风格), 而 z_sty 空间太小且经过非线性变换。</p>
+<h4 id="adain-风格增强-原版-feddsa">AdaIN 风格增强 (原版 FedDSA)</h4>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _style_augment(<span class="va">self</span>, h):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 1. 从风格仓库随机取一个外域的 (mu, sigma)</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    mu_ext, sigma_ext <span class="op">=</span> random_pick(style_bank)  <span class="co"># [1024] each</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 2. 计算本地 batch 的统计量</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    mu_local <span class="op">=</span> h.mean(dim<span class="op">=</span><span class="dv">0</span>)                      <span class="co"># [1024]</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    sigma_local <span class="op">=</span> h.std(dim<span class="op">=</span><span class="dv">0</span>).clamp(<span class="bu">min</span><span class="op">=</span><span class="fl">1e-6</span>)    <span class="co"># [1024]</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 3. 随机混合强度</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    alpha <span class="op">=</span> np.random.beta(<span class="fl">0.1</span>, <span class="fl">0.1</span>)  <span class="co"># U形分布, 多数为0或1</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 4. 混合统计量</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    mu_mix <span class="op">=</span> alpha <span class="op">*</span> mu_local <span class="op">+</span> (<span class="dv">1</span><span class="op">-</span>alpha) <span class="op">*</span> mu_ext</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    sigma_mix <span class="op">=</span> alpha <span class="op">*</span> sigma_local <span class="op">+</span> (<span class="dv">1</span><span class="op">-</span>alpha) <span class="op">*</span> sigma_ext</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 5. AdaIN: 去掉本地风格, 穿上混合风格</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    h_norm <span class="op">=</span> (h <span class="op">-</span> mu_local) <span class="op">/</span> sigma_local    <span class="co"># 标准化 → 纯内容</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    h_aug <span class="op">=</span> h_norm <span class="op">*</span> sigma_mix <span class="op">+</span> mu_mix       <span class="co"># 上色 → 混合风格</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> h_aug  <span class="co"># [B, 1024]</span></span></code></pre></div>
+<p><strong>流程图</strong>:</p>
+<pre><code>h [B,1024] ──→ 计算 mu_local, sigma_local
+    |                    |
+    v                    v
+ 标准化          风格仓库取 mu_ext, sigma_ext
+ h_norm             |
+    |            alpha 混合
+    |               |
+    v               v
+ h_norm * sigma_mix + mu_mix = h_aug [B,1024]
+    |
+    v
+ z_sem_aug = semantic_head(h_aug)
+    |
+    v
+ loss_aug = CE(classifier(z_sem_aug), y)</code></pre>
+<h3 id="align-语义对齐">2.3 Align (语义对齐)</h3>
+<p><strong>目标</strong>: 拉近同类的 z_sem 和全局原型, 推开异类。</p>
+<h4 id="全局原型的收集">全局原型的收集</h4>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 客户端: 在最后一个 epoch, 按类聚合 z_sem</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> each sample (z_sem_i, y_i):</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    proto_sum[y_i] <span class="op">+=</span> z_sem_i</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    proto_count[y_i] <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>local_proto[c] <span class="op">=</span> proto_sum[c] <span class="op">/</span> proto_count[c]  <span class="co"># 每类一个 [128] 向量</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 服务器: 加权平均所有客户端的同类原型</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>global_proto[c] <span class="op">=</span> weighted_mean(all_clients_proto[c])</span></code></pre></div>
+<h4 id="infonce-对比损失">InfoNCE 对比损失</h4>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _infonce_loss(<span class="va">self</span>, z_sem, y):</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># proto_matrix: 所有类的全局原型 [C, 128], C=类别数(如7)</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    proto_matrix <span class="op">=</span> stack([global_proto[c] <span class="cf">for</span> c <span class="kw">in</span> classes])</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># L2 归一化</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    z_n <span class="op">=</span> normalize(z_sem)     <span class="co"># [B, 128]</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    p_n <span class="op">=</span> normalize(proto_matrix) <span class="co"># [C, 128]</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 计算相似度矩阵 / 温度</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    logits <span class="op">=</span> (z_n <span class="op">@</span> p_n.T) <span class="op">/</span> tau  <span class="co"># [B, C]</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 交叉熵: 每个样本的正确类别应得到最高 logit</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    loss <span class="op">=</span> cross_entropy(logits, y)</span></code></pre></div>
+<p><strong>公式</strong>:</p>
+<pre><code>L_InfoNCE = -(1/B) * sum_i [ log( exp(sim(z_i, p_yi)/tau) / sum_c exp(sim(z_i, p_c)/tau) ) ]
+
+其中:
+  sim(a, b) = (a/||a||) . (b/||b||)  (余弦相似度)
+  p_yi = 样本 i 的正确类别的全局原型
+  tau = 温度参数 (越小越尖锐)</code></pre>
+<p><strong>tau 的作用</strong>: - tau=0.1: logits 被放大 10 倍, 分布尖锐 → 梯度集中在最难的样本 → 学习快但不稳定 - tau=0.2: logits 被放大 5 倍, 分布温和 → 梯度分散 → 学习慢但稳定 - tau=1.0: 原始余弦相似度, 几乎无学习信号</p>
+<hr />
+<h2 id="三总损失函数">三、总损失函数</h2>
+<div class="sourceCode" id="cb12"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>L_total <span class="op">=</span> L_CE(z_sem, y)                        <span class="co"># 任务损失</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>        <span class="op">+</span> L_CE(z_sem_aug, y)                     <span class="co"># 增强后任务损失</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>        <span class="op">+</span> w <span class="op">*</span> lambda_orth <span class="op">*</span> L_orth               <span class="co"># 正交解耦</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="op">+</span> w <span class="op">*</span> lambda_hsic <span class="op">*</span> L_HSIC               <span class="co"># 核独立性</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        <span class="op">+</span> w <span class="op">*</span> lambda_sem  <span class="op">*</span> L_InfoNCE            <span class="co"># 语义对齐</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>其中 w <span class="op">=</span> <span class="bu">min</span>(<span class="fl">1.0</span>, current_round <span class="op">/</span> warmup_rounds)  <span class="co"># warmup 权重</span></span></code></pre></div>
+<p><strong>损失项流向</strong>:</p>
+<pre><code>                        L_CE ←── z_sem ←── Semantic Head ←── h ←── Encoder ←── x
+                                   ↑
+                        L_CE ←── z_sem_aug ←── Semantic Head ←── h_aug (来自 AdaIN)
+                                   |
+                        L_orth ←── z_sem ↔ z_sty ──→ Style Head ←── h
+                        L_hsic ←── z_sem ↔ z_sty
+                                   |
+                     L_InfoNCE ←── z_sem vs global_protos</code></pre>
+<hr />
+<h2 id="四adaptive-改进-feddsa_adaptive.py">四、Adaptive 改进 (feddsa_adaptive.py)</h2>
+<h3 id="m1-自适应增强强度">4.1 M1: 自适应增强强度</h3>
+<p><strong>问题</strong>: 原版所有域用相同的 Beta(0.1,0.1) 随机 alpha, 不区分域差异。</p>
+<p><strong>改进</strong>: 用 z_sty 空间(纯风格)测量每个客户端的域偏移, 据此调整 alpha。</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- 服务器端: 计算 gap ---</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 收集各客户端 z_sty 的 (mu, sigma) (不是 h 的!)</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> each client i:</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    raw_gap[i] <span class="op">=</span> <span class="op">||</span>mu_zsty_i <span class="op">-</span> mu_zsty_global<span class="op">||^</span><span class="dv">2</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>               <span class="op">+</span> <span class="op">||</span>sigma_zsty_i <span class="op">-</span> sigma_zsty_global<span class="op">||^</span><span class="dv">2</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># EMA z-score 归一化</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>mean_gap, std_gap <span class="op">=</span> EMA_update(mean_gap, std_gap, gaps)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>z_score[i] <span class="op">=</span> (raw_gap[i] <span class="op">-</span> mean_gap) <span class="op">/</span> std_gap</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>gap_normalized[i] <span class="op">=</span> clip(z_score <span class="op">*</span> <span class="fl">0.5</span> <span class="op">+</span> <span class="fl">0.5</span>, <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="co"># --- 客户端端: 自适应 alpha ---</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> aug_min <span class="op">+</span> (aug_max <span class="op">-</span> aug_min) <span class="op">*</span> gap_normalized <span class="op">+</span> N(<span class="dv">0</span>, noise_std)</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> clip(alpha, aug_min, aug_max)</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a><span class="co"># AdaIN 增强 (不同于原版!)</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>h_adain <span class="op">=</span> h_norm <span class="op">*</span> sigma_ext <span class="op">+</span> mu_ext     <span class="co"># 完整风格迁移</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>h_aug <span class="op">=</span> alpha <span class="op">*</span> h_adain <span class="op">+</span> (<span class="dv">1</span><span class="op">-</span>alpha) <span class="op">*</span> h   <span class="co"># 按 alpha 比例混合</span></span></code></pre></div>
+<p><strong>双 Bank 设计</strong>:</p>
+<pre><code>Bank 1: h-space (mu_h, sigma_h) [1024维] → 用于 AdaIN 增强
+Bank 2: z_sty-space (mu_zsty, sigma_zsty) [128维] → 用于 gap 度量
+
+为什么分开?
+  h 适合做增强 (保留完整统计信息)
+  z_sty 适合度量 gap (解耦后的纯风格信号更 discriminative)</code></pre>
+<h3 id="m3-域感知原型对齐">4.2 M3: 域感知原型对齐</h3>
+<p><strong>问题</strong>: 全局原型 = 所有域原型的均值 → 跨域平均导致语义稀释。</p>
+<p><strong>改进</strong>: 保留 (class, client_id) 独立原型, 用 SupCon InfoNCE。</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- 服务器端: 存储域级原型 ---</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>domain_protos <span class="op">=</span> {}</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> client_id, protos <span class="kw">in</span> all_client_protos:</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> class_c, proto <span class="kw">in</span> protos:</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>        domain_protos[(class_c, client_id)] <span class="op">=</span> proto</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 例: domain_protos = {</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co">#   (dog, Photo): [128d], (dog, Art): [128d],</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   (dog, Cartoon): [128d], (dog, Sketch): [128d],</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   (cat, Photo): [128d], ... }</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="co"># --- 客户端端: SupCon Multi-Positive InfoNCE ---</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>proto_matrix <span class="op">=</span> stack(<span class="bu">all</span> domain_protos)  <span class="co"># [N_total, 128]</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>proto_labels <span class="op">=</span> [<span class="kw">class</span> <span class="cf">for</span> (<span class="kw">class</span>, cid) <span class="kw">in</span> keys]</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>z_n <span class="op">=</span> normalize(z_sem)</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>p_n <span class="op">=</span> normalize(proto_matrix)</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>logits <span class="op">=</span> z_n <span class="op">@</span> p_n.T <span class="op">/</span> tau  <span class="co"># [B, N_total]</span></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 对每个样本: 同类的所有域原型都是正样本</span></span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> sample i <span class="cf">with</span> label y_i:</span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>    positives <span class="op">=</span> {j : proto_labels[j] <span class="op">==</span> y_i}  <span class="co"># 可能有 4 个 (4个域)</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>    loss_i <span class="op">=</span> <span class="op">-</span>(<span class="dv">1</span><span class="op">/|</span>P<span class="op">|</span>) <span class="op">*</span> sum_{p <span class="kw">in</span> positives} log(exp(logits[i,p]) <span class="op">/</span> sum_j exp(logits[i,j]))</span></code></pre></div>
+<p><strong>对比</strong>:</p>
+<pre><code>原版 InfoNCE:    每类 1 个正样本 (全局均值原型)
+M3 SupCon InfoNCE: 每类 N 个正样本 (N=客户端数, 如4)
+
+效果:
+  原版: &quot;你必须像平均狗&quot; → 所有域的狗被拉到一个点 → 丢失域内结构
+  M3:   &quot;你只要是狗就行&quot; → 允许不同域的狗在空间中有不同位置 → 更温和</code></pre>
+<h3 id="实验模式">4.3 实验模式</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Mode</th>
+<th>名称</th>
+<th>M1 自适应 alpha</th>
+<th>M3 域感知原型</th>
+<th>AdaIN 方式</th>
+<th>InfoNCE 方式</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>Fixed Alpha</td>
+<td>固定值(如0.5)</td>
+<td>全局原型</td>
+<td>h_adain blend</td>
+<td>标准 InfoNCE</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>M1 Only</td>
+<td>gap → alpha</td>
+<td>全局原型</td>
+<td>h_adain blend</td>
+<td>标准 InfoNCE</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>M3 Only</td>
+<td>Beta(0.1,0.1)</td>
+<td>域级原型</td>
+<td>h_adain blend</td>
+<td>SupCon InfoNCE</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>M1+M3 Full</td>
+<td>gap → alpha</td>
+<td>域级原型</td>
+<td>h_adain blend</td>
+<td>SupCon InfoNCE</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="五完整超参数表">五、完整超参数表</h2>
+<h3 id="核心训练超参数">5.1 核心训练超参数</h3>
+<table>
+<thead>
+<tr class="header">
+<th>参数</th>
+<th>符号</th>
+<th>默认值</th>
+<th>作用</th>
+<th>代码位置</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>学习率</td>
+<td>lr</td>
+<td>0.1</td>
+<td>SGD 步长</td>
+<td>config yml</td>
+</tr>
+<tr class="even">
+<td>学习率衰减</td>
+<td>lr_decay</td>
+<td>0.9998</td>
+<td>每轮乘以此系数</td>
+<td>config yml</td>
+</tr>
+<tr class="odd">
+<td>批大小</td>
+<td>B</td>
+<td>50</td>
+<td>每步训练图片数</td>
+<td>config yml</td>
+</tr>
+<tr class="even">
+<td>总轮数</td>
+<td>R</td>
+<td>200</td>
+<td>联邦通信轮数</td>
+<td>config yml</td>
+</tr>
+<tr class="odd">
+<td>本地 epoch</td>
+<td>E</td>
+<td>5 (PACS) / 1 (Office)</td>
+<td>每轮本地训练步数</td>
+<td>config yml</td>
+</tr>
+<tr class="even">
+<td>梯度裁剪</td>
+<td>clip_grad</td>
+<td>10</td>
+<td>梯度最大范数</td>
+<td>config yml</td>
+</tr>
+<tr class="odd">
+<td>权重衰减</td>
+<td>wd</td>
+<td>1e-3</td>
+<td>L2 正则化</td>
+<td>config yml</td>
+</tr>
+<tr class="even">
+<td>参与率</td>
+<td>proportion</td>
+<td>1.0</td>
+<td>每轮选几个客户端 (100%=全选)</td>
+<td>config yml</td>
+</tr>
+</tbody>
+</table>
+<h3 id="feddsa-损失权重">5.2 FedDSA 损失权重</h3>
+<table>
+<thead>
+<tr class="header">
+<th>参数</th>
+<th>符号</th>
+<th>默认值</th>
+<th>作用</th>
+<th>敏感性</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>正交权重</td>
+<td>lambda_orth</td>
+<td>1.0</td>
+<td>L_orth 的系数</td>
+<td>低 (0.5~2.0 差不多)</td>
+</tr>
+<tr class="even">
+<td>HSIC 权重</td>
+<td>lambda_hsic</td>
+<td>0.0</td>
+<td>L_HSIC 的系数 (当前关闭)</td>
+<td>-</td>
+</tr>
+<tr class="odd">
+<td>语义对齐权重</td>
+<td>lambda_sem</td>
+<td>1.0</td>
+<td>L_InfoNCE 的系数</td>
+<td>高 (0.5→-3.95%)</td>
+</tr>
+<tr class="even">
+<td>InfoNCE 温度</td>
+<td>tau</td>
+<td>0.2 (原版) / 0.1 (adaptive)</td>
+<td>对比学习尖锐度</td>
+<td>极高 (0.1导致崩溃)</td>
+</tr>
+<tr class="odd">
+<td>Warmup 轮数</td>
+<td>warmup_rounds</td>
+<td>50</td>
+<td>前N轮不做增强和对齐</td>
+<td>中</td>
+</tr>
+</tbody>
+</table>
+<h3 id="风格共享参数">5.3 风格共享参数</h3>
+<table>
+<thead>
+<tr class="header">
+<th>参数</th>
+<th>符号</th>
+<th>默认值</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>风格下发数</td>
+<td>style_dispatch_num</td>
+<td>5</td>
+<td>每轮给客户端发几个外域风格</td>
+</tr>
+<tr class="even">
+<td>投影维度</td>
+<td>proj_dim</td>
+<td>128</td>
+<td>Semantic/Style Head 输出维度</td>
+</tr>
+</tbody>
+</table>
+<h3 id="adaptive-专用参数">5.4 Adaptive 专用参数</h3>
+<table>
+<thead>
+<tr class="header">
+<th>参数</th>
+<th>符号</th>
+<th>默认值</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>增强下限</td>
+<td>aug_min</td>
+<td>0.05</td>
+<td>alpha 最小值 (最弱增强)</td>
+</tr>
+<tr class="even">
+<td>增强上限</td>
+<td>aug_max</td>
+<td>0.8</td>
+<td>alpha 最大值 (最强增强)</td>
+</tr>
+<tr class="odd">
+<td>随机噪声</td>
+<td>noise_std</td>
+<td>0.05</td>
+<td>alpha 的随机扰动</td>
+</tr>
+<tr class="even">
+<td>EMA 衰减</td>
+<td>ema_decay</td>
+<td>0.9</td>
+<td>gap 指标平滑系数</td>
+</tr>
+<tr class="odd">
+<td>模式选择</td>
+<td>adaptive_mode</td>
+<td>0/1/2/3</td>
+<td>控制 M1/M3 开关</td>
+</tr>
+<tr class="even">
+<td>固定 alpha</td>
+<td>fixed_alpha_value</td>
+<td>0.5</td>
+<td>mode=0 时使用</td>
+</tr>
+</tbody>
+</table>
+<h3 id="algo_para-配置格式">5.5 algo_para 配置格式</h3>
+<div class="sourceCode" id="cb18"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 原版 FedDSA (7 个参数)</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">algo_para</span><span class="kw">:</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">1.0</span><span class="co">    # [0] lambda_orth</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">0.0</span><span class="co">    # [1] lambda_hsic</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">1.0</span><span class="co">    # [2] lambda_sem</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">0.2</span><span class="co">    # [3] tau</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="dv">50</span><span class="co">     # [4] warmup_rounds</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="dv">5</span><span class="co">      # [5] style_dispatch_num</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="dv">128</span><span class="co">    # [6] proj_dim</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Adaptive 版 (13 个参数)</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="fu">algo_para</span><span class="kw">:</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">1.0</span><span class="co">    # [0] lambda_orth</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">0.0</span><span class="co">    # [1] lambda_hsic</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">1.0</span><span class="co">    # [2] lambda_sem</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">0.1</span><span class="co">    # [3] tau</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="dv">50</span><span class="co">     # [4] warmup_rounds</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="dv">5</span><span class="co">      # [5] style_dispatch_num</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="dv">128</span><span class="co">    # [6] proj_dim</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">0.05</span><span class="co">   # [7] aug_min</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">0.8</span><span class="co">    # [8] aug_max</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">0.05</span><span class="co">   # [9] noise_std</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">0.9</span><span class="co">    # [10] ema_decay</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="dv">3</span><span class="co">      # [11] adaptive_mode (0/1/2/3)</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fl">0.5</span><span class="co">    # [12] fixed_alpha_value</span></span></code></pre></div>
+<hr />
+<h2 id="六联邦学习通信流程">六、联邦学习通信流程</h2>
+<h3 id="每轮-round-的完整流程">每轮 (Round) 的完整流程</h3>
+<pre><code>Round t:
+
+[Server]
+  1. 打包下发: {全局模型参数, 全局原型, 风格仓库样本, round号, gap值}
+     |
+     v (下发到所有客户端)
+
+[Client i] (并行)
+  2. 接收并加载全局模型参数 (不含BN和Style Head)
+  3. 本地训练 E 个 epoch:
+     - 前向: x → h → z_sem, z_sty → output
+     - 如果 round &gt;= warmup:
+       - 用风格仓库做 AdaIN 增强 → h_aug → z_sem_aug
+     - 计算总损失 L_total
+     - 反向传播 + 梯度裁剪 + SGD
+  4. 收集本轮结果:
+     - 更新后的模型参数
+     - 按类聚合的语义原型 {class: z_sem均值}
+     - h 空间的风格统计量 (mu_h, sigma_h)
+     - z_sty 空间的风格统计量 (mu_zsty, sigma_zsty) [仅Adaptive]
+     |
+     v (上传到服务器)
+
+[Server]
+  5. 聚合模型参数: FedAvg (encoder + sem_head + classifier)
+  6. 聚合语义原型: 加权平均 → 更新 global_protos
+  7. 更新风格仓库: style_bank[cid] = (mu_h, sigma_h)
+  8. [Adaptive] 计算 gap 指标: z_sty → raw_gap → EMA z-score → gap_normalized
+  9. [Adaptive M3] 存储域级原型: domain_protos[(class, cid)] = proto
+
+→ 进入 Round t+1</code></pre>
+<hr />
+<h2 id="七关键实验结论">七、关键实验结论</h2>
+<h3 id="参数敏感性-exp-069">7.1 参数敏感性 (EXP-069)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>变化</th>
+<th>PACS Max</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>基线 (1.0/1.0/0.2)</td>
+<td>82.24%</td>
+<td>-</td>
+</tr>
+<tr class="even">
+<td>lambda_sem=0.5</td>
+<td>78.29%</td>
+<td>-3.95% 最差 → InfoNCE是核心</td>
+</tr>
+<tr class="odd">
+<td>lambda_orth=0.5</td>
+<td>80.41%</td>
+<td>-1.83% → 正交有用但非瓶颈</td>
+</tr>
+<tr class="even">
+<td>tau=0.05</td>
+<td>80.06%</td>
+<td>-2.18% → 太尖锐</td>
+</tr>
+<tr class="odd">
+<td>默认参数最优</td>
+<td>82.24%</td>
+<td>调参不是提升路径</td>
+</tr>
+</tbody>
+</table>
+<h3 id="组件消融-exp-070-pacs-3-seed">7.2 组件消融 (EXP-070, PACS 3-seed)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>配置</th>
+<th>Mean</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Decouple only</td>
+<td>80.65%</td>
+<td>最强单组件</td>
+</tr>
+<tr class="even">
+<td>+Share (no align)</td>
+<td>80.51%</td>
+<td>Share 单独略有害</td>
+</tr>
+<tr class="odd">
+<td>+Align (no share)</td>
+<td>80.55%</td>
+<td>Align 单独略有害</td>
+</tr>
+<tr class="even">
+<td>Full FedDSA</td>
+<td>81.29%</td>
+<td>三者协同 +0.64~0.78%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="adaptive-m3-效果-exp-072d">7.3 Adaptive M3 效果 (EXP-072d)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>方法</th>
+<th>PACS Peak</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Fixed alpha=0.5 (tau=0.1)</td>
+<td>~83% → 崩到 76.82%</td>
+</tr>
+<tr class="even">
+<td>M3 域感知原型 (tau=0.1)</td>
+<td>~82% → 部分崩到 ~80.64%</td>
+</tr>
+<tr class="odd">
+<td>原版 FedDSA (tau=0.2)</td>
+<td>~82% → 稳定 80.93%</td>
+</tr>
+<tr class="even">
+<td>M3 + tau=0.2 (EXP-074)</td>
+<td>预期 82-83% 且不崩 ← 正在验证</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>
