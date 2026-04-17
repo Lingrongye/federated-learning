@@ -69,25 +69,39 @@
 | orth_only | 81.44 / 79.13 \| 80.11 / 77.52 | 进行中 R149: ? \| 79.50 / 76.98 | 85.55 / 69.30 \| 83.65 / 65.34 💥 |
 | mse_alpha | 81.84 / 76.82 \| 80.14 / 74.58 | 进行中 R146: ? \| 79.15 / 76.24 | 84.35 / 78.73 \| 82.29 / 75.95 |
 
-### Office R200 — 严格 {2, 15, 333} 3-seed
+### Office R200 — 严格 {2, 15, 333} 3-seed（Office ALL 已从 SC4 git push 同步回）
 
 | 方法 | ALL Best | ALL Last | AVG Best | AVG Last |
 |------|---------|---------|---------|---------|
 | FedDSA 原 (EXP-051) | 84.39 | 81.61 | 89.13 | 86.52 |
 | **FDSE** (EXP-051) | **86.38** | **85.05** | **90.58** | **89.22** |
-| orth_only (s=2/333 SC4) | 待 SC4 同步† | 待 | **88.64** | **87.34** |
-| mse_alpha (s=2/333 SC4) | 待 SC4 同步† | 待 | **87.93** | **87.25** |
+| orth_only (s=2/333 + s=15 EXP-079) | 待 s=15 record‡ | 待 | **88.64** | **87.34** |
+| mse_alpha (s=2/333 + s=15 EXP-079) | 待 s=15 record‡ | 待 | **87.93** | **87.25** |
 
-†Office orth_only / mse_alpha 的 s=2/333 record JSON 在 SC4 已关机实例上，git 未同步；s=15 Best ALL 数据从 SC2 JSON 推 record 同步
+‡s=15 JSON record 在 SC2（EXP-079 R201 刚完成），等 commit + pull 后可算 ALL。今日 orth_only / mse_alpha s=2/s=333/s=42 ALL 已齐全
 
-**Office s=15 (EXP-079 SC2 R201 已完成，待 commit record)**：
+### Office R200 — 我们 seed {2, 333, 42} 3-seed（ALL 全齐）
 
-| 方法 | s=15 ALL Best/Last | s=15 AVG Best/Last |
-|------|-------------------|-------------------|
-| orth_only | 待 record | 88.43 / 86.07 |
-| mse_alpha | 待 record | **89.55 / 89.28** ★ drop 0.27 |
+| 方法 | ALL Best | ALL Last | AVG Best | AVG Last |
+|------|---------|---------|---------|---------|
+| **orth_only** | **83.74** | **82.55** | **89.41** | **88.47** |
+| mse_alpha | 82.68 | 81.48 | 87.76 | 86.79 |
 
-→ **Office 严格 3-seed AVG 口径**：orth_only 88.64 vs FDSE 90.58，**-1.94%**；ALL 口径待补
+**按 seed 明细（ALL / AVG Best/Last）**：
+
+| 方法 | s=2 ALL/AVG Best/Last | s=333 ALL/AVG Best/Last | s=42 ALL/AVG Best/Last |
+|------|-----------------------|-------------------------|-------------------------|
+| orth_only | 80.18/79.38 \| 87.72/87.23 | 85.72/84.92 \| 89.77/88.72 | 85.33/83.34 \| 90.74/89.47 |
+| mse_alpha | 79.38/77.40 \| 86.75/86.08 | 85.30/84.50 \| 87.50/86.38 | 83.35/82.55 \| 89.03/87.90 |
+
+**Office s=15 补跑结果（EXP-079 R201 已完成 SC2）**：
+
+| 方法 | s=15 AVG Best/Last（日志估值） |
+|------|-------------------------------|
+| orth_only | 88.43 / 86.07 |
+| mse_alpha | **89.55 / 89.28** ★ drop 0.27 |
+
+→ **Office 严格 3-seed {2,15,333} AVG**：orth_only 88.64 vs FDSE 90.58，**-1.94%**
 
 ### PACS R200 — 我们今日 seed {2, 333, 42}（含 FDSE 补跑 s=42 in EXP-081）
 

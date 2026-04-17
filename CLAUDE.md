@@ -229,56 +229,6 @@
 
 ---
 
-## 四、推荐研究路线
-
-### Phase 1：基线复现与环境搭建（1-2周）
-1. 基于 PFLlib 框架搭建实验环境
-2. 在 Digit-5 数据集上复现 FedProto、FPL、FedBN 基线
-3. 验证跨域场景下各方法的性能下降
-
-### Phase 2：双头解耦模块开发（2-3周）
-1. 实现双头架构（在ResNet-18骨干后分叉）
-2. 实现正交约束损失 `L_orth = (cos_sim(z_sem, z_sty))²`
-3. 验证t-SNE可视化解耦效果
-4. **关键实验**：对比有/无正交约束的特征分离效果
-
-### Phase 3：全局风格仓库与增强（2周）
-1. 实现服务器端风格仓库收集、去重、采样
-2. 实现风格交换增强机制
-3. **建议改进**：从简单加法开始，逐步尝试：
-   - `z_aug = z_con + λ·s_ext` （基础版）
-   - AdaIN: `z_aug = s_std * (z_con - z_mean) / z_std + s_mean`
-   - FiLM: `z_aug = γ_sty * z_con + β_sty`
-
-### Phase 4：语义软对齐与聚合策略（1-2周）
-1. 实现对比损失的语义对齐
-2. 实现差异化参数聚合（语义头+骨干聚合，风格头私有）
-3. **建议借鉴 DCFL** 的解耦对比设计
-
-### Phase 5：完整实验与论文撰写（3-4周）
-1. 在 Digit-5、Office-Caltech10、PACS 上跑完整实验
-2. 如时间允许，加入 DomainNet（更大规模验证）
-3. 消融实验：逐模块去除验证贡献
-4. 参数敏感性分析
-5. 可视化分析（t-SNE、风格仓库内容、原型质量）
-
----
-
-## 五、进一步研究方向建议
-
-### 5.1 更深层的创新点拓展
-1. **动态风格仓库管理**：引入多样性度量，自动控制仓库容量和采样策略
-2. **条件风格生成**：用VAE/CVAE根据语义条件生成风格向量，而非仅采样已有风格
-3. **多粒度解耦**：不仅分离语义/风格，还可分出"结构/纹理/颜色"等多层次
-4. **自适应正交松弛**：早期训练允许一定耦合，后期逐步加强正交约束
-
-### 5.2 值得关注的技术趋势
-1. **DCFL的解耦对比学习**：为FL量身定制的对比目标，可直接集成
-2. **Transformer聚合**（来自FedSTAR）：注意力机制替代简单平均
-3. **FDSE的迭代去偏移思想**：逐层处理域偏移可能比最后一层解耦更有效
-
----
-
 ## 六、关键源码参考
 
 | 代码仓库 | 对应论文 | 核心文件 | 用途 |
@@ -293,7 +243,6 @@
 ## 七、实验标准配置
 
 **数据集**：
-- Digit-5: MNIST, SVHN, USPS, SynthDigits, MNIST-M（5个域，10类）
 - Office-Caltech10: Amazon, Webcam, DSLR, Caltech（4个域，10类）
 - PACS: Photo, Art, Cartoon, Sketch（4个域，7类）
 - DomainNet（可选）: 6个域，345类子集
@@ -413,24 +362,6 @@ FedFSL-CFRD(双层重构)  FedSTAR(FiLM风格分离)
 
 ---
 
-## 十、与开题方案最相关的对比方法优先级
-
-| 优先级 | 方法 | 原因 |
-|--------|------|------|
-| ★★★ | FedSTAR | 最接近竞争者：也做内容-风格分离，但风格仅本地 |
-| ★★★ | FDSE | 层分解思路可借鉴，差异化聚合可参考 |
-| ★★★ | FedPLVM | 同赛道：多原型+对比损失，实验设置可复用 |
-| ★★☆ | FedPall | 对抗+协作机制参考，原型混合增强参考 |
-| ★★☆ | FPL | 基础对比方法，必须作为基线 |
-| ★★☆ | I2PFL | 域内+域间双视角可借鉴 |
-| ★☆☆ | FedProto | 基础基线 |
-| ★☆☆ | DCFL | 对比损失设计参考 |
-| ★☆☆ | FedAPA | 聚合策略参考 |
-
-*文档创建时间：2026-03-31*
-*最后更新：2026-04-01（含新文献调研+方案精炼+代码实现）*
-
----
 
 ## 十一、2025-2026新发现论文补充分析
 
@@ -657,6 +588,35 @@ FedPall, MOON, FedSTAR(需复现), FedSeProto(代码不公开)
 
 ## 十七、开发与同步工作流
 
+### 17.0 本地 Python 环境
+
+**本地 Python（Windows）**: `D:/anaconda/python.exe`（conda base，已装 pdfplumber/pypdf/pandas/numpy 等常用包）
+- 读 PDF/处理数据/本地脚本统一用此路径
+- 其他 conda env: `D:\anaconda\envs\{pfllib, pytorch, py38, py311, ...}`
+
+### 17.0.1 Git commit message 规则（强制）
+
+**所有 `git commit -m` 信息必须用中文书写**。
+
+- ✅ 正确: `git commit -m "结果: Office 补 s=15，orth_only 3-seed AVG 88.64 vs FDSE 90.58"`
+- ❌ 错误: `git commit -m "results: Office add s=15, orth_only AVG 88.64"`
+
+例外：前缀可用英文约定词（`config:` / `results:` / `docs:` / `fix:` / `feat:`），但主体描述必须中文。例如：
+- `git commit -m "config: EXP-080 正交超参扫（L_orth + HSIC + LR 变体）"`
+- `git commit -m "fix: 修正 orth_only R200 的 s=333 崩盘误判"`
+
+**HEREDOC 多行 commit 也必须中文**：
+```bash
+git commit -m "$(cat <<'EOF'
+修正: R200 full 数据推翻 R181 快照结论
+
+- orth_only 3-seed mean last 73.87（非之前以为的 80.7）
+- bell_60_30 才是 PACS 最稳方案 (last 79.29)
+- s=333 在 R200 时崩到 65.34%
+EOF
+)"
+```
+
 ### 17.1 环境架构
 
 ```
@@ -823,3 +783,123 @@ nohup $PY run_single.py --task PACS_c4 --algorithm feddsa --gpu 0 \
 - 指定空闲卡：`CUDA_VISIBLE_DEVICES=0` 或 `CUDA_VISIBLE_DEVICES=1`
 - 小实验 batch_size 调小防止 OOM
 - 长时间实验用 `nohup ... &` 后台运行，避免SSH断连中断
+
+---
+
+## 十八、Obsidian 知识库同步工作流
+
+### 18.1 Obsidian 目录结构
+
+```
+D:\桌面文件\联邦学习\obsidian_exprtiment_results\
+├── 知识笔记/                     ← 概念解释、算法说明、学习笔记
+│   ├── 解释InfoNCE对比损失.md
+│   ├── Alpha-Sparsity数学推导.md
+│   └── ...
+├── 2026-04-16/                   ← 按日期的实验记录
+│   ├── EXP-076_orth_only.md      ← 从 experiments/ 同步的 NOTE.md
+│   ├── EXP-077_mse_anchor.md
+│   └── daily_summary.md          ← 每日实验总结
+└── 2026-04-17/
+    └── ...
+```
+
+### 18.2 四个 Skill
+
+| Skill | 触发 | 用途 |
+|-------|------|------|
+| `/experiment-sync` | 自动 hook + 手动 | NOTE.md → Obsidian 对应日期目录 |
+| `/daily-experiment-summary` | "总结实验" | 全服务器实验报告 → daily_summary.md |
+| `/save-explanation` | "记笔记" / "保存到笔记" | 解释性内容 → 知识笔记/ |
+
+### 18.2.1 ⚠️ 关键实验发现备忘 — 最重要的规则
+
+**每天的 Obsidian 日期目录下必须维护一个 `关键实验发现备忘.md` 文件。**
+
+规则（极其重要，必须严格遵守）：
+
+1. **追加写入，绝不覆盖** — 每次发现新结论，在文件末尾追加一个新的 `## 发现 N:` 章节
+2. **触发条件** — 对话中出现以下任何情况时必须写入：
+   - 发现实验结果中的关键趋势（如"cos_sim 穿零"、"某方法崩溃"）
+   - 得出新的因果结论（如"InfoNCE 是崩溃元凶"）
+   - 文献调研发现关键对比（如"FPL 用了 MSE 锚点我们没有"）
+   - 发现之前结论有误（如"EXP-070 协同效应是 peak 幻觉"）
+   - 任何可能影响后续方向决策的发现
+3. **格式** — 每条发现包含：标题、时间、具体数据、因果分析
+4. **位置** — `obsidian_exprtiment_results/{YYYY-MM-DD}/关键实验发现备忘.md`
+5. **如果文件不存在则创建，如果存在则在末尾追加**
+
+### 18.2.2 NOTE.md 同步的日期规则
+
+**NOTE.md 必须按内容中的日期（而非今天的日期）分到对应的文件夹。**
+
+- 读取 NOTE.md 内容，找到第一个 `YYYY-MM-DD` 格式的日期
+- 以该日期作为 Obsidian 中的文件夹名
+- 如果找不到日期，使用文件修改时间
+- **不要把所有文件都堆到今天的文件夹下**
+
+### 18.3 NOTE.md 写作规范
+
+每个实验的 NOTE.md **必须包含以下内容**：
+
+1. **变体通俗解释**：用 2-3 句话解释这个变体做了什么改动、为什么要这么改。
+   - 例：M3 = "不把所有域的原型平均成一个，而是保留每个域自己的原型，让 InfoNCE 同时拉近所有同类域的原型"
+   - 例：mode 6 = "给 InfoNCE 加两道安全阀：MSE 锚点防止特征飘太远，alpha-sparsity 弱化正例梯度避免跟 CE 打架"
+2. **技术细节**：损失公式、关键超参数、与基线的区别
+3. **实验配置**：config 文件名、seeds、服务器、GPU
+4. **结果**：per-seed 的 max/last/drop + cos_sim（如有）
+5. **结论**：一句话判断（有效/无效/部分有效）+ 原因分析
+6. 最重要的比如要有`YYYY-MM-DD`的日期说明你是什么时候创建的！！！！非常重要
+
+### 18.4 查看实验进度时的同步要求
+
+**当用户让我查看实验进度时，必须同时**：
+1. SSH 到服务器提取最新 accuracy 数据
+2. 更新对应的 NOTE.md（回填结果）
+3. 自动触发 experiment-sync 同步到 Obsidian
+4. 如果实验已完成（log 中有 "End"），在 NOTE.md 中填写最终结论
+
+### 18.5 实验变体速查表
+
+> 方便快速回忆每个变体是什么
+
+| 变体 | 全称 | 一句话解释 |
+|------|------|-----------|
+| M0 | Fixed Alpha | 固定增强强度，消融基线 |
+| M1 | Adaptive Aug | 根据域差异自动调节增强强度 |
+| M3 | Domain-Aware Proto | 保留每域原型，不做跨域平均 |
+| M4 | Dual Alignment | 域内 cosine + 跨域 InfoNCE 双对齐 |
+| M5 | Style Contrastive | M4 + z_sty 做域对比学习 |
+| M6 | Delta-FiLM | 跨域风格差异做 FiLM 调制 |
+| mode 0 | Orth Only | 纯正交解耦，无增强无对齐 |
+| mode 1 | Bell-curve | InfoNCE 先升后降（钟形） |
+| mode 2 | Cutoff | InfoNCE R80 后硬关闭 |
+| mode 3 | Always-on | L_orth 全开 + InfoNCE 始终不关 |
+| mode 4 | MSE Anchor | 标准 InfoNCE + MSE 锚点（FPL 式） |
+| mode 5 | Alpha-Sparsity | cos^0.25 弱化正例梯度（FedPLVM 式） |
+| mode 6 | MSE + Alpha | 双安全阀组合（**R50 最佳 82.2%**） |
+| mode 7 | Detach Aug | 增强走对比不走 CE（PARDON 式） |
+
+---
+
+## 十九、关键实验发现备忘（2026-04-16 更新）
+
+### 19.1 梯度冲突是核心问题
+
+- cos_sim(grad_CE, grad_InfoNCE) 在 R50 穿零 → CE 和 InfoNCE 打架
+- 所有没有"安全阀"的 InfoNCE 变体都会在后期崩溃
+- 三道安全阀：MSE 锚点 / alpha-sparsity / 梯度截断（triplet margin）
+
+### 19.2 文献审查关键结论
+
+- **FPL**：InfoNCE + MSE 锚点，tau=0.02，FINCH 多原型
+- **FedPLVM**：alpha-sparsity (α=0.25)，correction MSE，tau=0.07
+- **PARDON**：Triplet loss (margin=0.3)，图像空间 AdaIN (no_grad)，CE 不用增强特征
+- **MixStyle**：浅层增强有效，深层（res4）暴跌 -7%
+- **共识**：我们在最深层做 AdaIN + CE 回传 = 违反所有安全原则
+
+### 19.3 EXP-070 消融的真相
+
+- "Decouple only" 用了 warmup=9999 → L_orth 权重仅 0.02 → 等于纯 CE
+- "+Share" 2/3 seed 的 peak 在 warmup 激活前就出现了 → Share 没贡献
+- "协同效应"是基于 peak 值的幻觉，按 final 排序结论完全反转
