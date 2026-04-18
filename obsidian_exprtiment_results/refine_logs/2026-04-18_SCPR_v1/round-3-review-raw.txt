@@ -1,0 +1,313 @@
+WARNING: proceeding, even though we could not update PATH: 磁盘空间不足。 (os error 112)
+OpenAI Codex v0.117.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-18_SCPR_v1
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019da01c-b0bf-7ff2-8739-f9278b9664d2
+--------
+user
+[Round 3 re-evaluation]
+
+I revised the proposal based on your Round 2 feedback. Please re-score and judge whether it is now READY (overall >= 9).
+
+Key changes in Round 3:
+
+1. [Simplification #1 accepted] Unified notation throughout: `s_k := normalize(E[z_sty(x)])` and `p_c^j := E[z_sem(x) | y=c]`. Single symbol for the style key everywhere; explicit computation and L2-normalization spec.
+
+2. [Simplification #2 accepted] Dropped warmup as a named method component. Bank burn-in is now described only as an implementation detail in the appendix (first round bank is empty -> uniform weights, which is exactly M3, for 1-2 rounds until bank populates).
+
+3. [Simplification #3 accepted] The `A_k^c = empty -> L_SCPR = 0` fallback moved to an implementation note, with an explicit statement that PACS/Office never trigger it (all clients hold all classes).
+
+4. [Sharpness fix for Venue Readiness] Added a new subsection "Why style weighting beats uniform: a signal-to-noise perspective" that argues SCPR is *not* an arbitrary reweighting trick but a **necessary correction from decouple imperfection**:
+   - Under perfect decouple, style_dist does not affect p_c^j quality -> uniform weight is optimal (SCPR -> M3)
+   - Under imperfect decouple (which always happens in practice, we measured residual cos(z_sem, z_sty) ~ 0.05-0.1), far-style prototypes contain residual style noise
+   - Equal-weight SupCon pulls z_sem toward noisy p_c^j, contaminating z_sem with cross-domain style
+   - Style-weighted SupCon is equivalent to signal-to-noise importance weighting over positives
+   - SCPR sits conceptually between M3 (style-ignorant) and SAS (param personalization): it weights alignment targets by style WITHOUT forcing parameter personalization, which explains why SCPR works on both PACS (full outlier, SAS fails) and Office (single outlier, SAS wins)
+
+5. Core mechanism formula now a single canonical expression (already was in Round 2):
+   g_kj = cos(s_k, s_j); raw_j = exp(g_kj/tau) * 1[j!=k]
+   w_{k->j}^c = raw_j / sum over A_k^c    (A_k^c = {l != k, p_c^l exists})
+   L_SCPR = - sum_{j in A_k^c} w_{k->j}^c * log [ exp(sim(z, p_c^j)/tau_nce) / (numerator + sum_{c'!=c, l in A_k^{c'}} exp(sim(z, p_{c'}^l)/tau_nce)) ]
+
+=== REVISED PROPOSAL ===
+
+# Research Proposal Round 2: Self-Masked Style-Weighted Multi-Positive InfoNCE (SCPR)
+
+## Problem Anchor (preserved verbatim)
+
+- Cross-domain FL where clients hold different visual styles; existing prototype alignment averages per-class prototypes globally and broadcasts, diluting outlier-domain clients.
+- Must-solve: (1) global-mean washes out style, (2) SAS param-space routing fails on PACS full-outlier (EXP-086 -0.65%), (3) FedDSA Share block never landed (EXP-059 -2.54%, EXP-078d NaN).
+- Non-goals: no style-as-data, no classifier personalization, no aux losses, no architecture change, no new trainable components.
+- Constraints: ResNet-18/AlexNet, FedBN, R=200, 3 seeds, orth decouple kept.
+- Success: PACS AVG Best 3-seed >= 81.5% (beat M3 81.91%); Office >= 90.5% (beat SAS 89.82%); drop <= 2%; <100 LOC; 0 new trainable.
+
+## Technical Gap
+
+No existing method uses *client style as retrieval key* over *domain-indexed class prototypes as values* in the decoupled representation space. Alternatives either erase, keep-local, or do AdaIN in mixed space.
+
+## Method Thesis
+
+Replace M3's equal-weighted multi-positive InfoNCE positives with style-conditioned weights, self-masked (j != i) by construction. Smallest adequate change to close the Share gap.
+
+## Contribution Focus
+
+- SINGLE main contribution: Self-Masked Style-Weighted Multi-Positive InfoNCE (SCPR).
+- Appendix composability check (not main): SCPR+SAS on Office.
+- Non-contributions: style-as-data, param routing, new loss terms.
+
+## Proposed Method
+
+### Notation (unified)
+
+- s_k := normalize(E_{x in D_k}[z_sty(x)])  -- L2-normalized client style anchor
+- p_c^j := E_{(x, y=c) in D_j}[z_sem(x)]     -- per-(class, client) prototype
+- tau_nce = 0.3 (Plan A optimal)
+- tau_SCPR = 0.3 (default, inherited from SAS)
+
+### Complexity Budget
+
+- Backbone / sem_head / style_head / classifier / BN: reused, frozen.
+- Orth decouple (cos^2 + HSIC): reused (Plan A).
+- Style bank {s_j}: reused from SAS.
+- Class-proto bank {p_c^j}: reused from M3.
+- NEW: SCPR attention + self-mask + per-class renormalize, ~30 LOC.
+- 0 new trainable components, 0 new loss terms, 1 new hyperparameter (tau_SCPR).
+
+### Core Mechanism (single canonical formula)
+
+Self-masked style attention:
+  g_kj = cos(s_k, s_j),   j = 1..K
+  raw_j = exp(g_kj / tau_SCPR) * 1[j != k]
+
+Per-class renormalize:
+  A_k^c = { j : j != k, p_c^j exists }
+  w_{k->j}^c = raw_j / sum_{l in A_k^c} raw_l    if j in A_k^c
+  w_{k->j}^c = 0                                  otherwise
+
+SCPR loss for (z = sem_head(backbone(x)), y = c) on client k:
+  L_SCPR(z, c)
+    = - sum_{j in A_k^c} w_{k->j}^c * log [
+          exp(sim(z, p_c^j) / tau_nce)
+          / ( exp(sim(z, p_c^j) / tau_nce)
+              + sum_{c' != c, l in A_k^{c'}} exp(sim(z, p_{c'}^l) / tau_nce) )
+        ]
+
+All p_c^j and s_j are detached.
+
+Total loss: L = L_CE + lambda_orth * L_orth + lambda_hsic * L_HSIC + lambda_sem * L_SCPR
+(weights 1.0, 0.1, 1.0 inherited from Plan A)
+
+### Mathematical Property (single claim)
+
+tau_SCPR -> infinity: w_{k->j}^c = 1/|A_k^c| -> SCPR strictly reduces to M3 domain-aware multi-positive InfoNCE (verified +5.09% on PACS).
+
+Other limits:
+- tau_SCPR -> 0: one-hot to argmax_{j != k} cos(s_k, s_j), nearest-style single positive.
+- self-mask: w_{k->k} == 0 by construction; Share path cannot collapse to FedBN.
+
+### Why style weighting beats uniform: a signal-to-noise perspective
+
+**Setup**: After FedDSA orthogonal decouple, z_sem theoretically keeps only semantic info and z_sty only style. But cos^2(z_sem, z_sty) -> 0 is a *soft* constraint; in practice we measure residual cos(z_sem, z_sty) ~ 0.05-0.1 at training end.
+
+**Implication**: The class prototype p_c^j = E[z_sem | y=c, D_j] absorbs some of client j's style residue under imperfect decouple. Larger style_dist(k, j) implies higher *style noise component* of p_c^j from client k's perspective.
+
+**M3 uniform multi-positive flaw**: In SupCon, each positive contributes equal pulling force, implicitly assuming all positives have equal class-signal-to-style-noise ratio. But in reality, far-style p_c^j has lower SNR. On PACS:
+- Pulling Art's z_sem toward Cartoon p_dog (near style) -> mostly "art-simplified dog" semantic signal
+- Pulling Art's z_sem toward Sketch p_dog (far style) -> absorbs "extreme line-art" style residue
+
+Equal-weighting means Art's z_sem is contaminated by Sketch style noise.
+
+**SCPR's correction (derived from decouple imperfection)**:
+w_{k->j}^c ∝ exp(cos(s_k, s_j) / tau)
+
+Near-style prototypes receive high weight (clean signal); far-style receive low weight (noisy signal). This is **importance weighting by SNR over positives**, not an arbitrary reweighting:
+- When decouple is perfect: style_dist does not affect p_c^j quality -> uniform weight optimal (SCPR -> M3).
+- When decouple is imperfect (always in practice): style weighting is a **necessary correction** for residual coupling.
+
+**Conceptual position**: SCPR sits between M3 (style-ignorant) and SAS (param personalization). It weights alignment targets by style WITHOUT forcing parameter personalization. This explains:
+- Why SAS fails on PACS full-outlier: all clients' params degenerate locally.
+- Why SCPR works on both PACS (param shared -> no local degeneracy) and Office (style-aware alignment -> single-outlier gains).
+
+### Failure Modes and Diagnostics
+
+| Failure | Signal | Fallback |
+|---------|--------|----------|
+| Attention uniform collapse | H(w_k) > 0.95 * log(K-1) for >20 rounds | project s_k to lower dim (still no param) or lower tau |
+| NaN | loss NaN | tau_SCPR 0.3 -> 1.0 |
+| PACS < M3 | 3-seed AVG Best < 81.91% | verify self-mask active, check entropy |
+
+Built-in safety: uniform w -> M3 (verified +5.09% lower bound).
+
+### Novelty and Elegance
+
+- Minimal mechanism: ~30 LOC, 0 new params, 1 new hyperparameter.
+- Mathematically consistent: single formula, uniform reduces to M3.
+- Theoretically motivated: derived from decouple imperfection SNR analysis, not arbitrary reweighting.
+- 2x2 first occupant: (Decouple, Style-share).
+- Closes FedDSA Share narrative with mechanism-level contribution.
+
+Closest prior works:
+1. FedProto: single global-mean, equal alignment -> SCPR uses domain-indexed multi-proto + style weighting.
+2. FPL / FedPLVM: cluster-based multi-proto, key = prototype geometry -> SCPR key = client style.
+3. FedSTAR: Transformer aggregator + FiLM, style strictly local -> SCPR first makes style a cross-client attention key.
+4. FISC/PARDON: share style via AdaIN in mixed space -> SCPR in decoupled space, only target.
+5. SAS (ours, unpublished): param routing fails PACS -> SCPR routes at prototype layer, keeps params shared.
+
+## Claim-Driven Validation Sketch
+
+### Claim A (main): PACS full-outlier, SCPR > M3 uniform
+- A.1 orth_only (80.41%), A.2 M3 (~81.91%, = SCPR uniform lower bound), A.3 SCPR tau=0.3
+- 3-seed mean AVG Best/Last + per-domain (Art, Sketch)
+- Expect A.3 >= A.2 + 0.5%, A.3 >= 81.5%
+
+### Claim B (main): Office single-outlier, SCPR >= SAS (no param personalization)
+- B.1 orth_only, B.2 SAS (89.82%), B.3 SCPR tau=0.3
+- 3-seed mean AVG Best/Last + Caltech
+- Expect B.3 >= B.2
+- Decisive: SCPR works on both regimes (SAS fails on PACS)
+
+### Claim C (mechanism): tau_SCPR sensitivity & attention health
+- PACS 3-seed, tau in {0.1, 0.3, 1.0, 3.0}
+- Record H(w_k), attention heatmap
+- Expect optimal tau in [0.3, 1.0]
+
+### Appendix (not main): SCPR + SAS composability on Office, 1 config x 3 seeds
+
+### Budget: 60 GPU-hours, 5 days end-to-end.
+
+## Implementation Note (appendix, separated from main method)
+
+1. First round when bank is empty: w falls back to uniform 1/(K-1), equivalent to M3 for the 1-2 round burn-in period. No explicit warmup hyperparameter.
+2. On PACS/Office each client holds all classes, so A_k^c = {j: j != k} always, renormalize trivial to 1/(K-1).
+3. Numerical: log-sum-exp softmax; tau_SCPR min 0.1 to avoid numerical explosion.
+4. Unit tests: (a) w_{k->k} == 0; (b) tau -> inf => uniform; (c) tau -> 0 => one-hot.
+
+## Handoff
+
+- Must-prove: A, B, C.
+- Must-run ablations: M3 lower bound, tau sweep.
+- Critical metrics: PACS per-domain + AVG, Office Caltech + AVG.
+- Highest-risk: style separability at K=4-5; SCPR >= M3; burn-in stability.
+
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score same 7 dimensions + overall
+- Say whether Problem Anchor is preserved
+- Say whether method is now at the READY bar (overall >= 9)
+- Say whether the new Signal-to-Noise motivation is sharp enough to deflect "pseudo-novelty / just reweighting" critique at a top venue, or if another pass is needed
+- Same output format (scores, drift, simplification, modernization, verdict, reviewer summary)
+
+Please output in English.
+
+codex
+1. **Problem Fidelity: 10/10**  
+The anchor is preserved exactly. This is still a direct fix to the original `Share` bottleneck, not a drift into personalization, augmentation, or architecture change.
+
+2. **Method Specificity: 9/10**  
+The method is now concrete enough to implement. The interfaces, notation, bank contents, loss, detach behavior, and edge-case handling are all sufficiently specified.
+
+3. **Contribution Quality: 8/10**  
+This is now one clean mechanism, not contribution sprawl. The remaining discount is not breadth but reviewer skepticism: at top venues, “style-weighted positives” can still be read as a clever reweighting unless the mechanism story is framed very carefully.
+
+4. **Frontier Leverage: 9/10**  
+Appropriate and unforced. Attention-style retrieval/weighting is the right modern primitive here; adding FM-era components would be trend-chasing.
+
+5. **Feasibility: 9/10**  
+High. It reuses the existing M3/SAS interfaces, adds little code, and fits the stated compute budget.
+
+6. **Validation Focus: 9/10**  
+Tight and claim-driven. The main experiments are now minimal and aligned with the core claims.
+
+7. **Venue Readiness: 8/10**  
+Much better than Round 2, but still not fully at the READY bar. The remaining risk is not complexity or drift; it is whether the paper can convincingly defend that this is a necessary correction induced by imperfect decoupling, rather than merely a sensible weighting heuristic.
+
+**Overall Score: 8.9/10**
+
+**Problem Anchor:** `PRESERVED`  
+**READY Bar:** `Not yet`  
+**Dominant Contribution:** Sharper. It is now one focused mechanism.  
+**Method Size:** Simpler, near-minimal rather than overbuilt.  
+**Frontier Leverage:** Appropriate, not forced.
+
+**Signal-to-Noise Motivation**  
+Improved materially, but one more pass is still needed if the goal is to deflect “pseudo-novelty / just reweighting” at a top venue. The current text is strongest when it says SCPR is a correction for residual coupling; it is weakest when it says SCPR is “equivalent to SNR importance weighting,” because that is more claimed than derived. For a READY-level paper, either:
+- weaken that sentence to “can be interpreted as a bias-control / SNR-aware weighting under imperfect decoupling,” or
+- add one minimal mechanism diagnostic showing that the marginal usefulness of positive `p_c^j` decays with style distance `1 - cos(s_k, s_j)`.
+
+**For each dimension < 7**
+- `NONE`
+
+**Simplification Opportunities**
+- `NONE`
+
+**Modernization Opportunities**
+- `NONE`
+
+**Drift Warning**
+- `NONE`
+
+**Verdict**
+- `REVISE`
+
+**Reviewer summary**  
+This is now a strong, elegant proposal: the anchor is intact, the algorithm is singular and implementable, and the contribution is much sharper than before. The remaining gap to READY is mostly rhetorical and mechanistic: the paper still needs one tighter pass to ensure the SNR story reads as a defensible explanation of why style weighting is the right correction, not just a well-motivated heuristic.
+tokens used
+52,381
+1. **Problem Fidelity: 10/10**  
+The anchor is preserved exactly. This is still a direct fix to the original `Share` bottleneck, not a drift into personalization, augmentation, or architecture change.
+
+2. **Method Specificity: 9/10**  
+The method is now concrete enough to implement. The interfaces, notation, bank contents, loss, detach behavior, and edge-case handling are all sufficiently specified.
+
+3. **Contribution Quality: 8/10**  
+This is now one clean mechanism, not contribution sprawl. The remaining discount is not breadth but reviewer skepticism: at top venues, “style-weighted positives” can still be read as a clever reweighting unless the mechanism story is framed very carefully.
+
+4. **Frontier Leverage: 9/10**  
+Appropriate and unforced. Attention-style retrieval/weighting is the right modern primitive here; adding FM-era components would be trend-chasing.
+
+5. **Feasibility: 9/10**  
+High. It reuses the existing M3/SAS interfaces, adds little code, and fits the stated compute budget.
+
+6. **Validation Focus: 9/10**  
+Tight and claim-driven. The main experiments are now minimal and aligned with the core claims.
+
+7. **Venue Readiness: 8/10**  
+Much better than Round 2, but still not fully at the READY bar. The remaining risk is not complexity or drift; it is whether the paper can convincingly defend that this is a necessary correction induced by imperfect decoupling, rather than merely a sensible weighting heuristic.
+
+**Overall Score: 8.9/10**
+
+**Problem Anchor:** `PRESERVED`  
+**READY Bar:** `Not yet`  
+**Dominant Contribution:** Sharper. It is now one focused mechanism.  
+**Method Size:** Simpler, near-minimal rather than overbuilt.  
+**Frontier Leverage:** Appropriate, not forced.
+
+**Signal-to-Noise Motivation**  
+Improved materially, but one more pass is still needed if the goal is to deflect “pseudo-novelty / just reweighting” at a top venue. The current text is strongest when it says SCPR is a correction for residual coupling; it is weakest when it says SCPR is “equivalent to SNR importance weighting,” because that is more claimed than derived. For a READY-level paper, either:
+- weaken that sentence to “can be interpreted as a bias-control / SNR-aware weighting under imperfect decoupling,” or
+- add one minimal mechanism diagnostic showing that the marginal usefulness of positive `p_c^j` decays with style distance `1 - cos(s_k, s_j)`.
+
+**For each dimension < 7**
+- `NONE`
+
+**Simplification Opportunities**
+- `NONE`
+
+**Modernization Opportunities**
+- `NONE`
+
+**Drift Warning**
+- `NONE`
+
+**Verdict**
+- `REVISE`
+
+**Reviewer summary**  
+This is now a strong, elegant proposal: the anchor is intact, the algorithm is singular and implementable, and the contribution is much sharper than before. The remaining gap to READY is mostly rhetorical and mechanistic: the paper still needs one tighter pass to ensure the SNR story reads as a defensible explanation of why style weighting is the right correction, not just a well-motivated heuristic.

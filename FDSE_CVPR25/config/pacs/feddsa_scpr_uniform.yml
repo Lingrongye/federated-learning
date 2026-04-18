@@ -1,0 +1,36 @@
+# EXP-095 Claim A.2 — PACS SCPR uniform (scpr=1, M3 lower bound)
+# Style-FREE multi-positive SupCon on domain-indexed prototypes.
+# Math: this is SCPR with tau_SCPR -> infinity (uniform attention weights).
+# Purpose: in-codepath M3 baseline for strict Claim A novelty isolation vs SCPR style-weighted.
+algo_para:
+- 1.0    # lo
+- 0.0    # lh
+- 1.0    # ls
+- 0.2    # tau (InfoNCE)
+- 5      # sdn
+- 128    # pd
+- 0      # sm = orth_only
+- 60
+- 30
+- 80
+- 10     # gli
+- 1.0    # lm
+- 0.25   # al
+- 1      # se
+- 0      # sas
+- 0.3    # sas_tau (unused)
+- 1      # scpr = 1 (uniform multi-positive — style-free)
+- 0.3    # scpr_tau (unused in mode 1, kept for config symmetry)
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

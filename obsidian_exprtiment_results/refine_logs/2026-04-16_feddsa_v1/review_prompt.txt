@@ -1,0 +1,24 @@
+You are a senior ML reviewer for NeurIPS/ICML. Review this research proposal for cross-domain federated learning.
+
+Key context the authors discovered through extensive experiments:
+1. FedDSA's warmup mechanism (hard switch at round 50) causes performance degradation: 10/11 experiments show accuracy DROP after warmup activates style augmentation + InfoNCE alignment
+2. FDSE (CVPR 2025 competitor) trains all components from round 0 and achieves stable continuous improvement (peak at round 120-236, not round 30-50 like FedDSA)
+3. FedDSA R500: starts at 80% then CRASHES to 72%. FDSE R500: starts at 77% then CLIMBS to 82%
+4. M3 domain-aware prototypes showed +5% improvement but was masked by training instability
+
+The proposal suggests replacing the hard warmup switch with sigmoid ramp-up to enable gradual joint training from round 0.
+
+Score these 7 dimensions (1-10):
+1. Problem Fidelity - does the fix address the real bottleneck?
+2. Method Specificity - concrete enough to implement?
+3. Contribution Quality - is this a meaningful contribution or just a hyperparameter fix?
+4. Frontier Leverage - does it use modern techniques appropriately?
+5. Feasibility - can it be done with stated resources?
+6. Validation Focus - are proposed experiments sufficient?
+7. Venue Readiness - sharp enough for a top venue?
+
+OVERALL SCORE (1-10) and verdict (READY/REVISE/RETHINK).
+
+Be brutally honest: Is sigmoid ramp-up alone a sufficient fix, or is there a deeper architectural issue with injecting style noise into already-learned features? Should the augmentation happen BEFORE the encoder (image-level) rather than AFTER (feature-level)? Is the InfoNCE alignment target (global/domain prototypes) fundamentally conflicting with the local CE objective?
+
+=== PROPOSAL ===

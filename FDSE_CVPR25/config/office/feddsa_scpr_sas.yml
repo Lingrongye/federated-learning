@@ -1,0 +1,35 @@
+# EXP-095 Appendix — Office SCPR + SAS composability (scpr=2 + sas=1 τ=0.3)
+# Validates whether prototype-layer routing (SCPR) and parameter-layer routing (SAS) are orthogonal.
+# Not a main claim — appendix composability check only.
+algo_para:
+- 1.0
+- 0.0
+- 1.0
+- 0.2
+- 5
+- 128
+- 0      # sm = orth_only
+- 60
+- 30
+- 80
+- 10
+- 1.0
+- 0.25
+- 1      # se
+- 1      # sas = 1 (Plan A style-aware sem_head aggregation, like EXP-084)
+- 0.3    # sas_tau = 0.3
+- 2      # scpr = 2 (SCPR enabled in parallel with SAS)
+- 0.3    # scpr_tau = 0.3
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

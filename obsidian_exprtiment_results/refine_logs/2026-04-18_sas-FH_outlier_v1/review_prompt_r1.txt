@@ -1,0 +1,227 @@
+You are a senior ML reviewer for a top venue (NeurIPS/ICML/ICLR). This is an early-stage, method-first research proposal.
+
+Your job is NOT to reward extra modules, contribution sprawl, or a giant benchmark checklist. Your job IS to stress-test whether the proposed method:
+(1) still solves the original anchored problem,
+(2) is concrete enough to implement,
+(3) presents a focused, elegant contribution,
+(4) uses foundation-model-era techniques appropriately when they are the natural fit.
+
+Review principles:
+- Prefer the smallest adequate mechanism over a larger system.
+- Penalize parallel contributions that make the paper feel unfocused.
+- If a modern LLM / VLM / Diffusion / RL route would clearly produce a better paper, say so concretely.
+- If the proposal is already modern enough, do NOT force trendy components.
+- Do not ask for extra experiments unless they are needed to prove the core claims.
+
+Read the Problem Anchor first. If your suggested fix would change the problem being solved, call that out explicitly as drift instead of treating it as a normal revision request.
+
+=== PROPOSAL ===
+
+# Research Proposal: Full-Head Style-Aware Aggregation (sas-FH) for Outlier-Domain Recovery in Federated Domain Generalization
+
+## Problem Anchor
+
+- Bottom-line problem: FedDSA Plan A (sas personalizes only `semantic_head`; `classifier head` and backbone go through FedAvg) fails badly on outlier domains. 3-seed evidence: PACS art_painting Client 0 AVG only 65.69% (other 3 domains 83-89%), Office Caltech 77.68% (other 3 domains 89-100%). Error analysis: 70 art_painting misclassifications all have conf >= 0.85 (confidently wrong), errors concentrate on inter-organic-class confusion (person<->dog<->horse<->guitar).
+- Must-solve bottleneck: When the same model shares a classifier across multiple domains, the outlier domain's classification decision boundary is diluted by other domains' semantic preferences. Evidence: EXP-086 PACS Plan A is -0.65/-1.03 AVG on all 4 domains because PACS 4 domains are mutual outliers; EXP-084 Office Plan A Caltech +2.4/+3.6 but still -3.9% from FDSE (Caltech Best), meaning sem_head personalization captured part of the benefit but not all.
+- Non-goals:
+  - No backbone change (keep AlexNet aligned with FDSE baseline)
+  - No new trainable modules or new loss terms
+  - No inference-time tricks (TTA / temperature scaling disallowed)
+  - No per-sample sas (keep client-level sas for communication efficiency)
+- Constraints:
+  - 3-seed {2, 15, 333} x R200 x E=1 aligned with FDSE protocol
+  - SC2 single GPU, 2-4h per run
+  - Code change <= 50 lines, finishable in 1h with unit tests
+  - Fully comparable with existing baselines (EXP-083 / EXP-084 / EXP-086) -- only sas aggregation scope differs
+- Success condition:
+  1. Main: art_painting Client 0 AVG Best >= 67.7% (+2), Caltech Client 0 AVG Best >= 77.0% (+2, approaching FDSE 78.9%)
+  2. Side: other domains drop < 1%
+  3. Overall: PACS AVG Best >= 80.41 (orth_only baseline), Office AVG Best >= 90.58 (FDSE)
+
+## Technical Gap
+
+Plan A's sas only covers the projection head (`semantic_head`); the final linear classifier still uses FedAvg.
+- sas = Style-Aware Semantic head aggregation: server computes personalized sem_head weights for each target client via softmax(cos_sim(style_proto_i, style_proto_j) / tau).
+- Classifier `head` is only 1024 -> num_classes FC, but it is the only layer deciding the class decision boundary.
+- As a style outlier, art receives a personalized `sem_head` that moves features toward its own style direction, but all clients share one classification plane, so the plane leans toward photo/sketch majority preference. Feature correct, boundary wrong.
+
+Why "bigger model / more epochs / more augmentation" will not work:
+- None fixes the structural problem of classifier sharing.
+- Adding augmentation (e.g. MixStyle) may confuse art further.
+- More epochs let the shared classifier overfit majority domains and hurt outliers more.
+
+Smallest adequate intervention: extend sas aggregation scope from "sem_head only" to "sem_head + classifier head".
+- Zero new trainable parameters (only change server-side key grouping)
+- Theory aligned with FedROD (ICLR 23) per-client classifier
+- 100% architecturally compatible with Plan A, does not touch backbone/style_head/BN
+
+Core technical claim: When style heterogeneity makes different clients require different classification decision boundaries, extending style-aware aggregation from a single projection head to the whole head chain (sem_head + classifier) is the minimal sufficient mechanism to recover outlier-domain accuracy -- no new trainable modules, no new loss terms.
+
+Required evidence:
+1. On PACS / Office, sas-FH vs sas-half-head (EXP-084 Plan A) shows significant outlier-domain improvement.
+2. Granularity ablation: full-head sas > half-head sas >= no-sas >= full-model sas (find sweet spot).
+
+## Method Thesis
+
+- One-sentence thesis: Extend FedDSA Plan A's style-aware aggregation from the semantic projection head alone to the full head chain (semantic projection + final classifier), so outlier clients receive both personalized feature mapping AND personalized class decision boundary, with zero new trainable components.
+- Why smallest adequate: modify only the server's parameter-grouping dict at pack time (move `classifier.weight/bias` from shared_keys into sas_keys). No new module, no new loss, no new augmentation.
+- Why timely: FedROD (ICLR 23) showed per-client classifier + shared backbone is effective for pFL; FedAlign (CVPR Workshop 25) adopted classifier personalization in FedDG. Our contribution is conditioning classifier personalization on style similarity (rather than uniform per-client), giving outlier clients a much better starting point than random.
+
+## Contribution Focus
+
+- Dominant contribution: Full-head sas (sas-FH) -- extend Plan A's scope from half-head to full head chain, as the only structural extension.
+- Optional supporting contribution: Granularity sweet-spot analysis -- 4-level ablation (no-sas / sem-head-only / full-head / full-head + encoder-last-block).
+- Explicit non-contributions:
+  - No claim of novelty on classifier personalization itself (FedROD already did)
+  - No MixStyle / SupCon / focal loss
+  - No change to BN strategy (keep FedBN local, aligned with baseline)
+  - No per-sample aggregation
+
+## Proposed Method
+
+### Complexity Budget
+- Frozen / reused: Plan A architecture (AlexNet encoder + semantic_head + style_head + classifier), style_proto extraction, FedBN BN-local, L_orth, sas softmax, all hyperparameters (sas_tau=0.3, lambda_orth=1.0, etc.)
+- Changed: only server pack() aggregation path for `classifier.weight` / `classifier.bias` -- from FedAvg to sas-personalized (same weights as sem_head)
+- New trainable components: 0
+- Intentionally not added: per-client sas_tau, style_head personalization, backbone sas, classifier-bias-only sas
+
+### System Overview (ASCII)
+Client i: encoder(x) -> h; h -> sem_head -> z_sem -> head -> logits; h -> style_head -> z_sty -> style_proto; Local SGD with CE + L_orth; upload encoder, sem_head, style_head, head (NEW: sent to sas branch), style_proto.
+Server: maintain client_sem_states[j], client_head_states[j] (NEW), client_style_protos[j]; for each target client i, w_ij = softmax(cos(sp_i, sp_j)/tau); per_sem_i = sum_j w_ij * sem_state[j], per_head_i = sum_j w_ij * head_state[j] (NEW); encoder, style_head, BN via standard FedAvg; send personalized (encoder, sem_head_i, head_i) to client i.
+
+### Core Mechanism
+- Input: latest uploaded classifier.state_dict() and style_proto_i from client i; server retains all client classifier states and style protos.
+- Output: personalized classifier head weights for client i, sent as starting state for next round.
+- Policy: no new module. Only change in server pack():
+
+  Before (Plan A):   sas_keys = [k for k in global_dict if k.startswith('semantic_head.')]
+  After (sas-FH):    sas_keys = [k for k in global_dict if k.startswith('semantic_head.') or k.startswith('head.')]
+
+  Aggregation unchanged:
+  w_ij = softmax(cos(sp_i, sp_j) / sas_tau)
+  per_param_i[k] = sum_j w_ij * client_state[j][k], for k in sas_keys
+
+- Training signal / loss: unchanged. Client forward / backward / CE / L_orth untouched.
+- Why the main novelty: FedROD gives each client a uniform per-client classifier; FedAlign combines classifier personalization with cross-client feature alignment; we first apply style-conditional aggregation at the classifier level -- style similarity decides which clients should share classification boundaries.
+
+### Modern Primitive Usage
+None. Intentional: (1) compute constraint (AlexNet R200 3-seed) not suitable for foundation models; (2) core gap is classifier sharing, foundation models cannot fix that structural issue; (3) minimal structural extension is a more honest route.
+
+### Integration into Pipeline
+- Code location: FDSE_CVPR25/algorithm/feddsa_scheduled.py, pack() method (~30 lines change).
+- Before: sas_keys = [k for k in global_dict if k.startswith('semantic_head.')]
+- After: sas_keys = [k for k in global_dict if k.startswith('semantic_head.') or k.startswith('head.')]
+- Fully frozen: client code, style_proto extraction, L_orth, all hyperparameter defaults, unit tests (except a new head-sas coverage test).
+- Config new flag: sas=2 (0=off, 1=sem-only=Plan A, 2=sem+head=sas-FH) -- just a switch, does not change default data flow.
+
+### Training Plan
+- Single-stage joint training (same as Plan A), no warmup / curriculum needed.
+- Data: PACS 4 domains c4 / Office-Caltech10 c4 (same as EXP-084/086).
+- Loss: CE + lambda_orth * L_orth (same as Plan A).
+- Schedule: R200, E=1, B=50, LR=0.05, decay=0.9998 (aligned with FDSE).
+- Seeds: {2, 15, 333} aligned with FDSE official.
+- No warmup / curriculum / pseudo-labels / new augmentation.
+
+### Failure Modes and Diagnostics
+- Failure 1: PACS still -0.5% overall or worse.
+  - Detect: R50 PACS AVG Best still < 79.5.
+  - Fallback: revert to Plan A sem-head-only; paper positions sas-FH as "Office-applicable, PACS-neutral" (consistent with EXP-086 mechanism analysis).
+- Failure 2: Office Caltech flat no gain.
+  - Detect: R100 Caltech AVG < 75.5.
+  - Fallback: check whether style_proto direction changed; if not, classifier was not the bottleneck -> switch to Top-2 (multi-centroid).
+- Failure 3: training unstable (drop > 3%).
+  - Detect: any seed AVG Last < AVG Best - 3%.
+  - Fallback: should not happen (pure aggregation change, no new gradient flow); if it does, sas tau=0.3 is too extreme at head level, try tau=0.5.
+- Diagnostic signals during training:
+  - track cos_sim(personalized_head, global_head) per client per round, confirm outlier client actually diverges.
+  - track ||personalized_head - old_personalized_head|| per client for convergence stability.
+
+### Novelty and Elegance Argument
+- Closest work:
+  - FedROD (ICLR 23): per-client classifier, uniform aggregation -- we go style-conditional.
+  - FedAlign (CVPR Workshop 25): classifier personalization + feature alignment -- we skip feature alignment (Plan A's orth suffices).
+  - FedDSA Plan A (EXP-084): sas only on sem_head -- we extend to full head.
+- Exact difference (3 steps):
+  1. Keep Plan A's style-aware aggregation mechanism.
+  2. Extend aggregation scope from "feature mapping head" to "feature mapping + class boundary".
+  3. Classifier personalization direction is driven by style similarity, not random/uniform.
+- Why focused: the whole paper story = 1 sentence: "Style similarity is the natural conditioning signal for deciding which clients should share classification decision boundaries."
+
+## Claim-Driven Validation Sketch
+
+### Claim 1 (Main): sas-FH significantly improves outlier-domain (Caltech) in outlier-heavy Office, overall AVG Best improves >= 1%
+- Minimal experiment: Office-Caltech10 c4 x 3-seed x R200 x E=1
+  - EXP-093-A: FedDSA + sas-FH (sas=2, sas_tau=0.3, others same as EXP-084)
+- Baselines: EXP-083 (Plan A sas=0, orth_only), EXP-084 (Plan A sas=1), FDSE (EXP-051) -- all already have 3-seed data.
+- Metric: AVG Best, AVG Last, per-domain Caltech Best/Last.
+- Expected evidence: Caltech AVG Best 75.0 (EXP-084) -> >= 77.0 (sas-FH); AVG Best 89.82 -> >= 90.5, passing FDSE 90.58; other 3 domains drop < 1%.
+
+### Claim 2 (Supporting): sas granularity sweet-spot analysis shows full-head is the inflection
+- Minimal experiment: Office-Caltech10 x 1 seed x R200 (just s=2)
+  - A0: sas=0 (no sas) <- EXP-083
+  - A1: sas=1 (sem-head only) <- EXP-084
+  - A2: sas=2 (sem-head + classifier) <- NEW
+  - A3: sas=3 (sem-head + classifier + encoder last block) <- NEW ablation
+- Baselines: same 4 configs above.
+- Metric: AVG Best / Caltech Best.
+- Expected evidence: monotone increase A0 -> A1 -> A2; A3 <= A2 or ~= A2 (full-model sas does not help further, may even degrade) -> full-head is optimal granularity.
+
+### Claim 3 (Diagnostic, optional): unified explanation for PACS mechanism failure
+- Rerun PACS sas-FH x 3-seed (same config as EXP-086 except sas=2).
+- If PACS overall still <= baseline: PACS 4 domains are all mutual outliers, no majority to share with.
+- Validates EXP-086 mechanism hypothesis: sas only works under "majority-similar + few-outliers" distributions.
+
+## Experiment Handoff Inputs
+- Must-prove claims: Claim 1 (Office outlier recovery).
+- Must-run ablations: Claim 2 (granularity), Claim 3 (PACS mechanism).
+- Critical datasets / metrics: Office-Caltech10 c4 (AVG Best, Caltech Best/Last), PACS c4 (AVG Best).
+- Highest-risk assumptions:
+  1. style_proto can sufficiently distinguish Caltech from other 3 Office domains (validated by EXP-084 Caltech +3.6%).
+  2. classifier layer is the bottleneck (not directly validated; is the experiment's point).
+  3. zero new trainable parameters -> no instability (based on Plan A's validated stability).
+
+## Compute & Timeline Estimate
+
+| Experiment | Runs | Per run | Serial total | Parallel (2 servers) |
+| --- | --- | --- | --- | --- |
+| Claim 1: Office sas-FH x 3-seed | 3 | 2h | 6h | 3h |
+| Claim 2: Office granularity ablation x 1 seed x 4 configs (2 new) | 2 | 2h | 4h | 2h |
+| Claim 3: PACS sas-FH x 3-seed | 3 | 3.5h | 10.5h | 5.5h |
+| Total | 8 | | 20.5h | ~10.5h |
+
+- GPU-hours: ~20.
+- Code impl: 1h (incl unit tests).
+- Monitoring: ~1h human.
+- Critical path: Office 3h signal -> if passes, expand to PACS.
+- Quick stop: run Office s=2 single seed first (2h), if Caltech does not gain 2%, halt.
+
+=== END PROPOSAL ===
+
+Score these 7 dimensions from 1-10:
+
+1. Problem Fidelity: Does the method still attack the original bottleneck, or has it drifted into solving something easier or different?
+2. Method Specificity: Are the interfaces, representations, losses, training stages, and inference path concrete enough that an engineer could start implementing?
+3. Contribution Quality: Is there one dominant mechanism-level contribution with real novelty, good parsimony, and no obvious contribution sprawl?
+4. Frontier Leverage: Does the proposal use current foundation-model-era primitives appropriately when they are the right tool, instead of defaulting to old-school module stacking?
+5. Feasibility: Can this method be trained and integrated with the stated resources and data assumptions?
+6. Validation Focus: Are the proposed experiments minimal but sufficient to validate the core claims? Is there unnecessary experimental bloat?
+7. Venue Readiness: If executed well, would the contribution feel sharp and timely enough for a top venue?
+
+OVERALL SCORE (1-10): Weighted toward Problem Fidelity, Method Specificity, Contribution Quality, and Frontier Leverage.
+Use this weighting: PF 15%, MS 25%, CQ 25%, FL 15%, Feas 10%, VF 5%, VR 5%.
+
+For each dimension scoring < 7, provide:
+- Specific weakness
+- Concrete method-level fix (interface / loss / training recipe / integration point / deletion of unnecessary parts)
+- Priority: CRITICAL / IMPORTANT / MINOR
+
+Then add:
+- Simplification Opportunities: 1-3 concrete ways to delete, merge, or reuse components while preserving the main claim. Write "NONE" if already tight.
+- Modernization Opportunities: 1-3 concrete ways to replace old-school pieces with more natural foundation-model-era primitives if genuinely better. Write "NONE" if already modern enough.
+- Drift Warning: "NONE" if the proposal still solves the anchored problem; otherwise explain the drift clearly.
+- Verdict: READY / REVISE / RETHINK.
+
+Verdict rule:
+- READY: overall score >= 9, no meaningful drift, one focused dominant contribution, and no obvious complexity bloat remains
+- REVISE: the direction is promising but not yet at READY bar
+- RETHINK: the core mechanism or framing is still fundamentally off

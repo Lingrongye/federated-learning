@@ -1,0 +1,157 @@
+Round 2 re-evaluation.
+
+I revised the proposal based on your feedback.
+
+First, check whether the original Problem Anchor is still preserved.
+Second, judge whether the method is now more concrete, more focused, and more current.
+
+Key changes in this round:
+1. Removed A3 (encoder last block) ablation — per your simplification request.
+2. Added matched counterfactuals C1 (sem_head sas + fully local classifier) and C2 (sem_head sas + FedROD-style uniform per-client classifier) to isolate the novelty of *style conditioning* vs *any classifier personalization*.
+3. Added Claim 2 as a zero-training mechanism diagnostic: classifier swap at R150 checkpoint to directly test "feature right, boundary wrong".
+4. Tightened the one-sentence thesis from "extend sas scope to full head" to "style similarity is the right routing signal for sharing classification decision boundaries".
+5. Removed Top-2 multi-centroid fallback from proposal body; it belongs in a different paper direction.
+6. Demoted PACS from co-equal claim to "negative control / scope boundary" — run only if Office succeeds.
+7. Removed the Optional Supporting Contribution (granularity sweep) — the isolation work now lives inside Claim 1 as counterfactuals, not as a second parallel contribution.
+
+=== REVISED PROPOSAL ===
+
+# Research Proposal: Style-Conditioned Classifier Routing for Outlier-Domain Recovery in Federated Domain Generalization
+
+## Problem Anchor
+
+- Bottom-line problem: FedDSA Plan A (sas personalizes only `semantic_head`; classifier head and backbone go through FedAvg) fails on outlier domains. PACS art_painting 65.69%, Office Caltech 77.68% (other domains much higher). 70 art misclass all conf >= 0.85, concentrated on person<->dog<->horse<->guitar.
+- Must-solve bottleneck: Shared classifier dilutes outlier-domain decision boundary by majority preference.
+- Non-goals: No backbone change, no new trainable modules, no inference-time tricks, no per-sample sas.
+- Constraints: 3-seed {2,15,333} x R200 x E=1 aligned with FDSE; SC2 single GPU 2-4h/run; code <= 50 lines.
+- Success: art/Caltech +2% AVG Best; other domains drop < 1%; Office overall >= FDSE 90.58.
+
+## Technical Gap
+
+Plan A sas covers only the projection head `semantic_head`. The final FC classifier (1024 -> num_classes) still uses FedAvg and is the only layer deciding the class decision boundary. Outlier clients get personalized feature mapping but no personalized boundary -> feature right, boundary wrong.
+
+Missing mechanism: a signal that decides *which clients should share classification boundaries*. FedROD uses uniform per-client classifier (no conditioning). FedAlign uses classifier personalization + feature alignment (no style signal). **We claim style similarity is the natural routing signal for classifier-boundary sharing.**
+
+Smallest adequate: move `classifier.*` keys into sas_keys -- zero new parameters, ~30 lines.
+
+Core claim: *Style similarity is the natural routing signal for sharing classification decision boundaries; classifier-level personalization is the minimal sufficient granularity under style-driven outlier domains.*
+
+## Method Thesis
+
+- One-sentence thesis: **Style similarity is the right routing signal for deciding which clients should share classification decision boundaries**, realized by extending style-aware aggregation from the semantic projection head alone to the full head chain (projection + classifier), with zero new trainable components.
+- Why smallest adequate: server-side pack() change, ~30 lines, no new modules / losses / augmentations.
+- Why timely: FedROD (ICLR 23), FedAlign (CVPR Workshop 25), DualFed already established per-client classifier as pFL. Our contribution: **conditioning the classifier personalization on style similarity**, not uniform/random.
+
+## Contribution Focus
+
+- Dominant contribution: Style-conditioned classifier routing (sas-FH).
+- Optional supporting contribution: **NONE**. (The former granularity sweep is absorbed into Claim 1 counterfactuals; not a parallel contribution.)
+- Explicit non-contributions: No novelty claim on classifier personalization itself (FedROD did), no MixStyle / SupCon / focal loss, no BN strategy change, no per-sample / multi-centroid aggregation.
+
+## Proposed Method
+
+### Complexity Budget
+- Frozen / reused: Plan A architecture, style_proto extraction, FedBN BN-local, L_orth, sas softmax, all hyperparameters.
+- Changed: server pack() aggregation path for `classifier.weight/bias` -- from FedAvg to sas-personalized.
+- New trainable components: **0**.
+- Intentionally excluded: per-client sas_tau, style_head personalization, backbone sas, encoder last-block sas, multi-centroid (different paper).
+
+### System Overview
+
+Client i: encoder(x) -> h; h -> sem_head -> z_sem -> head -> logits; h -> style_head -> z_sty -> style_proto. Local SGD with CE + L_orth. Upload encoder/sem_head/style_head/head/style_proto.
+
+Server: maintains client_sem_states[j], client_head_states[j] [NEW], client_style_protos[j]. For target client i: w_ij = softmax(cos(sp_i, sp_j)/tau); per_sem_i = sum_j w_ij * sem_state[j]; per_head_i = sum_j w_ij * head_state[j] [NEW]; encoder/style_head/BN via standard FedAvg. Send personalized (encoder, sem_head_i, head_i) to client i.
+
+### Core Mechanism
+
+- Change: `sas_keys = [k for k in global_dict if k.startswith('semantic_head.') or k.startswith('head.')]`
+- Aggregation rule unchanged: w_ij = softmax(cos(sp_i, sp_j)/sas_tau); per_param_i[k] = sum_j w_ij * client_state[j][k] for k in sas_keys.
+- Client-side training unchanged.
+
+### Modern Primitive Usage
+NONE. Confirmed appropriate by R1 review.
+
+### Integration into Pipeline
+File: `FDSE_CVPR25/algorithm/feddsa_scheduled.py` pack() method. Config flag `sas=2` (0=off, 1=sem-only, 2=sem+head).
+
+### Training Plan
+Single-stage joint training (same as Plan A). Office-Caltech10 c4 main; PACS c4 negative-control only. CE + lambda_orth * L_orth. R200 E=1 B=50 LR=0.05 decay 0.9998. Seeds {2,15,333}.
+
+### Failure Modes and Diagnostics
+- Failure 1: Caltech no gain -> use Claim 2 swap diagnostic to diagnose; if swap also shows no effect -> classifier not bottleneck -> halt.
+- Failure 2: training unstable (drop > 3%) -> retry tau=0.5.
+
+### Novelty and Elegance Argument
+Closest work: FedROD (uniform per-client classifier), FedAlign (classifier + feature alignment), FedDSA Plan A (sas on sem_head only). Exact difference: **style similarity as the conditioning signal for classifier sharing** -- not uniform, not feature-alignment-coupled, not just-projection-head. Paper story (1 sentence): "Style similarity is the natural conditioning signal for sharing classification decision boundaries under domain heterogeneity."
+
+## Claim-Driven Validation Sketch
+
+### Claim 1 (Main): sas-FH improves outlier domain (Caltech) on outlier-heavy Office, AND style conditioning is the decisive factor (isolated by counterfactuals)
+
+Configurations:
+- B0 = EXP-083: sas=0 (baseline)
+- B1 = EXP-084: sem_head sas, classifier FedAvg (Plan A)
+- **A2 = sas-FH (ours)**: sem_head sas + classifier sas
+- **C1 counterfactual**: sem_head sas + classifier fully local (per-client, no sharing)
+- **C2 counterfactual (CRITICAL)**: sem_head sas + classifier uniform per-client (FedROD-style, no style conditioning)
+
+Experiment: Office-Caltech10 c4 x R200 x E=1.
+- A2: 3-seed {2,15,333}
+- C1, C2: 1 seed (s=2) first, extend only if A2 succeeds
+- B0, B1: already have 3-seed data
+
+Decisive comparisons:
+- A2 > B1 (full-head > half-head)
+- A2 > C1 (classifier should share, not fully local)
+- A2 > C2 (style conditioning > uniform: the CORE novelty test)
+
+Metric: AVG Best / AVG Last / per-domain Caltech Best/Last.
+Expected: A2 Caltech >= 77 (EXP-084 75.0 + 2); AVG >= 90.5, beating FDSE 90.58; C1/C2 < A2 by 0.5-1.5%.
+
+### Claim 2 (Mechanism Diagnostic, zero-training): feature right, boundary wrong
+
+Load A2 R150 best checkpoint. For each client i:
+- Condition (a): personalized encoder + personalized sem_head + personalized head_i
+- Condition (b): personalized encoder + personalized sem_head + **global FedAvg** head
+
+Predicted signature:
+- Caltech: (a) > (b) by >= 2%
+- Other Office domains: (a) ~ (b), delta < 0.5%
+
+If signature holds: direct proof that classifier sharing hurts outlier specifically, localized to the head layer.
+If (a) ~ (b) on Caltech too: thesis falsified -> halt.
+
+### Claim 3 (Negative Control / Scope Boundary): PACS demonstrates mechanism limits
+
+PACS c4 3-seed, OPTIONAL (only if Office A2 wins). Predicted: AVG Best <= 79.76 (EXP-086 Plan A). Interpretation: PACS 4 domains are mutual outliers, so there is no majority reference for the outlier to borrow from. Paper positioning: "Our mechanism's scope boundary."
+
+## Experiment Handoff Inputs
+- Must-prove: Claim 1 A2 >= B1; Claim 2 signature holds.
+- Must-isolate: Claim 1 A2 > C1 and A2 > C2 (this is the paper's core novelty test).
+- Critical: Office-Caltech10 c4 AVG Best, Caltech Best/Last.
+
+## Compute & Timeline
+
+| Experiment | Runs | Per run | Total |
+| --- | --- | --- | --- |
+| Claim 1 A2 x 3-seed (Office) | 3 | 2h | 6h |
+| Claim 1 C1, C2 x 1-seed (Office) | 2 | 2h | 4h |
+| Claim 2 swap diagnostic | 1 | 0.5h | 0.5h |
+| Claim 3 PACS A2 x 3-seed (optional) | 3 | 3.5h | 10.5h |
+| **Must-run** | 6 | | **~10.5h** |
+| **Full (incl. PACS control)** | 9 | | ~21h |
+
+Critical path: Office A2 s=2 single seed 2h -> if Caltech >= 77 extend to 3-seed + 2 counterfactuals.
+
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score the same 7 dimensions and overall.
+- State whether the Problem Anchor is preserved or drifted.
+- State whether the dominant contribution is now sharper or still too broad.
+- State whether the method is simpler or still overbuilt.
+- State whether the frontier leverage is now appropriate or still old-school/forced.
+- Focus new critiques on missing mechanism, weak training signal, weak integration point, pseudo-novelty, or unnecessary complexity.
+- Use the same verdict rule: READY only if overall >= 9 and no blocking issue remains.
+
+Same output format: 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items.

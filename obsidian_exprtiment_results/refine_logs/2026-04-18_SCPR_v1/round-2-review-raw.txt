@@ -1,0 +1,430 @@
+OpenAI Codex v0.117.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-18_SCPR_v1
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019da01c-b0bf-7ff2-8739-f9278b9664d2
+--------
+user
+[Round 2 re-evaluation]
+
+I revised the proposal based on your Round 1 feedback.
+First, please check whether the original Problem Anchor is still preserved.
+Second, please judge whether the method is now more concrete, more focused, and more current.
+
+Key changes applied in Round 2:
+
+1. [CRITICAL fix] Collapsed the two competing mainlines (retrieved-mean vs weighted multi-positive) into a SINGLE canonical algorithm: **Self-Masked Style-Weighted Multi-Positive InfoNCE (SCPR)**, built directly on the existing M3 code path. Retrieved-mean branch deleted entirely. Now uniform w truly reduces to M3 (as you recommended), not to FedProto.
+
+2. [IMPORTANT fix] Self-mask (j != i) is now the DEFAULT design, not an ablation. `w_{i->i} = 0` by construction, preventing Share from collapsing into FedBN-like self-only behavior.
+
+3. [IMPORTANT fix] Frozen three interface decisions:
+   (a) Style key = `style_proto_k` from z_sty space (reusing SAS/EXP-084 interface; no competing (mu, sigma) raw key).
+   (b) Bank update: clients upload `(style_proto, class_protos)` every round during `pack()`; server overwrites bank in `iterate()`.
+   (c) Missing class handling: per-class renormalize `w_{i->j}^c` only over clients j != i with p_c^j present; if |A_i^c| = 0, set SCPR loss = 0 for that sample (CE-only fallback).
+
+4. [IMPORTANT] Dropped SCPR+SAS from main claims. It is now a SINGLE appendix composability check on Office (1 config x 3 seeds), NOT part of headline contributions.
+
+5. [IMPORTANT] Dropped `cos_sim(grad_CE, grad_InfoNCE)` gradient-conflict monitoring. Kept only `H(w_k)` attention entropy as a lightweight diagnostic for attention collapse (used for a single figure in the paper, not a training signal).
+
+6. [MINOR] Rewrote the "strict generalization" claim to ONE statement only: uniform w (tau -> infinity) strictly reduces to M3 domain-aware multi-positive InfoNCE. Removed the "also generalizes FedProto" claim, which was inconsistent.
+
+7. Narrowed main claims to 3 points:
+   - Claim A: PACS full-outlier regime — SCPR > M3 uniform
+   - Claim B: Office single-outlier regime — SCPR >= SAS (without parameter personalization)
+   - Claim C: tau_SCPR sensitivity + attention health
+
+=== REVISED PROPOSAL ===
+
+# Research Proposal Round 1: Self-Masked Style-Weighted Multi-Positive InfoNCE (SCPR)
+
+## Problem Anchor (preserved verbatim)
+
+- Bottom-line: Cross-domain FL where clients hold different visual styles; existing prototype alignment averages per-class prototypes globally and broadcasts, diluting outlier-domain clients (Caltech, Sketch).
+- Must-solve:
+  1. Global-mean prototype washes out style → outlier clients lose their structure.
+  2. SAS (param-space routing) succeeds on Office single-outlier (+1.21%) but fails on PACS full-outlier (-0.65%) because param-space softmix degenerates to FedBN-local (EXP-086).
+  3. FedDSA "Share" block never worked: EXP-059 (z_sem AdaIN) broke PACS -2.54%; EXP-078d (h-space AdaIN -> InfoNCE) NaN.
+- Non-goals: no style-as-augmentation, no classifier personalization, no auxiliary losses, no architecture changes, no new trainable components.
+- Constraints: ResNet-18 / AlexNet, FedBN, R=200, 3 seeds, orthogonal decouple kept, InfoNCE target is the ONLY thing that changes.
+- Success: PACS AVG Best 3-seed mean >= 81.5% (beat M3 isolated 81.91%), Office AVG Best >= 90.5% (beat SAS 89.82%), drop <= 2%, <100 LOC, 0 new trainable.
+
+## Technical Gap
+
+No existing method uses "client style as retrieval key" over "domain-indexed class prototypes as values" in the decoupled representation space. Prior alternatives either erase style (FDSE/FedSeProto/FedDP), keep style local (FedSTAR/FedBN), do AdaIN in mixed space (FISC/PARDON, disproved for us in EXP-059), or route in parameter space (SAS, fails on PACS full-outlier).
+
+## Method Thesis
+
+Replace M3's equal-weighted multi-positive InfoNCE positives with style-conditioned weights, and self-mask (j != i) so Share never collapses to self-only. This is the smallest adequate change to close FedDSA's Share gap.
+
+## Contribution Focus
+
+- SINGLE main contribution: Self-Masked Style-Weighted Multi-Positive InfoNCE (SCPR).
+- Appendix composability check: SCPR + SAS on Office (NOT a main claim).
+- Explicit non-contributions: no style-as-training-data, no param routing, no new loss terms.
+
+## Proposed Method
+
+### Complexity Budget
+- Backbone / sem_head / style_head / classifier / BN: reused (frozen).
+- Orthogonal decouple (cos^2 + HSIC): reused (Plan A).
+- Style bank (z_sty per-client proto): reused from SAS/EXP-084.
+- Class-proto bank (per-(class, client)): reused from M3/EXP-072.
+- New: SCPR attention function (~20 LOC) + self-mask & per-class renormalize (~10 LOC).
+- New trainable components: 0. New loss terms: 0. New hyperparameters: 1 (tau_SCPR, default 0.3 inherited from SAS).
+
+### Core Mechanism — Self-Masked Style-Weighted Multi-Positive InfoNCE
+
+Setup (matches M3 up to weight choice):
+- Sample (x_i, y_i=c) on client k, z_i = sem_head(backbone(x_i))
+- Server provides {p_c^j}_{c=1..C, j=1..K} and {style_proto_j}_{j=1..K}
+
+Self-masked style attention:
+  g_kj = cos(style_proto_k, style_proto_j),  j = 1..K
+  raw_j = exp(g_kj / tau_SCPR) * 1[j != k]            # self-mask
+
+Per-class renormalize (handle missing class):
+  A_k^c = { j : j != k, p_c^j exists }
+  w_{k->j}^c = raw_j / sum_{l in A_k^c} raw_l    if j in A_k^c
+  w_{k->j}^c = 0                                  otherwise
+
+SCPR loss (for sample z_i with y_i = c, on client k):
+  L_SCPR(z_i)
+    = - sum_{j in A_k^c} w_{k->j}^c * log [
+          exp(sim(z_i, p_c^j) / tau_nce)
+          / ( exp(sim(z_i, p_c^j) / tau_nce)
+              + sum_{c' != c, l in A_k^{c'}} exp(sim(z_i, p_{c'}^l) / tau_nce) )
+        ]
+
+All p_c^j and style_proto_j are detached (soft anchors).
+
+### Mathematical properties (kept to ONE)
+
+- tau_SCPR -> infinity: w_{k->j}^c = 1/|A_k^c| -> strictly reduces to M3 domain-aware multi-positive InfoNCE (verified +5.09% on PACS).
+- tau_SCPR -> 0: one-hot to argmax_{j != k} cos(s_k, s_j), i.e., nearest-style single positive.
+- Self-mask: Share path never uses self prototype, so w_kk is always 0.
+
+### Warmup handling
+
+- Round < warmup (50): bank not yet stable; fallback to uniform w (== M3 equal multi-pos == tau -> infinity branch).
+- Round >= warmup: full SCPR.
+- Bank update: clients upload style_proto & class_proto in pack(); server overwrites bank in iterate().
+
+### Failure modes & fallbacks
+
+| Failure | Signal | Fallback |
+|---------|--------|----------|
+| Attention uniform collapse | H(w_k) > 0.95 * log(K-1) for >20 rounds | L2-normalize style key and re-project (still no new param) |
+| NaN / numerical instability | loss NaN | tau_SCPR 0.3 -> 1.0 |
+| PACS < M3 | 3-seed AVG Best < 81.91% | check self-mask & attention entropy |
+| A_k^c empty | no other client has class c | set L_SCPR = 0 for that sample (CE-only fallback) |
+
+Built-in safety: uniform-w case is strictly M3 (+5.09%). Worst-case recovery bound holds mathematically.
+
+### Novelty & elegance
+
+- Single mechanism (self-masked style-weighted multi-positive InfoNCE), 0 new params, <100 LOC.
+- Math: uniform w = M3, tau -> 0 = nearest-style share; no ambiguous generalization claims.
+- First method to sit in the (Decouple, Style-share) cell of the 2x2 matrix.
+- Closes the FedDSA Share narrative with mechanism-level contribution.
+
+## Claim-Driven Validation Sketch (narrowed)
+
+### Claim A (main) — PACS full-outlier: SCPR > M3 uniform
+
+- Configs:
+  A.1 FedDSA orth_only (Plan A baseline, 80.41%)
+  A.2 + M3 domain-aware multi-pos (= SCPR uniform attention lower bound)
+  A.3 + SCPR (tau_SCPR = 0.3, self-mask)
+- Metric: 3-seed mean AVG Best / Last / per-domain (Art, Sketch)
+- Expect A.3 >= A.2 + 0.5%, A.3 >= 81.5%
+- Decisive: A.3 < A.2 falsifies style-weighted > uniform
+
+### Claim B (main) — Office single-outlier: SCPR >= SAS without param personalization
+
+- Configs:
+  B.1 FedDSA orth_only
+  B.2 + SAS (param-space routing, 89.82%)
+  B.3 + SCPR (prototype-layer routing)
+- Metric: 3-seed mean AVG Best / Last / Caltech-specific
+- Expect B.3 >= B.2 (prototype layer >= param layer)
+- Decisive: demonstrates universality (SCPR works on both PACS and Office; SAS does not)
+
+### Claim C (mechanism) — tau_SCPR sensitivity & attention health
+
+- PACS 3-seed, tau in {0.1, 0.3, 1.0, 3.0}
+- Record H(w_k), per-client attention heatmap
+- Expect optimal tau in [0.3, 1.0], H(w) not at boundaries
+
+### Appendix (NOT main claim) — SCPR + SAS composability
+
+- Office, 1 config x 3 seeds
+- Only answers "are prototype-layer and param-layer routing orthogonal?"
+- Not in headline
+
+## Experiment Handoff Inputs
+
+- Must-prove claims: A, B, C
+- Must-run ablations: M3 (uniform lower bound), tau sweep, unit tests for self-mask / missing-class renorm / warmup fallback
+- Critical metrics: PACS AVG Best/Last + per-domain (Art, Sketch), Office AVG Best/Last + Caltech
+- Highest-risk assumptions:
+  1. style_proto separability with 4-5 clients (if H(w) at log(K-1), downgrade key)
+  2. SCPR >= M3 (else falsified)
+  3. Warmup fallback does not destabilize training
+
+## Compute & Timeline
+
+- Main: 9 (PACS) + 9 (Office) + 12 (tau sweep) = 30 runs, ~54 GPU-hours
+- Appendix: 3 runs, ~6 GPU-hours
+- Total: ~60 GPU-hours, 3 days compute, 5 days end-to-end
+
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score the same 7 dimensions and overall.
+- State whether the Problem Anchor is preserved or drifted.
+- State whether the dominant contribution is now sharper or still too broad.
+- State whether the method is simpler or still overbuilt.
+- State whether the frontier leverage is now appropriate or still forced.
+- Focus new critiques on missing mechanism, weak training signal, weak integration point, pseudo-novelty, or unnecessary complexity.
+- Use the same verdict rule: READY only if overall score >= 9 AND no blocking issue remains.
+
+Output format (same as Round 1):
+- 7 dimension scores (1-10)
+- Overall score (1-10, weighted)
+- For each dimension < 7: specific weakness, concrete method-level fix, priority (CRITICAL/IMPORTANT/MINOR)
+- Simplification Opportunities (1-3 or NONE)
+- Modernization Opportunities (1-3 or NONE)
+- Drift Warning (NONE or explain)
+- Verdict (READY / REVISE / RETHINK)
+- Reviewer summary (2-3 sentences)
+
+Please output in English.
+
+codex
+I’m applying the `code-review-excellence` skill again, using it as a structured method review rather than a source-code review. I’m checking three things in order: whether the anchor is still intact, whether the canonical algorithm is now truly singular and implementable, and whether any remaining weakness is core or just paper-shaping.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content -Path 'C:/Users/31279/.agents/skills/code-review-excellence/SKILL.md' -TotalCount 120" in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-18_SCPR_v1
+ succeeded in 887ms:
+---
+name: code-review-excellence
+description: Master effective code review practices to provide constructive feedback, catch bugs early, and foster knowledge sharing while maintaining team morale. Use when reviewing pull requests, establishing review standards, or mentoring developers.
+---
+
+# Code Review Excellence
+
+Transform code reviews from gatekeeping to knowledge sharing through constructive feedback, systematic analysis, and collaborative improvement.
+
+## When to Use This Skill
+
+- Reviewing pull requests and code changes
+- Establishing code review standards for teams
+- Mentoring junior developers through reviews
+- Conducting architecture reviews
+- Creating review checklists and guidelines
+- Improving team collaboration
+- Reducing code review cycle time
+- Maintaining code quality standards
+
+## Core Principles
+
+### 1. The Review Mindset
+
+**Goals of Code Review:**
+
+- Catch bugs and edge cases
+- Ensure code maintainability
+- Share knowledge across team
+- Enforce coding standards
+- Improve design and architecture
+- Build team culture
+
+**Not the Goals:**
+
+- Show off knowledge
+- Nitpick formatting (use linters)
+- Block progress unnecessarily
+- Rewrite to your preference
+
+### 2. Effective Feedback
+
+**Good Feedback is:**
+
+- Specific and actionable
+- Educational, not judgmental
+- Focused on the code, not the person
+- Balanced (praise good work too)
+- Prioritized (critical vs nice-to-have)
+
+```markdown
+❌ Bad: "This is wrong."
+✅ Good: "This could cause a race condition when multiple users
+access simultaneously. Consider using a mutex here."
+
+❌ Bad: "Why didn't you use X pattern?"
+✅ Good: "Have you considered the Repository pattern? It would
+make this easier to test. Here's an example: [link]"
+
+❌ Bad: "Rename this variable."
+✅ Good: "[nit] Consider `userCount` instead of `uc` for
+clarity. Not blocking if you prefer to keep it."
+```
+
+### 3. Review Scope
+
+**What to Review:**
+
+- Logic correctness and edge cases
+- Security vulnerabilities
+- Performance implications
+- Test coverage and quality
+- Error handling
+- Documentation and comments
+- API design and naming
+- Architectural fit
+
+**What Not to Review Manually:**
+
+- Code formatting (use Prettier, Black, etc.)
+- Import organization
+- Linting violations
+- Simple typos
+
+## Review Process
+
+### Phase 1: Context Gathering (2-3 minutes)
+
+```markdown
+Before diving into code, understand:
+
+1. Read PR description and linked issue
+2. Check PR size (>400 lines? Ask to split)
+3. Review CI/CD status (tests passing?)
+4. Understand the business requirement
+5. Note any relevant architectural decisions
+```
+
+### Phase 2: High-Level Review (5-10 minutes)
+
+```markdown
+1. **Architecture & Design**
+   - Does the solution fit the problem?
+   - Are there simpler approaches?
+   - Is it consistent with existing patterns?
+   - Will it scale?
+
+2. **File Organization**
+   - Are new files in the right places?
+   - Is code grouped logically?
+   - Are there duplicate files?
+
+3. **Testing Strategy**
+   - Are there tests?
+   - Do tests cover edge cases?
+   - Are tests readable?
+```
+
+### Phase 3: Line-by-Line Review (10-20 minutes)
+
+
+codex
+1. **Problem Fidelity: 9/10**  
+Still anchored on the original bottleneck: global prototype averaging dilutes outlier-domain structure, and the only substantive change remains the InfoNCE target construction. The self-mask strengthens fidelity because it prevents the method from quietly reverting to local-only behavior.
+
+2. **Method Specificity: 8/10**  
+This is now concrete enough to implement: canonical loss fixed, interfaces frozen, bank update timing specified, self-mask specified, missing-class fallback specified, warmup specified. The only remaining softness is that the final paper should define `style_proto_k` computation and normalization explicitly, not just “reuse SAS interface.”
+
+3. **Contribution Quality: 8/10**  
+Much better. There is now one dominant mechanism-level contribution instead of two competing ones. Deleting retrieved-mean was the right decision. The remaining ceiling is that the delta over M3 is still a weighting operator, so the contribution will be judged by how cleanly it resolves the anchored failure mode and how clearly it beats uniform weighting.
+
+4. **Frontier Leverage: 9/10**  
+Appropriate and unforced. This uses an attention-style retrieval primitive exactly where it is natural, without bolting on LLM/VLM/Diffusion/RL components that would change the problem.
+
+5. **Feasibility: 9/10**  
+High. Reusing the M3 code path and SAS style bank makes the implementation small and realistic under the stated compute and architecture constraints.
+
+6. **Validation Focus: 9/10**  
+Now tight. The main claims are minimal and aligned with the method. Moving `SCPR+SAS` to appendix was correct.
+
+7. **Venue Readiness: 7/10**  
+This now looks like a plausible top-venue mechanism paper rather than a sprawling system. The remaining risk is pseudo-novelty perception: if the gain over uniform M3 is small or unstable, reviewers may still view it as a clean reweighting trick rather than a sufficiently sharp new `Share` operator.
+
+**Overall Score: 8.4/10**
+
+**Problem Anchor:** Preserved. No drift.  
+**Dominant Contribution:** Sharper. Now one clear mechanism.  
+**Method Size:** Simpler, near-minimal.  
+**Frontier Leverage:** Appropriate, not forced.
+
+**For each dimension < 7**  
+NONE.
+
+**Simplification Opportunities**
+- Treat warmup as an implementation guard, not a named conceptual component. If it is not needed after a pilot run, delete it from the main method.
+- Move the `A_k^c = empty => L_SCPR = 0` rule to an implementation note or appendix unless partial-class absence actually occurs in PACS/Office.
+- Use one symbol for the style key throughout, e.g. `s_k = style_proto_k`, and keep the operator definition entirely in that notation.
+
+**Modernization Opportunities**
+- NONE.
+
+**Drift Warning**
+- NONE.
+
+**Verdict**
+- REVISE
+
+**Reviewer summary**  
+This is materially stronger than Round 1. The anchor is preserved, the method is now singular and implementable, and the use of a modern attention-style primitive is appropriate rather than trendy. The remaining issue is not complexity but sharpness: top-venue success will depend on whether style-weighted positives produce a clear, repeatable win over uniform M3, not merely a tidy reformulation.
+tokens used
+42,862
+1. **Problem Fidelity: 9/10**  
+Still anchored on the original bottleneck: global prototype averaging dilutes outlier-domain structure, and the only substantive change remains the InfoNCE target construction. The self-mask strengthens fidelity because it prevents the method from quietly reverting to local-only behavior.
+
+2. **Method Specificity: 8/10**  
+This is now concrete enough to implement: canonical loss fixed, interfaces frozen, bank update timing specified, self-mask specified, missing-class fallback specified, warmup specified. The only remaining softness is that the final paper should define `style_proto_k` computation and normalization explicitly, not just “reuse SAS interface.”
+
+3. **Contribution Quality: 8/10**  
+Much better. There is now one dominant mechanism-level contribution instead of two competing ones. Deleting retrieved-mean was the right decision. The remaining ceiling is that the delta over M3 is still a weighting operator, so the contribution will be judged by how cleanly it resolves the anchored failure mode and how clearly it beats uniform weighting.
+
+4. **Frontier Leverage: 9/10**  
+Appropriate and unforced. This uses an attention-style retrieval primitive exactly where it is natural, without bolting on LLM/VLM/Diffusion/RL components that would change the problem.
+
+5. **Feasibility: 9/10**  
+High. Reusing the M3 code path and SAS style bank makes the implementation small and realistic under the stated compute and architecture constraints.
+
+6. **Validation Focus: 9/10**  
+Now tight. The main claims are minimal and aligned with the method. Moving `SCPR+SAS` to appendix was correct.
+
+7. **Venue Readiness: 7/10**  
+This now looks like a plausible top-venue mechanism paper rather than a sprawling system. The remaining risk is pseudo-novelty perception: if the gain over uniform M3 is small or unstable, reviewers may still view it as a clean reweighting trick rather than a sufficiently sharp new `Share` operator.
+
+**Overall Score: 8.4/10**
+
+**Problem Anchor:** Preserved. No drift.  
+**Dominant Contribution:** Sharper. Now one clear mechanism.  
+**Method Size:** Simpler, near-minimal.  
+**Frontier Leverage:** Appropriate, not forced.
+
+**For each dimension < 7**  
+NONE.
+
+**Simplification Opportunities**
+- Treat warmup as an implementation guard, not a named conceptual component. If it is not needed after a pilot run, delete it from the main method.
+- Move the `A_k^c = empty => L_SCPR = 0` rule to an implementation note or appendix unless partial-class absence actually occurs in PACS/Office.
+- Use one symbol for the style key throughout, e.g. `s_k = style_proto_k`, and keep the operator definition entirely in that notation.
+
+**Modernization Opportunities**
+- NONE.
+
+**Drift Warning**
+- NONE.
+
+**Verdict**
+- REVISE
+
+**Reviewer summary**  
+This is materially stronger than Round 1. The anchor is preserved, the method is now singular and implementable, and the use of a modern attention-style primitive is appropriate rather than trendy. The remaining issue is not complexity but sharpness: top-venue success will depend on whether style-weighted positives produce a clear, repeatable win over uniform M3, not merely a tidy reformulation.

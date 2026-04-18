@@ -1,0 +1,33 @@
+# EXP-095 Claim C — PACS SCPR τ sweep: τ_SCPR=3.0 (near uniform → approaches M3)
+algo_para:
+- 1.0
+- 0.0
+- 1.0
+- 0.2
+- 5
+- 128
+- 0
+- 60
+- 30
+- 80
+- 10
+- 1.0
+- 0.25
+- 1
+- 0
+- 0.3
+- 2
+- 3.0    # scpr_tau = 3.0 (near uniform)
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

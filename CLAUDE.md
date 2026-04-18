@@ -851,6 +851,19 @@ D:\桌面文件\联邦学习\obsidian_exprtiment_results\
 5. **结论**：一句话判断（有效/无效/部分有效）+ 原因分析
 6. 最重要的比如要有`YYYY-MM-DD`的日期说明你是什么时候创建的！！！！非常重要
 
+#### 18.3.1 NOTE.md 语言风格（强制）
+
+**写给自己看的实验笔记，不是给审稿人看的学术文档。**
+
+- ✅ 用大白话描述做了什么：「把分类器也按风格加权」「只个性化特征映射层，分类器还是全局平均」
+- ❌ 不要堆学术黑话：~~counterfactual baseline~~ → 「对照实验」；~~thesis falsified~~ → 「假设不成立」；~~routing signal~~ → 「按什么标准分配」
+- ✅ 配置表用「xx 怎么聚合」这种白话列名，不要 "style-conditioned aggregation scope"
+- ✅ 结论直接说「分类器不该个性化」「τ=0.3 还是最好」，不要包装成 "negative result validates the mechanism hypothesis"
+- ✅ 失败实验直接写「❌ 失败」+ 用一两句话说为什么失败，不要写一大段 "this constitutes an important contribution as..."
+- ❌ 不要在 NOTE.md 里放论文级别的 claim-driven validation sketch、decision rule 公式、reviewer 评审记录等（这些放 refine-logs）
+- ✅ 表格标题用中文（「各域准确率」而非 "per-domain accuracy"），技术术语（sas、FedAvg、sem_head、L_orth 等）保留英文
+- ✅ **每个结果表必须带对照行 + Δ 行**：第一行放对照基线（如方案A），第二行放本实验结果，第三行放 Δ（差值）。一眼看出比基线好还是差。不要让读者自己翻到别的表格找对照数字
+
 ### 18.4 查看实验进度时的同步要求
 
 **当用户让我查看实验进度时，必须同时**：
