@@ -1,0 +1,269 @@
+Reading prompt from stdin...
+OpenAI Codex v0.117.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: high
+reasoning summaries: none
+session id: 019d9ebd-235a-7ae3-9dbc-739cc40b9995
+--------
+user
+Round 4 re-evaluation.
+
+Changes from R3:
+
+1. **Blocking fix** (R3 reviewer's only remaining blocker): C2 is now UNCONDITIONALLY escalated to 3-seed when A2 is escalated. No margin-based exemption. Decision rule simplified:
+   - Triage single-seed s=2 on A2/C1/C2
+   - If `AVG_Best(A2) − max(AVG_Best(B1), AVG_Best(C2)) ≥ 0.5`: both A2 AND C2 escalate to 3-seed {2, 15, 333}
+   - If < 0.5: halt
+
+2. Statistics framing: primary reporting = 3-seed mean ± std, per-seed Δ, effect size; paired t-test supplementary with n=3 caveat. Require A2 > C2 on all 3 seeds to claim "confirmed".
+
+3. `S` participation set: both A2 and C2 use identical S_t per round (in Office c4 with proportion=1.0, S_t = {0,1,2,3} always). Spelled out in aggregation rule.
+
+4. Claim 3 matrix heatmap demoted from independent claim to "Mechanism Evidence (supplementary to Claim 2)". Qualitative expectation ("Caltech more self-concentrated than others"), no quantitative threshold.
+
+5. C1 labeled "secondary, 1-seed" — budget priority: A2 and C2 first.
+
+=== REVISED PROPOSAL ===
+
+# Research Proposal: Style-Conditioned Classifier Routing for Outlier-Domain Recovery in Federated Domain Generalization
+
+## Problem Anchor
+
+- Bottom-line problem: FedDSA Plan A fails on outlier domains. PACS art 65.69%, Office Caltech 77.68%. 70 art misclass all conf >= 0.85.
+- Must-solve bottleneck: Shared classifier dilutes outlier-domain decision boundary.
+- Non-goals: No backbone change; no new trainable modules; no inference tricks; no per-sample sas.
+- Constraints: 3-seed {2,15,333} x R200 x E=1 aligned with FDSE; SC2 single GPU 2-4h/run; code <= 50 lines; comparable with EXP-083/084/086.
+- Success: Caltech +2% AVG Best; other domains drop < 1%; Office AVG Best >= FDSE 90.58.
+
+## Technical Gap
+
+Plan A sas only covers `semantic_head`; classifier `head` uses FedAvg. Outlier clients get personalized features but all share one decision plane -> feature right, boundary wrong.
+
+Missing mechanism: a signal that decides *which clients should share classification boundaries*. FedROD = uniform per-client classifier. FedAlign = classifier personalization + feature alignment (no style signal). We claim **style similarity is the natural routing signal for classifier-boundary sharing**.
+
+Smallest adequate: move `classifier.*` into sas_keys. Zero new parameters.
+
+## Method Thesis
+
+One-sentence: **Under style heterogeneity, the key federated-learning question at the classifier layer is not whether to personalize but how to route the sharing, and style similarity is the natural routing signal.**
+
+Realization: extend FedDSA Plan A's sas from `semantic_head` to the full head chain (projection + classifier).
+
+## Contribution Focus
+
+Dominant: Style-conditioned classifier routing (sas-FH). Supporting: NONE.
+
+## Proposed Method
+
+### Config switch (sas flag 0..4)
+
+- sas=0: baseline no sas (B0 = EXP-083)
+- sas=1: sem_head sas only, classifier FedAvg sample-weighted (B1 = Plan A = EXP-084)
+- sas=2: sem_head + classifier, both style-conditioned (OURS, A2)
+- sas=3: sem_head sas + classifier uniform-avg (C2)
+- sas=4: sem_head sas + classifier fully local (C1)
+
+### Aggregation (for k in sas_keys, identical participation set S_t per round)
+- A2: per_param_i[k] = sum_{j in S_t} w_ij * client_state[j][k], w_ij = softmax(cos(sp_i, sp_j)/sas_tau)
+- C2: per_param_i[k] = (1/|S_t|) * sum_{j in S_t} client_state[j][k]  -- same head for every i
+- C1: per_param_i[k] = client_state[i][k]  -- local only
+
+Office c4 proportion=1.0 so S_t = {0,1,2,3} for all rounds. A2 and C2 aggregate over the exact same participation set; only the weighting differs.
+
+Client-side training unchanged: CE + lambda_orth * L_orth.
+
+### Integration
+FDSE_CVPR25/algorithm/feddsa_scheduled.py pack(). sas flag extended to 0..4. ~40 lines incl. branches and unit tests.
+
+### Training
+R200 E=1 B=50 LR=0.05 decay=0.9998. Seeds {2,15,333}. Office-Caltech10 c4 main; PACS c4 appendix-only.
+
+### Failure Modes
+- Caltech no gain -> Claim 2 swap diagnostic; if swap null -> halt.
+- Training instability -> sas_tau=0.5 retry.
+
+### Modern Primitive Usage
+NONE.
+
+### Novelty
+vs FedROD: style conditioning, not uniform. vs FedAlign: no feature alignment added. vs Plan A: covers full head chain, framed as routing problem.
+
+Paper story: "Classifier aggregation in federated DG is a routing problem, not a scope problem. Style similarity provides the routing."
+
+## Claim-Driven Validation
+
+### Claim 1 (Main): A2 > C2 isolates style routing causality
+
+Configs:
+| ID | sem_head | classifier | seeds |
+| --- | --- | --- | --- |
+| B0 | FedAvg | FedAvg | 3 (existing) |
+| B1 | sas | FedAvg sample-weighted | 3 (existing) |
+| **A2 (ours)** | **sas** | **sas style-conditioned** | **3 (new)** |
+| **C2** | **sas** | **uniform-avg** | **3 (new)** |
+| C1 (secondary) | sas | local-only | 1 |
+
+Triage (single-seed s=2): run A2, C1, C2 pilot.
+
+**Decision rule (no margin-based exemption)**:
+- if `AVG_Best(A2) − max(AVG_Best(B1), AVG_Best(C2)) >= 0.5`: both A2 AND C2 escalate to 3-seed {2,15,333}
+- if < 0.5: halt (falsified)
+
+Statistics:
+- Primary: 3-seed mean ± std + per-seed Δ(A2 − C2) + effect size
+- Secondary (supplementary): paired t-test with n=3 caveat
+- Consistency: A2 > C2 on all 3 seeds required to claim "confirmed"
+
+Metric: AVG Best / AVG Last / per-domain Caltech Best/Last.
+
+Expected: A2 Caltech >= 77 (+2); A2 AVG >= 90.5 (beats FDSE 90.58); A2 − C2 >= 1%.
+
+### Claim 2 (Mechanism Diagnostic, same-round swap, zero training)
+
+Load A2 R149 best-round checkpoint. Retain (i) personalized (encoder_i, sem_head_i, head_i) and (ii) same-round pack-time FedAvg snapshot global_head (server-side intermediate during R149 aggregation).
+
+Per-client swap:
+- (a) (encoder_i, sem_head_i, head_i) on client i test
+- (b) (encoder_i, sem_head_i, global_head) on same test
+
+Same-round guarantee: both heads come from R149; no training-dynamics confound.
+
+Predicted: Caltech (a) > (b) by >= 2%; Amazon/DSLR/Webcam (a) ~ (b), Δ < 0.5%.
+
+### Mechanism Evidence (supplementary to Claim 2): style similarity matrix + routing weights
+
+At A2 R149: extract 4x4 matrices S_ij = cos(sp_i, sp_j) and W_ij = softmax(S/sas_tau). Heatmap.
+
+Qualitative expectation: Caltech row is more self-concentrated than other rows; others are more spread. Exact magnitudes reported as-observed, no quantitative pre-commitment.
+
+### Claim 3 (Appendix, optional): PACS scope boundary
+
+PACS A2 x 3-seed only if Office A2 succeeds. Expected AVG <= EXP-086 Plan A 79.76. Interpretation: no majority reference in PACS -> routing vacuous. Appendix only.
+
+## Compute & Timeline
+
+| Experiment | Runs | Per run | Total |
+| --- | --- | --- | --- |
+| Triage: Office s=2 x {A2, C1, C2} | 3 | 2h | 6h |
+| **Mandatory escalation: A2 + C2 x (s=15, s=333)** | 4 | 2h | 8h |
+| Claim 2 swap + Mechanism matrix viz | — | 0.5h | 0.5h |
+| Claim 3 PACS A2 x 3-seed (optional appendix) | 3 | 3.5h | 10.5h |
+| Must-run (if pass) | 7 | | ~14.5h |
+| Full (incl PACS) | 10 | | ~25h |
+
+=== END REVISED PROPOSAL ===
+
+Please re-score and give a verdict. Decide READY only if overall >= 9 and no blocking issue remains.
+
+Same output format.
+
+codex
+**Anchor Check**
+
+Problem Anchor is preserved. The proposal still attacks the same bottleneck: shared classifier boundaries harming outlier domains under style heterogeneity.
+
+The dominant contribution is now sharp enough. It is clearly a routing claim at the classifier layer, not a generic “personalize more components” story.
+
+The method is simple, not overbuilt. The design is now minimal and internally consistent.
+
+Frontier leverage is appropriate. No foundation-model-era component is missing or obviously better for this anchored problem.
+
+**Scores**
+
+| Dimension | Score | Rationale |
+| --- | --- | --- |
+| 1. Problem Fidelity | 10/10 | Fully preserved and tightly tied to the original bottleneck. |
+| 2. Method Specificity | 10/10 | Update rules, configs, participation set, diagnostics, and integration point are now fully specified. |
+| 3. Contribution Quality | 9/10 | One dominant mechanism, good parsimony, and the novelty is now framed at the right level: routing, not mere scope extension. |
+| 4. Frontier Leverage | 9/10 | Appropriate restraint; no forced FM-era add-ons. |
+| 5. Feasibility | 9/10 | Code footprint, runtime, and protocol all remain credible. |
+| 6. Validation Focus | 9/10 | The core claim is now isolated cleanly, with the right matched counterfactual and a direct mechanism test. |
+| 7. Venue Readiness | 9/10 | If executed cleanly, this now reads like a focused top-venue method paper rather than a loose ablation package. |
+
+**Overall Score: 9.4/10**
+
+**Weaknesses For Scores < 7**
+
+None.
+
+**Drift Warning**
+
+NONE.
+
+**Simplification Opportunities**
+
+NONE.
+
+**Modernization Opportunities**
+
+NONE.
+
+**Remaining Action Items**
+- Save the same-round `global_head` artifact explicitly during `R149` pack so Claim 2 is operationally reproducible.
+- Keep `C2` in the main table with full 3-seed reporting no matter how strong the pilot looks.
+- Make the paper’s main narrative center on `A2 vs C2`; treat `C1`, PACS, and the heatmap as supporting evidence only.
+- Be careful with wording: claim “supported” or “confirmed” from consistent 3-seed superiority and effect sizes, not from the `n=3` t-test alone.
+
+**Verdict**
+
+READY
+
+The earlier blocking issue is fixed. The anchor is preserved, the contribution is focused, the method is minimal, and the validation now matches the claim closely enough for a top-venue early-stage proposal.
+tokens used
+31,663
+**Anchor Check**
+
+Problem Anchor is preserved. The proposal still attacks the same bottleneck: shared classifier boundaries harming outlier domains under style heterogeneity.
+
+The dominant contribution is now sharp enough. It is clearly a routing claim at the classifier layer, not a generic “personalize more components” story.
+
+The method is simple, not overbuilt. The design is now minimal and internally consistent.
+
+Frontier leverage is appropriate. No foundation-model-era component is missing or obviously better for this anchored problem.
+
+**Scores**
+
+| Dimension | Score | Rationale |
+| --- | --- | --- |
+| 1. Problem Fidelity | 10/10 | Fully preserved and tightly tied to the original bottleneck. |
+| 2. Method Specificity | 10/10 | Update rules, configs, participation set, diagnostics, and integration point are now fully specified. |
+| 3. Contribution Quality | 9/10 | One dominant mechanism, good parsimony, and the novelty is now framed at the right level: routing, not mere scope extension. |
+| 4. Frontier Leverage | 9/10 | Appropriate restraint; no forced FM-era add-ons. |
+| 5. Feasibility | 9/10 | Code footprint, runtime, and protocol all remain credible. |
+| 6. Validation Focus | 9/10 | The core claim is now isolated cleanly, with the right matched counterfactual and a direct mechanism test. |
+| 7. Venue Readiness | 9/10 | If executed cleanly, this now reads like a focused top-venue method paper rather than a loose ablation package. |
+
+**Overall Score: 9.4/10**
+
+**Weaknesses For Scores < 7**
+
+None.
+
+**Drift Warning**
+
+NONE.
+
+**Simplification Opportunities**
+
+NONE.
+
+**Modernization Opportunities**
+
+NONE.
+
+**Remaining Action Items**
+- Save the same-round `global_head` artifact explicitly during `R149` pack so Claim 2 is operationally reproducible.
+- Keep `C2` in the main table with full 3-seed reporting no matter how strong the pilot looks.
+- Make the paper’s main narrative center on `A2 vs C2`; treat `C1`, PACS, and the heatmap as supporting evidence only.
+- Be careful with wording: claim “supported” or “confirmed” from consistent 3-seed superiority and effect sizes, not from the `n=3` t-test alone.
+
+**Verdict**
+
+READY
+
+The earlier blocking issue is fixed. The anchor is preserved, the contribution is focused, the method is minimal, and the validation now matches the claim closely enough for a top-venue early-stage proposal.

@@ -1,0 +1,333 @@
+Reading prompt from stdin...
+OpenAI Codex v0.117.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: high
+reasoning summaries: none
+session id: 019d9ebd-235a-7ae3-9dbc-739cc40b9995
+--------
+user
+Round 3 re-evaluation.
+
+Key changes this round (all operational refinements, no structural additions):
+
+1. C2 update rule specified exactly:
+   - C2: per_param_i[k] = (1/|S|) * sum_{j in S} client_state[j][k], same head for all clients
+   - Distinct from B1 (Plan A, sample-weighted FedAvg) and C1 (local, no sync)
+   - Realized via new config flag sas=3; ~10 extra lines in existing sas branch
+
+2. Pre-committed decision rule for C2 3-seed escalation:
+   - Triage: single-seed s=2 for A2 + C1 + C2
+   - If A2 − max(B1, C2) >= 2.0: strong margin, single-seed sufficient
+   - If margin in [0.5, 2.0): escalate A2 + C2 to 3-seed, paired t-test
+   - If margin < 0.5: halt, thesis falsified
+
+3. Claim 2 "same-round" clarification:
+   - global_head is the pack-time FedAvg snapshot at R149, same round as A2 checkpoint
+   - Avoids training-dynamics confound between "personalized" and "shared" head
+
+4. Thesis tightened to meta-framing:
+   - Before: "Style similarity is the right routing signal for sharing classification decision boundaries."
+   - After: "Under style heterogeneity, the key federated-learning question at the classifier layer is not *whether* to personalize but *how to route* the sharing — and style similarity is the natural routing signal."
+
+5. Added Claim 3: style similarity matrix + routing weights for Office at R149 as mechanism visualization (zero extra training, one heatmap).
+
+6. PACS strictly appendix; art_painting removed from success criteria; Office is sole main path.
+
+=== REVISED PROPOSAL ===
+
+# Research Proposal: Style-Conditioned Classifier Routing for Outlier-Domain Recovery in Federated Domain Generalization
+
+## Problem Anchor
+
+- Bottom-line problem: FedDSA Plan A fails on outlier domains. PACS art 65.69%, Office Caltech 77.68%. 70 art misclass all conf >= 0.85, concentrated on person<->dog<->horse<->guitar.
+- Must-solve bottleneck: Shared classifier dilutes outlier-domain decision boundary by majority preference.
+- Non-goals: No backbone change, no new trainable modules, no inference-time tricks, no per-sample sas.
+- Constraints: 3-seed {2,15,333} x R200 x E=1 aligned with FDSE; SC2 single GPU 2-4h/run; code <= 50 lines.
+- Success condition: Caltech +2% AVG Best; other domains drop < 1%; Office AVG Best >= FDSE 90.58. PACS only if Office succeeds.
+
+## Technical Gap
+
+Plan A's sas covers only `semantic_head`; classifier `head` still uses FedAvg. Outlier clients get personalized features but all share one decision plane -> feature right, boundary wrong.
+
+Missing mechanism: a signal that decides *which clients should share classification boundaries*. FedROD uses uniform per-client classifier (no conditioning). FedAlign couples classifier personalization with feature alignment (no style signal). **We claim: style similarity is the natural routing signal for classifier-boundary sharing.**
+
+Smallest adequate: move `classifier.*` into sas_keys. Zero new parameters.
+
+## Method Thesis
+
+- **One-sentence thesis**: Under style heterogeneity, the key federated-learning question at the classifier layer is not *whether* to personalize but *how to route* the sharing — and style similarity is the natural routing signal.
+- Concrete realization: Extend FedDSA Plan A's sas from `semantic_head` to the full head chain (projection + classifier); zero new trainable components.
+- Why timely: FedROD (ICLR 23), FedAlign (CVPR Workshop 25), DualFed established per-client classifier as pFL. Our contribution: **conditioning the classifier personalization on style similarity**.
+
+## Contribution Focus
+
+- Dominant contribution: Style-conditioned classifier routing (sas-FH), framed as a routing problem at the classifier layer.
+- Optional supporting contribution: **NONE**.
+- Explicit non-contributions: No novelty on classifier personalization itself; no MixStyle/SupCon/focal; no BN strategy change; no per-sample / multi-centroid.
+
+## Proposed Method
+
+### Complexity Budget
+- Frozen / reused: Plan A architecture, style_proto extraction, FedBN BN-local, L_orth, sas softmax, all hyperparameters.
+- Changed: server pack() aggregation path for `classifier.weight/bias` from FedAvg to sas.
+- New trainable components: **0**.
+
+### Core Mechanism — exact config table
+
+Config switch (sas flag):
+- sas=0 : no personalization (baseline B0 = EXP-083)
+- sas=1 : sem_head sas only, classifier FedAvg (B1 = Plan A = EXP-084)
+- sas=2 : sem_head + classifier, both style-conditioned (OURS, A2)
+- sas=3 : sem_head sas + classifier uniform-avg (C2 counterfactual)
+- sas=4 : sem_head sas + classifier fully local (C1 counterfactual)
+
+Aggregation rule (for k in sas_keys):
+- A2 (sas=2): per_param_i[k] = sum_j w_ij * client_state[j][k], w_ij = softmax(cos(sp_i, sp_j)/sas_tau)
+- C2 (sas=3): per_param_i[k] = (1/|S|) * sum_{j in S} client_state[j][k]  — same head for every client
+- C1 (sas=4): per_param_i[k] = client_state[i][k]  — local only, no sync
+
+Client-side training unchanged: CE + lambda_orth * L_orth.
+
+### Integration
+File: FDSE_CVPR25/algorithm/feddsa_scheduled.py pack() method. Config: sas flag extended to 0..4. ~40 lines total with branches and unit tests.
+
+### Training Plan
+R200, E=1, B=50, LR=0.05, decay=0.9998. Seeds {2,15,333}. Office-Caltech10 c4 main; PACS c4 appendix-only.
+
+### Modern Primitive Usage
+NONE. Appropriate for anchored problem under stated constraints.
+
+### Failure Modes
+- Caltech no gain -> use Claim 2 swap diagnostic; if swap also no-effect -> classifier not bottleneck -> halt.
+- Training instability (drop > 3%) -> retry sas_tau=0.5.
+
+### Novelty Argument
+
+vs FedROD: style conditioning, not uniform per-client.
+vs FedAlign: no feature alignment coupled.
+vs Plan A: sas covers full head chain, and framed as routing problem.
+
+Paper story (1 sentence): "Classifier aggregation in federated DG is a routing problem, not a scope problem. Style similarity provides the routing."
+
+## Claim-Driven Validation Sketch
+
+### Claim 1 (Main): A2 > C2 isolates the style routing signal
+
+Configurations:
+| ID | sem_head | classifier | Interpretation |
+| --- | --- | --- | --- |
+| B0 | FedAvg | FedAvg | baseline (EXP-083) |
+| B1 | sas | FedAvg sample-weighted | Plan A (EXP-084) |
+| **A2 (ours)** | **sas** | **sas style-conditioned** | target |
+| **C2** | **sas** | **uniform-avg** | **key counterfactual: is style conditioning causal?** |
+| C1 | sas | local-only | secondary: should classifier share? |
+
+Protocol:
+1. Triage (6h): Office s=2 single seed x {A2, C1, C2}
+2. Decision rule (pre-committed):
+   - margin(A2 - max(B1, C2)) >= 2.0: strong, single-seed sufficient + 3-seed confirmation on A2
+   - margin in [0.5, 2.0): **escalate A2 + C2 to 3-seed (s=15, s=333)**, paired t-test
+   - margin < 0.5: halt, thesis falsified
+3. Final main table (assuming escalation): A2 3-seed, C2 3-seed, B0 3-seed (existing), B1 3-seed (existing), C1 1-seed.
+
+Metric: AVG Best / AVG Last / per-domain Caltech Best/Last.
+
+Expected: A2 Caltech >= 77 (EXP-084 75.0 + 2); A2 AVG >= 90.5 (beats FDSE 90.58); A2 - C2 >= 1%.
+
+### Claim 2 (Mechanism Diagnostic, same-round swap, zero training): feature right, boundary wrong
+
+Load A2 R149 best-round checkpoint. Checkpoint retains:
+- (i) personalized (encoder_i, sem_head_i, head_i) for each client i
+- (ii) same-round pack-time FedAvg snapshot global_head — computed as a side artifact during standard R149 aggregation
+
+Per-client swap:
+- Condition (a): (encoder_i, sem_head_i, **head_i**) on client i test set
+- Condition (b): (encoder_i, sem_head_i, **global_head**) on the same test set
+
+Same-round guarantee: both head_i and global_head come from R149, so training-dynamics confound is absent.
+
+Predicted signature:
+- Caltech: (a) > (b) by >= 2%
+- Amazon/DSLR/Webcam: (a) ~ (b), delta < 0.5%
+
+If signature holds: direct proof that classifier sharing hurts outlier specifically at the head layer.
+
+### Claim 3 (Mechanism Visualization, zero training): style similarity matrix and routing weights
+
+From A2 R149, extract and visualize:
+- 4x4 matrix S_ij = cos(sp_i, sp_j)
+- 4x4 matrix W_ij = softmax(S / sas_tau)
+
+Heatmap. Expected: Caltech row has strongly concentrated weight on itself (> 0.7) and low on others; other rows more spread.
+
+This is the routing signature. No extra training; one figure.
+
+### Claim 4 (Appendix, OPTIONAL): PACS scope boundary
+
+Run PACS A2 3-seed only if Office A2 succeeds. Expected: PACS AVG <= EXP-086 Plan A 79.76. Interpretation: PACS 4 domains are mutual outliers, no majority for routing; validates mechanism's scope boundary.
+
+## Experiment Handoff
+
+- Must-prove: Claim 1 A2 > C2 >= 1%; Claim 2 swap signature holds.
+- Must-isolate: A2 > C2 (causal style conditioning).
+- Critical: Office Caltech Best / AVG Best.
+
+## Compute & Timeline
+
+| Experiment | Runs | Per run | Serial |
+| --- | --- | --- | --- |
+| Triage: Office A2 + C1 + C2 x 1-seed s=2 | 3 | 2h | 6h |
+| Escalation (if margin 0.5-2.0): A2 + C2 x 3-seed (s=15, s=333) | 4 | 2h | 8h |
+| Claim 2 swap (checkpoint eval) | — | 0.5h | 0.5h |
+| Claim 3 matrix viz | — | 0.2h | 0.2h |
+| Claim 4 PACS A2 x 3-seed (optional appendix) | 3 | 3.5h | 10.5h |
+| Must-run (strong margin) | 3 | | ~6.5h |
+| Must-run (statistical path) | 7 | | ~14.5h |
+| Full (incl PACS) | 10 | | ~25h |
+
+Critical path: Triage 2h -> decision gate.
+
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score the 7 dimensions.
+- State whether the Problem Anchor is preserved.
+- State whether the dominant contribution is now sharper or still too broad.
+- State whether the method is simpler or still overbuilt.
+- State whether the frontier leverage is now appropriate.
+- Same verdict rule: READY only if overall >= 9 and no blocking issue remains.
+
+Same output format.
+
+codex
+The proposal is now quite tight. I’m checking one remaining top-venue issue: whether the core novelty comparator `C2` is treated rigorously enough, since the whole paper now stands or falls on `A2 > C2`.
+codex
+**Anchor Check**
+
+Problem Anchor is preserved. This is still the same anchored problem: outlier-domain failure caused by a shared classifier boundary under style heterogeneity. The revisions stay on that bottleneck and do not drift into a broader personalization or representation-learning paper.
+
+The dominant contribution is now sharper. It is no longer “personalize more of the head”; it is clearly “classifier sharing is a routing problem, and style similarity is the routing signal.”
+
+The method is simpler, not overbuilt. The proposal is now minimal and coherent.
+
+Frontier leverage is appropriate. No FM-era primitive is missing here.
+
+**Scores**
+
+| Dimension | Score | Rationale |
+| --- | --- | --- |
+| 1. Problem Fidelity | 10/10 | Fully preserved and now better framed around the actual bottleneck. |
+| 2. Method Specificity | 10/10 | The configs, update rules, checkpoints, and integration point are now concrete enough to implement without ambiguity. |
+| 3. Contribution Quality | 9/10 | One dominant mechanism, clean counterfactuals, and good parsimony. The novelty is still narrow, but now defensible. |
+| 4. Frontier Leverage | 9/10 | Appropriate restraint. The method uses no FM-era primitive because none is the natural fit. |
+| 5. Feasibility | 9/10 | Credible code footprint, compute plan, and integration path. |
+| 6. Validation Focus | 8/10 | Much improved and mostly sufficient. One remaining issue is that the final paper still needs stronger treatment of `C2` than the current decision rule guarantees. |
+| 7. Venue Readiness | 8/10 | This is now close, but not fully at `READY` because the key novelty baseline can still end up under-validated in the strong-margin branch. |
+
+**Overall Score: 9.1/10**
+
+**Weaknesses For Scores < 7**
+
+None.
+
+**Remaining Blocking Issue**
+
+The remaining blocker is narrow but important: the paper’s central claim is now `A2 > C2`, so `C2` cannot remain effectively a single-seed comparator in the “strong margin” branch. If the final version says style-conditioned routing is causal, top-venue reviewers will expect the matched non-style-conditioned routing baseline to be evaluated with the same seriousness as the proposed method.
+
+Concretely, the current rule
+- if `A2 - max(B1, C2) >= 2.0`, keep `C2` single-seed
+is good for internal triage, but not good enough for the final paper.
+
+That is the only reason this is still `REVISE` rather than `READY`.
+
+**Drift Warning**
+
+NONE.
+
+**Simplification Opportunities**
+- Keep `C1` explicitly secondary. `C2` is the real novelty isolator; if budget gets tight, preserve `A2` and `C2` first.
+- Keep PACS in appendix only. Do not let it grow back into a second claim track.
+- If the paper gets crowded, fold Claim 3 heatmap into Claim 1/2 mechanism evidence rather than presenting it as a separate claim.
+
+**Modernization Opportunities**
+- NONE.
+
+**Remaining Action Items**
+- Change the final evaluation rule so that `C2` gets 3 seeds whenever `A2` is taken to the final main table. Triage can stay single-seed, but the final paper should not rely on single-seed `C2`.
+- Make the statistical test plan consistent with the actual seed count. With 3 seeds total, a paired t-test is weak; use it cautiously and let effect size plus per-seed consistency do most of the work.
+- Clarify whether `S` in `C2` is all clients or participating clients in that round, and keep that identical to the participation set used by `A2`.
+- In Claim 3, avoid overcommitting to a specific signature like “Caltech self-weight > 0.7” unless you already know that scale is realistic. Better to state the qualitative expectation: Caltech should be more self-concentrated than the other rows.
+
+**Verdict**
+
+REVISE
+
+This is a strong revision. The anchor is preserved, the contribution is sharp, the method is simple, and the mechanism tests are now well aligned with the claim. The only blocking issue is evidentiary: the key baseline `C2` must be promoted to full final-table status whenever the paper makes the causal routing claim. Once that is fixed, this is very close to `READY`.
+tokens used
+27,389
+**Anchor Check**
+
+Problem Anchor is preserved. This is still the same anchored problem: outlier-domain failure caused by a shared classifier boundary under style heterogeneity. The revisions stay on that bottleneck and do not drift into a broader personalization or representation-learning paper.
+
+The dominant contribution is now sharper. It is no longer “personalize more of the head”; it is clearly “classifier sharing is a routing problem, and style similarity is the routing signal.”
+
+The method is simpler, not overbuilt. The proposal is now minimal and coherent.
+
+Frontier leverage is appropriate. No FM-era primitive is missing here.
+
+**Scores**
+
+| Dimension | Score | Rationale |
+| --- | --- | --- |
+| 1. Problem Fidelity | 10/10 | Fully preserved and now better framed around the actual bottleneck. |
+| 2. Method Specificity | 10/10 | The configs, update rules, checkpoints, and integration point are now concrete enough to implement without ambiguity. |
+| 3. Contribution Quality | 9/10 | One dominant mechanism, clean counterfactuals, and good parsimony. The novelty is still narrow, but now defensible. |
+| 4. Frontier Leverage | 9/10 | Appropriate restraint. The method uses no FM-era primitive because none is the natural fit. |
+| 5. Feasibility | 9/10 | Credible code footprint, compute plan, and integration path. |
+| 6. Validation Focus | 8/10 | Much improved and mostly sufficient. One remaining issue is that the final paper still needs stronger treatment of `C2` than the current decision rule guarantees. |
+| 7. Venue Readiness | 8/10 | This is now close, but not fully at `READY` because the key novelty baseline can still end up under-validated in the strong-margin branch. |
+
+**Overall Score: 9.1/10**
+
+**Weaknesses For Scores < 7**
+
+None.
+
+**Remaining Blocking Issue**
+
+The remaining blocker is narrow but important: the paper’s central claim is now `A2 > C2`, so `C2` cannot remain effectively a single-seed comparator in the “strong margin” branch. If the final version says style-conditioned routing is causal, top-venue reviewers will expect the matched non-style-conditioned routing baseline to be evaluated with the same seriousness as the proposed method.
+
+Concretely, the current rule
+- if `A2 - max(B1, C2) >= 2.0`, keep `C2` single-seed
+is good for internal triage, but not good enough for the final paper.
+
+That is the only reason this is still `REVISE` rather than `READY`.
+
+**Drift Warning**
+
+NONE.
+
+**Simplification Opportunities**
+- Keep `C1` explicitly secondary. `C2` is the real novelty isolator; if budget gets tight, preserve `A2` and `C2` first.
+- Keep PACS in appendix only. Do not let it grow back into a second claim track.
+- If the paper gets crowded, fold Claim 3 heatmap into Claim 1/2 mechanism evidence rather than presenting it as a separate claim.
+
+**Modernization Opportunities**
+- NONE.
+
+**Remaining Action Items**
+- Change the final evaluation rule so that `C2` gets 3 seeds whenever `A2` is taken to the final main table. Triage can stay single-seed, but the final paper should not rely on single-seed `C2`.
+- Make the statistical test plan consistent with the actual seed count. With 3 seeds total, a paired t-test is weak; use it cautiously and let effect size plus per-seed consistency do most of the work.
+- Clarify whether `S` in `C2` is all clients or participating clients in that round, and keep that identical to the participation set used by `A2`.
+- In Claim 3, avoid overcommitting to a specific signature like “Caltech self-weight > 0.7” unless you already know that scale is realistic. Better to state the qualitative expectation: Caltech should be more self-concentrated than the other rows.
+
+**Verdict**
+
+REVISE
+
+This is a strong revision. The anchor is preserved, the contribution is sharp, the method is simple, and the mechanism tests are now well aligned with the claim. The only blocking issue is evidentiary: the key baseline `C2` must be promoted to full final-table status whenever the paper makes the causal routing claim. Once that is fixed, this is very close to `READY`.

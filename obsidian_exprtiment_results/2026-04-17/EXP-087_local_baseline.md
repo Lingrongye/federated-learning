@@ -4,7 +4,7 @@
 - **日期**: 2026-04-17 / 2026-04-18
 - **算法**: `standalone` (FDSE 自带，每 client 独立训练无聚合)
 - **服务器**: SC2 GPU 0 (Office) + Lab-lry 试跑 PACS (挂)
-- **状态**: ⚠️ Office 跑中（Webcam 可能 early stop 失败）, PACS 放弃复现
+- **状态**: ❌ 放弃复现 — flgo standalone bug (PACS server.model=None) + Office 结果不稳
 
 ## ⚠️ PACS 放弃复现，引用 FDSE 论文原值
 

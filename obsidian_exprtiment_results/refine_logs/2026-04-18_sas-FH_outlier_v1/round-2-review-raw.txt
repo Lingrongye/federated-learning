@@ -1,0 +1,316 @@
+Reading prompt from stdin...
+OpenAI Codex v0.117.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: high
+reasoning summaries: none
+session id: 019d9ebd-235a-7ae3-9dbc-739cc40b9995
+--------
+user
+Round 2 re-evaluation.
+
+I revised the proposal based on your feedback.
+
+First, check whether the original Problem Anchor is still preserved.
+Second, judge whether the method is now more concrete, more focused, and more current.
+
+Key changes in this round:
+1. Removed A3 (encoder last block) ablation — per your simplification request.
+2. Added matched counterfactuals C1 (sem_head sas + fully local classifier) and C2 (sem_head sas + FedROD-style uniform per-client classifier) to isolate the novelty of *style conditioning* vs *any classifier personalization*.
+3. Added Claim 2 as a zero-training mechanism diagnostic: classifier swap at R150 checkpoint to directly test "feature right, boundary wrong".
+4. Tightened the one-sentence thesis from "extend sas scope to full head" to "style similarity is the right routing signal for sharing classification decision boundaries".
+5. Removed Top-2 multi-centroid fallback from proposal body; it belongs in a different paper direction.
+6. Demoted PACS from co-equal claim to "negative control / scope boundary" — run only if Office succeeds.
+7. Removed the Optional Supporting Contribution (granularity sweep) — the isolation work now lives inside Claim 1 as counterfactuals, not as a second parallel contribution.
+
+=== REVISED PROPOSAL ===
+
+# Research Proposal: Style-Conditioned Classifier Routing for Outlier-Domain Recovery in Federated Domain Generalization
+
+## Problem Anchor
+
+- Bottom-line problem: FedDSA Plan A (sas personalizes only `semantic_head`; classifier head and backbone go through FedAvg) fails on outlier domains. PACS art_painting 65.69%, Office Caltech 77.68% (other domains much higher). 70 art misclass all conf >= 0.85, concentrated on person<->dog<->horse<->guitar.
+- Must-solve bottleneck: Shared classifier dilutes outlier-domain decision boundary by majority preference.
+- Non-goals: No backbone change, no new trainable modules, no inference-time tricks, no per-sample sas.
+- Constraints: 3-seed {2,15,333} x R200 x E=1 aligned with FDSE; SC2 single GPU 2-4h/run; code <= 50 lines.
+- Success: art/Caltech +2% AVG Best; other domains drop < 1%; Office overall >= FDSE 90.58.
+
+## Technical Gap
+
+Plan A sas covers only the projection head `semantic_head`. The final FC classifier (1024 -> num_classes) still uses FedAvg and is the only layer deciding the class decision boundary. Outlier clients get personalized feature mapping but no personalized boundary -> feature right, boundary wrong.
+
+Missing mechanism: a signal that decides *which clients should share classification boundaries*. FedROD uses uniform per-client classifier (no conditioning). FedAlign uses classifier personalization + feature alignment (no style signal). **We claim style similarity is the natural routing signal for classifier-boundary sharing.**
+
+Smallest adequate: move `classifier.*` keys into sas_keys -- zero new parameters, ~30 lines.
+
+Core claim: *Style similarity is the natural routing signal for sharing classification decision boundaries; classifier-level personalization is the minimal sufficient granularity under style-driven outlier domains.*
+
+## Method Thesis
+
+- One-sentence thesis: **Style similarity is the right routing signal for deciding which clients should share classification decision boundaries**, realized by extending style-aware aggregation from the semantic projection head alone to the full head chain (projection + classifier), with zero new trainable components.
+- Why smallest adequate: server-side pack() change, ~30 lines, no new modules / losses / augmentations.
+- Why timely: FedROD (ICLR 23), FedAlign (CVPR Workshop 25), DualFed already established per-client classifier as pFL. Our contribution: **conditioning the classifier personalization on style similarity**, not uniform/random.
+
+## Contribution Focus
+
+- Dominant contribution: Style-conditioned classifier routing (sas-FH).
+- Optional supporting contribution: **NONE**. (The former granularity sweep is absorbed into Claim 1 counterfactuals; not a parallel contribution.)
+- Explicit non-contributions: No novelty claim on classifier personalization itself (FedROD did), no MixStyle / SupCon / focal loss, no BN strategy change, no per-sample / multi-centroid aggregation.
+
+## Proposed Method
+
+### Complexity Budget
+- Frozen / reused: Plan A architecture, style_proto extraction, FedBN BN-local, L_orth, sas softmax, all hyperparameters.
+- Changed: server pack() aggregation path for `classifier.weight/bias` -- from FedAvg to sas-personalized.
+- New trainable components: **0**.
+- Intentionally excluded: per-client sas_tau, style_head personalization, backbone sas, encoder last-block sas, multi-centroid (different paper).
+
+### System Overview
+
+Client i: encoder(x) -> h; h -> sem_head -> z_sem -> head -> logits; h -> style_head -> z_sty -> style_proto. Local SGD with CE + L_orth. Upload encoder/sem_head/style_head/head/style_proto.
+
+Server: maintains client_sem_states[j], client_head_states[j] [NEW], client_style_protos[j]. For target client i: w_ij = softmax(cos(sp_i, sp_j)/tau); per_sem_i = sum_j w_ij * sem_state[j]; per_head_i = sum_j w_ij * head_state[j] [NEW]; encoder/style_head/BN via standard FedAvg. Send personalized (encoder, sem_head_i, head_i) to client i.
+
+### Core Mechanism
+
+- Change: `sas_keys = [k for k in global_dict if k.startswith('semantic_head.') or k.startswith('head.')]`
+- Aggregation rule unchanged: w_ij = softmax(cos(sp_i, sp_j)/sas_tau); per_param_i[k] = sum_j w_ij * client_state[j][k] for k in sas_keys.
+- Client-side training unchanged.
+
+### Modern Primitive Usage
+NONE. Confirmed appropriate by R1 review.
+
+### Integration into Pipeline
+File: `FDSE_CVPR25/algorithm/feddsa_scheduled.py` pack() method. Config flag `sas=2` (0=off, 1=sem-only, 2=sem+head).
+
+### Training Plan
+Single-stage joint training (same as Plan A). Office-Caltech10 c4 main; PACS c4 negative-control only. CE + lambda_orth * L_orth. R200 E=1 B=50 LR=0.05 decay 0.9998. Seeds {2,15,333}.
+
+### Failure Modes and Diagnostics
+- Failure 1: Caltech no gain -> use Claim 2 swap diagnostic to diagnose; if swap also shows no effect -> classifier not bottleneck -> halt.
+- Failure 2: training unstable (drop > 3%) -> retry tau=0.5.
+
+### Novelty and Elegance Argument
+Closest work: FedROD (uniform per-client classifier), FedAlign (classifier + feature alignment), FedDSA Plan A (sas on sem_head only). Exact difference: **style similarity as the conditioning signal for classifier sharing** -- not uniform, not feature-alignment-coupled, not just-projection-head. Paper story (1 sentence): "Style similarity is the natural conditioning signal for sharing classification decision boundaries under domain heterogeneity."
+
+## Claim-Driven Validation Sketch
+
+### Claim 1 (Main): sas-FH improves outlier domain (Caltech) on outlier-heavy Office, AND style conditioning is the decisive factor (isolated by counterfactuals)
+
+Configurations:
+- B0 = EXP-083: sas=0 (baseline)
+- B1 = EXP-084: sem_head sas, classifier FedAvg (Plan A)
+- **A2 = sas-FH (ours)**: sem_head sas + classifier sas
+- **C1 counterfactual**: sem_head sas + classifier fully local (per-client, no sharing)
+- **C2 counterfactual (CRITICAL)**: sem_head sas + classifier uniform per-client (FedROD-style, no style conditioning)
+
+Experiment: Office-Caltech10 c4 x R200 x E=1.
+- A2: 3-seed {2,15,333}
+- C1, C2: 1 seed (s=2) first, extend only if A2 succeeds
+- B0, B1: already have 3-seed data
+
+Decisive comparisons:
+- A2 > B1 (full-head > half-head)
+- A2 > C1 (classifier should share, not fully local)
+- A2 > C2 (style conditioning > uniform: the CORE novelty test)
+
+Metric: AVG Best / AVG Last / per-domain Caltech Best/Last.
+Expected: A2 Caltech >= 77 (EXP-084 75.0 + 2); AVG >= 90.5, beating FDSE 90.58; C1/C2 < A2 by 0.5-1.5%.
+
+### Claim 2 (Mechanism Diagnostic, zero-training): feature right, boundary wrong
+
+Load A2 R150 best checkpoint. For each client i:
+- Condition (a): personalized encoder + personalized sem_head + personalized head_i
+- Condition (b): personalized encoder + personalized sem_head + **global FedAvg** head
+
+Predicted signature:
+- Caltech: (a) > (b) by >= 2%
+- Other Office domains: (a) ~ (b), delta < 0.5%
+
+If signature holds: direct proof that classifier sharing hurts outlier specifically, localized to the head layer.
+If (a) ~ (b) on Caltech too: thesis falsified -> halt.
+
+### Claim 3 (Negative Control / Scope Boundary): PACS demonstrates mechanism limits
+
+PACS c4 3-seed, OPTIONAL (only if Office A2 wins). Predicted: AVG Best <= 79.76 (EXP-086 Plan A). Interpretation: PACS 4 domains are mutual outliers, so there is no majority reference for the outlier to borrow from. Paper positioning: "Our mechanism's scope boundary."
+
+## Experiment Handoff Inputs
+- Must-prove: Claim 1 A2 >= B1; Claim 2 signature holds.
+- Must-isolate: Claim 1 A2 > C1 and A2 > C2 (this is the paper's core novelty test).
+- Critical: Office-Caltech10 c4 AVG Best, Caltech Best/Last.
+
+## Compute & Timeline
+
+| Experiment | Runs | Per run | Total |
+| --- | --- | --- | --- |
+| Claim 1 A2 x 3-seed (Office) | 3 | 2h | 6h |
+| Claim 1 C1, C2 x 1-seed (Office) | 2 | 2h | 4h |
+| Claim 2 swap diagnostic | 1 | 0.5h | 0.5h |
+| Claim 3 PACS A2 x 3-seed (optional) | 3 | 3.5h | 10.5h |
+| **Must-run** | 6 | | **~10.5h** |
+| **Full (incl. PACS control)** | 9 | | ~21h |
+
+Critical path: Office A2 s=2 single seed 2h -> if Caltech >= 77 extend to 3-seed + 2 counterfactuals.
+
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score the same 7 dimensions and overall.
+- State whether the Problem Anchor is preserved or drifted.
+- State whether the dominant contribution is now sharper or still too broad.
+- State whether the method is simpler or still overbuilt.
+- State whether the frontier leverage is now appropriate or still old-school/forced.
+- Focus new critiques on missing mechanism, weak training signal, weak integration point, pseudo-novelty, or unnecessary complexity.
+- Use the same verdict rule: READY only if overall >= 9 and no blocking issue remains.
+
+Same output format: 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items.
+
+codex
+The revised version is materially sharper. I’m checking whether the new counterfactuals and swap diagnostic now isolate the routing claim cleanly, or whether there is still a hidden ambiguity in what actually causes the gain.
+codex
+**Anchor Check**
+
+Problem Anchor is preserved. This is still the same problem: outlier-domain failure caused by a shared classifier boundary under style heterogeneity. The revision does not drift into a broader personalization paper or a larger FedDG system.
+
+The dominant contribution is now sharper. The paper is no longer “full-head personalization plus several side ideas”; it is now clearly “style similarity is the routing signal for classifier-boundary sharing.”
+
+The method is simpler, not overbuilt. Removing the encoder-last-block ablation, multi-centroid fallback, and parallel contribution track was the right move.
+
+Frontier leverage is appropriate. This is not old-school in a bad way; it is restrained. FM-era components would still be forced here.
+
+**Scores**
+
+| Dimension | Score | Rationale |
+| --- | --- | --- |
+| 1. Problem Fidelity | 10/10 | The proposal remains tightly anchored to the original bottleneck and improves the framing of that bottleneck. |
+| 2. Method Specificity | 9/10 | The implementation path is concrete, minimal, and engineer-ready. The only remaining gap is that `C2` should be specified more operationally. |
+| 3. Contribution Quality | 9/10 | This is now one clean mechanism-level contribution with matched counterfactuals that test the right question. Much better than Round 1. |
+| 4. Frontier Leverage | 9/10 | Appropriate restraint. The proposal uses no FM-era primitives because they are not the natural fit for the anchored problem. |
+| 5. Feasibility | 9/10 | Still highly feasible within the stated code and compute budget. |
+| 6. Validation Focus | 8/10 | The validation is now mostly minimal and targeted. The main remaining issue is statistical strength of the new counterfactuals. |
+| 7. Venue Readiness | 8/10 | This now reads like a sharp workshop-to-conference transition idea. It is closer to top-venue quality, but the empirical proof of the core novelty still needs one more notch of rigor. |
+
+**Overall Score: 9.0/10**
+
+Using the stated weights, the arithmetic lands at 8.95, which rounds to 9.0. I still would not mark it `READY`, because one blocking issue remains around proof strength for the central novelty claim.
+
+**Weaknesses For Scores < 7**
+
+None.
+
+**Key Remaining Critiques**
+
+`Validation / novelty isolation`
+- The big improvement is real: `C1`, `C2`, and the swap diagnostic directly address the Round 1 weakness.
+- The remaining concern is that `C1` and `C2` are only planned as 1-seed unless `A2` succeeds. That is fine for triage, but not strong enough for the final paper if the margin over `C2` is small.
+- This matters because the paper’s novelty is no longer “classifier personalization helps”; it is “style-conditioned sharing is better than generic classifier personalization.”
+
+`Method specificity`
+- `C2` needs an exact interface definition. “FedROD-style uniform per-client classifier” is conceptually clear, but the server update should be written unambiguously.
+- You want something like: `head_i <- mean_j head_j` over participating clients, or alternatively “head remains local-only across rounds.” Those are different counterfactuals. The proposal should lock one down.
+
+`Pseudo-novelty risk`
+- The remaining top-venue risk is still pseudo-novelty: a reviewer may say this is just moving `head.*` into an existing personalized key set.
+- The revised framing helps, but the paper must make the routing claim do the work: style is not just another personalization scope, it is the criterion for selective classifier sharing.
+- That means the A2 vs C2 result is now the most important experiment in the paper, not a side check.
+
+**Drift Warning**
+
+NONE.
+
+**Simplification Opportunities**
+- Keep PACS strictly as a negative control appendix or short secondary result unless Office is strong. Do not let it become a second paper thread.
+- Collapse `C1` if needed. If budget gets tight, `C2` is the essential counterfactual and `C1` is secondary.
+- Remove art-painting from the success criteria unless PACS is actually run. Right now Office is the true main path.
+
+**Modernization Opportunities**
+- NONE.
+
+**Remaining Action Items**
+- Specify `C2` precisely at the update-rule level so there is no ambiguity about what “uniform per-client classifier” means in this codebase.
+- Pre-commit to promoting `C2` from 1 seed to 3 seeds if `A2 - C2` is within a modest band, because that comparison is the core novelty test.
+- In Claim 2, add one sentence clarifying whether the “global FedAvg head” is taken from the same round/checkpoint as A2. It should be same-round to avoid a confound.
+- In the paper framing, make the main theorem-of-the-paper sentence even stricter: “the key question is not whether to personalize the classifier, but how to route classifier sharing.” That is the actual contribution.
+- Consider reporting the style-similarity matrix and resulting routing weights for Office once, as mechanism evidence. This is lightweight and directly supports the claim that style is the meaningful sharing signal.
+
+**Verdict**
+
+REVISE
+
+This is a much stronger proposal than Round 1. The anchor is preserved, the contribution is sharper, the method is simpler, and the validation is far more on-point. The only reason it is not `READY` is that the core novelty now lives almost entirely in `A2 > C2`, so that comparison needs to be specified and, if promising, validated with enough statistical strength to survive top-venue scrutiny.
+tokens used
+21,793
+**Anchor Check**
+
+Problem Anchor is preserved. This is still the same problem: outlier-domain failure caused by a shared classifier boundary under style heterogeneity. The revision does not drift into a broader personalization paper or a larger FedDG system.
+
+The dominant contribution is now sharper. The paper is no longer “full-head personalization plus several side ideas”; it is now clearly “style similarity is the routing signal for classifier-boundary sharing.”
+
+The method is simpler, not overbuilt. Removing the encoder-last-block ablation, multi-centroid fallback, and parallel contribution track was the right move.
+
+Frontier leverage is appropriate. This is not old-school in a bad way; it is restrained. FM-era components would still be forced here.
+
+**Scores**
+
+| Dimension | Score | Rationale |
+| --- | --- | --- |
+| 1. Problem Fidelity | 10/10 | The proposal remains tightly anchored to the original bottleneck and improves the framing of that bottleneck. |
+| 2. Method Specificity | 9/10 | The implementation path is concrete, minimal, and engineer-ready. The only remaining gap is that `C2` should be specified more operationally. |
+| 3. Contribution Quality | 9/10 | This is now one clean mechanism-level contribution with matched counterfactuals that test the right question. Much better than Round 1. |
+| 4. Frontier Leverage | 9/10 | Appropriate restraint. The proposal uses no FM-era primitives because they are not the natural fit for the anchored problem. |
+| 5. Feasibility | 9/10 | Still highly feasible within the stated code and compute budget. |
+| 6. Validation Focus | 8/10 | The validation is now mostly minimal and targeted. The main remaining issue is statistical strength of the new counterfactuals. |
+| 7. Venue Readiness | 8/10 | This now reads like a sharp workshop-to-conference transition idea. It is closer to top-venue quality, but the empirical proof of the core novelty still needs one more notch of rigor. |
+
+**Overall Score: 9.0/10**
+
+Using the stated weights, the arithmetic lands at 8.95, which rounds to 9.0. I still would not mark it `READY`, because one blocking issue remains around proof strength for the central novelty claim.
+
+**Weaknesses For Scores < 7**
+
+None.
+
+**Key Remaining Critiques**
+
+`Validation / novelty isolation`
+- The big improvement is real: `C1`, `C2`, and the swap diagnostic directly address the Round 1 weakness.
+- The remaining concern is that `C1` and `C2` are only planned as 1-seed unless `A2` succeeds. That is fine for triage, but not strong enough for the final paper if the margin over `C2` is small.
+- This matters because the paper’s novelty is no longer “classifier personalization helps”; it is “style-conditioned sharing is better than generic classifier personalization.”
+
+`Method specificity`
+- `C2` needs an exact interface definition. “FedROD-style uniform per-client classifier” is conceptually clear, but the server update should be written unambiguously.
+- You want something like: `head_i <- mean_j head_j` over participating clients, or alternatively “head remains local-only across rounds.” Those are different counterfactuals. The proposal should lock one down.
+
+`Pseudo-novelty risk`
+- The remaining top-venue risk is still pseudo-novelty: a reviewer may say this is just moving `head.*` into an existing personalized key set.
+- The revised framing helps, but the paper must make the routing claim do the work: style is not just another personalization scope, it is the criterion for selective classifier sharing.
+- That means the A2 vs C2 result is now the most important experiment in the paper, not a side check.
+
+**Drift Warning**
+
+NONE.
+
+**Simplification Opportunities**
+- Keep PACS strictly as a negative control appendix or short secondary result unless Office is strong. Do not let it become a second paper thread.
+- Collapse `C1` if needed. If budget gets tight, `C2` is the essential counterfactual and `C1` is secondary.
+- Remove art-painting from the success criteria unless PACS is actually run. Right now Office is the true main path.
+
+**Modernization Opportunities**
+- NONE.
+
+**Remaining Action Items**
+- Specify `C2` precisely at the update-rule level so there is no ambiguity about what “uniform per-client classifier” means in this codebase.
+- Pre-commit to promoting `C2` from 1 seed to 3 seeds if `A2 - C2` is within a modest band, because that comparison is the core novelty test.
+- In Claim 2, add one sentence clarifying whether the “global FedAvg head” is taken from the same round/checkpoint as A2. It should be same-round to avoid a confound.
+- In the paper framing, make the main theorem-of-the-paper sentence even stricter: “the key question is not whether to personalize the classifier, but how to route classifier sharing.” That is the actual contribution.
+- Consider reporting the style-similarity matrix and resulting routing weights for Office once, as mechanism evidence. This is lightweight and directly supports the claim that style is the meaningful sharing signal.
+
+**Verdict**
+
+REVISE
+
+This is a much stronger proposal than Round 1. The anchor is preserved, the contribution is sharper, the method is simpler, and the validation is far more on-point. The only reason it is not `READY` is that the core novelty now lives almost entirely in `A2 > C2`, so that comparison needs to be specified and, if promising, validated with enough statistical strength to survive top-venue scrutiny.

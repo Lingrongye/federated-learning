@@ -4,7 +4,7 @@
 - **日期**: 2026-04-18
 - **服务器**: Lab-lry GPU 1
 - **算法**: feddsa_scheduled (sm=0, sas=1, sas_tau=0.3, LR=**0.025**)
-- **状态**: 🔄 运行中
+- **状态**: ❌ 全部 SIGKILL 放弃（Lab-lry 被 wjc 抢 GPU，SC2 未重跑）
 
 ## 动机分析
 
@@ -22,10 +22,10 @@
 
 ## 实验矩阵 (6 runs)
 
-| # | Task | LR | sas | Seed |
-|---|------|------|-----|------|
-| 1-3 | PACS | 0.025 | 1 | 2, 15, 333 |
-| 4-6 | Office | 0.025 | 1 | 2, 15, 333 |
+| #   | Task   | LR    | sas | Seed       |
+| --- | ------ | ----- | --- | ---------- |
+| 1-3 | PACS   | 0.025 | 1   | 2, 15, 333 |
+| 4-6 | Office | 0.025 | 1   | 2, 15, 333 |
 
 ## 对照基线
 
@@ -53,9 +53,11 @@
 
 | Task | seed | ALL Best/Last | AVG Best/Last | drop |
 |------|------|---------------|---------------|------|
-| PACS | 2 | - | - | - |
-| PACS | 15 | - | - | - |
-| PACS | 333 | - | - | - |
-| Office | 2 | - | - | - |
-| Office | 15 | - | - | - |
-| Office | 333 | - | - | - |
+| PACS | 2 | ❌ SIGKILL | ❌ SIGKILL | — |
+| PACS | 15 | ❌ SIGKILL | ❌ SIGKILL | — |
+| PACS | 333 | ❌ SIGKILL | ❌ SIGKILL | — |
+| Office | 2 | ❌ SIGKILL | ❌ SIGKILL | — |
+| Office | 15 | ❌ SIGKILL | ❌ SIGKILL | — |
+| Office | 333 | ❌ SIGKILL | ❌ SIGKILL | — |
+
+**放弃原因**：Lab-lry 6 runs 全被 wjc SIGKILL（log rounds=0）。LR=0.05 + sas τ=0.3 已在 Office 验证有效（EXP-084 AVG 89.82），LR=0.025 的额外收益不确定且投入过高（需重占 SC2 6h），放弃此方向。
