@@ -1,0 +1,164 @@
+[Round 4 re-evaluation]
+
+I revised the proposal based on your Round 3 feedback. Please re-score and judge if it now clears the READY bar (overall >= 9).
+
+Key changes in Round 4:
+
+1. [Contribution Quality / Venue Readiness fix] Added a **Minimal Derivation under imperfect decoupling** block, explicitly deriving why style weighting is necessary:
+   - Decompose `p_c^j = p_c^* + eps_j` where eps_j is j-domain style residue (residual cos(z_sem, z_sty) ~ 0.05-0.1 in our measurements).
+   - `sim(z, p_c^j) = sim(z, p_c^*) + sim(z, eps_j)` (signal + noise pulling).
+   - Noise term `E[sim(z, eps_j) | client k]` scales with `style_dist(k, j) = 1 - cos(s_k, s_j)`.
+   - SCPR weight `w_{k->j}^c proportional to exp(cos(s_k, s_j) / tau)` exponentially downweights far-style positives, minimizing the expected noise-pulling.
+   - Two limits: perfect decouple -> eps_j = 0 -> uniform optimal -> SCPR = M3; imperfect decouple -> style weighting is the minimal single-parameter correction.
+
+2. [Contribution Quality fix] Weakened the strong claim "equivalent to SNR importance weighting" to "can be interpreted as a bias-control / SNR-aware weighting under imperfect decoupling, as derived in the minimal derivation above."
+
+3. [Sharpness fix] Added **SNR mechanism activation diagnostic** in Claim C, at ZERO extra GPU cost:
+   - Log `(w_{k->j}, style_dist(k, j))` per client pair per round during training.
+   - Report Spearman correlation `rho(w, -style_dist)`; expect `rho >= 0.7` (strong positive correlation, meaning attention actively downweights far-style positives).
+   - If rho ~ 0, mechanism is NOT active (style separability too weak) — method falsified.
+
+4. Otherwise no method changes. Complexity budget still at 0 new trainable, 1 new hyperparameter, ~30 LOC.
+
+=== REVISED PROPOSAL ===
+
+# Research Proposal Round 3: Self-Masked Style-Weighted Multi-Positive InfoNCE (SCPR)
+
+## Problem Anchor (preserved)
+
+(same as Round 2/3)
+
+## Technical Gap
+
+No existing method uses client style as retrieval key over domain-indexed class prototypes as values in the decoupled representation space. SCPR occupies the first (Decouple, Style-share) 2x2 cell.
+
+## Method Thesis
+
+Replace M3's equal-weighted multi-positive InfoNCE positives with style-conditioned weights, self-masked (j != k). Motivation: **necessary noise-suppression correction from imperfect decouple** (see minimal derivation).
+
+## Contribution Focus
+
+- SINGLE main contribution: Self-Masked Style-Weighted Multi-Positive InfoNCE (SCPR).
+- Appendix composability (not main): SCPR + SAS on Office.
+
+## Proposed Method
+
+### Notation
+
+- s_k := normalize(E_{x in D_k}[z_sty(x)])
+- p_c^j := E_{(x, y=c) in D_j}[z_sem(x)]
+- tau_nce = 0.3, tau_SCPR = 0.3
+
+### Complexity Budget
+
+- Reused: backbone/heads/classifier/BN, orth decouple, style bank, class-proto bank
+- New: SCPR attention + self-mask + renorm (~30 LOC)
+- 0 new trainable, 0 new loss terms, 1 new hyperparameter (tau_SCPR)
+
+### Core Mechanism (single canonical formula)
+
+g_kj = cos(s_k, s_j)
+raw_j = exp(g_kj / tau_SCPR) * 1[j != k]
+A_k^c = {j: j != k, p_c^j exists}
+w_{k->j}^c = raw_j / sum_{l in A_k^c} raw_l    if j in A_k^c else 0
+
+L_SCPR(z, c) = -sum_{j in A_k^c} w_{k->j}^c * log [ exp(sim(z, p_c^j)/tau_nce) / (numerator + sum_{c'!=c, l in A_k^{c'}} exp(sim(z, p_{c'}^l)/tau_nce)) ]
+
+All p_c^j and s_j detached.
+
+Total: L = L_CE + 1.0 * L_orth + 0.1 * L_HSIC + 1.0 * L_SCPR (Plan A weights).
+
+### Mathematical Property (single claim)
+
+tau_SCPR -> infinity: w = 1/|A_k^c| -> SCPR strictly reduces to M3 (verified +5.09% on PACS).
+
+### Why style weighting is a necessary correction — Minimal Derivation under imperfect decoupling
+
+Decompose each prototype as `p_c^j = p_c^* + eps_j`, where:
+- `p_c^*` is the ideal style-free class-c prototype,
+- `eps_j` is j-domain's style residue absorbed through imperfect orthogonal decoupling (cos^2(z_sem, z_sty) → 0 is a soft constraint; residual cos is ~0.05-0.1 in our measurements).
+
+Under multi-positive SupCon on client k, each positive's pulling term decomposes:
+  sim(z, p_c^j) = sim(z, p_c^*) + sim(z, eps_j)
+                    ——————————      ——————————
+                    semantic signal    style-noise pulling (undesired)
+
+The noise term E[sim(z, eps_j) | client k] scales with style_dist(k, j) = 1 - cos(s_k, s_j): far-style prototypes contain more k-foreign style, inducing larger semantic drift in z.
+
+SCPR's weight w_{k->j}^c ∝ exp(cos(s_k, s_j) / tau) applies exponential decay to far-style positives, directly minimizing the expected noise-pulling:
+
+  E[ sum_j w_{k->j}^c * sim(z, eps_j) ]
+    = sum_j w_{k->j}^c * c_j * style_dist(k, j)    (c_j > 0)
+
+This expectation is minimized (by standard softmax attention property) when weights follow cos(s_k, s_j).
+
+Two limits:
+- Perfect decouple (eps_j = 0 for all j): noise is zero, style weighting is redundant -> uniform w is optimal -> SCPR reduces to M3 seamlessly.
+- Imperfect decouple (practical regime): noise is non-zero, style weighting is the minimal single-parameter correction.
+
+**SCPR is not arbitrary reweighting.** It is the necessary noise-suppression mechanism under imperfect decouple. It **can be interpreted as a bias-control / SNR-aware weighting** under imperfect decoupling.
+
+### Conceptual Position
+
+- M3: style-ignorant, all positives equal -> good on PACS but misses style-locality prior
+- SAS: param-space routing -> Office single-outlier gain, PACS full-outlier degenerate (EXP-086)
+- **SCPR**: alignment targets style-weighted, **parameters shared** -> works on both regimes
+
+This explains why SAS fails on PACS (all clients' params go local) while SCPR does not (params still shared; only alignment targets weighted).
+
+### Failure Modes
+
+| Failure | Signal | Fallback |
+|---------|--------|----------|
+| Attention uniform collapse | H(w_k) > 0.95*log(K-1) >20 rounds | project s_k to lower dim / lower tau_SCPR |
+| NaN | loss NaN | tau_SCPR 0.3 -> 1.0 |
+| PACS < M3 | 3-seed AVG Best < 81.91% | check self-mask active, entropy |
+| SNR diagnostic rho ~ 0 | mechanism inactive | method falsified -> downgrade |
+
+Built-in safety: uniform-w SCPR = M3 (+5.09%).
+
+### Novelty & Elegance
+
+- Minimal mechanism: ~30 LOC, 0 new params, 1 new hyperparameter
+- Mathematically consistent: uniform reduces to M3
+- **Theoretically derived** (not claimed): imperfect-decouple SNR derivation
+- 2x2 first occupant: (Decouple, Style-share)
+- Closes FedDSA Share narrative
+
+## Claims
+
+### Claim A (main): PACS full-outlier, SCPR > M3 uniform
+- 3 configs x 3 seeds, expect A.3 >= A.2 + 0.5% and A.3 >= 81.5%
+
+### Claim B (main): Office single-outlier, SCPR >= SAS (no param personalization)
+- 3 configs x 3 seeds, expect B.3 >= B.2; demonstrates universality
+
+### Claim C (mechanism): tau_SCPR sensitivity + attention health + **SNR activation**
+- tau in {0.1, 0.3, 1.0, 3.0} on PACS 3-seed
+- H(w_k) curves, attention heatmaps
+- **NEW**: log (w_{k->j}, style_dist(k, j)) per round; report Spearman rho(w, -style_dist); expect rho >= 0.7
+- zero extra GPU cost
+
+### Appendix (not main): SCPR + SAS composability on Office
+1 config x 3 seeds.
+
+### Budget: 60 GPU-hours.
+
+## Implementation Note (appendix)
+
+1. Empty bank first round -> uniform w (= M3 burn-in 1-2 rounds), no explicit warmup hyperparameter.
+2. On PACS/Office A_k^c = {j != k} always.
+3. Numerical: log-sum-exp softmax, tau_SCPR min 0.1.
+4. Unit tests: w_{k->k} = 0; tau -> inf => uniform; tau -> 0 => one-hot.
+5. SNR diagnostic log: per-round (style_dist, w) pairs in attention_log.jsonl.
+
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score 7 dimensions + overall.
+- Confirm Problem Anchor preserved.
+- Decide if this now clears READY (>= 9).
+- Specifically: does the minimal derivation + weakened claim + SNR diagnostic resolve the "pseudo-novelty / just reweighting" concern from Round 3?
+- Same output format.
+
+Please output in English.

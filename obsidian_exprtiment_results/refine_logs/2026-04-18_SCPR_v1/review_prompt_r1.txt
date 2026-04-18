@@ -1,0 +1,327 @@
+You are a senior ML reviewer for a top venue (NeurIPS / ICML / ICLR / CVPR).
+This is an early-stage, method-first research proposal in federated learning.
+
+Your job is NOT to reward extra modules, contribution sprawl, or a giant benchmark checklist.
+Your job IS to stress-test whether the proposed method:
+(1) still solves the original anchored problem,
+(2) is concrete enough to implement,
+(3) presents a focused, elegant contribution,
+(4) uses foundation-model-era techniques appropriately when they are the natural fit.
+
+Review principles:
+- Prefer the smallest adequate mechanism over a larger system.
+- Penalize parallel contributions that make the paper feel unfocused.
+- If a modern LLM / VLM / Diffusion / RL route would clearly produce a better paper, say so concretely.
+- If the proposal is already modern enough, do NOT force trendy components.
+- Do not ask for extra experiments unless they are needed to prove the core claims.
+
+Read the Problem Anchor first. If your suggested fix would change the problem being solved,
+call that out explicitly as drift instead of treating it as a normal revision request.
+
+Important context you must leverage while reviewing:
+- 85 prior experiments have already been run on this system. Many plausible additions have been
+  falsified already. Do NOT blindly propose: (a) style injection into z_sem features (EXP-059 broke
+  PACS -2.54%), (b) routing style through InfoNCE in h space (EXP-078d caused NaN), (c) auxiliary
+  losses HSIC / PCGrad / Triplet / CKA / Uncertainty (all failed), (d) VAE head / multilayer style
+  injection / asymmetric heads (all failed), (e) classifier personalization (EXP-093 failed). The
+  author knows these dead ends.
+- The author's verified gains are: M3 domain-aware multi-positive prototypes (+5.09% PACS) and
+  SAS style-aware sem_head aggregation (+1.21% Office Caltech outlier). SAS fails on PACS full-
+  outlier regime (-0.65%).
+- The paper narrative is "FedDSA = Decouple-Share-Align" but Share has never actually worked.
+  SCPR is proposed as the Share mechanism that finally closes the narrative.
+
+=== PROPOSAL ===
+
+# 研究方案 Round 0:Style-Conditioned Prototype Retrieval (SCPR)
+
+> 面向跨域联邦学习的风格条件化原型检索机制
+> 基础框架:FedDSA (Decouple-Share-Align)
+> 目标会议:CVPR / ICCV / NeurIPS
+
+---
+
+## Problem Anchor
+
+- **Bottom-line problem**:跨域联邦学习中,客户端数据来自不同视觉风格域(照片/素描/油画/线稿等)。现有原型对齐方法(FedProto/FPL/FedPLVM)把所有客户端的同类原型求平均后广播,使得风格-outlier 客户端(Caltech、Sketch)被稀释严重,性能显著落后于 FedBN/FDSE 等域适应方法。
+
+- **Must-solve bottleneck**:
+  1. 现有 global-mean prototype 把 style 信息"揉糊",outlier 域客户端对齐时丢失自身风格结构
+  2. 我们自己已验证的 SAS(Style-Aware sem_head Aggregation)在 Office-Caltech10 Caltech-outlier 场景 +1.21%,但在 PACS 全 outlier 场景 -0.65%,因参数空间个性化退化为 FedBN-like 本地化(EXP-086 诊断)
+  3. 论文框架 FedDSA = Decouple-Share-Align 中,Share 章节从未落地:EXP-059 在 z_sem 空间做 AdaIN 注入致 PACS -2.54%,EXP-078d 在 h 空间 AdaIN→InfoNCE 致 NaN 崩溃
+
+- **Non-goals**:
+  1. 不做"风格作为训练数据增强"
+  2. 不做分类器个性化
+  3. 不加辅助损失
+  4. 不做架构改动
+  5. 不做训练调度复杂化
+  6. 不引入新的可训练组件
+
+- **Constraints**:
+  - Backbone:ResNet-18 (Office) / AlexNet-from-scratch (PACS)
+  - 遵守 FedBN 原则
+  - R=200 rounds, 3-seed {2, 15, 333}, 单卡 24GB
+  - 保留正交解耦 (cos² + HSIC), orth_only Plan A
+  - 保留 InfoNCE 对齐机制 (只改 target)
+
+- **Success condition** (同时满足):
+  1. PACS 3-seed mean AVG Best >= 81.5% (vs baseline 80.41%, 严格优于 M3 孤立值 81.91%)
+  2. Office 3-seed mean AVG Best >= 90.5% (vs SAS 89.82%)
+  3. R200 drop (Best - Last) <= 2%
+  4. 新增代码 < 100 行, 0 个新 trainable 组件
+  5. Share 章节首次有正向实证
+
+---
+
+## Technical Gap
+
+### 现有方法的失败模式
+
+| 流派 | 代表 | 对风格的态度 | 不适合原因 |
+|------|------|------------|-----------|
+| Global-mean proto | FedProto | 隐式抹除 | outlier 被稀释 |
+| Cluster-based multi-proto | FPL / FedPLVM / MP-FedCL | 混合特征里聚类 | 聚类 key 是原型自己几何 |
+| 风格擦除 | FDSE / FedSeProto / FedDP | 噪声 | 风格信息丢失 |
+| 风格本地保留 | FedSTAR / FedBN | 不共享 | 无跨域互助 |
+| 风格共享但不解耦 | FISC / PARDON / StyleDDG / FedCCRL | 混合空间 AdaIN | 破坏语义(EXP-059 证伪) |
+| 风格感知参数聚合 | SAS (我们) | 参数空间软混合 | PACS 全 outlier 退化 |
+
+**关键缺口**:没有方法把"风格"作为跨客户端共享、在解耦后的表征空间、被客户端按需检索的资产。
+
+### 最小充分干预
+
+唯一需要改的是"客户端在 InfoNCE 对齐时,目标原型怎么构造"。其余不动。
+
+---
+
+## Method Thesis
+
+- **一句话 thesis**:用"客户端风格 → style-prototype bank"的 attention 检索取代"全局平均",把风格信息从"被稀释的标量权重"变成"动态检索的共享资产"
+- **最小充分干预**:只改对齐目标构造;不增加 trainable 组件;不加损失;不碰 z_sem;<100 行代码
+- **为什么当下可行**:风格向量 (μ,σ) 和 domain-indexed prototype bank 已经在 EXP-059/SAS/M3 中实现
+
+---
+
+## Contribution Focus
+
+- **主贡献**:**SCPR**:在域索引的 (style_proto, class_proto) bank 上用客户端瞬时风格做 softmax attention 检索风格匹配的类原型作为 InfoNCE 对齐目标
+- **辅贡献(可选)**:**Style-Weighted Multi-Positive InfoNCE**:严格泛化 FedProto (K=1) 和 M3 multi-positive (K 等权)
+- **非贡献**:不做风格作为训练数据、不做参数路由、不做新损失、不加新网络
+
+---
+
+## Proposed Method
+
+### Complexity Budget
+
+| 组件 | 状态 |
+|------|------|
+| 主干 (ResNet-18/AlexNet) | 冻结 |
+| 正交解耦 (cos² + HSIC) | 复用 (Plan A) |
+| sem_head / style_head / classifier | 复用 (完全不个性化) |
+| BN | 复用 (FedBN) |
+| Style bank / Class-proto bank | 复用 |
+| SCPR retrieval 模块 | 新增 (仅 attention 函数,无参数) |
+| Style-weighted multi-pos InfoNCE | 新增 (仅 loss 权重调整,无参数) |
+
+新 trainable 组件 0 个, 新 loss 项 0 个。
+
+### System Overview
+
+Client k: x -> backbone -> h(1024d) -> [style_head -> z_sty -> style_proto_k; sem_head -> z_sem -> classifier -> y_hat]
+                                                                       |
+                                                                       v InfoNCE target
+                                                        L_InfoNCE(z_sem, P*)
+
+Server:
+  Style-proto bank {s_k}_{k=1..K}; Class-proto bank {p_c^k}_{c,k}
+  For each target client i:
+    w_{i->j} = softmax_j(cos(s_i, s_j) / tau_SCPR)
+    P*_c^i  = Sum_j w_{i->j} * p_c^j
+  Dispatch {P*_c^i} to client i (replaces global mean)
+  DFE / sem_head / classifier: standard FedAvg
+  BN: not aggregated (FedBN)
+
+### Core Mechanism - SCPR Retrieval
+
+Input:
+- Client k style s_k = (mu_k, sigma_k) in R^{2d}, d=512 for ResNet-18 (1024 total)
+- Server maintains {s_k, {p_c^k}_c}_{k=1..K}
+
+Retrieval:
+  raw cos:            g_ij = cos(s_i, s_j) in [-1, 1]
+  tempered softmax:   w_{i->j} = exp(g_ij / tau_SCPR) / sum_l exp(g_il / tau_SCPR)
+  retrieved proto:    P*_c^i = sum_j w_{i->j} * p_c^j
+
+Properties:
+- tau_SCPR -> infinity: uniform w, degenerates to FedProto global mean
+- tau_SCPR -> 0: one-hot w, degenerates to nearest-style retrieval
+- Default tau_SCPR = 0.3 (inherit SAS optimal); ablation {0.1, 0.3, 1.0, 3.0}
+
+Gradient detach: P*_c^i.detach() - retrieved proto is a soft anchor, no gradient back to proto bank.
+This is the key safety design avoiding EXP-078d NaN (which leaked gradient through AdaIN-modified z_sem).
+
+### Supporting Component - Style-Weighted Multi-Positive InfoNCE (optional)
+
+Instead of collapsing K prototypes into one weighted mean, let all K prototypes be positives with weighted pulling:
+
+L_SCPR(z_i, y=c) = - Sum_j w_{i->j} * log [ exp(sim(z_i, p_c^j)/tau_nce) / (exp(sim(z_i, p_c^j)/tau_nce) + Sum_{c'!=c, l} exp(sim(z_i, p_{c'}^l)/tau_nce)) ]
+
+- Uniform w: reduces to SupCon multi-positive (= M3)
+- One-hot w: reduces to single-positive nearest-style
+- Middle: style-weighted pulling
+
+Default main implementation is single retrieved proto (simpler); weighted multi-pos is an ablation.
+
+### Modern Primitive Usage
+
+Intentionally conservative: no LLM/VLM/Diffusion/RL.
+Reasons: (1) the problem is pure FL communication + prototype alignment, (2) CLIP/VLM violates fair baseline comparison, (3) CVPR FL community values mechanism cleanliness. Frontier leverage is expressed through attention-based retrieval (Transformer-era primitive) applied to FL prototype systems.
+
+### Integration
+
+- Hook point: replace `FDSE_CVPR25/algorithm/feddsa_scheduled.py` iterate() prototype aggregation branch
+- Frozen: backbone / sem_head / style_head / classifier / BN, FedAvg/FedBN unchanged
+- New: Server `_retrieve_prototypes(target_cid)` (~30 lines); Server removes proto_global mean; Client InfoNCE target reads from retrieved_protos (~5 lines)
+- Client training flow unchanged: z_sem = sem_head(h); L_CE = CE(classifier(z_sem), y); L_InfoNCE = infonce(z_sem, retrieved_protos)
+
+### Training Plan
+
+Budget: R=200, E=1(Office)/E=5(PACS), B=50, LR=0.05.
+
+Hyperparameters (minimal sufficient):
+- lambda_orth = 1.0, lambda_hsic = 0.1, lambda_sem = 1.0 (Plan A)
+- tau_nce = 0.3, tau_scpr = 0.3
+- warmup = 50
+
+Monitoring (diagnostic, not training):
+- H(w_k) = -sum_j w_{k->j} log w_{k->j} (collapse detection)
+- L2(retrieved_proto, global_mean) (degeneracy detection)
+- cos_sim(grad_CE, grad_InfoNCE) (gradient conflict)
+
+### Failure Modes and Diagnostics
+
+| Failure | Signal | Fallback |
+|---------|--------|----------|
+| Attention uniform collapse | H(w) > 0.95*log(K) for >20 rounds | project style key to lower dim, or tau -> 0.1 |
+| One-hot collapse | H(w) < 0.1*log(K) | tau -> 1.0 |
+| PACS regression below baseline | 3-seed AVG Best < orth_only | verify >= M3 uniform attention; else 50/50 mix with global mean |
+| InfoNCE NaN | loss NaN/Inf | more aggressive detach, tau_nce 0.3 -> 0.5 |
+| Self-attention dominance (w_kk > 0.9) | collapse to FedBN | mask self (j != k) |
+
+Built-in safety: worst case SCPR with uniform attention = M3 (already +5.09%).
+
+### Novelty and Elegance Argument
+
+Closest prior works:
+1. FedProto (AAAI 2022): SCPR replaces its target construction via style attention
+2. FPL (CVPR 2023) / FedPLVM (NeurIPS 2024): both use prototype-self geometry as cluster key; SCPR uses client style as retrieval key (semantically different)
+3. FedSTAR: Transformer aggregator + FiLM, but style strictly LOCAL; SCPR is first to make style a cross-client attention key
+4. FISC / PARDON (ICDCS 2025): share style via AdaIN in image/mixed feature space; SCPR shares style in decoupled representation space via target construction
+5. SAS (ours, unpublished): param-space routing, fails on PACS full-outlier; SCPR moves routing to prototype layer, keeps all clients on same sem_head
+
+2x2 differentiation matrix:
+
+|   | No style sharing | Style sharing |
+|---|-----------------|---------------|
+| No decouple | FedBN / FedAvg / FedProto | FISC / PARDON / StyleDDG / FedCCRL |
+| Decouple | FedSTAR / FedSeProto / FDSE | **SCPR (first)** |
+
+Elegance:
+- Single mechanism, 0 new params, <100 lines
+- Math: strictly generalizes FedProto (tau->inf) and M3 (uniform w, multi-pos variant)
+- Worst case = M3 (+5.09%)
+- Closes FedDSA Share narrative; avoids all known failure modes
+
+---
+
+## Claim-Driven Validation Sketch
+
+### Claim 1 (main): SCPR effective on full-outlier PACS, strictly better than M3
+
+- PACS (4 domains, 7 classes)
+- C1.1 orth_only (Plan A baseline)
+- C1.2 + M3 multi-positive (= SCPR uniform attention, lower bound)
+- C1.3 + SCPR (tau=0.3)
+- 3-seed mean AVG Best / Last / per-domain (Art, Sketch)
+- Expected: C1.3 >= C1.2 + 0.5%, C1.3 >= 81.5%
+- Decisive: if C1.3 < C1.2, method falsified
+
+### Claim 2 (main): SCPR on single-outlier Office >= SAS
+
+- Office-Caltech10
+- C2.1 orth_only baseline
+- C2.2 + SAS (tau=0.3, verified 89.82%)
+- C2.3 + SCPR (tau=0.3)
+- C2.4 + SCPR + SAS (orthogonality check)
+- Expected: C2.3 >= C2.2, C2.4 >= max + 0.3%
+- Decisive: (a) C2.3 >= C2.2 proves proto layer >= param layer; (b) C2.4 > C2.3 proves orthogonality
+
+### Claim 3 (mechanism): tau_SCPR sensitivity and attention health
+
+- PACS 3-seed
+- tau in {0.1, 0.3, 1.0, 3.0}
+- record H(w), L2(retrieved, mean)
+- Expected: optimal tau in [0.3, 1.0], H(w) in [0.3*log K, 0.85*log K]
+
+### Total compute
+
+- PACS main: 9 runs
+- Office main: 12 runs
+- tau ablation: 9 runs
+- ~60 GPU-hours, single GPU 3 days
+
+---
+
+## Experiment Handoff
+
+- Must-prove claims: 1, 2, 3
+- Must-run ablations: uniform attention (=M3) lower bound, tau sweep, self-mask variant, SCPR+SAS, (optional) single-proto vs weighted multi-pos
+- Critical metrics: PACS AVG Best/Last + per-domain, Office AVG Best/Last + Caltech
+- Highest-risk assumptions:
+  1. High-dim cos sim with 4-5 clients produces meaningful discrimination
+  2. PACS SCPR >= M3 (otherwise falsified)
+  3. retrieved proto detach suffices to avoid EXP-078d NaN
+
+## Compute
+60 GPU-hours, 5 days end-to-end
+
+=== END PROPOSAL ===
+
+Score these 7 dimensions from 1-10:
+
+1. **Problem Fidelity**: Does the method still attack the original bottleneck, or has it drifted into solving something easier or different?
+
+2. **Method Specificity**: Are the interfaces, representations, losses, training stages, and inference path concrete enough that an engineer could start implementing?
+
+3. **Contribution Quality**: Is there one dominant mechanism-level contribution with real novelty, good parsimony, and no obvious contribution sprawl?
+
+4. **Frontier Leverage**: Does the proposal use current foundation-model-era primitives appropriately when they are the right tool, instead of defaulting to old-school module stacking?
+
+5. **Feasibility**: Can this method be trained and integrated with the stated resources and data assumptions?
+
+6. **Validation Focus**: Are the proposed experiments minimal but sufficient to validate the core claims? Is there unnecessary experimental bloat?
+
+7. **Venue Readiness**: If executed well, would the contribution feel sharp and timely enough for a top venue?
+
+**OVERALL SCORE** (1-10): Weighted toward Problem Fidelity, Method Specificity, Contribution Quality, and Frontier Leverage.
+Use this weighting: Problem Fidelity 15%, Method Specificity 25%, Contribution Quality 25%, Frontier Leverage 15%, Feasibility 10%, Validation Focus 5%, Venue Readiness 5%.
+
+For each dimension scoring < 7, provide:
+- The specific weakness
+- A concrete fix at the method level (interface / loss / training recipe / integration point / deletion of unnecessary parts)
+- Priority: CRITICAL / IMPORTANT / MINOR
+
+Then add:
+- **Simplification Opportunities**: 1-3 concrete ways to delete, merge, or reuse components while preserving the main claim. Write "NONE" if already tight.
+- **Modernization Opportunities**: 1-3 concrete ways to replace old-school pieces with more natural foundation-model-era primitives if genuinely better. Write "NONE" if already modern enough.
+- **Drift Warning**: "NONE" if the proposal still solves the anchored problem; otherwise explain the drift clearly.
+- **Verdict**: READY / REVISE / RETHINK
+
+Verdict rule:
+- READY: overall score >= 9, no meaningful drift, one focused dominant contribution, and no obvious complexity bloat remains
+- REVISE: the direction is promising but not yet at READY bar
+- RETHINK: the core mechanism or framing is still fundamentally off
+
+Please output in English. Be rigorous and specific — this author has already run 85 experiments and can push back on weak suggestions.

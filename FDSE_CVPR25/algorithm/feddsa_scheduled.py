@@ -131,6 +131,16 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                           #   3 = sem_head sas + classifier uniform-avg (C2 counterfactual)
                           #   4 = sem_head sas + classifier fully local (C1 counterfactual)
             'sas_tau': 0.3,  # softmax temperature for style similarity
+            # -------- SCPR (Self-Masked Style-Weighted Multi-Positive InfoNCE) --------
+            # NEW (2026-04-19): refined via GPT-5.4 x5-round refine session
+            # (obsidian_exprtiment_results/refine_logs/2026-04-18_SCPR_v1/)
+            'scpr': 0,    # SCPR mode:
+                          #   0 = off (fall back to sm schedule / Plan A, no SCPR loss)
+                          #   1 = uniform multi-positive (= M3 / SCPR tau->inf lower bound)
+                          #   2 = style-weighted multi-positive (SCPR, OURS)
+                          # Always self-masked (j != k) when mode > 0.
+                          # Uses domain-indexed class prototypes; NO new trainable params.
+            'scpr_tau': 0.3,  # SCPR style attention temperature (inherited from SAS optimal)
         })
         # Readable aliases
         self.lambda_orth = float(self.lo)
@@ -149,6 +159,9 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.save_errors = int(self.se)
         self.style_aware_sem = int(self.sas)
         self.style_aware_tau = float(self.sas_tau)
+        # SCPR aliases
+        self.scpr_mode = int(self.scpr)
+        self.scpr_tau_val = float(self.scpr_tau)
         self.sample_option = 'full'
 
         # 方案 A：per-client semantic_head states (最近一轮上传的)
@@ -160,6 +173,9 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.style_bank = {}
         # Global semantic prototypes
         self.global_semantic_protos = {}
+        # SCPR: per-(client, class) prototypes bank (domain-indexed)
+        #   key: client_id -> value: dict {class_idx: proto_tensor (cpu)}
+        self.client_class_protos = {}
         # Gradient conflict log
         self.grad_conflict_log = {}
         # Best checkpoint tracking (for save_errors)
@@ -186,6 +202,9 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             c.grad_log_interval = self.grad_log_interval
             c.lambda_mse = self.lambda_mse
             c.alpha_sparsity = self.alpha_sparsity
+            # SCPR params to client
+            c.scpr_mode = self.scpr_mode
+            c.scpr_tau_val = self.scpr_tau_val
 
     def _init_agg_keys(self):
         """Classify model keys into: shared (FedAvg), private (style_head+BN)."""
@@ -271,11 +290,18 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         if overridden:
             model_to_send.load_state_dict(model_state)
 
+        # SCPR: compute self-masked style-weighted (or uniform) prototype payload
+        # Returns None when scpr=0 OR bank insufficient; client falls back to non-SCPR path.
+        scpr_payload = None
+        if self.scpr_mode > 0 and len(self.client_class_protos) >= 2:
+            scpr_payload = self._compute_scpr_payload(client_id)
+
         return {
             'model': model_to_send,
             'global_protos': copy.deepcopy(self.global_semantic_protos),
             'style_bank': dispatched_styles,
             'current_round': self.current_round,
+            'scpr_payload': scpr_payload,
         }
 
     @staticmethod
@@ -358,6 +384,81 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                     accumulated[k] += st[k] / n
         return accumulated
 
+    def _compute_scpr_payload(self, target_cid):
+        """Compute SCPR payload for target client: self-masked style-weighted
+        (or uniform) prototype dispatch.
+
+        scpr_mode=1 (uniform multi-positive, = M3 lower bound) — STYLE-FREE:
+            w_{k->j}^{uniform} = 1 / (K-1) for all j != k that have proto(s)
+            Does NOT require style bank (this is the whole point of M3 lower bound).
+        scpr_mode=2 (style-weighted, OURS) — requires style bank:
+            w_{k->j} = softmax_j( cos(s_k, s_j) / tau_SCPR ) * 1[j != k]
+
+        Returns:
+            None if insufficient bank. Otherwise dict:
+              'weights': {source_cid: float}  (self-masked, sums to 1 over source_cids)
+              'protos':  {source_cid: {class_idx: proto_tensor_cpu}}
+        """
+        import torch as _t
+
+        # --- Stage 1: self-masked prototype source collection (style-independent) ---
+        source_cids_raw = []
+        source_protos_raw = {}
+        for cid, protos in self.client_class_protos.items():
+            if cid == target_cid:  # SELF-MASK (R1 reviewer fix)
+                continue
+            if protos is None or len(protos) == 0:
+                continue
+            source_cids_raw.append(cid)
+            source_protos_raw[cid] = protos
+
+        if len(source_cids_raw) == 0:
+            return None
+
+        # --- Stage 2: weight assignment ---
+        if self.scpr_mode == 1:
+            # Uniform (M3 lower bound; SCPR tau -> infinity). STYLE-FREE by design.
+            # codex-fix #1: do NOT depend on style_bank here.
+            uniform_w = 1.0 / len(source_cids_raw)
+            weights = {cid: uniform_w for cid in source_cids_raw}
+            return {'weights': weights, 'protos': source_protos_raw}
+
+        if self.scpr_mode == 2:
+            # Style-weighted softmax (SCPR main method). Requires style bank.
+            target_style = self.style_bank.get(target_cid)
+            if target_style is None:
+                return None
+            target_vec = self._extract_style_vec(target_style)
+
+            source_cids = []
+            source_vecs = []
+            source_protos = {}
+            for cid in source_cids_raw:
+                src_style = self.style_bank.get(cid)
+                if src_style is None:
+                    continue
+                src_vec = self._extract_style_vec(src_style)
+                if src_vec.shape != target_vec.shape:
+                    continue
+                source_cids.append(cid)
+                source_vecs.append(src_vec)
+                source_protos[cid] = source_protos_raw[cid]
+
+            if len(source_cids) == 0:
+                return None
+
+            sims = []
+            for src_vec in source_vecs:
+                dot = (src_vec * target_vec).sum()
+                norm = src_vec.norm() * target_vec.norm() + 1e-8
+                sims.append((dot / norm).item())
+            sims_t = _t.tensor(sims, dtype=_t.float32) / max(self.scpr_tau_val, 1e-3)
+            w_vec = _t.softmax(sims_t, dim=0).tolist()
+            weights = {cid: float(w) for cid, w in zip(source_cids, w_vec)}
+            return {'weights': weights, 'protos': source_protos}
+
+        return None
+
     def iterate(self):
         self.selected_clients = self.sample()
         res = self.communicate(self.selected_clients)
@@ -389,6 +490,14 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         for cid, style in zip(self.received_clients, style_stats_list):
             if style is not None:
                 self.style_bank[cid] = style
+
+        # SCPR: update per-(client, class) prototype bank (domain-indexed)
+        if self.scpr_mode > 0:
+            for cid, protos in zip(self.received_clients, protos_list):
+                if protos is not None and len(protos) > 0:
+                    self.client_class_protos[cid] = {
+                        c: p.detach().clone().cpu() for c, p in protos.items()
+                    }
 
         # Aggregate global protos (weighted mean)
         self._aggregate_protos(protos_list, proto_counts_list)
@@ -550,12 +659,18 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         self.local_style_bank = None
         self.current_round = 0
         self._grad_conflict_log = None
+        # SCPR state (populated by Server.initialize via `c.scpr_mode=...`)
+        self.scpr_mode = 0
+        self.scpr_tau_val = 0.3
+        self.scpr_payload = None
 
     def reply(self, svr_pkg):
         model, global_protos, style_bank, current_round = self.unpack(svr_pkg)
         self.current_round = current_round
         self.global_protos = global_protos
         self.local_style_bank = style_bank
+        # SCPR: extract per-round payload (self-masked weights + domain protos)
+        self.scpr_payload = svr_pkg.get('scpr_payload', None)
         self.train(model)
         return self.pack()
 
@@ -696,7 +811,16 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             loss_mse_anchor = torch.tensor(0.0, device=x.device)
             use_alpha = self.schedule_mode in (5, 6, 7)
             use_mse = self.schedule_mode in (4, 6, 7)
-            if w_aux > 1e-4 and self.global_protos and len(self.global_protos) >= 2:
+            # codex-fix #2: when SCPR is active, it is the sole alignment loss.
+            # Disable the legacy global-mean InfoNCE/alpha/MSE block to preserve
+            # the "scpr=1 strictly reduces to M3" mathematical contract.
+            legacy_align_active = (
+                self.scpr_mode == 0
+                and w_aux > 1e-4
+                and self.global_protos
+                and len(self.global_protos) >= 2
+            )
+            if legacy_align_active:
                 # Choose InfoNCE variant
                 # For mode 7: use z_sem + z_sem_aug concatenated for richer contrastive
                 z_for_contrast = z_sem
@@ -724,6 +848,13 @@ class Client(flgo.algorithm.fedbase.BasicClient):
                 + w_aux * self.lambda_sem * loss_sem
                 + w_aux * self.lambda_mse * loss_mse_anchor
             )
+
+            # SCPR loss: self-masked (style-)weighted multi-positive InfoNCE.
+            # Independent from sm/w_aux schedule (works even when Plan A sm=0).
+            # scpr_mode=0 → skip entirely; =1 → uniform multi-pos (M3 bound); =2 → style-weighted.
+            if self.scpr_mode > 0 and self.scpr_payload is not None:
+                loss_scpr = self._scpr_loss(z_sem, y)
+                loss = loss + self.lambda_sem * loss_scpr
 
             # Gradient conflict logging (last batch of last epoch)
             is_last_batch = (step == num_steps - 1)
@@ -934,6 +1065,82 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         target_matrix = torch.stack(targets).to(z_sem.device).detach()
         valid_t = torch.tensor(valid, device=z_sem.device)
         return F.mse_loss(z_sem[valid_t], target_matrix)
+
+    # ----------------------------------------------------------------
+    # SCPR: Self-Masked Style-Weighted Multi-Positive InfoNCE
+    # ----------------------------------------------------------------
+
+    def _scpr_loss(self, z_sem, y):
+        """Self-masked (style-)weighted multi-positive SupCon-style InfoNCE.
+
+        For client k (self-masked by Server: j != k), given the domain-indexed
+        prototype bank {p_c^j} (all j != k, all classes c) and client-pair
+        weights w_{k->j}, the loss per sample (z_i, y_i=c) is the weighted
+        SupCon multi-positive formulation WITH POSITIVES IN THE DENOMINATOR
+        (standard SupCon, Khosla et al. 2020):
+
+            L_i = - sum_{j in A_i^c} (w_{k->j} / Z_i^c) * log_prob(j; i)
+            log_prob(j; i) = logits[i, j] - logsumexp_{a in ALL_entries} logits[i, a]
+            logits[i, a] = sim(z_i, p_{c_a}^{j_a}) / tau_nce
+
+        where:
+          A_i^c = {j != k : p_c^j exists}    (per-class available clients)
+          Z_i^c = sum_{j in A_i^c} w_{k->j}  (per-sample renormalization)
+          ALL_entries = all (class, client) pairs in the bank passed in
+
+        Under scpr_mode=1 (uniform weights) this is exactly domain-aware
+        multi-positive SupCon (= M3 lower bound). Under scpr_mode=2
+        (style-weighted softmax) it is the full SCPR method.
+
+        All prototypes are detached (soft anchors, no grad back to bank).
+        """
+        if self.scpr_payload is None:
+            return torch.tensor(0.0, device=z_sem.device)
+        weights = self.scpr_payload.get('weights', {})
+        domain_protos = self.scpr_payload.get('protos', {})
+        if not weights or not domain_protos:
+            return torch.tensor(0.0, device=z_sem.device)
+
+        device = z_sem.device
+
+        # Flatten into per-entry arrays: each entry = (class, source_cid, proto, weight)
+        entry_protos = []
+        entry_classes = []
+        entry_weights = []
+        for cid, protos in domain_protos.items():
+            w = float(weights.get(cid, 0.0))
+            for c, proto in protos.items():
+                entry_protos.append(proto)
+                entry_classes.append(int(c))
+                entry_weights.append(w)
+
+        if len(entry_protos) < 2:
+            return torch.tensor(0.0, device=device)
+
+        proto_matrix = torch.stack([p.to(device) for p in entry_protos]).detach()  # [N, D]
+        entry_classes_t = torch.tensor(entry_classes, device=device, dtype=torch.long)  # [N]
+        entry_weights_t = torch.tensor(entry_weights, device=device, dtype=torch.float32)  # [N]
+
+        # Cosine-similarity logits with InfoNCE temperature
+        z_n = F.normalize(z_sem, dim=1)
+        p_n = F.normalize(proto_matrix, dim=1)
+        logits = (z_n @ p_n.T) / self.tau  # [B, N]
+        log_prob = logits - torch.logsumexp(logits, dim=1, keepdim=True)  # [B, N]
+
+        # Positive mask: entry.class == y[i]  -> [B, N]
+        y_col = y.unsqueeze(1)  # [B, 1]
+        pos_mask = (entry_classes_t.unsqueeze(0) == y_col).float()  # [B, N]
+
+        # Per-sample renormalize positive weights over A_i^c (clients that have class c)
+        pos_w = pos_mask * entry_weights_t.unsqueeze(0)  # [B, N]
+        pos_w_sum = pos_w.sum(dim=1, keepdim=True)  # [B, 1]
+        pos_w_norm = pos_w / pos_w_sum.clamp(min=1e-8)  # [B, N]
+
+        # Weighted NLL; skip samples with no positive (A_i^c empty)
+        loss_per_sample = -(pos_w_norm * log_prob).sum(dim=1)  # [B]
+        has_pos = (pos_w_sum.squeeze(1) > 1e-8).float()  # [B]
+        denom = has_pos.sum().clamp(min=1.0)
+        return (loss_per_sample * has_pos).sum() / denom
 
 
 # ============================================================
