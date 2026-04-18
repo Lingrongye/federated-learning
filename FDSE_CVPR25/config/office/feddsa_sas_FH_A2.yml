@@ -1,0 +1,32 @@
+# EXP-093 A2 (sas-FH, OURS): Office orth_only LR=0.05 + sas=2 (sem_head + classifier 都 style-conditioned) + se=1
+# 方案：把 Plan A 的 sas 从半头扩到整 head 链（投影头 + 分类器）
+algo_para:
+- 1.0    # lo lambda_orth
+- 0.0    # lh lambda_hsic
+- 1.0    # ls lambda_sem (无效,因为 sm=0)
+- 0.2    # tau InfoNCE 温度
+- 5      # sdn style_dispatch_num
+- 128    # pd proj_dim
+- 0      # sm = orth_only (不引入 InfoNCE)
+- 60     # bp
+- 30     # bw
+- 80     # cr
+- 10     # gli grad log interval
+- 1.0    # lm lambda_mse
+- 0.25   # al alpha_sparsity
+- 1      # se = 1 (保存 best checkpoint)
+- 2      # sas = 2, A2 (sas-FH, sem_head + classifier 都 sas)
+- 0.3    # sas_tau = 0.3
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
