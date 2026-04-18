@@ -124,7 +124,12 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'lm': 1.0,    # lambda_mse (MSE anchor weight, modes 4/6)
             'al': 0.25,   # alpha_sparsity (power for cos_sim, modes 5/6)
             'se': 0,      # save_errors: 0=off, 1=save client checkpoints on last round
-            'sas': 0,     # style-aware semantic head aggregation: 0=off, 1=on
+            'sas': 0,     # style-aware aggregation scope:
+                          #   0 = off (baseline B0)
+                          #   1 = sem_head only, classifier FedAvg (Plan A / B1 / EXP-084)
+                          #   2 = sem_head + classifier, both style-conditioned (A2 / sas-FH, OURS)
+                          #   3 = sem_head sas + classifier uniform-avg (C2 counterfactual)
+                          #   4 = sem_head sas + classifier fully local (C1 counterfactual)
             'sas_tau': 0.3,  # softmax temperature for style similarity
         })
         # Readable aliases
@@ -148,6 +153,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
 
         # 方案 A：per-client semantic_head states (最近一轮上传的)
         self.client_sem_states = {}
+        # sas-FH (A2/C1/C2)：per-client classifier head states
+        self.client_head_states = {}
 
         # Style bank
         self.style_bank = {}
@@ -160,6 +167,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self._best_round = 0
         self._best_global_state = None
         self._best_client_states = None
+        # Same-round FedAvg head snapshot at best round (for Claim 2 swap diagnostic)
+        self._best_fedavg_head_state = None
 
         self._init_agg_keys()
 
@@ -191,7 +200,16 @@ class Server(flgo.algorithm.fedbase.BasicServer):
 
     def pack(self, client_id, mtype=0):
         """Send global model + protos + styles.
-        方案 A (sas=1): 对 semantic_head 做 style-similarity 加权的 per-client personalization。
+
+        sas 聚合策略（分两个部分分别处理）：
+          sem_head:
+            - sas in {1,2,3,4}: style-conditioned 个性化 (同 Plan A)
+            - sas == 0: FedAvg (不做个性化)
+          classifier head:
+            - sas == 2 (A2): style-conditioned 个性化（OURS, sas-FH）
+            - sas == 3 (C2): uniform-avg 聚合（均匀加权，不用 style）
+            - sas == 4 (C1): local-only（用 client 自己最近一轮上传的 head）
+            - sas in {0,1}: FedAvg (Plan A 行为)
         """
         dispatched_styles = None
         if self.schedule_mode != 0 and len(self.style_bank) > 0:
@@ -205,16 +223,53 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                 dispatched_styles = [available[k] for k in chosen]
 
         model_to_send = copy.deepcopy(self.model)
+        model_state = model_to_send.state_dict()
+        overridden = False
 
-        # 方案 A：用 style similarity 个性化 semantic_head
-        if self.style_aware_sem == 1 and len(self.client_sem_states) >= 2 and client_id in self.style_bank:
-            personalized_sem = self._compute_style_weighted_sem(client_id)
+        # --- 1) sem_head 部分 ---
+        if self.style_aware_sem in (1, 2, 3, 4) \
+                and len(self.client_sem_states) >= 2 \
+                and client_id in self.style_bank:
+            personalized_sem = self._compute_style_weighted(
+                self.client_sem_states, client_id
+            )
             if personalized_sem is not None:
-                model_state = model_to_send.state_dict()
                 for k, v in personalized_sem.items():
                     if k in model_state:
                         model_state[k] = v.to(model_state[k].device)
-                model_to_send.load_state_dict(model_state)
+                overridden = True
+
+        # --- 2) classifier head 部分 ---
+        if self.style_aware_sem == 2 \
+                and len(self.client_head_states) >= 2 \
+                and client_id in self.style_bank:
+            # A2 (sas-FH): style-conditioned personalized head
+            personalized_head = self._compute_style_weighted(
+                self.client_head_states, client_id
+            )
+            if personalized_head is not None:
+                for k, v in personalized_head.items():
+                    if k in model_state:
+                        model_state[k] = v.to(model_state[k].device)
+                overridden = True
+        elif self.style_aware_sem == 3 and len(self.client_head_states) >= 2:
+            # C2 counterfactual: uniform-avg head (每个 client 收到同一份均值 head)
+            uniform_head = self._compute_uniform_avg(self.client_head_states)
+            if uniform_head is not None:
+                for k, v in uniform_head.items():
+                    if k in model_state:
+                        model_state[k] = v.to(model_state[k].device)
+                overridden = True
+        elif self.style_aware_sem == 4 and client_id in self.client_head_states:
+            # C1 counterfactual: local-only head (client 拿自己上轮上传的 head)
+            local_head = self.client_head_states[client_id]
+            for k, v in local_head.items():
+                if k in model_state:
+                    model_state[k] = v.to(model_state[k].device)
+            overridden = True
+
+        if overridden:
+            model_to_send.load_state_dict(model_state)
 
         return {
             'model': model_to_send,
@@ -223,36 +278,42 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'current_round': self.current_round,
         }
 
-    def _compute_style_weighted_sem(self, target_cid):
-        """对 target client 计算其他 client 的 style-similarity 加权 semantic_head。
-        返回 dict of semantic_head params (averaged)."""
+    @staticmethod
+    def _extract_style_vec(style):
+        """从 style_bank 的 entry (tuple/dict/tensor) 提取展平的 style 向量。"""
+        if isinstance(style, (tuple, list)):
+            return style[0].flatten().cpu()
+        elif isinstance(style, dict):
+            v = style.get('mu', next(iter(style.values())))
+            return v.flatten().cpu()
+        else:
+            return style.flatten().cpu()
+
+    def _compute_style_weighted(self, client_states, target_cid):
+        """通用版本：对 target client 计算其他 client 的 style-similarity 加权 state。
+
+        Args:
+            client_states: dict[cid -> state_dict]，比如 self.client_sem_states 或
+                           self.client_head_states。所有 value 必须有相同的 key 集合。
+            target_cid: 目标 client id。
+        Returns:
+            aggregated state dict (同 client_states[cid] 的结构)，或 None（无法聚合时）。
+        """
         import torch as _t
         target_style = self.style_bank.get(target_cid)
         if target_style is None:
             return None
-        # target style: (mu, sigma) tuple or dict. 取 μ 作为 style vector
-        if isinstance(target_style, (tuple, list)):
-            target_vec = target_style[0].flatten().cpu()
-        elif isinstance(target_style, dict):
-            target_vec = target_style.get('mu', next(iter(target_style.values()))).flatten().cpu()
-        else:
-            target_vec = target_style.flatten().cpu()
+        target_vec = self._extract_style_vec(target_style)
 
         sims = []
         cids = []
-        for cid, sem_state in self.client_sem_states.items():
+        for cid in client_states:
             src_style = self.style_bank.get(cid)
             if src_style is None:
                 continue
-            if isinstance(src_style, (tuple, list)):
-                src_vec = src_style[0].flatten().cpu()
-            elif isinstance(src_style, dict):
-                src_vec = src_style.get('mu', next(iter(src_style.values()))).flatten().cpu()
-            else:
-                src_vec = src_style.flatten().cpu()
+            src_vec = self._extract_style_vec(src_style)
             if src_vec.shape != target_vec.shape:
                 continue
-            # cosine similarity
             dot = (src_vec * target_vec).sum()
             norm = src_vec.norm() * target_vec.norm() + 1e-8
             sims.append((dot / norm).item())
@@ -261,19 +322,40 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         if len(sims) == 0:
             return None
 
-        # softmax with temperature
         sims_t = _t.tensor(sims, dtype=_t.float32) / max(self.style_aware_tau, 1e-3)
         weights = _t.softmax(sims_t, dim=0)
 
-        # weighted average of sem states
         accumulated = None
         for w, cid in zip(weights.tolist(), cids):
-            sem = self.client_sem_states[cid]
+            st = client_states[cid]
             if accumulated is None:
-                accumulated = {k: v.clone() * w for k, v in sem.items()}
+                accumulated = {k: v.clone() * w for k, v in st.items()}
             else:
                 for k in accumulated:
-                    accumulated[k] += sem[k] * w
+                    accumulated[k] += st[k] * w
+        return accumulated
+
+    def _compute_uniform_avg(self, client_states):
+        """C2 counterfactual: 对所有 client state 做均匀平均（uniform mean），
+        不使用 style 信息。每个 target client 都会收到同一份结果。
+
+        Args:
+            client_states: dict[cid -> state_dict]
+        Returns:
+            averaged state dict，或 None（空输入时）。
+        """
+        if len(client_states) == 0:
+            return None
+        cids = list(client_states.keys())
+        n = float(len(cids))
+        accumulated = None
+        for cid in cids:
+            st = client_states[cid]
+            if accumulated is None:
+                accumulated = {k: v.clone() / n for k, v in st.items()}
+            else:
+                for k in accumulated:
+                    accumulated[k] += st[k] / n
         return accumulated
 
     def iterate(self):
@@ -289,12 +371,19 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         # Aggregate shared parameters (FedAvg)
         self._aggregate_shared(models)
 
-        # 方案 A：记录每个 client 上传的 semantic_head state（供 pack 时做 style-weighted mix）
-        if self.style_aware_sem == 1:
+        # sas：记录每个 client 上传的 sem_head / head state（供 pack 时做聚合）
+        if self.style_aware_sem in (1, 2, 3, 4):
             for cid, m in zip(self.received_clients, models):
                 m_state = m.state_dict()
-                sem_state = {k: v.clone().cpu() for k, v in m_state.items() if 'semantic_head' in k}
+                sem_state = {k: v.clone().cpu() for k, v in m_state.items()
+                             if 'semantic_head' in k}
                 self.client_sem_states[cid] = sem_state
+                # sas-FH (A2/C1/C2) 需要额外记录 classifier head
+                if self.style_aware_sem in (2, 3, 4):
+                    head_state = {k: v.clone().cpu() for k, v in m_state.items()
+                                  if k.startswith('head.')}
+                    if head_state:
+                        self.client_head_states[cid] = head_state
 
         # Collect style bank
         for cid, style in zip(self.received_clients, style_stats_list):
@@ -345,6 +434,14 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                     copy.deepcopy(c.model.state_dict()) if getattr(c, 'model', None) is not None else None
                     for c in self.clients
                 ]
+                # sas-FH Claim 2：保存同轮 FedAvg head 快照（供 swap diagnostic 用）
+                # 仅 A2 模式下有意义：此时 server.model 里 head 已是 FedAvg 版本，
+                # 但下发给 client 的 head 是 style-conditioned personalized，
+                # 两者有差异 → 需要保留这份 "same-round global_head"。
+                self._best_fedavg_head_state = {
+                    k: v.clone().cpu() for k, v in self.model.state_dict().items()
+                    if k.startswith('head.')
+                }
         except Exception as e:
             try:
                 self.gv.logger.info(f"[TrackBest] skip: {e}")
@@ -362,6 +459,12 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                 for c in self.clients
             ]
             self._best_round = self.current_round
+            # 同时保一份最后一轮的 FedAvg head 作为 fallback snapshot
+            if self._best_fedavg_head_state is None:
+                self._best_fedavg_head_state = {
+                    k: v.clone().cpu() for k, v in self.model.state_dict().items()
+                    if k.startswith('head.')
+                }
             fallback = True
         else:
             fallback = False
@@ -375,6 +478,10 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             if state is not None:
                 torch.save(state, os.path.join(save_dir, f'client_{cid}.pt'))
                 saved += 1
+        # 同轮 FedAvg head 快照（Claim 2 swap diagnostic）
+        if self._best_fedavg_head_state is not None:
+            torch.save(self._best_fedavg_head_state,
+                       os.path.join(save_dir, 'fedavg_head.pt'))
         meta = {
             'best_round': self._best_round,
             'best_avg_acc': self._best_avg_acc,
@@ -383,7 +490,10 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'schedule_mode': int(self.schedule_mode),
             'lambda_orth': float(self.lambda_orth),
             'tau': float(self.tau),
+            'sas': int(self.style_aware_sem),
+            'sas_tau': float(self.style_aware_tau),
             'seed': seed,
+            'has_fedavg_head': self._best_fedavg_head_state is not None,
             'is_last_round_fallback': fallback,
         }
         with open(os.path.join(save_dir, 'meta.json'), 'w') as f:
