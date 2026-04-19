@@ -197,6 +197,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'use_etf': 1,     # 1=Fixed ETF (SGPA), 0=普通 Linear (对照)
             'use_whitening': 1,  # 1=广播 pooled whitening (μ_global,Σ_inv_sqrt), 0=不广播
             'use_centers': 1,    # 1=Client 收集并上传 class_centers, 0=不收集
+            'se': 0,             # 1=训练结束后保存 global_model + source_style_bank + whitening 到 ~/fl_checkpoints/
         })
         self.sample_option = 'full'
 
@@ -284,6 +285,10 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         if getattr(self, 'use_whitening', 1) == 1 and len(self.style_bank) >= self.min_clients_whiten:
             self._compute_pooled_whitening()
 
+        # 3.5. Save checkpoint at last round (if se=1, for EXP-099 SGPA inference)
+        if int(getattr(self, 'se', 0)) == 1 and self.current_round >= self.num_rounds:
+            self._save_sgpa_checkpoint()
+
         # 4. Diagnostic: Layer 2 指标 (client_center_variance + param_drift)
         if self.dl_agg is not None:
             metrics = {}
@@ -327,6 +332,69 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                 continue
             global_dict[k] = sum(w * md[k] for w, md in zip(weights, model_dicts))
         self.model.load_state_dict(global_dict, strict=False)
+
+    def _save_sgpa_checkpoint(self):
+        """训练末轮保存 global model + source_style_bank + pooled whitening payload.
+
+        供 EXP-099 SGPA inference script 独立推理使用 (无需重算 style bank).
+        输出路径: ~/fl_checkpoints/sgpa_{task}_s{seed}_R{rounds}_{timestamp}/
+        文件:
+            - global_model.pt      (model state_dict)
+            - client_models.pt     (list of client state_dicts for FedBN BN)
+            - source_style_bank.pt (dict cid -> (μ_sty, Σ_sty))
+            - whitening.pt         (μ_global, Σ_inv_sqrt, source_μ_k)
+            - meta.json            (config params)
+        """
+        import os, json, time
+        task_name = os.path.basename(self.option.get('task', 'unknown'))
+        seed = self.option.get('seed', 'x')
+        tag = f"sgpa_{task_name}_s{seed}_R{self.num_rounds}_{int(time.time())}"
+        save_dir = os.path.expanduser(f'~/fl_checkpoints/{tag}')
+        os.makedirs(save_dir, exist_ok=True)
+
+        # 1. Global model (含 encoder + heads + M buffer)
+        torch.save(self.model.state_dict(), os.path.join(save_dir, 'global_model.pt'))
+
+        # 2. Client models (for FedBN private BN)
+        client_states = [
+            copy.deepcopy(c.model.state_dict()) if getattr(c, 'model', None) is not None else None
+            for c in self.clients
+        ]
+        torch.save(client_states, os.path.join(save_dir, 'client_models.pt'))
+
+        # 3. Source style bank (for EXP-099 whitening reconstruction)
+        if self.style_bank:
+            torch.save(dict(self.style_bank), os.path.join(save_dir, 'source_style_bank.pt'))
+
+        # 4. Whitening payload (已算好,直接存)
+        if self.source_mu_k is not None:
+            whitening = {
+                'source_mu_k': self.source_mu_k,
+                'mu_global': self.mu_global,
+                'sigma_inv_sqrt': self.sigma_inv_sqrt,
+            }
+            torch.save(whitening, os.path.join(save_dir, 'whitening.pt'))
+
+        # 5. Meta
+        meta = {
+            'task': task_name,
+            'seed': seed,
+            'num_rounds': self.num_rounds,
+            'num_clients': len(self.clients),
+            'use_etf': int(self.use_etf),
+            'use_whitening': int(getattr(self, 'use_whitening', 1)),
+            'use_centers': int(getattr(self, 'use_centers', 1)),
+            'tau_etf': float(self.tau_etf),
+            'lambda_orth': float(self.lo),
+            'timestamp': int(time.time()),
+        }
+        with open(os.path.join(save_dir, 'meta.json'), 'w') as f:
+            json.dump(meta, f, indent=2)
+
+        try:
+            self.gv.logger.info(f"[SGPA checkpoint] saved to {save_dir}")
+        except Exception:
+            pass
 
     def _compute_pooled_whitening(self):
         """聚合各 client (μ, Σ) → (μ_global, Σ_within+Σ_between, Σ_inv_sqrt).
