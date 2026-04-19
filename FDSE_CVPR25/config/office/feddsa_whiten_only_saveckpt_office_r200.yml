@@ -1,0 +1,27 @@
+# EXP-105: Linear + whitening only + se=1 (为 EXP-099 SGPA 推理生成 checkpoint)
+# 同 EXP-102 config, 但 se=1 保存 ~/fl_checkpoints/
+algo_para:
+- 1.0    # lo
+- 0.1    # tau_etf (无效, use_etf=0)
+- 128    # pd
+- 10     # warmup_r
+- 1e-3   # eps_sigma
+- 2      # min_clients_whiten
+- 0      # diag = OFF
+- 0      # use_etf = 0
+- 1      # use_whitening = 1
+- 0      # use_centers = 0
+- 1      # se = 1 ★ 保存 checkpoint 给 EXP-099 用
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
