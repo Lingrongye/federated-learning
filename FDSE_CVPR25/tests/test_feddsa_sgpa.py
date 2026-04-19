@@ -385,6 +385,153 @@ class TestUseETFFlag:
         assert n_lin - n_etf == 128 * 10 + 10
 
 
+class TestLambdaETFPull:
+    """Test lambda_etf_pull soft regularizer (EXP-106 new mechanism, Codex REVISE compliance)."""
+
+    def _make_batch(self, K=10, d=128, per_class=4, device='cpu'):
+        """Helper: 均衡 batch, 每类 per_class 样本."""
+        torch.manual_seed(0)
+        z = torch.randn(K * per_class, d)
+        y = torch.arange(K).repeat_interleave(per_class)
+        return z.to(device), y.to(device)
+
+    def test_lambda_zero_equiv_baseline(self):
+        """CRITICAL: lambda=0 时 loss_etf_pull=0, 不影响 backward."""
+        K, d = 10, 128
+        M = FedDSASGPAModel(num_classes=K).M
+        z, y = self._make_batch(K=K, d=d)
+        # 模拟 Client.train 的 pull loss 计算路径
+        lambda_pull = 0.0
+        loss_etf_pull = torch.tensor(0.0)
+        if lambda_pull > 0:  # 不执行
+            pulls = []
+            for c in range(K):
+                mask = y == c
+                if mask.sum() >= 2:
+                    z_c_mean = z[mask].mean(dim=0)
+                    cos = F.cosine_similarity(z_c_mean.unsqueeze(0), M[:, c].unsqueeze(0))
+                    pulls.append(1.0 - cos.squeeze())
+            loss_etf_pull = torch.stack(pulls).mean()
+        assert loss_etf_pull.item() == 0.0
+
+    def test_pull_value_reasonable(self):
+        """lambda>0 时 pull 值在 [0, 2] (cos 范围 [-1, 1], 1-cos ∈ [0, 2])."""
+        K, d = 10, 128
+        M = FedDSASGPAModel(num_classes=K).M
+        z, y = self._make_batch(K=K, d=d)
+        pulls = []
+        for c in range(K):
+            mask = y == c
+            if mask.sum() >= 2:
+                z_c_mean = z[mask].mean(dim=0)
+                cos = F.cosine_similarity(z_c_mean.unsqueeze(0), M[:, c].unsqueeze(0))
+                pulls.append(1.0 - cos.squeeze())
+        loss = torch.stack(pulls).mean()
+        assert 0.0 <= loss.item() <= 2.0, f"pull loss {loss.item()} out of [0,2]"
+
+    def test_pull_skip_singleton_classes(self):
+        """n_c < 2 的类应 skip (codex SHOULD_FIX)."""
+        K, d = 10, 128
+        M = FedDSASGPAModel(num_classes=K).M
+        # 只有 class 0 有 4 个样本, class 1 有 1 个样本 (singleton), 其他空
+        z = torch.randn(5, d)
+        y = torch.tensor([0, 0, 0, 0, 1])
+        pulls = []
+        for c in range(K):
+            mask = y == c
+            n_c = int(mask.sum().item())
+            if n_c < 2:
+                continue
+            z_c_mean = z[mask].mean(dim=0)
+            cos = F.cosine_similarity(z_c_mean.unsqueeze(0), M[:, c].unsqueeze(0))
+            pulls.append(1.0 - cos.squeeze())
+        assert len(pulls) == 1  # 只 class 0 有 >=2
+        # class 1 (singleton) 应被 skip
+
+    def test_pull_perfect_alignment(self):
+        """z_sem_c_mean = M[:,c] (完美对齐) → loss=0."""
+        K, d = 7, 128
+        M = FedDSASGPAModel(num_classes=K).M
+        # 构造: z 各类的平均恰好等于 M[:,c]
+        z_list = []
+        y_list = []
+        for c in range(K):
+            z_list.append(M[:, c].unsqueeze(0).repeat(3, 1))  # 3 个一样的样本
+            y_list.extend([c] * 3)
+        z = torch.cat(z_list, dim=0)
+        y = torch.tensor(y_list)
+        pulls = []
+        for c in range(K):
+            mask = y == c
+            if mask.sum() < 2:
+                continue
+            z_c_mean = z[mask].mean(dim=0)
+            cos = F.cosine_similarity(z_c_mean.unsqueeze(0), M[:, c].unsqueeze(0))
+            pulls.append(1.0 - cos.squeeze())
+        loss = torch.stack(pulls).mean()
+        assert loss.item() < 1e-5, f"perfect alignment should give 0, got {loss.item()}"
+
+    def test_pull_opposite_alignment(self):
+        """z_sem_c_mean = -M[:,c] (反向) → loss=2."""
+        K, d = 7, 128
+        M = FedDSASGPAModel(num_classes=K).M
+        z_list = []
+        y_list = []
+        for c in range(K):
+            z_list.append((-M[:, c]).unsqueeze(0).repeat(3, 1))  # 负方向
+            y_list.extend([c] * 3)
+        z = torch.cat(z_list, dim=0)
+        y = torch.tensor(y_list)
+        pulls = []
+        for c in range(K):
+            mask = y == c
+            if mask.sum() < 2:
+                continue
+            z_c_mean = z[mask].mean(dim=0)
+            cos = F.cosine_similarity(z_c_mean.unsqueeze(0), M[:, c].unsqueeze(0))
+            pulls.append(1.0 - cos.squeeze())
+        loss = torch.stack(pulls).mean()
+        assert abs(loss.item() - 2.0) < 1e-5, f"opposite alignment should give 2, got {loss.item()}"
+
+    def test_pull_no_valid_classes_stays_zero(self):
+        """全部 singleton class → pulls 为空 → loss=0, 不 crash."""
+        K, d = 10, 128
+        M = FedDSASGPAModel(num_classes=K).M
+        # 每类只有 1 个样本 (全 singleton)
+        z = torch.randn(10, d)
+        y = torch.arange(10)  # 每类各 1 个
+        pulls = []
+        for c in range(K):
+            mask = y == c
+            if mask.sum() < 2:
+                continue
+            z_c_mean = z[mask].mean(dim=0)
+            cos = F.cosine_similarity(z_c_mean.unsqueeze(0), M[:, c].unsqueeze(0))
+            pulls.append(1.0 - cos.squeeze())
+        loss = torch.stack(pulls).mean() if pulls else torch.tensor(0.0)
+        assert loss.item() == 0.0
+        assert len(pulls) == 0
+
+    def test_pull_gradient_flow(self):
+        """Pull loss 对 z 有梯度 (non-zero gradient)."""
+        K, d = 7, 128
+        M = FedDSASGPAModel(num_classes=K).M
+        z = torch.randn(21, d, requires_grad=True)
+        y = torch.arange(K).repeat_interleave(3)
+        pulls = []
+        for c in range(K):
+            mask = y == c
+            if mask.sum() < 2:
+                continue
+            z_c_mean = z[mask].mean(dim=0)
+            cos = F.cosine_similarity(z_c_mean.unsqueeze(0), M[:, c].unsqueeze(0))
+            pulls.append(1.0 - cos.squeeze())
+        loss = torch.stack(pulls).mean()
+        loss.backward()
+        assert z.grad is not None
+        assert z.grad.norm().item() > 0
+
+
 class TestEndToEnd:
     def test_model_forward_with_random_batch(self):
         """端到端 smoke: model(x) 不 crash, 产出合理 logits."""

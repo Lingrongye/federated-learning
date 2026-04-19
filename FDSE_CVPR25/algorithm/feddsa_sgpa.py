@@ -198,6 +198,12 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'use_whitening': 1,  # 1=广播 pooled whitening (μ_global,Σ_inv_sqrt), 0=不广播
             'use_centers': 1,    # 1=Client 收集并上传 class_centers, 0=不收集
             'se': 0,             # 1=训练结束后保存 global_model + source_style_bank + whitening 到 ~/fl_checkpoints/
+            'lambda_etf_pull': 0.0,  # 软性 ETF pull regularization (仅 use_etf=0 生效):
+                                     # 0=关闭 (默认, 等同 Plan A Linear+whitening)
+                                     # >0=加 L_pull = mean_{c: n_c>=2} (1 - cos(z_sem_c_mean, M[:,c])).
+                                     # 平衡类间分离 (ETF 优势) + 类内紧密 (Linear 优势).
+                                     # Codex REVISE 后推荐范围: {0.001, 0.003, 0.01, 0.03, 0.1}.
+                                     # use_etf=1 时会 silently no-op (避免模糊 hybrid).
         })
         self.sample_option = 'full'
 
@@ -238,6 +244,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             c.diag_interval = 5  # Client 端每 5 轮记 Layer 1 (训练端)
             c.diag_log_dir = diag_root
             c.use_centers = self.use_centers  # 传给 Client 控制 class_centers 收集
+            c.lambda_etf_pull = float(self.lambda_etf_pull)
 
     def _init_agg_keys(self):
         """FedBN + style_head 本地; M buffer 参与聚合但因 seeded 一致所以不影响."""
@@ -569,9 +576,46 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             z_sty_n = F.normalize(z_sty, dim=-1)
             loss_orth = ((z_sem_n * z_sty_n).sum(dim=-1) ** 2).mean()
 
-            loss = loss_task + self.lambda_orth * loss_orth
+            # Loss 3: 软性 ETF pull (平衡 类间分离 vs 类内紧密, EXP-106+ 新方向)
+            # Codex review 后实现:
+            #   (1) use_etf=0 才生效 (use_etf=1 已有 ETF 约束, 加 pull 语义模糊)
+            #   (2) 跳过 n_c < 2 的类 (singleton 类梯度噪声大)
+            #   (3) 只有 >=1 个有效类时才算 loss (避免空 stack)
+            # L_pull = mean_{c: n_c>=2} (1 - cos(z_sem_c_mean, M[:,c]))
+            loss_etf_pull = torch.tensor(0.0, device=x.device)
+            lambda_pull = getattr(self, 'lambda_etf_pull', 0.0)
+            # 统计量 (用于诊断, 即使 lambda=0 也算,以便 log 观察 pull 方向的自然演化)
+            pull_n_valid = 0
+            pull_raw_value = 0.0
+            if lambda_pull > 0 and not model.use_etf:  # guard: 仅 Linear 模式生效
+                M = model.M  # [d, K], seeded cross-client 一致
+                K_cls = M.shape[1]
+                pulls = []
+                for c in range(K_cls):
+                    mask = y == c
+                    n_c = int(mask.sum().item())
+                    if n_c < 2:  # skip singleton/empty classes (gradient noise)
+                        continue
+                    z_c_mean = z_sem[mask].mean(dim=0)  # [d]
+                    cos = F.cosine_similarity(
+                        z_c_mean.unsqueeze(0), M[:, c].unsqueeze(0)
+                    )
+                    pulls.append(1.0 - cos.squeeze())
+                if pulls:
+                    loss_etf_pull = torch.stack(pulls).mean()
+                    pull_n_valid = len(pulls)
+                    pull_raw_value = loss_etf_pull.item()
+
+            loss = (loss_task
+                    + self.lambda_orth * loss_orth
+                    + lambda_pull * loss_etf_pull)
             loss.backward()
             optimizer.step()
+
+            # Record pull stats for diagnostics (last batch only)
+            if step == num_steps - 1 and lambda_pull > 0:
+                self._last_pull_loss = pull_raw_value
+                self._last_pull_n_valid = pull_n_valid
 
             # Style stats accumulation (last epoch only, 保证稳定)
             if step >= last_epoch_start:
@@ -648,6 +692,11 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             # 新增: z_sem/z_sty norm 分布 (暴露 head 坍塌/爆炸)
             metrics.update(DL.feature_norm_stats(z_sem_d, name='z_sem'))
             metrics.update(DL.feature_norm_stats(z_sty_d, name='z_sty'))
+            # 新增: ETF pull stats (if lambda_etf_pull > 0)
+            pull_loss = getattr(self, '_last_pull_loss', None)
+            if pull_loss is not None:
+                metrics['loss_etf_pull'] = pull_loss
+                metrics['pull_n_valid_classes'] = getattr(self, '_last_pull_n_valid', 0)
             self._dl_train.record(
                 round_id=self.current_round, metrics_dict=metrics)
 
