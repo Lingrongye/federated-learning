@@ -22,6 +22,24 @@
 - SGPA 86.97 vs Plan A 82.55 = **+4.42** (说明 SGPA 仍比 Plan A 强,但比 Linear 弱)
 - Linear 88.75 vs FDSE 90.58 = **-1.83** (离 SOTA 很近)
 
+## Per-domain 结果 (Best/Last, 3-seed mean)
+
+| 配置 | Caltech | Amazon | DSLR | Webcam |
+|------|---------|--------|------|--------|
+| Plan A orth_only | 72.6/70.2 | 90.9/88.1 | 100.0/97.8 | 94.3/93.1 |
+| SAS τ=0.3 | 75.0/73.8 | 91.6/88.4 | 100.0/97.8 | 95.4/93.1 |
+| **SGPA (use_etf=1)** | 70.5/69.6 | 88.8/88.1 | 97.8/95.6 | 90.8/88.5 |
+| **Linear+whitening** | 72.3/70.5 | 88.4/87.4 | 100.0/97.8 | 94.3/92.0 |
+| Δ Linear − SGPA | **+1.8** | -0.4 | **+2.2** | **+3.5** |
+| Δ Linear − Plan A | -0.3 | -2.5 | ±0 | ±0 |
+
+**Per-domain 启示**:
+- **SGPA 在 DSLR 掉 -2.2** (100→97.8): Fixed ETF 对 DSLR 小样本域 (157 samples) 强制几何反而有害
+- **SGPA 在 Webcam 掉 -3.5** (94.3→90.8): ETF 阻止了 Linear 对高相似性 Webcam 的学习
+- **SGPA 在 Caltech 掉 -1.8** (72.3→70.5): Caltech 是最难域, ETF 没帮上
+- **Linear 在 Amazon 掉 -2.5** vs Plan A: 但被其他域 gain 抵消
+- **Linear 的优势主要在 DSLR + Webcam 保持高位**, ETF 在这两个相似视觉风格的域反而掉分
+
 ## 每 seed 详细
 
 ### SGPA (use_etf=1)
