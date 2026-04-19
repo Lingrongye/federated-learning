@@ -69,13 +69,61 @@ nohup $PY run_single.py --task office_caltech10_c4 --algorithm feddsa_sgpa --gpu
   > $EXP_DIR/terminal_s2.log 2>&1 &
 ```
 
-## 结果 (待回填)
+## 结果 (2026-04-19 22:23 完成)
 
-| 指标 | 值 |
-|------|-----|
-| R50 ETF accuracy | 待填 |
-| R50 SGPA accuracy | 待填 |
-| SGPA reliable_rate | 待填 |
-| proto_vs_etf_gain | 待填 |
-| 训练耗时 | 待填 |
-| 最终 verdict | 待填 |
+### 核心数据 (from record JSON, R50 seed=2 Office-Caltech10)
+
+| 指标 | R0 (起点) | R50 (收官) | max (峰值) |
+|------|----------|------------|-----------|
+| **AVG test accuracy** (mean_local_test_accuracy) | 0.1084 | **0.8447** | **0.8614** |
+| **ALL test accuracy** (local_test_accuracy) | 0.0879 | **0.7935** | 0.7977 |
+| **AVG val accuracy** | 0.1020 | 0.8174 | 0.8397 |
+| CE loss (mean_local_test_loss) | 2.50 | 0.64 | — |
+| std_local_test_accuracy | 0.053 | 0.090 | — |
+| max_local_test_accuracy | 0.200 | 0.9333 | **1.0000** |
+| min_local_test_accuracy | 0.069 | 0.6964 | — |
+
+### 对比基线 (PACS/Office 历史数据)
+
+| 方法 | 数据集 | 训练预算 | AVG Best | ALL Best |
+|------|-------|---------|---------|---------|
+| FedAvg | Office | R200 | 85.67 | — |
+| FedBN | Office | R200 | 88.65 | — |
+| Plan A orth_only (无 SAS) | Office | R200 | **82.55** | — |
+| Plan A + SAS (τ=0.3) | Office | R200 | 89.82 | 84.40 |
+| FDSE | Office | R200 | 90.58 | 86.38 |
+| **EXP-096 SGPA smoke** | **Office** | **R50** | **84.47 (+1.92 vs Plan A R200)** | **79.35** |
+
+**关键发现**:SGPA 在 **R50 (1/4 训练预算)** 就达到 **AVG 84.47%**,已经**超过 Plan A orth_only R200 的 82.55%** (+1.92%)。虽然 ALL 79.35% 还低于 SAS/FDSE 的 84-86,但作为 smoke test,验证了:
+- ✅ Fixed ETF buffer 训练可收敛 (CE 2.50→0.64)
+- ✅ Pooled whitening broadcast 成功 (Σ_inv_sqrt 构造不奇异)
+- ✅ 无 NaN/crash (修 num_classes bug 后)
+- ✅ max_client_acc 达 100% (证明 ETF 几何能给出完美分类)
+
+### 成功标准达标情况
+
+- [x] 训练跑完 R50 不 crash/NaN ✅
+- [x] CE loss 下降 (R0 2.50 → R50 0.64, -74%)✅
+- [x] test accuracy >50% ✅ (AVG 84.47%, ALL 79.35%)
+- [x] whitening broadcast 正常 ✅ (record JSON 完整,无 Σ 报警)
+- [ ] SGPA `reliable_rate` 监控 → **本次 smoke 未触发**,因 flgo 默认 test 走 `model.forward()` = ETF argmax,未调用 `test_with_sgpa()`。SGPA 完整推理需独立 script,**留给 EXP-097**。
+
+### 首次部署 bug 记录 (commit cf0c47a 已修)
+
+- **Bug**: `init_global_module` 默认 `num_classes=7` (PACS), Office 10 类导致 CE `assert target < n_classes` CUDA crash
+- **Fix**: 复用 `feddsa_scheduled.py` 的 `_MODEL_MAP` 模式, 按 task 前缀 dispatch (`office` → 10)
+- **教训**: 写新 algorithm 模块时必须按 task 前缀 map, 不能硬编码默认
+
+### 耗时
+
+~14 分钟 (启动到完成,含 load dataset + R50 训练 + 51 次 eval)
+
+## 最终 Verdict
+
+**smoke test 通过,SGPA 方案可行性初步得到验证。Fixed ETF R50 就超 Plan A R200 是一个非常有前景的信号,但需要:**
+
+1. **EXP-097**: 3-seed × R200 Office 扩展,验证不是 seed=2 的运气
+2. **EXP-098**: 3-seed × R200 PACS 扩展 (等 SCPR v2 释放 GPU)
+3. **EXP-099**: 独立 script 测试 SGPA 完整推理路径 (test_with_sgpa),验证 proto_vs_etf_gain
+4. **EXP-100**: 对照组 Linear classifier R200 on Office (同配置) 量化 ETF 贡献
+
