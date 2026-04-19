@@ -208,14 +208,18 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.sigma_inv_sqrt = None  # [d, d]
 
         # Diagnostic logger (Layer 2 — server-side: client_center_variance, param_drift)
+        # 路径加入 use_etf 和进程 pid 区分, 避免同 seed 不同 variant (SGPA/Linear)
+        # 或重跑实验时 jsonl 互相污染 (R200_S2 SGPA 和 R200_S2 Linear 共享同一文件夹 race condition)
         self.dl_agg = None
-        diag_root = None  # 默认: 即使 diag=0 也有定义, 避免 NameError
+        diag_root = None
         if self.diag == 1 and DL is not None:
             task_name = os.path.basename(self.option.get('task', 'unknown'))
             seed_str = self.option.get('seed', 'x')
+            # get use_etf to disambiguate variant (already set as self.use_etf via init_algo_para)
+            variant = 'etf' if getattr(self, 'use_etf', 1) == 1 else 'linear'
             diag_root = os.path.join(
                 'task', task_name, 'diag_logs',
-                f'R{self.num_rounds}_S{seed_str}',
+                f'R{self.num_rounds}_S{seed_str}_{variant}',
             )
             self.dl_agg = DL(client_id=-1, stage='aggregate',
                              log_dir=diag_root, dump_every_n=1)
