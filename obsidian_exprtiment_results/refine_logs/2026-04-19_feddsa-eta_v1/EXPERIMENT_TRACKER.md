@@ -9,12 +9,12 @@
 | R005 | M1 | EXP-100 | C2 Control | Linear (use_etf=0) | Office | 15 | 200 | 同上 | MUST | TODO | 并行组 1 |
 | R006 | M1 | EXP-100 | C2 Control | Linear (use_etf=0) | Office | 333 | 200 | 同上 | MUST | TODO | 并行组 1 |
 | R007 | M2 | EXP-099 | C3 SGPA 推理 | SGPA infer script | Office | 2 (EXP-096 ckpt) | N/A | proto_vs_etf_gain > 0.5% | MUST | TODO | CPU 可做 |
-| R008 | M4 | EXP-098 | C1 PACS | SGPA (use_etf=1) | PACS | 2 | 200 | AVG Best ≥ 82.5% | NICE | WAIT | 等 SCPR v2 结束 |
-| R009 | M4 | EXP-098 | C1 PACS | SGPA (use_etf=1) | PACS | 15 | 200 | 同上 | NICE | WAIT | — |
-| R010 | M4 | EXP-098 | C1 PACS | SGPA (use_etf=1) | PACS | 333 | 200 | 同上 | NICE | WAIT | — |
-| R011 | M4 | EXP-098 | C2 PACS | Linear (use_etf=0) | PACS | 2 | 200 | AVG Best ≈ 80.4% | NICE | WAIT | — |
-| R012 | M4 | EXP-098 | C2 PACS | Linear (use_etf=0) | PACS | 15 | 200 | 同上 | NICE | WAIT | — |
-| R013 | M4 | EXP-098 | C2 PACS | Linear (use_etf=0) | PACS | 333 | 200 | 同上 | NICE | WAIT | — |
+| R008 | M4 | EXP-098 | C1 PACS | SGPA (use_etf=1) | PACS | 2 | 200 | AVG Best ≥ 82.5% | NICE | RUNNING | 08:54 deploy |
+| R009 | M4 | EXP-098 | C1 PACS | SGPA (use_etf=1) | PACS | 15 | 200 | 同上 | NICE | RUNNING | 08:54 deploy |
+| R010 | M4 | EXP-098 | C1 PACS | SGPA (use_etf=1) | PACS | 333 | 200 | 同上 | NICE | RUNNING | 08:54 deploy |
+| R011 | M4 | EXP-098 | C2 PACS | Linear (use_etf=0) | PACS | 2 | 200 | AVG Best ≈ 80.4% | NICE | RUNNING | 08:54 deploy |
+| R012 | M4 | EXP-098 | C2 PACS | Linear (use_etf=0) | PACS | 15 | 200 | 同上 | NICE | RUNNING | 08:54 deploy |
+| R013 | M4 | EXP-098 | C2 PACS | Linear (use_etf=0) | PACS | 333 | 200 | 同上 | NICE | RUNNING | 08:54 deploy |
 
 ## 状态字段
 
