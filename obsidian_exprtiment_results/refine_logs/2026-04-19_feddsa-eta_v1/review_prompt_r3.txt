@@ -1,0 +1,99 @@
+You are the same senior ML reviewer from Rounds 1-2 (NeurIPS/ICML/ICLR/CVPR, feature-skew cross-domain FL).
+
+[ROUND 3 RE-EVALUATION — address Round 2 critical item]
+
+Round 2 scored OVERALL 8.5/10, REVISE, with ONE remaining CRITICAL:
+- Feasibility PARTIAL: the SGPA z_sty-distance gate is numerically fine but statistically only partial under FedBN — client A's z_sty and client B's μ_k do not share an identical affine coordinate system because each client has private BN.
+
+Plus IMPORTANT items:
+- delete `bn.track_running_stats=False` (weakens stability)
+- replace first-batch quantile calibration with running quantile + warm-up
+- decide σ: either delete it or actually use it
+- keep ETF subordinate in abstract/intro
+- narrow the non-goal to allow lightweight summary-statistics broadcast
+
+The author applied all these fixes. Key change: the gate now operates in a **whitened Mahalanobis space**:
+(1) Server aggregates μ_global and Σ_global = Σ_within + Σ_between (between-client + within-client covariance) and broadcasts μ_global + Σ_inv_sqrt (128×128 matrix, 66KB/round).
+(2) Client whitens both its test z_sty and the source bank μ_k using the same Σ_inv_sqrt; distance in whitened space ≡ Mahalanobis in original space.
+(3) This uses Σ explicitly (so σ is no longer vestigial) AND gives a principled cross-client common coordinate system.
+
+Other fixes applied:
+- removed `bn.track_running_stats=False`, keeping `model.eval()+torch.no_grad()` only
+- running quantile with 5-batch warm-up and EMA updates (no first-batch order dependency)
+- non-goal narrowed: "no raw feature/sample sharing, but lightweight summary statistics (μ, Σ) are allowed, same order of magnitude as FedBN broadcasting"
+- ETF kept subordinate in title/abstract/intro
+
+=== PROBLEM ANCHOR (verbatim, non-goal NARROWED) ===
+
+- Bottom-line: cross-domain FL feature-skew, Plan A + ≥1% AVG, PACS+Office 通用
+- Must-solve: (a) classifier drift; (b) z_sty/style_bank unused at inference
+- Non-goals (narrowed):
+  - no persistent alignment loss
+  - no raw feature/sample sharing, BUT lightweight source-domain summary statistics (μ, Σ) broadcast is allowed (same order of magnitude as FedBN γ/β)
+  - no CLIP/VLM
+  - don't claim "first FL+ETF+decouple"
+- Success: PACS AVG Best ≥81.5%, Office AVG Best ≥84% (w/o SAS) or ≥90.5% (w/ SAS), drop ≤1%, std ≤1.5%
+
+=== REVISED PROPOSAL (Round 2 → Round 3) ===
+
+# FedDSA-SGPA v3 (Mahalanobis Whitening Gate)
+
+## Round 2 Fixes Applied
+1. **Mahalanobis in whitened space** (CRITICAL resolve): whitening via Σ_global eigendecomposition Q Λ^{-1/2} Q^T. Euclidean in whitened space ≡ Mahalanobis in original → provably invariant to cross-client private BN affine distortion as long as aggregate μ_global/Σ_global are globally defined.
+2. **BN inference**: `model.eval() + torch.no_grad()` only (removed track_running_stats=False).
+3. **Running quantile τ_H/τ_S**: 5-batch warm-up, then EMA p50/p30 updates.
+4. **σ used via Mahalanobis**: Σ_global = (1/N)ΣΣ_k + cov_across_k(μ_k), ε=1e-3 regularization.
+5. **ETF subordinate**: paper title "Style-Gated Prototype Adjustment for Federated Domain Generalization" — ETF appears only as "stabilizer / prototype cold-start prior" in §Method.
+6. **Non-goal narrowed**: summary-statistics broadcast explicitly allowed, quantified as ~66KB/round (on par with FedBN γ/β).
+
+## Gate Pseudocode (new)
+```python
+# ===== Server aggregation per round =====
+μ_global = (1/N) Σ_k μ_sty_k                          # [d]
+Σ_within = (1/N) Σ_k Σ_sty_k                          # [d,d]
+Σ_between = (1/N) Σ_k (μ_sty_k-μ_global)(μ_sty_k-μ_global)^T
+Σ_global = Σ_within + Σ_between + ε·I                 # ε=1e-3
+Λ, Q = symeig(Σ_global); Σ_inv_sqrt = Q @ diag(Λ^{-1/2}) @ Q^T
+
+# Broadcast: source_μ_k (N×d), μ_global (d), Σ_inv_sqrt (d×d) ≈ 66KB/round
+
+# ===== Inference (per client) =====
+model.eval()
+μ_k_white = (source_μ_k - μ_global) @ Σ_inv_sqrt      # [N, d], precompute once
+with torch.no_grad():
+  for batch_idx, (x, _) in enumerate(test_loader):
+    z_sem, z_sty = model(x)
+    logits = F.normalize(z_sem, -1) @ M / τ_etf
+    H = entropy(softmax(logits))
+    z_sty_white = (z_sty - μ_global) @ Σ_inv_sqrt
+    dist_min = ((z_sty_white[:,None]-μ_k_white[None])**2).sum(-1).min(-1).values
+    # Running quantile + 5-batch warm-up (warm-up: gate disabled, supports empty)
+    if batch_idx < 5:  # collect stats, no gate
+      buf_H += H.tolist(); buf_D += dist_min.tolist()
+      continue
+    elif batch_idx == 5:
+      τ_H, τ_S = quantile(buf_H, 0.5), quantile(buf_D, 0.3)
+    else:
+      τ_H = 0.95*τ_H + 0.05*quantile(H.cpu(), 0.5)
+      τ_S = 0.95*τ_S + 0.05*quantile(dist_min.cpu(), 0.3)
+    reliable = (H < τ_H) & (dist_min < τ_S)
+    # top-m proto update on z_sem; classification cos(z_sem, proto); fallback = ETF argmax
+```
+
+## Expected Score Changes
+- Feasibility: 8.1 → 9+
+- Validation Focus: 8.3 → 9+ (new ablations: whitening on/off, Σ_within vs Σ_within+Σ_between)
+- Venue: 8.5 → 9+
+- Overall target: **9+, READY**
+
+=== END REVISED PROPOSAL ===
+
+Please:
+1. Re-score the 7 dimensions.
+2. Confirm the Mahalanobis whitening solves the FedBN cross-client comparability issue, OR identify any remaining formal gap.
+3. Verify warm-up + running quantile doesn't introduce a new bug (e.g. first 5 batches never get SGPA classification).
+4. Check ETF subordinate framing is real (not cosmetic).
+5. Confirm non-goal narrowing is defensible (summary statistics broadcast vs raw sample sharing).
+6. If OVERALL ≥ 9 and no drift, output READY. Otherwise list remaining items.
+
+Same output format: 7 scores, overall, verdict, drift warning, simplification/modernization, remaining action items.

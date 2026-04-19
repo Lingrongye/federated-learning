@@ -1,0 +1,1026 @@
+OpenAI Codex v0.121.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019da5a7-2f2e-73d3-8ebd-fd72d5164e68
+--------
+user
+You are a senior ML reviewer for a top venue (NeurIPS/ICML/ICLR/CVPR).
+This is an early-stage, method-first research proposal in federated learning (feature-skew cross-domain FL, specifically PACS and Office-Caltech10).
+
+Your job is NOT to reward extra modules, contribution sprawl, or a giant benchmark checklist.
+Your job IS to stress-test whether the proposed method:
+(1) still solves the original anchored problem,
+(2) is concrete enough to implement,
+(3) presents a focused, elegant contribution,
+(4) uses foundation-model-era techniques appropriately when they are the natural fit.
+
+Review principles:
+- Prefer the smallest adequate mechanism over a larger system.
+- Penalize parallel contributions that make the paper feel unfocused.
+- If a modern LLM/VLM/Diffusion/RL route would clearly produce a better paper, say so concretely. (The author explicitly excludes VLM to stay in the ResNet-18 from-scratch track; challenge this ONLY if staying from-scratch materially hurts the story.)
+- If the proposal is already modern enough, do NOT force trendy components.
+- Do not ask for extra experiments unless they are needed to prove the core claims.
+
+Read the Problem Anchor first. If your suggested fix would change the problem being solved, call that out explicitly as drift.
+
+**Important context (the author has already run 85+ experiments — these constraints are HARD)**:
+- Plan A orth_only LR=0.05 is the strongest current config. PACS AVG Best=80.41% / ALL Best=82.31%. Office AVG Best=82.55% (baseline without SAS).
+- **All the following alternatives have been falsified and MUST NOT be reproposed**:
+  - All InfoNCE / contrastive alignment (EXP-076/077/078, 21/25 crashed)
+  - All cross-client style sharing (SCPR EXP-095 all 3 claims falsified, plus EXP-059/078d NaN)
+  - HSIC, VAE head, non-symmetric head, multi-layer style injection, FixBN, Consensus aggregation, Distance-gated dispatch — all shown ineffective or harmful
+- **Closest threat**: FedDEAP (arXiv 2510.18837, Oct 2025) already uses ETF-constrained decoupling for semantic/domain in FL — but with CLIP prompt-tuning on FROZEN backbone. This proposal explicitly stays in the ResNet-18 from-scratch track to differentiate.
+- **Other strong competitors** to consider for Related Work / positioning: FedETF (ICCV'23 label-skew), FediOS (ML'25 orth-projection generic/personal), FedSTAR (arXiv'25 FiLM decouple), FedDG-MoE (CVPRW'25 test-time MoE routing), SATA (IVC'25 centralized TTA), T3A (NeurIPS'21 centralized TTA), FedCTTA (arXiv'25 pure-entropy FL TTA).
+
+=== PROPOSAL ===
+
+[PASTE OF round-0-initial-proposal.md — see companion file round-0-initial-proposal.md; reviewer should treat its contents as the full proposal under review.]
+# Research Proposal: FedDSA-ETA (ETF-Head + Style-Aware TTA)
+
+## Problem Anchor
+- **Bottom-line problem**: 在跨域联邦学习 (feature-skew FL, PACS/Office-Caltech10) 场景下,客户端来自不同视觉域 (photo/art/cartoon/sketch),如何在已稳定的"正交双头解耦"基线 (Plan A: z_sem ⊥ z_sty + LR=0.05 + 可选 SAS) 之上**再取得 ≥1% AVG 提升**,同时 **PACS 与 Office 双数据集通用**,不引入任何会长期崩溃的机制。
+- **Must-solve bottleneck**: Plan A 已把 backbone/解耦几乎用到极限。当前瓶颈有两个:
+  - **训练端**: sem_classifier 是普通 Linear+CE,与正交化的 z_sem 几何不匹配;同时 classifier 参加 FedAvg 聚合,是每轮一个可训练的漂移源。
+  - **推理端**: z_sty 和 style_bank 在训练时已经被收集/正交约束,**推理时完全不用**,这是免费资源。domain shift 在测试样本上的 style signature 也没有被利用。
+- **Non-goals**:
+  - 不再引入任何持续性对齐损失 (InfoNCE/Triplet/Supcon — 已被 21/25 runs 证伪)
+  - 不再做风格共享跨客户端注入 (EXP-059/078d/095 三连败)
+  - 不引入 CLIP/VLM/frozen backbone (留给 FedDEAP 等,我们坚守 ResNet-18/AlexNet from-scratch)
+  - 不主张"FL+ETF+decouple 第一"的 headline (FedDEAP 抢了)
+- **Constraints**:
+  - Backbone: AlexNet (PACS, E=5) / ResNet-18 (Office, E=1) from scratch
+  - 单卡 24GB,3-seed {2,15,333} 对齐 FDSE/Plan A baseline
+  - R200 训练预算 (PACS ~8h × 3 seeds, Office ~1h × 3 seeds)
+  - FedBN 原则: BN 层本地私有; FedAvg backbone + classifier; SAS 只替换 sem_head 聚合
+- **Success condition**:
+  - **PACS**: AVG Best ≥ 81.5% (Plan A = 80.41); ALL Best ≥ 83% (Plan A = 82.31)
+  - **Office**: AVG Best ≥ 90.5% (SAS = 89.82, FDSE = 90.58); ALL Best ≥ 85%
+  - **稳定性**: drop ≤ 1%, 3-seed std ≤ 1.5% (Plan A AVG drop = 0.99%)
+  - **消融显示**: ETF / TTA 各自独立 +0.5~1%,叠加 +1~2%
+
+---
+
+## Technical Gap
+
+**Plan A 已经做对的事**:
+- 正交解耦把语义 z_sem 和风格 z_sty 分开,避免跨域混淆
+- LR=0.05 + decay 让长期训练稳定
+
+**Plan A 没做的事 (= 本 proposal 的切入点)**:
+
+### Gap 1: 分类器 (sem_classifier) 与 z_sem 几何不一致
+- 正交约束让 z_sem 内部彼此接近"类间等角"的配置 (Neural Collapse 的 NC2 性质)
+- 但下游的 Linear + CE 分类器权重是**自由学习**的 — 每轮被不同 client 的本地梯度推向不同方向
+- 再经 FedAvg 粗平均 → classifier 成为"漂移源"
+- 即使 z_sem 已经接近 ETF vertices,classifier 也没对齐这些顶点
+- **缺失的机制**:一个**固定的、理论最优的分类器**让 z_sem 直接对齐已知几何
+
+### Gap 2: z_sty 和 style_bank 推理时被浪费
+- 训练结束后,每个 client 有自己的 style (μ_k, σ_k)
+- style_bank 里有所有其他 client 的 (μ_j, σ_j)
+- test 样本过 backbone + 双头后也能提取 (μ_test, σ_test)
+- 这些风格签名**应该告诉我们**:
+  - test 样本是否和训练时见过的风格差太远 → 不可靠预测
+  - test 样本语义特征 z_sem 是否在受风格污染 → 需要去风格化
+- 当前 Plan A 推理直接吃 argmax(linear(z_sem)),**完全忽略**这些免费信号
+
+### Naive 修复为什么不够
+- "再加一个分类器"或"再训一个 style-aware head" → 重引入 classifier 漂移
+- "在训练时加 InfoNCE 拉近同类 z_sem" → 已证伪 (EXP-076/077/078 全崩)
+- "把 style_bank 当特征 augmentation" → 已证伪 (EXP-059 PACS -2.54%)
+- "test-time fine-tune 用 entropy" (TENT) → 涉及反向传播,触发 BN 不稳定
+
+### 最小充分干预
+- **Training side**: 用 **Fixed Simplex ETF** 替代 sem_classifier (零可训参数,零 aggregation 噪声,与 NC 理论自洽)
+- **Inference side**: **完全 backprop-free** 的测试时机制 — SATA style-exchange 做可靠性 gate,T3A 在线 proto 做可靠样本的二次分类。两者都只读 z_sem/z_sty,**不更新任何参数**
+
+### Frontier-native check
+- Neural Collapse (Papyan NAS'20) + ETF 分类器 = 2023-2025 一直是 FL 领域的活跃迁移源 (FedETF, FedLSA, FedDEAP)
+- TTA 方向 SATA/T3A/DeYO/EATA = 2023-2024 顶会主线
+- 两者都是"foundation-model 时代的 prior 感"方法:**几何一致性 + test-time 利用**
+- 我们**拒绝**使用 CLIP/VLM 作为 moat — 这是刻意选择,与 FedDEAP 区分,保住 ResNet-18 from-scratch 的公平比较赛道
+
+### Core technical claim
+**"在 feature-skew FL 下,Plan A 的正交解耦 + Fixed ETF 分类头构成训练端的'类-特征几何一致性',而推理端的 SATA 可靠性 gate + T3A 在线原型构成'风格感知的测试时校正',两者协同在 PACS/Office 双数据集上稳定超越 Plan A。"**
+
+### Required evidence
+- **E1**: ETF 替换 Linear,**单独**在 PACS/Office 都 +0.5~1% (三 seed mean)
+- **E2**: SATA + T3A TTA 加在 Plan A checkpoint 上,**单独**免费 +0.5~2%
+- **E3**: ETF + TTA 叠加后,PACS AVG Best ≥ 81.5%, Office ≥ 90.5%
+- **E4**: 与 FedDEAP (CLIP) 不同:ResNet-18 scratch 下,我们 ≥ FedDEAP reproduced
+- **E5**: 所有三 seed std ≤ 1.5%,drop ≤ 1%
+
+---
+
+## Method Thesis
+- **One-sentence thesis**: 把 Plan A 的 sem_classifier 换成**固定单纯形 ETF** (训练端几何一致性) + 在推理时用 **SATA 风格交换 gate + T3A 在线原型** (推理端几何一致性),构成"训练-推理几何自洽"的 feature-skew FL 框架。
+- **Why this is the smallest adequate intervention**:
+  - Fixed ETF = **0** 可训参数 (只是个 buffer,不参加聚合) → 比 Linear 更小
+  - SATA+T3A TTA = **0** 训练修改 (推理时才激活) → 完全增量
+  - 不引入任何持续性对齐损失,不碰 backbone,不改训练循环
+- **Why this is timely**:
+  - Neural Collapse 在 FL 的 label-skew 已有 FedETF 验证,但在 feature-skew DG 场景尚无定论
+  - TTA 在 centralized DG 已经成熟 (SATA'25, DeYO ICLR'24),但**federated TTA 只做过基于 entropy 的 FedCTTA**,从未利用 disentangled features 作为 gate
+  - "几何一致性 across training-inference" 是一条新的 FL+DG 叙事
+
+---
+
+## Contribution Focus
+- **Dominant contribution**: **Style-Aware Federated Test-Time Adaptation** (SATA-gate + T3A-proto 融合,完全 backprop-free,复用 decoupled features)
+- **Supporting contribution**: **Fixed Simplex ETF 分类头** + 正交解耦的几何互补性论证 (含简短 Neural Collapse 理论分析)
+- **Explicit non-contributions**:
+  - 不是 "第一个 FL+ETF+decouple" (FedDEAP 抢先)
+  - 不是 "新的损失函数/增强机制/聚合策略"
+  - 不是 "FL 下的 domain generalization 新 baseline" — 是现有 Plan A 的增强
+
+---
+
+## Proposed Method
+
+### Complexity Budget
+- **Frozen / reused**: Plan A 全部 (backbone, 双头解耦, L_orth, LR schedule, style_bank 收集流程, SAS 可选)
+- **New trainable**: **无** — Fixed ETF 是固定 buffer,TTA 完全 backprop-free
+- **Intentionally excluded**:
+  - 不加 contrastive loss / InfoNCE (已证伪)
+  - 不做 cross-client style fusion (已证伪)
+  - 不改 BN / classifier aggregation (只是换了 classifier 的几何形状)
+  - 不引入 prompt/adapter/VLM (保住 ResNet 赛道)
+
+### System Overview
+```
+[Training phase]
+  x → backbone → double_head
+       ↓
+  z_sem (128d)  ⊥  z_sty (128d)    [L_orth 正交约束]
+       ↓               ↓
+  Fixed-ETF M     style_bank 收集 (μ,σ)
+       ↓
+  logits = F.normalize(z_sem) @ M / τ
+       ↓
+  CE loss (同时用原样本和 style-augmented 样本,保持 Plan A 的 CE+CE_aug)
+
+[Server aggregation]
+  FedAvg: backbone + sem_head + sty_head (Plan A 不变)
+  FedBN: BN 本地
+  SAS (Office only, opt-in): sem_head 风格加权聚合
+  Fixed ETF M: 不聚合 (所有 client 用同一个 seed 构造的固定 M)
+
+[Inference phase — NEW]
+  for x in test_loader:
+    with torch.no_grad():
+      z_sem, z_sty = backbone + double_head(x)
+      logits_orig = F.normalize(z_sem) @ M / τ
+      H = entropy(softmax(logits_orig))
+
+      # SATA gate
+      mu_ext, sig_ext = sample_from_style_bank(size=B, exclude_self=True)
+      z_sem_swap = AdaIN(z_sem, mu_ext, sig_ext)  # 在 z_sem 特征空间做 AdaIN
+      logits_swap = F.normalize(z_sem_swap) @ M / τ
+      reliable = (logits_orig.argmax(1) == logits_swap.argmax(1)) & (H < τ_H)
+
+      # T3A proto (EMA 更新 + fallback)
+      for c in range(K):
+        mask = reliable & (logits_orig.argmax(1) == c)
+        if mask.any():
+          proto[c] = γ · proto[c] + (1-γ) · z_sem[mask].mean(0)
+
+      # 分类 (cold-start fallback: proto 未被更新时用 ETF vertex)
+      pred_proto = argmax_c cos(z_sem, proto[c])
+      pred_etf = logits_orig.argmax(1)
+      pred = where(reliable & proto_initialized[pred_proto], pred_proto, pred_etf)
+```
+
+### Core Mechanism
+
+#### (1) Fixed Simplex ETF Classifier (训练端)
+- **Input**: z_sem ∈ ℝ^{B×d}, d=128
+- **Construction** (server init,所有 client 复制):
+  ```
+  U = torch.linalg.qr(torch.randn(d, K, generator=seeded_rng))[0]  # [d, K] 正交
+  M = β · √(K/(K-1)) · U @ (I_K - (1/K)·1_K·1_K^T)                 # [d, K] 单纯形 ETF
+  # M 是 buffer,不 requires_grad
+  ```
+- **Forward**:
+  ```
+  logits = F.normalize(z_sem, dim=-1) @ M / τ_etf    # τ_etf=0.1
+  loss = CE(logits, y)
+  ```
+- **Why**: ETF vertices 是 K 个等角最大间隔向量,与 L_orth 产生的类间等角特征天然对齐。FedAvg 不需要聚合分类器 (所有 client 同一个 M),消除漂移源。
+
+#### (2) SATA Style-Exchange Reliability Gate (推理端)
+- **Input**: z_sem, z_sty, style_bank {(μ_k, σ_k)}_{k=1..N_domains}
+- **Procedure**:
+  ```
+  # 从 style_bank 随机采样 (排除当前 client 的 style)
+  (μ_ext, σ_ext) ← sample_uniform(style_bank, exclude=self_idx)   # [B, d]
+
+  # AdaIN: 把 z_sem 的 channel-wise (μ, σ) 替换为外部域的
+  μ_sem, σ_sem = z_sem.mean(0, keepdim=True), z_sem.std(0, keepdim=True)  # per-channel
+  z_sem_swap = σ_ext · (z_sem - μ_sem) / (σ_sem + ε) + μ_ext
+
+  # 过 ETF head,比较预测
+  logits_swap = F.normalize(z_sem_swap) @ M / τ_etf
+  H = -Σ_c p_c · log p_c   where p = softmax(logits_orig)
+  reliable = (argmax(logits_orig) == argmax(logits_swap)) & (H < τ_H)   # τ_H=0.4
+  ```
+- **Why**: 若 test 样本预测对风格扰动鲁棒 (style-swap 不改变 argmax) 且原预测确定 (低熵),则它处于"clean semantic region",可安全用于 proto 更新。反之则可能被风格污染,回退到 ETF 原始预测。
+
+#### (3) T3A On-the-fly Prototype Classifier (推理端)
+- **Input**: reliable mask, z_sem
+- **Bank initialization**: proto ∈ ℝ^{K×d},初始化为 M.T (ETF vertices 方向,归一化)
+- **Update** (EMA):
+  ```
+  for c in range(K):
+    mask_c = reliable & (logits_orig.argmax(1) == c)
+    if mask_c.any():
+      proto[c] = γ · proto[c] + (1-γ) · F.normalize(z_sem[mask_c].mean(0), dim=-1)
+  ```
+- **Classification** (cold-start safe):
+  ```
+  pred_proto = argmax_c cos(F.normalize(z_sem), proto[c])
+  pred_etf = logits_orig.argmax(1)
+  # fallback: 如果该类 proto 还没被 reliable 样本激活过,用 ETF
+  pred = where(updated[pred_proto], pred_proto, pred_etf)
+  ```
+- **Why**: reliable 样本构成 domain-specific pseudo-prototype,对 test domain 的实际 class means 做 online estimate,比固定 ETF vertices 更贴近 test distribution。初始化为 ETF vertices 保证 cold-start 不退化。
+
+### Modern Primitive Usage
+- **Neural Collapse (NC)**: 作为 "为什么 ETF 是 z_sem 最优分类器" 的理论 backing
+- **Test-Time Adaptation (TTA)**: 作为 "训练后仍可免费提升" 的现代范式
+- **Disentangled Features + Style-exchange**: 不是简单 style transfer,是用来做 reliability signal
+- **不用** CLIP/DINOv2/VLM (刻意与 FedDEAP 差异化)
+
+### Integration
+- `PFLlib/system/flcore/clients/clientdsa.py`:
+  - `__init__`: 构造 Fixed ETF buffer M,替换 self.sem_classifier
+  - `train()`: logits = F.normalize(z_sem) @ M / τ,其余不变
+  - `test()`: 新增 `test_with_tta()` — SATA gate + T3A proto + fallback
+- `PFLlib/system/flcore/servers/serverdsa.py`:
+  - `aggregate_parameters()`: 排除 self.sem_classifier (ETF 是共享 buffer,不聚合)
+  - 其余 FedAvg + FedBN + 可选 SAS 保持不变
+
+### Training Plan
+- **Stage 1** (R0-R200): Plan A 训练,唯一改动是 sem_classifier → Fixed ETF
+  - 损失: CE(logits_sem) + CE(logits_sem_aug) + λ_orth · L_orth
+  - λ_orth = 1.0, τ_etf = 0.1 (默认 NC 温度),β = 1.0
+- **Stage 2** (推理时,无训练): 加载 R200 checkpoint,test_with_tta 激活 SATA+T3A
+
+### Failure Modes and Diagnostics
+
+| 失败模式 | 检测方法 | Fallback |
+|---------|---------|---------|
+| ETF 在 PACS 4-outlier 下 hurt | `per-seed ETF vs Linear` 实验,若 PACS 3-seed mean 掉 >0.5% → 回退 | 切回 Linear classifier,只用 TTA 部分 |
+| SATA reliable mask 永远 True/False | 记录 `reliable.float().mean()` 每 client,应在 [0.3, 0.9] | τ_H 自适应 (per-client,第一批 test 样本校准) |
+| T3A proto 冷启动 NaN / 少样本崩 | proto_initialized mask,未激活用 ETF fallback | ETF fallback 默认永远可用 |
+| style_bank 只有 4 个域 (PACS) 导致 swap 多样性不足 | 记录 SATA agreement rate,若 <0.2 或 >0.95 → 报警 | 引入 per-sample shuffle style mixing |
+| 与 FedDEAP (CLIP) 比较时赛道不公平 | 明确声明 "ResNet-18 from-scratch 赛道" | Related Work 中分开报告 |
+
+### Novelty and Elegance Argument
+
+**最接近的工作**:
+- **FedDEAP** (arXiv 2510.18837, 2025-10): CLIP prompt-tuning 下用 ETF-constrained transformation decouple semantic/domain。**差异**: 我们 ResNet-18 from-scratch,单侧 ETF (只在 z_sem), z_sty 保持 Gaussian bank,完全不同技术栈。
+- **FedETF** (ICCV'23): label-skew FL 的 fixed ETF head。**差异**: 我们是 feature-skew DG 场景,ETF 与正交解耦组合是新的。
+- **FediOS** (ML'25): 正交投影 generic/personalized。**差异**: 我们是 semantic/style,用 ETF 代替可训 head。
+- **SATA** (IVC'25): centralized DG 的 style-exchange TTA。**差异**: 我们是 FL 下,且用 z_sty+style_bank 而非图像空间。
+- **T3A** (NeurIPS'21 Spot): centralized DG 的 proto TTA。**差异**: 我们在 ETF vertices 上初始化 proto,且与 SATA gate 融合。
+- **FedDG-MoE** (CVPRW'25): feature-stat cosine routing + MoE。**差异**: 我们不用 MoE,直接复用 style_bank。
+- **FedCTTA** (arXiv'25): pure entropy TTA for FL。**差异**: 我们利用 disentangled features 做 gate,而非 entropy only。
+
+**核心 moat**:
+- "Style-exchange reliability gate + ETF-initialized T3A proto, 基于 disentangled features, 完全 backprop-free, 在 federated setting 下" 这个完整组合在 2024-2026 文献中**无占坑**
+- 与 Plan A 完全兼容,所有消融 (ETF-only / TTA-only / 组合) 都可做
+
+---
+
+## Claim-Driven Validation Sketch
+
+### Claim 1 (Dominant): Style-Aware Federated TTA 在 Plan A checkpoint 上免费 +0.5~2%
+- **Minimal experiment**: Plan A checkpoint × {w/o TTA, w/ SATA-only, w/ T3A-only, w/ SATA+T3A} × {PACS, Office} × 3 seeds
+- **Baselines/ablations**:
+  - Plan A (orth_only + LR=0.05) — 已有
+  - Plan A + TENT (entropy min TTA baseline)
+  - Plan A + FedCTTA (FL-TTA baseline)
+- **Metric**: AVG Best, AVG Last, ALL Best, ALL Last, drop, 3-seed std
+- **Expected evidence**: PACS TTA 免费 +0.5~1.5%, Office +0.3~1.5%, std 不增加
+
+### Claim 2 (Supporting): Fixed ETF 与正交解耦几何互补
+- **Minimal experiment**: 统一训练 {Linear+CE, Fixed ETF+CE, Learnable Proto+CE} × {PACS, Office} × 3 seeds
+- **Baselines/ablations**:
+  - Linear (Plan A 原版)
+  - Learnable Prototype Classifier (IJCAI'23)
+  - Fixed ETF (本方案)
+- **Metric**: AVG Best / ALL Best / 3-seed std
+- **Expected evidence**: Fixed ETF ≈ Plan A 或 +0.3~1%, 但 std 明显减小 (classifier 无漂移)
+
+### Claim 3 (Integration): ETF + TTA 叠加 PACS ≥ 81.5%, Office ≥ 90.5%
+- **Minimal experiment**: Fixed ETF 训练 + SATA+T3A 推理 × {PACS, Office} × 3 seeds
+- **Baselines**:
+  - FDSE R200 复现 (既有)
+  - Plan A (既有)
+  - FedDEAP adapted to ResNet-18 (次要,若可复现)
+- **Expected evidence**:
+  - PACS AVG Best ≥ 81.5%, ALL Best ≥ 83% (Plan A = 80.41/82.31)
+  - Office AVG Best ≥ 90.5%, ALL Best ≥ 85% (Plan A = 80.41/82.55)
+  - 3-seed std ≤ 1.5%, drop ≤ 1%
+
+---
+
+## Experiment Handoff Inputs
+- **Must-prove claims**: C1 (TTA 免费 +), C2 (ETF ≥ Linear), C3 (叠加达 success condition)
+- **Must-run ablations**: ETF-only / TTA-only / 组合; SATA-only / T3A-only; τ_H ∈ {0.2, 0.4, 0.6}; γ ∈ {0.8, 0.9, 0.95}
+- **Critical datasets/metrics**: PACS AVG+ALL Best/Last, Office AVG+ALL Best/Last, 3-seed std
+- **Highest-risk assumptions**:
+  - PACS 4-outlier 下 style_bank 多样性 (N=4) 可能不够 SATA gate 激活
+  - AlexNet 128d z_sem 与 ETF vertices 几何一致性实际强度
+  - Fixed ETF 在 4-client FedAvg 聚合的兼容性 (理论上无需聚合但实现细节要对)
+
+## Compute & Timeline Estimate
+- **ETF 训练**: 3-seed × 2 datasets × R200 = PACS ~24h + Office ~3h ≈ **27 GPU-hours**
+- **TTA 推理**: 复用 Plan A/ETF checkpoint, 每 checkpoint 几分钟 × 10 配置 × 3 seeds ≈ **3 GPU-hours**
+- **Ablation**: Learnable Proto classifier × 3 seeds × 2 datasets ≈ 27 GPU-hours
+- **Total**: ~60 GPU-hours (3-4 天 on 单卡 24GB)
+=== END PROPOSAL ===
+
+Score these 7 dimensions from 1–10:
+
+1. **Problem Fidelity (weight 15%)**: Does the method still attack the original bottleneck (beat Plan A by ≥1% AVG on both PACS and Office, without any persistent alignment-loss mechanism)? Or has it drifted into solving something easier (Office-only, TTA-only on an unrelated baseline, etc.)?
+
+2. **Method Specificity (weight 25%)**: Are the interfaces (Fixed ETF buffer construction, SATA gate input/output, T3A proto EMA update, fallback logic), losses, training stages, and inference path concrete enough that an engineer could start implementing immediately?
+
+3. **Contribution Quality (weight 25%)**: Is there one dominant mechanism-level contribution (Style-Aware Federated TTA) with real novelty relative to FedDEAP/FedETF/SATA/T3A/FedCTTA, plus ONE supporting contribution (Fixed ETF on decoupled z_sem)? Is there any sprawl beyond these two?
+
+4. **Frontier Leverage (weight 15%)**: Does Neural Collapse + TTA + Disentangled Features constitute an appropriate foundation-model-era framing? Is the deliberate exclusion of VLM/CLIP defensible? Does the method feel 2025-native or 2020-era?
+
+5. **Feasibility (weight 10%)**: Can this be trained and integrated within 60 GPU-hours on single-GPU 24GB? Is the ETF buffer sync across clients specified correctly? Is the TTA inference path actually backprop-free (not accidentally triggering BN running-stats update)?
+
+6. **Validation Focus (weight 5%)**: Are the 3 claim-driven experiments minimal but sufficient to prove the core claims (C1 TTA-only lift, C2 ETF-only compat, C3 combined > success conditions)? Is there any experimental bloat?
+
+7. **Venue Readiness (weight 5%)**: If executed well, would the contribution feel sharp and timely enough for a top venue (CVPR/ICCV/ICML/NeurIPS)? Is the story "first FL+TTA leveraging disentangled features as reliability signal" sufficiently crisp?
+
+**OVERALL SCORE (1-10)** — weighted sum per the weights above.
+
+For each dimension scoring < 7, provide:
+- The specific weakness
+- A concrete fix at the method level (interface / loss / training recipe / integration point / deletion of unnecessary parts)
+- Priority: CRITICAL / IMPORTANT / MINOR
+
+Then add:
+- **Simplification Opportunities**: 1-3 concrete ways to delete, merge, or reuse components while preserving the main claim. Write "NONE" if already tight.
+- **Modernization Opportunities**: 1-3 concrete ways to replace old-school pieces with more natural foundation-model-era primitives if genuinely better. Write "NONE" if already modern enough.
+- **Drift Warning**: "NONE" if the proposal still solves the anchored problem; otherwise explain the drift clearly.
+- **Differentiation Check vs FedDEAP**: Is the "single-side ETF on z_sem + Gaussian z_sty bank + ResNet-from-scratch" actually sufficient differentiation, or could a reviewer say "this is FedDEAP without the prompt tuning"? Suggest concrete rephrasing if needed.
+- **Mathematical soundness check**: Is the ETF construction correct (β·√(K/(K-1))·U·(I-1·1^T/K))? Are there degenerate cases where AdaIN on z_sem becomes identity (e.g. when per-channel σ=0 in a tiny test batch)? Flag any concrete math / numerical bug.
+- **Verdict**: READY / REVISE / RETHINK
+
+Verdict rule:
+- READY: overall score >= 9, no meaningful drift, one focused dominant contribution, and no obvious complexity bloat remains, differentiation from FedDEAP holds
+- REVISE: the direction is promising but not yet at READY bar
+- RETHINK: the core mechanism or framing is still fundamentally off
+
+codex
+I’m reviewing the proposal against the anchor first, then I’ll stress-test the method interfaces and the novelty/differentiation claims against the cited baselines so the score reflects implementability rather than ambition.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'git status --short' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_ERROR: Reconnecting... 1/5
+web search: 
+web search: 
+web search: 
+web search: arXiv FedDEAP ETF decoupling federated learning CLIP prompt tuning 2510.18837
+web search: 
+web search: SATA style exchange test-time adaptation domain generalization 2025 IVC
+web search: 
+web search: site:arxiv.org 2510.18837 FedDEAP
+web search: 
+web search: https://neurips.cc/virtual/2021/poster/27675
+web search: 
+web search: https://openaccess.thecvf.com/content/CVPR2025W/FedVision/html/Radwan_FedDG-MoE_Test-Time_Mixture-of-Experts_Fusion_for_Federated_Domain_Generalization_CVPRW_2025_paper.html
+ERROR: Reconnecting... 2/5
+web search: 
+web search: https://arxiv.org/abs/2510.18837
+web search: 
+web search: site:openaccess.thecvf.com FedETF Harnessing Neural Collapse in Federated Learning on Non-IID Labels ICCV 2023
+web search: 
+web search: site:arxiv.org "FedCTTA" federated test-time adaptation
+web search: 
+web search: FedCTTA arxiv 2025 FL TTA entropy
+web search: 
+web search: arXiv federated test-time adaptation entropy minimization 2025
+web search: 
+ERROR: Reconnecting... 3/5
+web search: 
+web search: https://arxiv.org/abs/2510.18837
+web search: 
+web search: site:openaccess.thecvf.com "Harnessing Neural Collapse in Federated Learning on Non-IID Data with Partial Model Personalization"
+web search: 
+web search: site:openaccess.thecvf.com "Harnessing Neural Collapse in Federated Learning" ICCV 2023
+web search: 
+web search: FedETF fixed ETF federated learning non-iid labels ICCV 2023
+web search: 
+web search: 
+web search: 
+web search: 
+web search: 
+web search: 
+web search: 
+web search: 'ETF' in https://arxiv.org/abs/2510.18837
+web search: 
+web search: https://openaccess.thecvf.com/content/ICCV2023/papers/Li_No_Fear_of_Classifier_Biases_Neural_Collapse_Inspired_Federated_Learning_ICCV_2023_paper.pdf
+web search: 
+web search: "style exchange" "test-time adaptation" domain generalization SATA
+codex
+**Overall**
+This is a promising `REVISE`, not a `RETHINK`. The proposal is still aimed at the anchored problem, and the high-level instinct is right: keep training-side change small, remove classifier drift with a fixed geometry, and exploit the already-learned style signal only at test time. The two things holding it back are clear: the current TTA mechanism is not yet mathematically clean, and the paper still reads too much like `FedETF + SATA + T3A` composed together rather than one sharp new mechanism.
+
+One paper-level inconsistency should be fixed before anything else: the Office anchor alternates between `82.55` and `89.82/90.58`. Lock the exact Office baseline and whether the success condition is “beat Plan A by 1%” or “reach the stronger SAS/FDSE regime,” because those are not the same target.
+
+**Scores**
+
+| Dimension | Score | Reason |
+|---|---:|---|
+| 1. Problem Fidelity | 8/10 | Still attacks the stated bottlenecks: classifier drift and wasted test-time style signal. Slight protocol ambiguity because the main lift comes from TTA, and the Office target is internally inconsistent. |
+| 2. Method Specificity | 8/10 | Buffer construction, forward path, inference logic, fallback behavior, and integration points are concrete enough to implement. |
+| 3. Contribution Quality | 6/10 | Too compositional right now. It risks reading as three stitched priors rather than one dominant mechanism plus one support. |
+| 4. Frontier Leverage | 8/10 | NC + backprop-free TTA + disentangled features is an appropriate 2025-style framing. Staying off CLIP/VLM is defensible here. |
+| 5. Feasibility | 6/10 | Compute is fine, but the proposed style swap is in the wrong space and there are real inference-path bugs/ambiguities. |
+| 6. Validation Focus | 6/10 | The three claims are right, but the experiment list still has avoidable bloat and one metric mismatch. |
+| 7. Venue Readiness | 7/10 | Could be sharp enough for a top venue if simplified and executed cleanly. In current form, reviewers can still dismiss it as a composition paper. |
+
+**OVERALL SCORE**
+`7.2/10`
+
+**Dimensions < 7**
+
+1. `Contribution Quality = 6/10`  
+Weakness: the paper currently sells `Fixed ETF + SATA gate + T3A proto`, which feels like module stacking. A reviewer can say the real novelty is unclear.  
+Concrete fix: collapse the dominant contribution into one named mechanism, e.g. `style-aware reliable prototype adaptation`. The style bank should only provide a reliability signal; the online prototypes are the adaptation rule; ETF is just the stable seed/fallback classifier. Do not present `SATA` and `T3A` as separate contributions. If ETF-only does not show a clean gain or stability win on both datasets, demote ETF from contribution to implementation choice.  
+Priority: `CRITICAL`
+
+2. `Feasibility = 6/10`  
+Weakness: `AdaIN(z_sem; μ_ext, σ_ext)` using statistics coming from `z_sty/style_bank` is not well-justified. You are transferring statistics across different subspaces. Also, `torch.no_grad()` alone does not prevent BN running-stat updates, `exclude_self=True` is undefined for an unseen target domain, and `std()` can go NaN on tiny test batches.  
+Concrete fix: the smallest clean fix is to delete explicit style exchange and define reliability directly in `z_sty` space, e.g. low ETF entropy plus low distance of `z_sty` to the source style bank. If you insist on style exchange, do it on the shared backbone feature map before the semantic/style split, not on `z_sem`. In all cases use `model.eval()` + `torch.inference_mode()`, use `std(correction=0)` or `var_mean`, and renormalize prototypes after every EMA update.  
+Priority: `CRITICAL`
+
+3. `Validation Focus = 6/10`  
+Weakness: the core claims are minimal, but the listed evidence still includes too much: learnable proto classifier, TENT, FedCTTA, FedDEAP reproduction, threshold sweeps, gamma sweeps. Also, the proposal evaluates TTA on `R200`, while the anchor is `AVG Best`; that is not the same claim.  
+Concrete fix: keep only three core tables: `ETF-only`, `style-aware TTA-only`, and `combined`, all against the same in-track baseline. Keep one entropy-only TTA comparator, not several. Move sweeps to appendix. If TTA is only run on the final checkpoint, make `Last` the primary metric; if the anchor is `Best`, run TTA on the same checkpoint-selection protocol as the baseline.  
+Priority: `IMPORTANT`
+
+**Simplification Opportunities**
+
+- Delete explicit SATA-style swap and use the existing `z_sty` bank only as a reliability prior. This preserves the main claim and removes the most fragile block.
+- Rename the dominant module so it reads as one thing, not `SATA + T3A`. `ETF-initialized reliable online prototypes` is tighter.
+- If ETF-only is merely neutral, remove it from the headline and keep the paper centered on style-aware federated TTA.
+
+**Modernization Opportunities**
+`NONE.` This is already modern enough for the intended from-scratch FL/DG lane. Moving to CLIP/DINOv2 would create a different paper and weaken differentiation from the CLIP-based track.
+
+**Drift Warning**
+`NONE.` The proposal still addresses the anchored problem. The only caveat is that the paper must explicitly present itself as `feature-skew FL with backprop-free test-time adaptation`, not as a pure training-time FL method.
+
+**Differentiation Check vs FedDEAP**
+As written, the differentiation is not yet strong enough if the headline is “decoupling + ETF in FL,” because that invites “FedDEAP without prompt tuning.” The safer positioning is:
+
+- `FedDEAP` is a training-time CLIP prompt-tuning method with dual prompts and text-visual alignment.
+- This proposal should be framed as a backprop-free inference-time adaptation method for from-scratch CNN FL, using disentangled style features as a reliability signal.
+- ETF should be presented as a stabilizer for the semantic head, not the novelty axis.
+
+Concrete rephrasing:  
+“Rather than another training-time decoupling method, we study whether disentangled style features learned in federated training can be reused at test time as a reliability prior for backprop-free target adaptation.”
+
+**Mathematical Soundness Check**
+
+- The ETF construction is correct provided `K <= d` and `U` has orthonormal columns. The scaling gives unit-norm columns with pairwise cosine `-1/(K-1)`.
+- `proto[c]` should be renormalized after every EMA update, otherwise cosine classification drifts.
+- `torch.std` on small batches can produce NaNs unless you use `correction=0` or equivalent.
+- The main math bug is not the ETF. It is the proposed AdaIN: using batchwise stats of `z_sem` and replacing them with style stats coming from `z_sty` is conceptually mismatched and numerically brittle. In the worst case it becomes near-identity or unstable when variance is tiny.
+- `exclude_self=True` only makes sense if the test domain is one of the source clients. For unseen-target DG, there is no “self” source style to exclude.
+
+**Verdict**
+`REVISE`
+
+Sources used for positioning: [FedDEAP](https://arxiv.org/abs/2510.18837), [FedETF](https://openaccess.thecvf.com/content/ICCV2023/papers/Li_No_Fear_of_Classifier_Biases_Neural_Collapse_Inspired_Federated_Learning_ICCV_2023_paper.pdf), [T3A](https://proceedings.neurips.cc/paper/2021/hash/1415fe9fea0fa1e45dddcff5682239a0-Abstract.html), [SATA](https://www.sciencedirect.com/science/article/pii/S0262885625001957)
+tokens used
+46,155
+**Overall**
+This is a promising `REVISE`, not a `RETHINK`. The proposal is still aimed at the anchored problem, and the high-level instinct is right: keep training-side change small, remove classifier drift with a fixed geometry, and exploit the already-learned style signal only at test time. The two things holding it back are clear: the current TTA mechanism is not yet mathematically clean, and the paper still reads too much like `FedETF + SATA + T3A` composed together rather than one sharp new mechanism.
+
+One paper-level inconsistency should be fixed before anything else: the Office anchor alternates between `82.55` and `89.82/90.58`. Lock the exact Office baseline and whether the success condition is “beat Plan A by 1%” or “reach the stronger SAS/FDSE regime,” because those are not the same target.
+
+**Scores**
+
+| Dimension | Score | Reason |
+|---|---:|---|
+| 1. Problem Fidelity | 8/10 | Still attacks the stated bottlenecks: classifier drift and wasted test-time style signal. Slight protocol ambiguity because the main lift comes from TTA, and the Office target is internally inconsistent. |
+| 2. Method Specificity | 8/10 | Buffer construction, forward path, inference logic, fallback behavior, and integration points are concrete enough to implement. |
+| 3. Contribution Quality | 6/10 | Too compositional right now. It risks reading as three stitched priors rather than one dominant mechanism plus one support. |
+| 4. Frontier Leverage | 8/10 | NC + backprop-free TTA + disentangled features is an appropriate 2025-style framing. Staying off CLIP/VLM is defensible here. |
+| 5. Feasibility | 6/10 | Compute is fine, but the proposed style swap is in the wrong space and there are real inference-path bugs/ambiguities. |
+| 6. Validation Focus | 6/10 | The three claims are right, but the experiment list still has avoidable bloat and one metric mismatch. |
+| 7. Venue Readiness | 7/10 | Could be sharp enough for a top venue if simplified and executed cleanly. In current form, reviewers can still dismiss it as a composition paper. |
+
+**OVERALL SCORE**
+`7.2/10`
+
+**Dimensions < 7**
+
+1. `Contribution Quality = 6/10`  
+Weakness: the paper currently sells `Fixed ETF + SATA gate + T3A proto`, which feels like module stacking. A reviewer can say the real novelty is unclear.  
+Concrete fix: collapse the dominant contribution into one named mechanism, e.g. `style-aware reliable prototype adaptation`. The style bank should only provide a reliability signal; the online prototypes are the adaptation rule; ETF is just the stable seed/fallback classifier. Do not present `SATA` and `T3A` as separate contributions. If ETF-only does not show a clean gain or stability win on both datasets, demote ETF from contribution to implementation choice.  
+Priority: `CRITICAL`
+
+2. `Feasibility = 6/10`  
+Weakness: `AdaIN(z_sem; μ_ext, σ_ext)` using statistics coming from `z_sty/style_bank` is not well-justified. You are transferring statistics across different subspaces. Also, `torch.no_grad()` alone does not prevent BN running-stat updates, `exclude_self=True` is undefined for an unseen target domain, and `std()` can go NaN on tiny test batches.  
+Concrete fix: the smallest clean fix is to delete explicit style exchange and define reliability directly in `z_sty` space, e.g. low ETF entropy plus low distance of `z_sty` to the source style bank. If you insist on style exchange, do it on the shared backbone feature map before the semantic/style split, not on `z_sem`. In all cases use `model.eval()` + `torch.inference_mode()`, use `std(correction=0)` or `var_mean`, and renormalize prototypes after every EMA update.  
+Priority: `CRITICAL`
+
+3. `Validation Focus = 6/10`  
+Weakness: the core claims are minimal, but the listed evidence still includes too much: learnable proto classifier, TENT, FedCTTA, FedDEAP reproduction, threshold sweeps, gamma sweeps. Also, the proposal evaluates TTA on `R200`, while the anchor is `AVG Best`; that is not the same claim.  
+Concrete fix: keep only three core tables: `ETF-only`, `style-aware TTA-only`, and `combined`, all against the same in-track baseline. Keep one entropy-only TTA comparator, not several. Move sweeps to appendix. If TTA is only run on the final checkpoint, make `Last` the primary metric; if the anchor is `Best`, run TTA on the same checkpoint-selection protocol as the baseline.  
+Priority: `IMPORTANT`
+
+**Simplification Opportunities**
+
+- Delete explicit SATA-style swap and use the existing `z_sty` bank only as a reliability prior. This preserves the main claim and removes the most fragile block.
+- Rename the dominant module so it reads as one thing, not `SATA + T3A`. `ETF-initialized reliable online prototypes` is tighter.
+- If ETF-only is merely neutral, remove it from the headline and keep the paper centered on style-aware federated TTA.
+
+**Modernization Opportunities**
+`NONE.` This is already modern enough for the intended from-scratch FL/DG lane. Moving to CLIP/DINOv2 would create a different paper and weaken differentiation from the CLIP-based track.
+
+**Drift Warning**
+`NONE.` The proposal still addresses the anchored problem. The only caveat is that the paper must explicitly present itself as `feature-skew FL with backprop-free test-time adaptation`, not as a pure training-time FL method.
+
+**Differentiation Check vs FedDEAP**
+As written, the differentiation is not yet strong enough if the headline is “decoupling + ETF in FL,” because that invites “FedDEAP without prompt tuning.” The safer positioning is:
+
+- `FedDEAP` is a training-time CLIP prompt-tuning method with dual prompts and text-visual alignment.
+- This proposal should be framed as a backprop-free inference-time adaptation method for from-scratch CNN FL, using disentangled style features as a reliability signal.
+- ETF should be presented as a stabilizer for the semantic head, not the novelty axis.
+
+Concrete rephrasing:  
+“Rather than another training-time decoupling method, we study whether disentangled style features learned in federated training can be reused at test time as a reliability prior for backprop-free target adaptation.”
+
+**Mathematical Soundness Check**
+
+- The ETF construction is correct provided `K <= d` and `U` has orthonormal columns. The scaling gives unit-norm columns with pairwise cosine `-1/(K-1)`.
+- `proto[c]` should be renormalized after every EMA update, otherwise cosine classification drifts.
+- `torch.std` on small batches can produce NaNs unless you use `correction=0` or equivalent.
+- The main math bug is not the ETF. It is the proposed AdaIN: using batchwise stats of `z_sem` and replacing them with style stats coming from `z_sty` is conceptually mismatched and numerically brittle. In the worst case it becomes near-identity or unstable when variance is tiny.
+- `exclude_self=True` only makes sense if the test domain is one of the source clients. For unseen-target DG, there is no “self” source style to exclude.
+
+**Verdict**
+`REVISE`
+
+Sources used for positioning: [FedDEAP](https://arxiv.org/abs/2510.18837), [FedETF](https://openaccess.thecvf.com/content/ICCV2023/papers/Li_No_Fear_of_Classifier_Biases_Neural_Collapse_Inspired_Federated_Learning_ICCV_2023_paper.pdf), [T3A](https://proceedings.neurips.cc/paper/2021/hash/1415fe9fea0fa1e45dddcff5682239a0-Abstract.html), [SATA](https://www.sciencedirect.com/science/article/pii/S0262885625001957)
+ed std
+- **Expected evidence**: PACS TTA 免费 +0.5~1.5%, Office +0.3~1.5%, std 不增加
+
+### Claim 2 (Supporting): Fixed ETF 与正交解耦几何互补
+- **Minimal experiment**: 统一训练 {Linear+CE, Fixed ETF+CE, Learnable Proto+CE} × {PACS, Office} × 3 seeds
+- **Baselines/ablations**:
+  - Linear (Plan A 原版)
+  - Learnable Prototype Classifier (IJCAI'23)
+  - Fixed ETF (本方案)
+- **Metric**: AVG Best / ALL Best / 3-seed std
+- **Expected evidence**: Fixed ETF ≈ Plan A 或 +0.3~1%, 但 std 明显减小 (classifier 无漂移)
+
+### Claim 3 (Integration): ETF + TTA 叠加 PACS ≥ 81.5%, Office ≥ 90.5%
+- **Minimal experiment**: Fixed ETF 训练 + SATA+T3A 推理 × {PACS, Office} × 3 seeds
+- **Baselines**:
+  - FDSE R200 复现 (既有)
+  - Plan A (既有)
+  - FedDEAP adapted to ResNet-18 (次要,若可复现)
+- **Expected evidence**:
+  - PACS AVG Best ≥ 81.5%, ALL Best ≥ 83% (Plan A = 80.41/82.31)
+  - Office AVG Best ≥ 90.5%, ALL Best ≥ 85% (Plan A = 80.41/82.55)
+  - 3-seed std ≤ 1.5%, drop ≤ 1%
+
+---
+
+## Experiment Handoff Inputs
+- **Must-prove claims**: C1 (TTA 免费 +), C2 (ETF ≥ Linear), C3 (叠加达 success condition)
+- **Must-run ablations**: ETF-only / TTA-only / 组合; SATA-only / T3A-only; τ_H ∈ {0.2, 0.4, 0.6}; γ ∈ {0.8, 0.9, 0.95}
+- **Critical datasets/metrics**: PACS AVG+ALL Best/Last, Office AVG+ALL Best/Last, 3-seed std
+- **Highest-risk assumptions**:
+  - PACS 4-outlier 下 style_bank 多样性 (N=4) 可能不够 SATA gate 激活
+  - AlexNet 128d z_sem 与 ETF vertices 几何一致性实际强度
+  - Fixed ETF 在 4-client FedAvg 聚合的兼容性 (理论上无需聚合但实现细节要对)
+
+## Compute & Timeline Estimate
+- **ETF 训练**: 3-seed × 2 datasets × R200 = PACS ~24h + Office ~3h ≈ **27 GPU-hours**
+- **TTA 推理**: 复用 Plan A/ETF checkpoint, 每 checkpoint 几分钟 × 10 配置 × 3 seeds ≈ **3 GPU-hours**
+- **Ablation**: Learnable Proto classifier × 3 seeds × 2 datasets ≈ 27 GPU-hours
+- **Total**: ~60 GPU-hours (3-4 天 on 单卡 24GB)
+
+
+2026-04-19T12:12:05.202091Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.9 seconds
+Output:
+fatal: detected dubious ownership in repository at 'D:/桌面文件/联邦学习'
+'D:/桌面文件/联邦学习' is owned by:
+	'S-1-5-21-848423689-3888500119-3127058330-1001'
+but the current user is:
+	'S-1-5-21-848423689-3888500119-3127058330-1013'
+To add an exception for this directory, call:
+
+	git config --global --add safe.directory 'D:/桌面文件/联邦学习'
+
+ exited 1 in 857ms:
+fatal: detected dubious ownership in repository at 'D:/桌面文件/联邦学习'
+'D:/桌面文件/联邦学习' is owned by:
+	'S-1-5-21-848423689-3888500119-3127058330-1001'
+but the current user is:
+	'S-1-5-21-848423689-3888500119-3127058330-1013'
+To add an exception for this directory, call:
+
+	git config --global --add safe.directory 'D:/桌面文件/联邦学习'
+
+web search: 
+web search: FedDEAP arXiv 2510.18837 ETF prompt tuning CLIP federated learning
+web search: 
+web search: FedETF ICCV 2023 openaccess equiangular tight frame federated learning
+web search: 
+web search: FediOS orthogonal projection generic personalized federated learning 2025
+codex
+The main remaining question is not “is there pseudocode,” but whether the proposed gate is actually well-posed: the current writeup uses style statistics to perturb `z_sem`, yet the formula never really consumes `z_sty` except as narrative justification. I’m checking that implementation surface now.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg --files PFLlib/system/flcore' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg -n "class .*dsa|clientdsa|serverdsa|style_bank|z_sem|z_sty|orth" -S PFLlib' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+2026-04-19T12:12:43.619805Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.8 seconds
+Output:
+rg: PFLlib: IO error for operation on PFLlib: 系统找不到指定的文件。 (os error 2)
+
+ exited 1 in 817ms:
+rg: PFLlib: IO error for operation on PFLlib: 系统找不到指定的文件。 (os error 2)
+
+2026-04-19T12:12:43.626731Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.8 seconds
+Output:
+rg: PFLlib/system/flcore: IO error for operation on PFLlib/system/flcore: 系统找不到指定的路径。 (os error 3)
+
+ exited 1 in 827ms:
+rg: PFLlib/system/flcore: IO error for operation on PFLlib/system/flcore: 系统找不到指定的路径。 (os error 3)
+
+web search: 
+web search: site:arxiv.org 2510.18837 FedDEAP
+web search: 
+web search: "FedETF" federated learning ETF
+web search: 
+web search: "2510.18837"
+web search: 
+web search: https://dblp.dagstuhl.de/rec/journals/corr/abs-2510-18837.html
+web search: 
+web search: 
+web search: 
+web search: "10.48550/arXiv.2510.18837"
+web search: 
+web search: "SATA" style exchange test-time adaptation domain generalization
+web search: 
+web search: "FedCTTA" federated continual test-time adaptation entropy arxiv
+web search: 
+web search: "Federated Learning with Learnable Class Centers" ETF
+codex
+I’ve narrowed the main weaknesses to three places: the novelty story is too close to a stitched combination of existing pieces, the proposed gate has a real numerical/interface problem, and the FedDEAP differentiation needs reframing around regime plus test-time behavior rather than around ETF alone.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-ChildItem -Force' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg -n "AVG Best|ALL Best|Plan A|orth_only|FedBN|PACS|Office" -S .' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+ succeeded in 828ms:
+.\review_prompt_r1.txt:2:This is an early-stage, method-first research proposal in federated learning (feature-skew cross-domain FL, specifically PACS and Office-Caltech10).
+.\review_prompt_r1.txt:21:- Plan A orth_only LR=0.05 is the strongest current config. PACS AVG Best=80.41% / ALL Best=82.31%. Office AVG Best=82.55% (baseline without SAS).
+.\review_prompt_r1.txt:37:1. **Problem Fidelity (weight 15%)**: Does the method still attack the original bottleneck (beat Plan A by ≥1% AVG on both PACS and Office, without any persistent alignment-loss mechanism)? Or has it drifted into solving something easier (Office-only, TTA-only on an unrelated baseline, etc.)?
+.\review_prompt_r1_full.txt:2:This is an early-stage, method-first research proposal in federated learning (feature-skew cross-domain FL, specifically PACS and Office-Caltech10).
+.\review_prompt_r1_full.txt:21:- Plan A orth_only LR=0.05 is the strongest current config. PACS AVG Best=80.41% / ALL Best=82.31%. Office AVG Best=82.55% (baseline without SAS).
+.\review_prompt_r1_full.txt:35:- **Bottom-line problem**: 在跨域联邦学习 (feature-skew FL, PACS/Office-Caltech10) 场景下,客户端来自不同视觉域 (photo/art/cartoon/sketch),如何在已稳定的"正交双头解耦"基线 (Plan A: z_sem ⊥ z_sty + LR=0.05 + 可选 SAS) 之上**再取得 ≥1% AVG 提升**,同时 **PACS 与 Office 双数据集通用**,不引入任何会长期崩溃的机制。
+.\review_prompt_r1_full.txt:36:- **Must-solve bottleneck**: Plan A 已把 backbone/解耦几乎用到极限。当前瓶颈有两个:
+.\review_prompt_r1_full.txt:45:  - Backbone: AlexNet (PACS, E=5) / ResNet-18 (Office, E=1) from scratch
+.\review_prompt_r1_full.txt:46:  - 单卡 24GB,3-seed {2,15,333} 对齐 FDSE/Plan A baseline
+.\review_prompt_r1_full.txt:47:  - R200 训练预算 (PACS ~8h × 3 seeds, Office ~1h × 3 seeds)
+.\review_prompt_r1_full.txt:48:  - FedBN 原则: BN 层本地私有; FedAvg backbone + classifier; SAS 只替换 sem_head 聚合
+.\review_prompt_r1_full.txt:50:  - **PACS**: AVG Best ≥ 81.5% (Plan A = 80.41); ALL Best ≥ 83% (Plan A = 82.31)
+.\review_prompt_r1_full.txt:51:  - **Office**: AVG Best ≥ 90.5% (SAS = 89.82, FDSE = 90.58); ALL Best ≥ 85%
+.\review_prompt_r1_full.txt:52:  - **稳定性**: drop ≤ 1%, 3-seed std ≤ 1.5% (Plan A AVG drop = 0.99%)
+.\review_prompt_r1_full.txt:59:**Plan A 已经做对的事**:
+.\review_prompt_r1_full.txt:63:**Plan A 没做的事 (= 本 proposal 的切入点)**:
+.\review_prompt_r1_full.txt:79:- 当前 Plan A 推理直接吃 argmax(linear(z_sem)),**完全忽略**这些免费信号
+.\review_prompt_r1_full.txt:84:- "把 style_bank 当特征 augmentation" → 已证伪 (EXP-059 PACS -2.54%)
+.\review_prompt_r1_full.txt:98:**"在 feature-skew FL 下,Plan A 的正交解耦 + Fixed ETF 分类头构成训练端的'类-特征几何一致性',而推理端的 SATA 可靠性 gate + T3A 在线原型构成'风格感知的测试时校正',两者协同在 PACS/Office 双数据集上稳定超越 Plan A。"**
+.\review_prompt_r1_full.txt:101:- **E1**: ETF 替换 Linear,**单独**在 PACS/Office 都 +0.5~1% (三 seed mean)
+.\review_prompt_r1_full.txt:102:- **E2**: SATA + T3A TTA 加在 Plan A checkpoint 上,**单独**免费 +0.5~2%
+.\review_prompt_r1_full.txt:103:- **E3**: ETF + TTA 叠加后,PACS AVG Best ≥ 81.5%, Office ≥ 90.5%
+.\review_prompt_r1_full.txt:110:- **One-sentence thesis**: 把 Plan A 的 sem_classifier 换成**固定单纯形 ETF** (训练端几何一致性) + 在推理时用 **SATA 风格交换 gate + T3A 在线原型** (推理端几何一致性),构成"训练-推理几何自洽"的 feature-skew FL 框架。
+.\review_prompt_r1_full.txt:128:  - 不是 "FL 下的 domain generalization 新 baseline" — 是现有 Plan A 的增强
+.\review_prompt_r1_full.txt:135:- **Frozen / reused**: Plan A 全部 (backbone, 双头解耦, L_orth, LR schedule, style_bank 收集流程, SAS 可选)
+.\review_prompt_r1_full.txt:154:  CE loss (同时用原样本和 style-augmented 样本,保持 Plan A 的 CE+CE_aug)
+.\review_prompt_r1_full.txt:157:  FedAvg: backbone + sem_head + sty_head (Plan A 不变)
+.\review_prompt_r1_full.txt:158:  FedBN: BN 本地
+.\review_prompt_r1_full.txt:159:  SAS (Office only, opt-in): sem_head 风格加权聚合
+.\review_prompt_r1_full.txt:254:  - 其余 FedAvg + FedBN + 可选 SAS 保持不变
+.\review_prompt_r1_full.txt:257:- **Stage 1** (R0-R200): Plan A 训练,唯一改动是 sem_classifier → Fixed ETF
+.\review_prompt_r1_full.txt:266:| ETF 在 PACS 4-outlier 下 hurt | `per-seed ETF vs Linear` 实验,若 PACS 3-seed mean 掉 >0.5% → 回退 | 切回 Linear classifier,只用 TTA 部分 |
+.\review_prompt_r1_full.txt:269:| style_bank 只有 4 个域 (PACS) 导致 swap 多样性不足 | 记录 SATA agreement rate,若 <0.2 或 >0.95 → 报警 | 引入 per-sample shuffle style mixing |
+.\review_prompt_r1_full.txt:285:- 与 Plan A 完全兼容,所有消融 (ETF-only / TTA-only / 组合) 都可做
+.\review_prompt_r1_full.txt:291:### Claim 1 (Dominant): Style-Aware Federated TTA 在 Plan A checkpoint 上免费 +0.5~2%
+.\review_prompt_r1_full.txt:292:- **Minimal experiment**: Plan A checkpoint × {w/o TTA, w/ SATA-only, w/ T3A-only, w/ SATA+T3A} × {PACS, Office} × 3 seeds
+.\review_prompt_r1_full.txt:294:  - Plan A (orth_only + LR=0.05) — 已有
+.\review_prompt_r1_full.txt:295:  - Plan A + TENT (entropy min TTA baseline)
+.\review_prompt_r1_full.txt:296:  - Plan A + FedCTTA (FL-TTA baseline)
+.\review_prompt_r1_full.txt:297:- **Metric**: AVG Best, AVG Last, ALL Best, ALL Last, drop, 3-seed std
+.\review_prompt_r1_full.txt:298:- **Expected evidence**: PACS TTA 免费 +0.5~1.5%, Office +0.3~1.5%, std 不增加
+.\review_prompt_r1_full.txt:301:- **Minimal experiment**: 统一训练 {Linear+CE, Fixed ETF+CE, Learnable Proto+CE} × {PACS, Office} × 3 seeds
+.\review_prompt_r1_full.txt:303:  - Linear (Plan A 原版)
+.\review_prompt_r1_full.txt:306:- **Metric**: AVG Best / ALL Best / 3-seed std
+.\review_prompt_r1_full.txt:307:- **Expected evidence**: Fixed ETF ≈ Plan A 或 +0.3~1%, 但 std 明显减小 (classifier 无漂移)
+.\review_prompt_r1_full.txt:309:### Claim 3 (Integration): ETF + TTA 叠加 PACS ≥ 81.5%, Office ≥ 90.5%
+.\review_prompt_r1_full.txt:310:- **Minimal experiment**: Fixed ETF 训练 + SATA+T3A 推理 × {PACS, Office} × 3 seeds
+.\review_prompt_r1_full.txt:313:  - Plan A (既有)
+.\review_prompt_r1_full.txt:316:  - PACS AVG Best ≥ 81.5%, ALL Best ≥ 83% (Plan A = 80.41/82.31)
+.\review_prompt_r1_full.txt:317:  - Office AVG Best ≥ 90.5%, ALL Best ≥ 85% (Plan A = 80.41/82.55)
+.\review_prompt_r1_full.txt:325:- **Critical datasets/metrics**: PACS AVG+ALL Best/Last, Office AVG+ALL Best/Last, 3-seed std
+.\review_prompt_r1_full.txt:327:  - PACS 4-outlier 下 style_bank 多样性 (N=4) 可能不够 SATA gate 激活
+.\review_prompt_r1_full.txt:332:- **ETF 训练**: 3-seed × 2 datasets × R200 = PACS ~24h + Office ~3h ≈ **27 GPU-hours**
+.\review_prompt_r1_full.txt:333:- **TTA 推理**: 复用 Plan A/ETF checkpoint, 每 checkpoint 几分钟 × 10 配置 × 3 seeds ≈ **3 GPU-hours**
+.\review_prompt_r1_full.txt:340:1. **Problem Fidelity (weight 15%)**: Does the method still attack the original bottleneck (beat Plan A by ≥1% AVG on both PACS and Office, without any persistent alignment-loss mechanism)? Or has it drifted into solving something easier (Office-only, TTA-only on an unrelated baseline, etc.)?
+.\round-1-review-raw.txt:14:This is an early-stage, method-first research proposal in federated learning (feature-skew cross-domain FL, specifically PACS and Office-Caltech10).
+.\round-1-review-raw.txt:33:- Plan A orth_only LR=0.05 is the strongest current config. PACS AVG Best=80.41% / ALL Best=82.31%. Office AVG Best=82.55% (baseline without SAS).
+.\round-1-review-raw.txt:47:- **Bottom-line problem**: 在跨域联邦学习 (feature-skew FL, PACS/Office-Caltech10) 场景下,客户端来自不同视觉域 (photo/art/cartoon/sketch),如何在已稳定的"正交双头解耦"基线 (Plan A: z_sem ⊥ z_sty + LR=0.05 + 可选 SAS) 之上**再取得 ≥1% AVG 提升**,同时 **PACS 与 Office 双数据集通用**,不引入任何会长期崩溃的机制。
+.\round-1-review-raw.txt:48:- **Must-solve bottleneck**: Plan A 已把 backbone/解耦几乎用到极限。当前瓶颈有两个:
+.\round-1-review-raw.txt:57:  - Backbone: AlexNet (PACS, E=5) / ResNet-18 (Office, E=1) from scratch
+.\round-1-review-raw.txt:58:  - 单卡 24GB,3-seed {2,15,333} 对齐 FDSE/Plan A baseline
+.\round-1-review-raw.txt:59:  - R200 训练预算 (PACS ~8h × 3 seeds, Office ~1h × 3 seeds)
+.\round-1-review-raw.txt:60:  - FedBN 原则: BN 层本地私有; FedAvg backbone + classifier; SAS 只替换 sem_head 聚合
+.\round-1-review-raw.txt:62:  - **PACS**: AVG Best ≥ 81.5% (Plan A = 80.41); ALL Best ≥ 83% (Plan A = 82.31)
+.\round-1-review-raw.txt:63:  - **Office**: AVG Best ≥ 90.5% (SAS = 89.82, FDSE = 90.58); ALL Best ≥ 85%
+.\round-1-review-raw.txt:64:  - **稳定性**: drop ≤ 1%, 3-seed std ≤ 1.5% (Plan A AVG drop = 0.99%)
+.\round-1-review-raw.txt:71:**Plan A 已经做对的事**:
+.\round-1-review-raw.txt:75:**Plan A 没做的事 (= 本 proposal 的切入点)**:
+.\round-1-review-raw.txt:91:- 当前 Plan A 推理直接吃 argmax(linear(z_sem)),**完全忽略**这些免费信号
+.\round-1-review-raw.txt:96:- "把 style_bank 当特征 augmentation" → 已证伪 (EXP-059 PACS -2.54%)
+.\round-1-review-raw.txt:110:**"在 feature-skew FL 下,Plan A 的正交解耦 + Fixed ETF 分类头构成训练端的'类-特征几何一致性',而推理端的 SATA 可靠性 gate + T3A 在线原型构成'风格感知的测试时校正',两者协同在 PACS/Office 双数据集上稳定超越 Plan A。"**
+.\round-1-review-raw.txt:113:- **E1**: ETF 替换 Linear,**单独**在 PACS/Office 都 +0.5~1% (三 seed mean)
+.\round-1-review-raw.txt:114:- **E2**: SATA + T3A TTA 加在 Plan A checkpoint 上,**单独**免费 +0.5~2%
+.\round-1-review-raw.txt:115:- **E3**: ETF + TTA 叠加后,PACS AVG Best ≥ 81.5%, Office ≥ 90.5%
+.\round-1-review-raw.txt:122:- **One-sentence thesis**: 把 Plan A 的 sem_classifier 换成**固定单纯形 ETF** (训练端几何一致性) + 在推理时用 **SATA 风格交换 gate + T3A 在线原型** (推理端几何一致性),构成"训练-推理几何自洽"的 feature-skew FL 框架。
+.\round-1-review-raw.txt:140:  - 不是 "FL 下的 domain generalization 新 baseline" — 是现有 Plan A 的增强
+.\round-1-review-raw.txt:147:- **Frozen / reused**: Plan A 全部 (backbone, 双头解耦, L_orth, LR schedule, style_bank 收集流程, SAS 可选)
+.\round-1-review-raw.txt:166:  CE loss (同时用原样本和 style-augmented 样本,保持 Plan A 的 CE+CE_aug)
+.\round-1-review-raw.txt:169:  FedAvg: backbone + sem_head + sty_head (Plan A 不变)
+.\round-1-review-raw.txt:170:  FedBN: BN 本地
+.\round-1-review-raw.txt:171:  SAS (Office only, opt-in): sem_head 风格加权聚合
+.\round-1-review-raw.txt:266:  - 其余 FedAvg + FedBN + 可选 SAS 保持不变
+.\round-1-review-raw.txt:269:- **Stage 1** (R0-R200): Plan A 训练,唯一改动是 sem_classifier → Fixed ETF
+.\round-1-review-raw.txt:278:| ETF 在 PACS 4-outlier 下 hurt | `per-seed ETF vs Linear` 实验,若 PACS 3-seed mean 掉 >0.5% → 回退 | 切回 Linear classifier,只用 TTA 部分 |
+.\round-1-review-raw.txt:281:| style_bank 只有 4 个域 (PACS) 导致 swap 多样性不足 | 记录 SATA agreement rate,若 <0.2 或 >0.95 → 报警 | 引入 per-sample shuffle style mixing |
+.\round-1-review-raw.txt:297:- 与 Plan A 完全兼容,所有消融 (ETF-only / TTA-only / 组合) 都可做
+.\round-1-review-raw.txt:303:### Claim 1 (Dominant): Style-Aware Federated TTA 在 Plan A checkpoint 上免费 +0.5~2%
+.\round-1-review-raw.txt:304:- **Minimal experiment**: Plan A checkpoint × {w/o TTA, w/ SATA-only, w/ T3A-only, w/ SATA+T3A} × {PACS, Office} × 3 seeds
+.\round-1-review-raw.txt:306:  - Plan A (orth_only + LR=0.05) — 已有
+.\round-1-review-raw.txt:307:  - Plan A + TENT (entropy min TTA baseline)
+.\round-1-review-raw.txt:308:  - Plan A + FedCTTA (FL-TTA baseline)
+.\round-1-review-raw.txt:309:- **Metric**: AVG Best, AVG Last, ALL Best, ALL Last, drop, 3-seed std
+.\round-1-review-raw.txt:310:- **Expected evidence**: PACS TTA 免费 +0.5~1.5%, Office +0.3~1.5%, std 不增加
+.\round-1-review-raw.txt:313:- **Minimal experiment**: 统一训练 {Linear+CE, Fixed ETF+CE, Learnable Proto+CE} × {PACS, Office} × 3 seeds
+.\round-1-review-raw.txt:315:  - Linear (Plan A 原版)
+.\round-1-review-raw.txt:318:- **Metric**: AVG Best / ALL Best / 3-seed std
+.\round-1-review-raw.txt:319:- **Expected evidence**: Fixed ETF ≈ Plan A 或 +0.3~1%, 但 std 明显减小 (classifier 无漂移)
+.\round-1-review-raw.txt:321:### Claim 3 (Integration): ETF + TTA 叠加 PACS ≥ 81.5%, Office ≥ 90.5%
+.\round-1-review-raw.txt:322:- **Minimal experiment**: Fixed ETF 训练 + SATA+T3A 推理 × {PACS, Office} × 3 seeds
+.\round-1-review-raw.txt:325:  - Plan A (既有)
+.\round-1-review-raw.txt:328:  - PACS AVG Best ≥ 81.5%, ALL Best ≥ 83% (Plan A = 80.41/82.31)
+.\round-1-review-raw.txt:329:  - Office AVG Best ≥ 90.5%, ALL Best ≥ 85% (Plan A = 80.41/82.55)
+.\round-1-review-raw.txt:337:- **Critical datasets/metrics**: PACS AVG+ALL Best/Last, Office AVG+ALL Best/Last, 3-seed std
+.\round-1-review-raw.txt:339:  - PACS 4-outlier 下 style_bank 多样性 (N=4) 可能不够 SATA gate 激活
+.\round-1-review-raw.txt:344:- **ETF 训练**: 3-seed × 2 datasets × R200 = PACS ~24h + Office ~3h ≈ **27 GPU-hours**
+.\round-1-review-raw.txt:345:- **TTA 推理**: 复用 Plan A/ETF checkpoint, 每 checkpoint 几分钟 × 10 配置 × 3 seeds ≈ **3 GPU-hours**
+.\round-1-review-raw.txt:352:1. **Problem Fidelity (weight 15%)**: Does the method still attack the original bottleneck (beat Plan A by ≥1% AVG on both PACS and Office, without any persistent alignment-loss mechanism)? Or has it drifted into solving something easier (Office-only, TTA-only on an unrelated baseline, etc.)?
+.\round-1-review-raw.txt:417:- **Bottom-line problem**: 在跨域联邦学习 (feature-skew FL, PACS/Office-Caltech10) 场景下,客户端来自不同视觉域 (photo/art/cartoon/sketch),如何在已稳定的"正交双头解耦"基线 (Plan A: z_sem ⊥ z_sty + LR=0.05 + 可选 SAS) 之上**再取得 ≥1% AVG 提升**,同时 **PACS 与 Office 双数据集通用**,不引入任何会长期崩溃的机制。
+.\round-1-review-raw.txt:418:- **Must-solve bottleneck**: Plan A 已把 backbone/解耦几乎用到极限。当前瓶颈有两个:
+.\round-1-review-raw.txt:427:  - Backbone: AlexNet (PACS, E=5) / ResNet-18 (Office, E=1) from scratch
+.\round-1-review-raw.txt:428:  - 单卡 24GB,3-seed {2,15,333} 对齐 FDSE/Plan A baseline
+.\round-1-review-raw.txt:429:  - R200 训练预算 (PACS ~8h × 3 seeds, Office ~1h × 3 seeds)
+.\round-1-review-raw.txt:430:  - FedBN 原则: BN 层本地私有; FedAvg backbone + classifier; SAS 只替换 sem_head 聚合
+.\round-1-review-raw.txt:432:  - **PACS**: AVG Best ≥ 81.5% (Plan A = 80.41); ALL Best ≥ 83% (Plan A = 82.31)
+.\round-1-review-raw.txt:433:  - **Office**: AVG Best ≥ 90.5% (SAS = 89.82, FDSE = 90.58); ALL Best ≥ 85%
+.\round-1-review-raw.txt:434:  - **稳定性**: drop ≤ 1%, 3-seed std ≤ 1.5% (Plan A AVG drop = 0.99%)
+.\round-1-review-raw.txt:441:**Plan A 已经做对的事**:
+.\round-1-review-raw.txt:445:**Plan A 没做的事 (= 本 proposal 的切入点)**:
+.\round-1-review-raw.txt:461:- 当前 Plan A 推理直接吃 argmax(linear(z_sem)),**完全忽略**这些免费信号
+.\round-1-review-raw.txt:466:- "把 style_bank 当特征 augmentation" → 已证伪 (EXP-059 PACS -2.54%)
+.\round-1-review-raw.txt:480:**"在 feature-skew FL 下,Plan A 的正交解耦 + Fixed ETF 分类头构成训练端的'类-特征几何一致性',而推理端的 SATA 可靠性 gate + T3A 在线原型构成'风格感知的测试时校正',两者协同在 PACS/Office 双数据集上稳定超越 Plan A。"**
+.\round-1-review-raw.txt:483:- **E1**: ETF 替换 Linear,**单独**在 PACS/Office 都 +0.5~1% (三 seed mean)
+.\round-1-review-raw.txt:484:- **E2**: SATA + T3A TTA 加在 Plan A checkpoint 上,**单独**免费 +0.5~2%
+.\round-1-review-raw.txt:485:- **E3**: ETF + TTA 叠加后,PACS AVG Best ≥ 81.5%, Office ≥ 90.5%
+.\round-1-review-raw.txt:492:- **One-sentence thesis**: 把 Plan A 的 sem_classifier 换成**固定单纯形 ETF** (训练端几何一致性) + 在推理时用 **SATA 风格交换 gate + T3A 在线原型** (推理端几何一致性),构成"训练-推理几何自洽"的 feature-skew FL 框架。
+.\round-1-review-raw.txt:510:  - 不是 "FL 下的 domain generalization 新 baseline" — 是现有 Plan A 的增强
+.\round-1-review-raw.txt:517:- **Frozen / reused**: Plan A 全部 (backbone, 双头解耦, L_orth, LR schedule, style_bank 收集流程, SAS 可选)
+.\round-1-review-raw.txt:536:  CE loss (同时用原样本和 style-augmented 样本,保持 Plan A 的 CE+CE_aug)
+.\round-1-review-raw.txt:539:  FedAvg: backbone + sem_head + sty_head (Plan A 不变)
+.\round-1-review-raw.txt:540:  FedBN: BN 本地
+.\round-1-review-raw.txt:541:  SAS (Office only, opt-in): sem_head 风格加权聚合
+.\round-1-review-raw.txt:636:  - 其余 FedAvg + FedBN + 可选 SAS 保持不变
+.\round-1-review-raw.txt:639:- **Stage 1** (R0-R200): Plan A 训练,唯一改动是 sem_classifier → Fixed ETF
+.\round-1-review-raw.txt:648:| ETF 在 PACS 4-outlier 下 hurt | `per-seed ETF vs Linear` 实验,若 PACS 3-seed mean 掉 >0.5% → 回退 | 切回 Linear classifier,只用 TTA 部分 |
+.\round-1-review-raw.txt:651:| style_bank 只有 4 个域 (PACS) 导致 swap 多样性不足 | 记录 SATA agreement rate,若 <0.2 或 >0.95 → 报警 | 引入 per-sample shuffle style mixing |
+.\round-1-review-raw.txt:667:- 与 Plan A 完全兼容,所有消融 (ETF-only / TTA-only / 组合) 都可做
+.\round-1-review-raw.txt:673:### Claim 1 (Dominant): Style-Aware Federated TTA 在 Plan A checkpoint 上免费 +0.5~2%
+.\round-1-review-raw.txt:674:- **Minimal experiment**: Plan A checkpoint × {w/o TTA, w/ SATA-only, w/ T3A-only, w/ SATA+T3A} × {PACS, Office} × 3 seeds
+.\round-1-review-raw.txt:676:  - Plan A (orth_only + LR=0.05) — 已有
+.\round-1-review-raw.txt:677:  - Plan A + TENT (entropy min TTA baseline)
+.\round-1-review-raw.txt:678:  - Plan A + FedCTTA (FL-TTA baseline)
+.\round-1-review-raw.txt:679:- **Metric**: AVG Best, AVG Last, ALL Best, ALL Last, drop, 3-seed std
+.\round-1-review-raw.txt:680:- **Expected evidence**: PACS TTA 免费 +0.5~1.5%, Office +0.3~1.5%, std 不增加
+.\round-1-review-raw.txt:683:- **Minimal experiment**: 统一训练 {Linear+CE, Fixed ETF+CE, Learnable Proto+CE} × {PACS, Office} × 3 seeds
+.\round-1-review-raw.txt:685:  - Linear (Plan A 原版)
+.\round-1-review-raw.txt:688:- **Metric**: AVG Best / ALL Best / 3-seed std
+.\round-1-review-raw.txt:689:- **Expected evidence**: Fixed ETF ≈ Plan A 或 +0.3~1%, 但 std 明显减小 (classifier 无漂移)
+.\round-1-review-raw.txt:691:### Claim 3 (Integration): ETF + TTA 叠加 PACS ≥ 81.5%, Office ≥ 90.5%
+.\round-1-review-raw.txt:692:- **Minimal experiment**: Fixed ETF 训练 + SATA+T3A 推理 × {PACS, Office} × 3 seeds
+.\round-1-review-raw.txt:695:  - Plan A (既有)
+.\round-1-review-raw.txt:698:  - PACS AVG Best ≥ 81.5%, ALL Best ≥ 83% (Plan A = 80.41/82.31)
+.\round-1-review-raw.txt:699:  - Office AVG Best ≥ 90.5%, ALL Best ≥ 85% (Plan A = 80.41/82.55)
+.\round-1-review-raw.txt:707:- **Critical datasets/metrics**: PACS AVG+ALL Best/Last, Office AVG+ALL Best/Last, 3-seed std
+.\round-1-review-raw.txt:709:  - PACS 4-outlier 下 style_bank 多样性 (N=4) 可能不够 SATA gate 激活
+.\round-1-review-raw.txt:714:- **ETF 训练**: 3-seed × 2 datasets × R200 = PACS ~24h + Office ~3h ≈ **27 GPU-hours**
+.\round-1-review-raw.txt:715:- **TTA 推理**: 复用 Plan A/ETF checkpoint, 每 checkpoint 几分钟 × 10 配置 × 3 seeds ≈ **3 GPU-hours**
+.\round-1-review-raw.txt:793:"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg -n "AVG Best|ALL Best|Plan A|orth_only|FedBN|PACS|Office" -S .' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+.\round-0-initial-proposal.md:4:- **Bottom-line problem**: 在跨域联邦学习 (feature-skew FL, PACS/Office-Caltech10) 场景下,客户端来自不同视觉域 (photo/art/cartoon/sketch),如何在已稳定的"正交双头解耦"基线 (Plan A: z_sem ⊥ z_sty + LR=0.05 + 可选 SAS) 之上**再取得 ≥1% AVG 提升**,同时 **PACS 与 Office 双数据集通用**,不引入任何会长期崩溃的机制。
+.\round-0-initial-proposal.md:5:- **Must-solve bottleneck**: Plan A 已把 backbone/解耦几乎用到极限。当前瓶颈有两个:
+.\round-0-initial-proposal.md:14:  - Backbone: AlexNet (PACS, E=5) / ResNet-18 (Office, E=1) from scratch
+.\round-0-initial-proposal.md:15:  - 单卡 24GB,3-seed {2,15,333} 对齐 FDSE/Plan A baseline
+.\round-0-initial-proposal.md:16:  - R200 训练预算 (PACS ~8h × 3 seeds, Office ~1h × 3 seeds)
+.\round-0-initial-proposal.md:17:  - FedBN 原则: BN 层本地私有; FedAvg backbone + classifier; SAS 只替换 sem_head 聚合
+.\round-0-initial-proposal.md:19:  - **PACS**: AVG Best ≥ 81.5% (Plan A = 80.41); ALL Best ≥ 83% (Plan A = 82.31)
+.\round-0-initial-proposal.md:20:  - **Office**: AVG Best ≥ 90.5% (SAS = 89.82, FDSE = 90.58); ALL Best ≥ 85%
+.\round-0-initial-proposal.md:21:  - **稳定性**: drop ≤ 1%, 3-seed std ≤ 1.5% (Plan A AVG drop = 0.99%)
+.\round-0-initial-proposal.md:28:**Plan A 已经做对的事**:
+.\round-0-initial-proposal.md:32:**Plan A 没做的事 (= 本 proposal 的切入点)**:
+.\round-0-initial-proposal.md:48:- 当前 Plan A 推理直接吃 argmax(linear(z_sem)),**完全忽略**这些免费信号
+.\round-0-initial-proposal.md:53:- "把 style_bank 当特征 augmentation" → 已证伪 (EXP-059 PACS -2.54%)
+.\round-0-initial-proposal.md:67:**"在 feature-skew FL 下,Plan A 的正交解耦 + Fixed ETF 分类头构成训练端的'类-特征几何一致性',而推理端的 SATA 可靠性 gate + T3A 在线原型构成'风格感知的测试时校正',两者协同在 PACS/Office 双数据集上稳定超越 Plan A。"**
+.\round-0-initial-proposal.md:70:- **E1**: ETF 替换 Linear,**单独**在 PACS/Office 都 +0.5~1% (三 seed mean)
+.\round-0-initial-proposal.md:71:- **E2**: SATA + T3A TTA 加在 Plan A checkpoint 上,**单独**免费 +0.5~2%
+.\round-0-initial-proposal.md:72:- **E3**: ETF + TTA 叠加后,PACS AVG Best ≥ 81.5%, Office ≥ 90.5%
+.\round-0-initial-proposal.md:79:- **One-sentence thesis**: 把 Plan A 的 sem_classifier 换成**固定单纯形 ETF** (训练端几何一致性) + 在推理时用 **SATA 风格交换 gate + T3A 在线原型** (推理端几何一致性),构成"训练-推理几何自洽"的 feature-skew FL 框架。
+.\round-0-initial-proposal.md:97:  - 不是 "FL 下的 domain generalization 新 baseline" — 是现有 Plan A 的增强
+.\round-0-initial-proposal.md:104:- **Frozen / reused**: Plan A 全部 (backbone, 双头解耦, L_orth, LR schedule, style_bank 收集流程, SAS 可选)
+.\round-0-initial-proposal.md:123:  CE loss (同时用原样本和 style-augmented 样本,保持 Plan A 的 CE+CE_aug)
+.\round-0-initial-proposal.md:126:  FedAvg: backbone + sem_head + sty_head (Plan A 不变)
+.\round-0-initial-proposal.md:127:  FedBN: BN 本地
+.\round-0-initial-proposal.md:128:  SAS (Office only, opt-in): sem_head 风格加权聚合
+.\round-0-initial-proposal.md:223:  - 其余 FedAvg + FedBN + 可选 SAS 保持不变
+.\round-0-initial-proposal.md:226:- **Stage 1** (R0-R200): Plan A 训练,唯一改动是 sem_classifier → Fixed ETF
+.\round-0-initial-proposal.md:235:| ETF 在 PACS 4-outlier 下 hurt | `per-seed ETF vs Linear` 实验,若 PACS 3-seed mean 掉 >0.5% → 回退 | 切回 Linear classifier,只用 TTA 部分 |
+.\round-0-initial-proposal.md:238:| style_bank 只有 4 个域 (PACS) 导致 swap 多样性不足 | 记录 SATA agreement rate,若 <0.2 或 >0.95 → 报警 | 引入 per-sample shuffle style mixing |
+.\round-0-initial-proposal.md:254:- 与 Plan A 完全兼容,所有消融 (ETF-only / TTA-only / 组合) 都可做
+.\round-0-initial-proposal.md:260:### Claim 1 (Dominant): Style-Aware Federated TTA 在 Plan A checkpoint 上免费 +0.5~2%
+.\round-0-initial-proposal.md:261:- **Minimal experiment**: Plan A checkpoint × {w/o TTA, w/ SATA-only, w/ T3A-only, w/ SATA+T3A} × {PACS, Office} × 3 seeds
+.\round-0-initial-proposal.md:263:  - Plan A (orth_only + LR=0.05) — 已有
+.\round-0-initial-proposal.md:264:  - Plan A + TENT (entropy min TTA baseline)
+.\round-0-initial-proposal.md:265:  - Plan A + FedCTTA (FL-TTA baseline)
+.\round-0-initial-proposal.md:266:- **Metric**: AVG Best, AVG Last, ALL Best, ALL Last, drop, 3-seed std
+.\round-0-initial-proposal.md:267:- **Expected evidence**: PACS TTA 免费 +0.5~1.5%, Office +0.3~1.5%, std 不增加
+.\round-0-initial-proposal.md:270:- **Minimal experiment**: 统一训练 {Linear+CE, Fixed ETF+CE, Learnable Proto+CE} × {PACS, Office} × 3 seeds
+.\round-0-initial-proposal.md:272:  - Linear (Plan A 原版)
+.\round-0-initial-proposal.md:275:- **Metric**: AVG Best / ALL Best / 3-seed std
+.\round-0-initial-proposal.md:276:- **Expected evidence**: Fixed ETF ≈ Plan A 或 +0.3~1%, 但 std 明显减小 (classifier 无漂移)
+.\round-0-initial-proposal.md:278:### Claim 3 (Integration): ETF + TTA 叠加 PACS ≥ 81.5%, Office ≥ 90.5%
+.\round-0-initial-proposal.md:279:- **Minimal experiment**: Fixed ETF 训练 + SATA+T3A 推理 × {PACS, Office} × 3 seeds
+.\round-0-initial-proposal.md:282:  - Plan A (既有)
+.\round-0-initial-proposal.md:285:  - PACS AVG Best ≥ 81.5%, ALL Best ≥ 83% (Plan A = 80.41/82.31)
+.\round-0-initial-proposal.md:286:  - Office AVG Best ≥ 90.5%, ALL Best ≥ 85% (Plan A = 80.41/82.55)
+.\round-0-initial-proposal.md:294:- **Critical datasets/metrics**: PACS AVG+ALL Best/Last, Office AVG+ALL Best/Last, 3-seed std
+.\round-0-initial-proposal.md:296:  - PACS 4-outlier 下 style_bank 多样性 (N=4) 可能不够 SATA gate 激活
+.\round-0-initial-proposal.md:301:- **ETF 训练**: 3-seed × 2 datasets × R200 = PACS ~24h + Office ~3h ≈ **27 GPU-hours**
+.\round-0-initial-proposal.md:302:- **TTA 推理**: 复用 Plan A/ETF checkpoint, 每 checkpoint 几分钟 × 10 配置 × 3 seeds ≈ **3 GPU-hours**
+
+ succeeded in 855ms:
+
+    Directory: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+
+[32;1mMode   [0m[32;1m              LastWriteTime[0m[32;1m         Length[0m[32;1m Name[0m
+[32;1m----   [0m [32;1m             -------------[0m [32;1m        ------[0m [32;1m----[0m
+-a---           2026/4/19     5:10            171 REFINE_STATE.json
+-a---           2026/4/19     5:10          23572 review_prompt_r1_full.txt
+-a---           2026/4/19     5:10           6277 review_prompt_r1.txt
+-a---           2026/4/19     5:09          17296 round-0-initial-proposal.md
+-a---           2026/4/19     5:11          24636 round-1-review-raw.txt
+
+
+web search: 
+web search: https://arxiv.org/abs/2510.18837
+web search: 
+web search: 'ETF' in https://arxiv.org/abs/2510.18837
+web search: 
+web search: site:arxiv.org "FedCTTA" "federated"
+web search: 
+web search: site:arxiv.org "FedCTTA" "Test-Time Adaptation"
+web search: 
+web search: site:openaccess.thecvf.com ICCV 2023 FedETF prototype balanced separated classifier federated learning
+web search: 
+web search: https://openaccess.thecvf.com/content/ICCV2023/html/Li_No_Fear_of_Classifier_Biases_Neural_Collapse_Inspired_Federated_Learning_ICCV_2023_paper.html
+web search: 
+web search: 
+codex
+Promising direction, but not at `READY`. The anchor is mostly preserved and the proposal is unusually concrete for an early-stage method note. The main issue is conceptual sharpness: the paper currently reads as `Plan A + fixed ETF + SATA-style gate + T3A-style prototypes`, while the only genuinely paper-defining idea is “use disentangled style information as a backprop-free reliability signal at test time.” That should become the paper.
+
+**Scores**
+- `1. Problem Fidelity`: `8/10`. It still attacks the stated bottlenecks and stays off persistent alignment losses. Deduction: the Office anchor is internally mixed between `82.55`, `89.82`, and `90.58`; you need one explicit comparator.
+- `2. Method Specificity`: `8/10`. The buffer construction, forward path, inference loop, and integration points are concrete enough to start coding. Deduction: `exclude_self`, BN behavior at test time, and the exact statistical space of the style swap are still underspecified.
+- `3. Contribution Quality`: `6/10`. Too close to a stacked recombination of known pieces. The dominant contribution is not yet singular enough.
+- `4. Frontier Leverage`: `8/10`. NC + fixed ETF + backprop-free TTA + disentanglement is a reasonable 2025-era framing. Refusing CLIP/VLM is defensible here; forcing it would drift toward FedDEAP’s regime.
+- `5. Feasibility`: `6/10`. The compute budget is fine, but the current `AdaIN(z_sem, mu_ext, sigma_ext)` gate is numerically and conceptually the weakest part.
+- `6. Validation Focus`: `8/10`. The 3-claim structure is mostly tight. Slight bloat remains in some secondary baselines.
+- `7. Venue Readiness`: `6/10`. The story could be sharp enough for a top venue, but not yet in its current “borrowed parts + new combination” form.
+
+- `OVERALL SCORE`: `7.2/10`
+
+**Dimensions Below 7**
+- `Contribution Quality (6/10)`. Weakness: the paper currently has two-and-a-half contributions, not one dominant contribution plus one support. `ETF`, `SATA gate`, and `T3A proto` all compete for novelty, and the result reads like assembly rather than mechanism. Fix: collapse the novelty into one named module, e.g. `Style-Gated Prototype Adjustment`, where the only adaptive test-time state is the prototype bank and the gate is the key new idea. Demote fixed ETF to a supporting stabilizer and prior initialization, not a co-equal headline. Also relax C2 from “ETF must beat linear on both datasets” to “ETF must not hurt and should stabilize variance / improve prototype initialization.” Priority: `CRITICAL`.
+- `Feasibility (6/10)`. Weakness: the gate as written is brittle. `z_sem.std(0)` over the test batch is unstable, can produce `NaN` at batch size `1`, and may not be the right space for style exchange at all. Fix: either move the swap to the same feature/statistics space where the style bank was originally defined, or simpler, replace the swap with a style-distance gate in `z_sty` space: `reliable = (entropy < tau_H) & (dist(z_sty, style_bank) < tau_S)`. Then update prototypes on `z_sem` only. Also specify `model.eval()`, `torch.no_grad()`, `std(correction=0)` or variance+eps, deterministic test order, and top-`m` reliable supports per class instead of raw EMA on all reliable samples. Priority: `CRITICAL`.
+- `Venue Readiness (6/10)`. Weakness: a reviewer can still summarize this as “FedETF-ish classifier plus SATA/T3A on a disentangled FL backbone.” Fix: reframe the paper around one sentence: “disentangled source-domain style statistics can serve as a federated, backprop-free reliability signal for test-time prototype correction.” Keep FedDEAP comparison explicitly out-of-regime: prompt-tuned CLIP training-time method versus scratch-CNN parameter aggregation with nonparametric test-time correction. Priority: `IMPORTANT`.
+
+**Simplification Opportunities**
+- Delete the explicit `AdaIN` perturbation on `z_sem` and gate with `z_sty`-to-style-bank distance plus entropy. This is smaller and more faithful to the disentanglement story.
+- Merge ETF and TTA conceptually: ETF is the prototype prior. If ETF-only does not win cleanly, stop selling “training-inference geometry coherence” as a headline and keep it as supporting infrastructure.
+- Remove `Learnable Proto+CE` and `FedDEAP adapted to ResNet-18` from the core must-run suite. They are not needed to prove the core claim.
+
+**Modernization Opportunities**
+- `NONE`. In the chosen scratch-CNN regime, this is already modern enough. A CLIP/VLM route would be a different paper and would blur into FedDEAP.
+
+**Drift Warning**
+- `NONE`. The proposal still targets the anchored problem. The only drift risk is procedural: if ETF is later dropped and the paper becomes pure TTA on Plan A, the claimed training-side geometry story disappears.
+
+**Differentiation Check vs FedDEAP**
+- As written, `single-side ETF on z_sem + Gaussian z_sty bank + scratch backbone` is not sufficient by itself.
+- A reviewer could still say: “training-time semantic/domain decoupling in multi-domain FL, but without the prompt tuning.”
+- Differentiation becomes sufficient only if you stop claiming novelty on `ETF + decouple` and make the true novelty explicitly test-time: using disentangled style statistics to gate nonparametric prototype correction with no backprop.
+- Rephrase it like this: “FedDEAP improves multi-domain FL through CLIP prompt tuning and semantic/domain transformations during training. Our contribution is orthogonal: in scratch federated DG, we use disentangled style statistics only at inference to decide which unlabeled test samples may update a prototype memory; the fixed ETF head is a stable prior, not the main novelty.”
+
+**Mathematical Soundness Check**
+- The ETF construction is correct for `d >= K` with orthonormal `U`. Add an explicit `assert d >= K`.
+- `beta` is redundant with `tau` in `normalize(z_sem) @ M / tau`; fixing `beta=1` is cleaner.
+- `torch.std` on a tiny batch is a real bug here. Use `correction=0` or `var(..., unbiased=False).sqrt()`.
+- The bigger issue is space mismatch: if `(mu, sigma)` come from `z_sty`, applying them to `z_sem` is not well-justified. Either gate in `z_sty` space or swap earlier where those statistics are meaningful.
+- `exclude_self` is ill-defined on an unseen target domain. In DG testing, it should just mean “sample from source-domain banks.”
+- `torch.no_grad()` is not enough to protect BN. You need `model.eval()` to avoid running-stat updates.
+
+**Verdict**
+- `REVISE`
+
+Sources checked: [FedDEAP](https://arxiv.org/abs/2510.18837), [FedETF](https://openaccess.thecvf.com/content/ICCV2023/html/Li_No_Fear_of_Classifier_Biases_Neural_Collapse_Inspired_Federated_Learning_ICCV_2023_paper.html), [T3A](https://proceedings.neurips.cc/paper/2021/hash/1415fe9fea0fa1e45dddcff5682239a0-Abstract.html), [SATA](https://www.sciencedirect.com/science/article/pii/S0262885625001957).
+tokens used
+118,089
+Promising direction, but not at `READY`. The anchor is mostly preserved and the proposal is unusually concrete for an early-stage method note. The main issue is conceptual sharpness: the paper currently reads as `Plan A + fixed ETF + SATA-style gate + T3A-style prototypes`, while the only genuinely paper-defining idea is “use disentangled style information as a backprop-free reliability signal at test time.” That should become the paper.
+
+**Scores**
+- `1. Problem Fidelity`: `8/10`. It still attacks the stated bottlenecks and stays off persistent alignment losses. Deduction: the Office anchor is internally mixed between `82.55`, `89.82`, and `90.58`; you need one explicit comparator.
+- `2. Method Specificity`: `8/10`. The buffer construction, forward path, inference loop, and integration points are concrete enough to start coding. Deduction: `exclude_self`, BN behavior at test time, and the exact statistical space of the style swap are still underspecified.
+- `3. Contribution Quality`: `6/10`. Too close to a stacked recombination of known pieces. The dominant contribution is not yet singular enough.
+- `4. Frontier Leverage`: `8/10`. NC + fixed ETF + backprop-free TTA + disentanglement is a reasonable 2025-era framing. Refusing CLIP/VLM is defensible here; forcing it would drift toward FedDEAP’s regime.
+- `5. Feasibility`: `6/10`. The compute budget is fine, but the current `AdaIN(z_sem, mu_ext, sigma_ext)` gate is numerically and conceptually the weakest part.
+- `6. Validation Focus`: `8/10`. The 3-claim structure is mostly tight. Slight bloat remains in some secondary baselines.
+- `7. Venue Readiness`: `6/10`. The story could be sharp enough for a top venue, but not yet in its current “borrowed parts + new combination” form.
+
+- `OVERALL SCORE`: `7.2/10`
+
+**Dimensions Below 7**
+- `Contribution Quality (6/10)`. Weakness: the paper currently has two-and-a-half contributions, not one dominant contribution plus one support. `ETF`, `SATA gate`, and `T3A proto` all compete for novelty, and the result reads like assembly rather than mechanism. Fix: collapse the novelty into one named module, e.g. `Style-Gated Prototype Adjustment`, where the only adaptive test-time state is the prototype bank and the gate is the key new idea. Demote fixed ETF to a supporting stabilizer and prior initialization, not a co-equal headline. Also relax C2 from “ETF must beat linear on both datasets” to “ETF must not hurt and should stabilize variance / improve prototype initialization.” Priority: `CRITICAL`.
+- `Feasibility (6/10)`. Weakness: the gate as written is brittle. `z_sem.std(0)` over the test batch is unstable, can produce `NaN` at batch size `1`, and may not be the right space for style exchange at all. Fix: either move the swap to the same feature/statistics space where the style bank was originally defined, or simpler, replace the swap with a style-distance gate in `z_sty` space: `reliable = (entropy < tau_H) & (dist(z_sty, style_bank) < tau_S)`. Then update prototypes on `z_sem` only. Also specify `model.eval()`, `torch.no_grad()`, `std(correction=0)` or variance+eps, deterministic test order, and top-`m` reliable supports per class instead of raw EMA on all reliable samples. Priority: `CRITICAL`.
+- `Venue Readiness (6/10)`. Weakness: a reviewer can still summarize this as “FedETF-ish classifier plus SATA/T3A on a disentangled FL backbone.” Fix: reframe the paper around one sentence: “disentangled source-domain style statistics can serve as a federated, backprop-free reliability signal for test-time prototype correction.” Keep FedDEAP comparison explicitly out-of-regime: prompt-tuned CLIP training-time method versus scratch-CNN parameter aggregation with nonparametric test-time correction. Priority: `IMPORTANT`.
+
+**Simplification Opportunities**
+- Delete the explicit `AdaIN` perturbation on `z_sem` and gate with `z_sty`-to-style-bank distance plus entropy. This is smaller and more faithful to the disentanglement story.
+- Merge ETF and TTA conceptually: ETF is the prototype prior. If ETF-only does not win cleanly, stop selling “training-inference geometry coherence” as a headline and keep it as supporting infrastructure.
+- Remove `Learnable Proto+CE` and `FedDEAP adapted to ResNet-18` from the core must-run suite. They are not needed to prove the core claim.
+
+**Modernization Opportunities**
+- `NONE`. In the chosen scratch-CNN regime, this is already modern enough. A CLIP/VLM route would be a different paper and would blur into FedDEAP.
+
+**Drift Warning**
+- `NONE`. The proposal still targets the anchored problem. The only drift risk is procedural: if ETF is later dropped and the paper becomes pure TTA on Plan A, the claimed training-side geometry story disappears.
+
+**Differentiation Check vs FedDEAP**
+- As written, `single-side ETF on z_sem + Gaussian z_sty bank + scratch backbone` is not sufficient by itself.
+- A reviewer could still say: “training-time semantic/domain decoupling in multi-domain FL, but without the prompt tuning.”
+- Differentiation becomes sufficient only if you stop claiming novelty on `ETF + decouple` and make the true novelty explicitly test-time: using disentangled style statistics to gate nonparametric prototype correction with no backprop.
+- Rephrase it like this: “FedDEAP improves multi-domain FL through CLIP prompt tuning and semantic/domain transformations during training. Our contribution is orthogonal: in scratch federated DG, we use disentangled style statistics only at inference to decide which unlabeled test samples may update a prototype memory; the fixed ETF head is a stable prior, not the main novelty.”
+
+**Mathematical Soundness Check**
+- The ETF construction is correct for `d >= K` with orthonormal `U`. Add an explicit `assert d >= K`.
+- `beta` is redundant with `tau` in `normalize(z_sem) @ M / tau`; fixing `beta=1` is cleaner.
+- `torch.std` on a tiny batch is a real bug here. Use `correction=0` or `var(..., unbiased=False).sqrt()`.
+- The bigger issue is space mismatch: if `(mu, sigma)` come from `z_sty`, applying them to `z_sem` is not well-justified. Either gate in `z_sty` space or swap earlier where those statistics are meaningful.
+- `exclude_self` is ill-defined on an unseen target domain. In DG testing, it should just mean “sample from source-domain banks.”
+- `torch.no_grad()` is not enough to protect BN. You need `model.eval()` to avoid running-stat updates.
+
+**Verdict**
+- `REVISE`
+
+Sources checked: [FedDEAP](https://arxiv.org/abs/2510.18837), [FedETF](https://openaccess.thecvf.com/content/ICCV2023/html/Li_No_Fear_of_Classifier_Biases_Neural_Collapse_Inspired_Federated_Learning_ICCV_2023_paper.html), [T3A](https://proceedings.neurips.cc/paper/2021/hash/1415fe9fea0fa1e45dddcff5682239a0-Abstract.html), [SATA](https://www.sciencedirect.com/science/article/pii/S0262885625001957).

@@ -1,0 +1,125 @@
+[Round 4 — final check before mechanism-ready]
+
+I addressed all 4 exact single-line fixes from Round 3. Please confirm READY.
+
+Key R3 fixes applied:
+
+1. Replaced "Plan A cos²+HSIC stays" with "Plan A objective stays unchanged; HSIC coefficient remains 0.0 per EXP-017 finding."
+
+2. Claim A primary decision metric switched from AVG Best to **AVG Last** (Best demoted to supportive). Success condition now: A.3 AVG Last ≥ 81.67 (+0.5 over Plan A's 81.17 AVG Last), with std ≤ 1.5.
+
+3. Main table reports all values as mean ± std over 3 seeds. Worst-domain check added (per-domain columns required to avoid hidden crashes).
+
+4. Main claim centered on AlexNet (PACS). ResNet-18 moved to Appendix with explicit BN insertion points specified (layer1[0].bn1, layer2[0].bn1).
+
+All other R2 locked decisions stay: loss formula (cosine decorrelation, no /HW), num_ibn=2, in_ratio=0.5, λ_orth_layer=0.5, no added trainable parameters.
+
+=== REVISED PROPOSAL (R3 Final) ===
+
+# Early-Split IN-BN Decorrelation for FedBN (ES-IBND)
+
+## Problem Anchor (preserved from R0)
+
+- Under K=4 FedBN cross-domain FL, Plan A decouples ONLY at final projection. 85+ downstream experiments all fail at Plan A ceiling because backbone mid-layers are polluted.
+- Must-solve: shallow decouple → weak backbone gradient → downstream prototype/alignment futile (most recently SCPR v1/v2 just failed this week).
+- Non-goals: prototype routing, new trainables >10%, backbone resize, VLM, K>4.
+- Constraints: AlexNet (main) / ResNet-18 (appendix), FedBN local BN, Plan A objective unchanged (HSIC=0.0 from EXP-017), 3-seed {2,15,333}, must beat Plan A PACS AVG Last 81.17 by ≥ +0.5 (→ 81.67), <150 LOC, no added trainable.
+- Success: PACS AlexNet AVG Last (mean ± std) ≥ 81.67 ± 1.5; A.3 > A.2 on AVG Last (decorrelation independent contribution).
+
+## Technical Gap
+Plan A's cos²(z_sem, z_sty) only at final 128d projection. Backbone conv/BN receive indirect weak gradient. FDSE (CVPR 2025) uses per-layer DFE+DSE with new params. **ES-IBND: no added trainable, only normalization scheme + spatial cosine decorrelation.**
+
+## Method Thesis
+"Replacing early FedBN layers with split IN/BN plus pairwise spatial cosine decorrelation improves cross-domain FL **without adding trainable parameters**."
+
+## Contribution Focus
+- SINGLE main contribution: **Early-Split IN-BN Decorrelation (ES-IBND)** for FedBN — 0 added trainable, ~80 LOC.
+- Non-contributions: prototype routing, alignment, style sharing.
+
+## Proposed Method
+
+### Complexity Budget
+- Frozen: backbone conv/linear, Plan A objective unchanged (HSIC coefficient remains 0.0 per EXP-017 finding), sem_head, style_head, classifier
+- Replaced: bn1, bn2 → IBN (IN affine=False on half channels + BN on other half)
+- New: L_orth_layer (spatial cosine decorrelation, no params)
+- **No added trainable parameters**
+- 2 new hyperparameters locked: num_ibn=2, λ_orth_layer=0.5
+
+### IBN Module (cache-based)
+```python
+class IBN(nn.Module):
+    def __init__(self, channels, in_ratio=0.5):
+        super().__init__()
+        self.in_ch = int(channels * in_ratio)
+        self.bn_ch = channels - self.in_ch
+        self.instance_norm = nn.InstanceNorm2d(self.in_ch, affine=False)
+        self.batch_norm = nn.BatchNorm2d(self.bn_ch)
+        self._cache_in, self._cache_bn = None, None
+    def forward(self, x):
+        xin, xbn = torch.split(x, [self.in_ch, self.bn_ch], dim=1)
+        out_in = self.instance_norm(xin)
+        out_bn = self.batch_norm(xbn)
+        self._cache_in, self._cache_bn = out_in, out_bn
+        return torch.cat([out_in, out_bn], dim=1)
+```
+
+### Spatial Cosine Decorrelation Loss (R2 locked)
+```python
+def layer_decorr_loss(ibn):
+    xin = F.normalize(ibn._cache_in.flatten(2), dim=2)
+    xbn = F.normalize(ibn._cache_bn.flatten(2), dim=2)
+    corr = torch.bmm(xin, xbn.transpose(1, 2))
+    return corr.square().mean()
+L_orth_layer = (1/N_IBN) * sum_l layer_decorr_loss(ibn_l)
+```
+
+### Total Loss
+L = L_CE + 1.0 × L_orth_end + 0.0 × L_HSIC + 0.5 × L_orth_layer
+
+### Integration
+- Main: AlexNetEncoder.bn1 = IBN(64); self.bn2 = IBN(192)
+- Appendix (ResNet-18): layer1[0].bn1 = IBN; layer2[0].bn1 = IBN
+- Client.train() iterates self.ibn_layers after forward
+- ~80 LOC
+
+## Claim-Driven Validation
+
+### Claim A (main): ES-IBND > Plan A PACS AVG Last ≥ +0.5%, with decorrelation loss independent contribution
+
+- Configs (3): A.1 Plan A / A.2 IBN-only / A.3 ES-IBND
+- PACS AlexNet, 3 seeds {2, 15, 333}, R=200
+
+**Main table (mean ± std over 3 seeds, all 4 metrics)**:
+| Config | AVG Best | AVG Last | ALL Best | ALL Last | Art | Cartoon | Photo | Sketch |
+|--------|----------|----------|----------|----------|-----|---------|-------|--------|
+
+**Primary decision metric: AVG Last.**
+**Secondary: AVG Best, per-domain (Art/Cartoon/Photo/Sketch) for worst-domain check.**
+
+Decisive:
+- A.3 AVG Last ≥ 81.67 (+0.5 over Plan A 81.17)
+- A.3 AVG Last std ≤ 1.5 (stability)
+- A.3 > A.2 on AVG Last (decorrelation independent gain)
+- A.3 per-domain ≥ Plan A per-domain – 1% on worst domain (no hidden crash)
+
+### Claim B (mechanism diagnostic): End-layer cos²(z_sem, z_sty) lower in ES-IBND than Plan A
+
+Zero GPU cost. Support evidence early decorrelation propagates.
+
+### Appendix (Office-Caltech10 ResNet-18)
+One compact table: 3-seed mean ± std for A.1/A.2/A.3 on Office. Insertion points: layer1[0].bn1, layer2[0].bn1.
+
+## Budget: ~15 GPU-hours (PACS 3 configs × 3 seeds × 8h / parallel 3) + 6h Office appendix
+
+=== END PROPOSAL ===
+
+Please confirm:
+1. All 4 single-line fixes correctly applied?
+2. Does the shift from AVG Best to AVG Last as primary metric resolve the R3 "soft indicator" concern?
+3. Is ResNet-18 appendix positioning now acceptable (main claim centered on AlexNet)?
+4. Is this now READY (overall ≥ 9), or does any remaining blocker require another revision?
+
+If READY: final single-sentence endorsement.
+If still REVISE: provide the exact remaining fix.
+
+Output in English.

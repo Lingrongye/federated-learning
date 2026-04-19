@@ -1,0 +1,121 @@
+You are the same senior ML reviewer from Round 1 (NeurIPS/ICML/ICLR/CVPR level, feature-skew cross-domain FL).
+
+[ROUND 2 RE-EVALUATION — compare against your Round 1 feedback]
+
+In Round 1 you scored OVERALL 7.2/10, REVISE, with these CRITICAL items:
+1. Contribution Quality 6/10 CRITICAL — 2.5 contributions sprawl; collapse to one named module "Style-Gated Prototype Adjustment (SGPA)" with Fixed ETF demoted to supporting prior.
+2. Feasibility 6/10 CRITICAL — AdaIN(z_sem, μ_sty, σ_sty) space mismatch, B=1 NaN, exclude_self ill-defined; replace with z_sty-space distance gate + entropy.
+3. Venue Readiness 6/10 IMPORTANT — one-liner = "disentangled source-domain style statistics as federated backprop-free reliability signal for TTA prototype correction".
+Plus mathematical fixes: assert d≥K, β=1, std(correction=0), model.eval()+no_grad, top-m supports (not raw EMA).
+
+The author addressed all three CRITICAL items and the math list. Please re-score the same 7 dimensions and decide READY / REVISE / RETHINK.
+
+Also verify: Did any new drift appear from the refactor? Specifically:
+(a) Is SGPA genuinely the dominant contribution now, or is ETF still competing for the headline?
+(b) Does the z_sty-distance gate actually respect the Problem Anchor ("make use of z_sty and style_bank at inference")?
+(c) Is the FedDEAP differentiation now framed as "orthogonal — training-time prompt vs inference-time prototype correction", not "we're FedDEAP without prompts"?
+(d) Mathematical soundness of new z_sty distance gate (is min_k ||normalize(z_sty)-normalize(μ_k)|| a well-defined statistic under FedBN, where each client has private BN)?
+
+Read the Problem Anchor first — it has NOT changed. Then read the revised proposal.
+
+=== PROBLEM ANCHOR (verbatim from Round 0) ===
+
+- **Bottom-line problem**: 在跨域联邦学习 (feature-skew FL, PACS/Office-Caltech10) 场景下,客户端来自不同视觉域,如何在已稳定的"正交双头解耦"基线 (Plan A) 之上再取得 ≥1% AVG 提升,PACS+Office 通用,不引入任何会长期崩溃的机制。
+- **Must-solve bottleneck**: (a) sem_classifier 参加 FedAvg 是漂移源;(b) z_sty 和 style_bank 推理时被浪费。
+- **Non-goals**: 不引入持续对齐损失,不跨客户端风格共享,不用 CLIP/VLM,不抢 "FL+ETF+decouple 第一" headline。
+- **Success condition**:
+  - PACS AVG Best ≥ 81.5% (Plan A 80.41) / ALL Best ≥ 83%
+  - Office AVG Best ≥ 84% (orth_only w/o SAS 比较) 或 ≥ 90.5% (w/ SAS 比较)
+  - drop ≤ 1%, 3-seed std ≤ 1.5%
+
+=== END ANCHOR ===
+
+=== REVISED PROPOSAL (Round 1 → Round 2) ===
+
+# FedDSA-SGPA (renamed from FedDSA-ETA)
+
+## Changes from Round 0
+1. **Renamed**: FedDSA-ETA → FedDSA-SGPA (Style-Gated Prototype Adjustment) — novelty singular.
+2. **Contribution collapsed**:
+   - Dominant: SGPA (double gate: entropy + z_sty-to-source-bank distance, + top-m prototype bank, + cos classification on z_sem)
+   - Supporting: Fixed ETF as classifier stabilizer + prototype cold-start prior
+   - Explicit non-contributions: no new loss, no new aggregation, no new backbone, no cross-client style sharing
+3. **Gate math fix**: deleted AdaIN(z_sem, μ_sty, σ_sty) entirely. New gate =
+   ```
+   dist_to_source = min_k ||F.normalize(z_sty_test) - F.normalize(μ_k)||_2  # on decoupled z_sty space
+   reliable = (entropy(logits_ETF) < τ_H) & (dist_to_source < τ_S)
+   ```
+4. **Prototype update = top-m (not raw EMA)**: each class c keeps up-to-m reliable supports (filtered by lowest entropy), proto[c] = F.normalize(mean(supports[c])). Cold start = ETF vertex column.
+5. **Classification rule**: `pred = where(proto_activated[pred_proto_idx], proto_pred, etf_pred)`
+6. **Training unchanged from Plan A**, only `sem_classifier` becomes Fixed ETF buffer and each client uploads local (μ_sty, σ_sty) per round to build `source_style_bank ∈ R^{N × 2 × d_sty}` on server.
+
+## Mathematical Correctness Patches
+- `assert feat_dim >= num_classes` before ETF QR.
+- β=1 (redundant with τ_etf).
+- All std use `var(unbiased=False).sqrt()` + eps=1e-5.
+- Inference: `model.eval()` + `torch.no_grad()` + `bn.track_running_stats=False` (triple guard).
+- Test-time calibration: τ_H = median of first-batch entropy; τ_S = 30%-quantile of first-batch dist_min (ensures ≥30% reliable).
+
+## Gate Details (Dominant Mechanism)
+```python
+# Training: each client pushes (μ_sty_k, σ_sty_k) every round to server.
+# Server maintains source_style_bank: N clients × 2 × d_sty. Broadcast back.
+
+# Inference (per client on its own test set, unseen domain):
+model.eval()
+with torch.no_grad():
+  z_sem, z_sty = backbone_heads(x)                          # [B, 128], [B, 128]
+  logits_etf = F.normalize(z_sem, dim=-1) @ M / τ_etf        # [B, K], τ_etf=0.1
+  H = -(softmax(logits_etf) * log_softmax(logits_etf)).sum(-1)  # [B]
+
+  # Gate 2: z_sty distance to nearest source style
+  z_sty_n = F.normalize(z_sty, dim=-1)                       # [B, d_sty]
+  mu_bank_n = F.normalize(source_style_bank[:, 0, :], dim=-1)  # [N, d_sty]
+  dist = (1 - z_sty_n @ mu_bank_n.T)                         # [B, N]  cosine dist
+  dist_min = dist.min(dim=-1).values                         # [B]
+
+  reliable = (H < τ_H) & (dist_min < τ_S)
+
+  # Top-m supports per class (by lowest entropy)
+  pred_etf = logits_etf.argmax(1)
+  for c in range(K):
+    mask_c = reliable & (pred_etf == c)
+    if mask_c.any():
+      supports[c].extend(list(zip(H[mask_c], z_sem[mask_c])))
+      supports[c] = sorted(supports[c], key=lambda t: t[0])[:m_top]  # m=35 PACS, 50 Office
+      proto[c] = F.normalize(torch.stack([s[1] for s in supports[c]]).mean(0), dim=-1)
+
+  z_sem_n = F.normalize(z_sem, dim=-1)
+  proto_tensor = torch.stack(proto)                          # [K, d]
+  proto_logits = z_sem_n @ proto_tensor.T                    # [B, K]
+  pred_proto = proto_logits.argmax(1)
+  activated = torch.tensor([len(supports[pred_proto[i]]) > 0 for i in range(B)])
+  pred = torch.where(activated, pred_proto, pred_etf)
+```
+
+## FedDEAP Differentiation (new framing)
+"FedDEAP improves multi-domain FL through CLIP prompt tuning and ETF-constrained transformations **during training** on frozen foundation features. Our contribution is orthogonal: in scratch CNN federated DG, we use disentangled style statistics **only at inference time** to decide which unlabeled test samples may update a nonparametric prototype memory; Fixed ETF is a stable classifier prior and prototype cold-start, not the main novelty."
+
+## Validation Claims (精简)
+- C1 (dominant): SGPA on Plan A checkpoint免费 +0.5–2% on both PACS and Office (double-gate vs each single gate vs no gate).
+- C2 (supporting): Fixed ETF does NOT hurt mean (|Δ|≤0.3%), 3-seed std decreases ≥0.2%.
+- C3 (integration): SGPA+ETF hits PACS AVG Best ≥81.5%, Office AVG Best ≥84% (w/o SAS) / ≥90.5% (w/ SAS).
+
+## Expected Failure Modes (untouched)
+- PACS 4-outlier: z_sty bank only 4 source domains → dist_min distribution may be bimodal → need dynamic τ_S.
+- AlexNet 128d z_sem vs ETF K=7 vertices: d ≫ K, assert passes.
+- source_style_bank communication: N × 2 × d_sty = 4 × 2 × 128 = 1024 floats per round (trivial overhead).
+
+## Compute
+~32 GPU-hours total.
+
+=== END REVISED PROPOSAL ===
+
+Please:
+1. Re-score the 7 dimensions and provide OVERALL.
+2. Explicitly mark which CRITICAL items from Round 1 are now RESOLVED vs still partial.
+3. Check the 4 new questions (a-d) above.
+4. Scrutinize the new z_sty distance gate: is cosine distance on F.normalize(z_sty) well-defined when each client has FedBN-private BN layers? Could per-client BN make μ_sty non-comparable across clients?
+5. If OVERALL ≥ 9 and no drift, output READY. Otherwise list remaining IMPORTANT/CRITICAL items.
+
+Same output format: 7 scores, overall, verdict, drift warning, simplification/modernization, remaining action items.

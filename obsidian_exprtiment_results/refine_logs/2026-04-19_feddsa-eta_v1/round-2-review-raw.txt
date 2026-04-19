@@ -1,0 +1,570 @@
+OpenAI Codex v0.121.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019da5b0-a03e-73c2-b7e9-0aa1fd4a9b41
+--------
+user
+You are the same senior ML reviewer from Round 1 (NeurIPS/ICML/ICLR/CVPR level, feature-skew cross-domain FL).
+
+[ROUND 2 RE-EVALUATION — compare against your Round 1 feedback]
+
+In Round 1 you scored OVERALL 7.2/10, REVISE, with these CRITICAL items:
+1. Contribution Quality 6/10 CRITICAL — 2.5 contributions sprawl; collapse to one named module "Style-Gated Prototype Adjustment (SGPA)" with Fixed ETF demoted to supporting prior.
+2. Feasibility 6/10 CRITICAL — AdaIN(z_sem, μ_sty, σ_sty) space mismatch, B=1 NaN, exclude_self ill-defined; replace with z_sty-space distance gate + entropy.
+3. Venue Readiness 6/10 IMPORTANT — one-liner = "disentangled source-domain style statistics as federated backprop-free reliability signal for TTA prototype correction".
+Plus mathematical fixes: assert d≥K, β=1, std(correction=0), model.eval()+no_grad, top-m supports (not raw EMA).
+
+The author addressed all three CRITICAL items and the math list. Please re-score the same 7 dimensions and decide READY / REVISE / RETHINK.
+
+Also verify: Did any new drift appear from the refactor? Specifically:
+(a) Is SGPA genuinely the dominant contribution now, or is ETF still competing for the headline?
+(b) Does the z_sty-distance gate actually respect the Problem Anchor ("make use of z_sty and style_bank at inference")?
+(c) Is the FedDEAP differentiation now framed as "orthogonal — training-time prompt vs inference-time prototype correction", not "we're FedDEAP without prompts"?
+(d) Mathematical soundness of new z_sty distance gate (is min_k ||normalize(z_sty)-normalize(μ_k)|| a well-defined statistic under FedBN, where each client has private BN)?
+
+Read the Problem Anchor first — it has NOT changed. Then read the revised proposal.
+
+=== PROBLEM ANCHOR (verbatim from Round 0) ===
+
+- **Bottom-line problem**: 在跨域联邦学习 (feature-skew FL, PACS/Office-Caltech10) 场景下,客户端来自不同视觉域,如何在已稳定的"正交双头解耦"基线 (Plan A) 之上再取得 ≥1% AVG 提升,PACS+Office 通用,不引入任何会长期崩溃的机制。
+- **Must-solve bottleneck**: (a) sem_classifier 参加 FedAvg 是漂移源;(b) z_sty 和 style_bank 推理时被浪费。
+- **Non-goals**: 不引入持续对齐损失,不跨客户端风格共享,不用 CLIP/VLM,不抢 "FL+ETF+decouple 第一" headline。
+- **Success condition**:
+  - PACS AVG Best ≥ 81.5% (Plan A 80.41) / ALL Best ≥ 83%
+  - Office AVG Best ≥ 84% (orth_only w/o SAS 比较) 或 ≥ 90.5% (w/ SAS 比较)
+  - drop ≤ 1%, 3-seed std ≤ 1.5%
+
+=== END ANCHOR ===
+
+=== REVISED PROPOSAL (Round 1 → Round 2) ===
+
+# FedDSA-SGPA (renamed from FedDSA-ETA)
+
+## Changes from Round 0
+1. **Renamed**: FedDSA-ETA → FedDSA-SGPA (Style-Gated Prototype Adjustment) — novelty singular.
+2. **Contribution collapsed**:
+   - Dominant: SGPA (double gate: entropy + z_sty-to-source-bank distance, + top-m prototype bank, + cos classification on z_sem)
+   - Supporting: Fixed ETF as classifier stabilizer + prototype cold-start prior
+   - Explicit non-contributions: no new loss, no new aggregation, no new backbone, no cross-client style sharing
+3. **Gate math fix**: deleted AdaIN(z_sem, μ_sty, σ_sty) entirely. New gate =
+   ```
+   dist_to_source = min_k ||F.normalize(z_sty_test) - F.normalize(μ_k)||_2  # on decoupled z_sty space
+   reliable = (entropy(logits_ETF) < τ_H) & (dist_to_source < τ_S)
+   ```
+4. **Prototype update = top-m (not raw EMA)**: each class c keeps up-to-m reliable supports (filtered by lowest entropy), proto[c] = F.normalize(mean(supports[c])). Cold start = ETF vertex column.
+5. **Classification rule**: `pred = where(proto_activated[pred_proto_idx], proto_pred, etf_pred)`
+6. **Training unchanged from Plan A**, only `sem_classifier` becomes Fixed ETF buffer and each client uploads local (μ_sty, σ_sty) per round to build `source_style_bank ∈ R^{N × 2 × d_sty}` on server.
+
+## Mathematical Correctness Patches
+- `assert feat_dim >= num_classes` before ETF QR.
+- β=1 (redundant with τ_etf).
+- All std use `var(unbiased=False).sqrt()` + eps=1e-5.
+- Inference: `model.eval()` + `torch.no_grad()` + `bn.track_running_stats=False` (triple guard).
+- Test-time calibration: τ_H = median of first-batch entropy; τ_S = 30%-quantile of first-batch dist_min (ensures ≥30% reliable).
+
+## Gate Details (Dominant Mechanism)
+```python
+# Training: each client pushes (μ_sty_k, σ_sty_k) every round to server.
+# Server maintains source_style_bank: N clients × 2 × d_sty. Broadcast back.
+
+# Inference (per client on its own test set, unseen domain):
+model.eval()
+with torch.no_grad():
+  z_sem, z_sty = backbone_heads(x)                          # [B, 128], [B, 128]
+  logits_etf = F.normalize(z_sem, dim=-1) @ M / τ_etf        # [B, K], τ_etf=0.1
+  H = -(softmax(logits_etf) * log_softmax(logits_etf)).sum(-1)  # [B]
+
+  # Gate 2: z_sty distance to nearest source style
+  z_sty_n = F.normalize(z_sty, dim=-1)                       # [B, d_sty]
+  mu_bank_n = F.normalize(source_style_bank[:, 0, :], dim=-1)  # [N, d_sty]
+  dist = (1 - z_sty_n @ mu_bank_n.T)                         # [B, N]  cosine dist
+  dist_min = dist.min(dim=-1).values                         # [B]
+
+  reliable = (H < τ_H) & (dist_min < τ_S)
+
+  # Top-m supports per class (by lowest entropy)
+  pred_etf = logits_etf.argmax(1)
+  for c in range(K):
+    mask_c = reliable & (pred_etf == c)
+    if mask_c.any():
+      supports[c].extend(list(zip(H[mask_c], z_sem[mask_c])))
+      supports[c] = sorted(supports[c], key=lambda t: t[0])[:m_top]  # m=35 PACS, 50 Office
+      proto[c] = F.normalize(torch.stack([s[1] for s in supports[c]]).mean(0), dim=-1)
+
+  z_sem_n = F.normalize(z_sem, dim=-1)
+  proto_tensor = torch.stack(proto)                          # [K, d]
+  proto_logits = z_sem_n @ proto_tensor.T                    # [B, K]
+  pred_proto = proto_logits.argmax(1)
+  activated = torch.tensor([len(supports[pred_proto[i]]) > 0 for i in range(B)])
+  pred = torch.where(activated, pred_proto, pred_etf)
+```
+
+## FedDEAP Differentiation (new framing)
+"FedDEAP improves multi-domain FL through CLIP prompt tuning and ETF-constrained transformations **during training** on frozen foundation features. Our contribution is orthogonal: in scratch CNN federated DG, we use disentangled style statistics **only at inference time** to decide which unlabeled test samples may update a nonparametric prototype memory; Fixed ETF is a stable classifier prior and prototype cold-start, not the main novelty."
+
+## Validation Claims (精简)
+- C1 (dominant): SGPA on Plan A checkpoint免费 +0.5–2% on both PACS and Office (double-gate vs each single gate vs no gate).
+- C2 (supporting): Fixed ETF does NOT hurt mean (|Δ|≤0.3%), 3-seed std decreases ≥0.2%.
+- C3 (integration): SGPA+ETF hits PACS AVG Best ≥81.5%, Office AVG Best ≥84% (w/o SAS) / ≥90.5% (w/ SAS).
+
+## Expected Failure Modes (untouched)
+- PACS 4-outlier: z_sty bank only 4 source domains → dist_min distribution may be bimodal → need dynamic τ_S.
+- AlexNet 128d z_sem vs ETF K=7 vertices: d ≫ K, assert passes.
+- source_style_bank communication: N × 2 × d_sty = 4 × 2 × 128 = 1024 floats per round (trivial overhead).
+
+## Compute
+~32 GPU-hours total.
+
+=== END REVISED PROPOSAL ===
+
+Please:
+1. Re-score the 7 dimensions and provide OVERALL.
+2. Explicitly mark which CRITICAL items from Round 1 are now RESOLVED vs still partial.
+3. Check the 4 new questions (a-d) above.
+4. Scrutinize the new z_sty distance gate: is cosine distance on F.normalize(z_sty) well-defined when each client has FedBN-private BN layers? Could per-client BN make μ_sty non-comparable across clients?
+5. If OVERALL ≥ 9 and no drift, output READY. Otherwise list remaining IMPORTANT/CRITICAL items.
+
+Same output format: 7 scores, overall, verdict, drift warning, simplification/modernization, remaining action items.
+
+ERROR: Reconnecting... 1/5
+codex
+I’m re-evaluating the revised proposal against the unchanged Problem Anchor and your Round 1 critical points first, then I’ll score the seven dimensions and check whether the refactor introduced any new drift.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content -Path 'C:\\Users\\31279\\.agents\\skills\\code-review-excellence\\SKILL.md' -TotalCount 220" in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+ succeeded in 820ms:
+---
+name: code-review-excellence
+description: Master effective code review practices to provide constructive feedback, catch bugs early, and foster knowledge sharing while maintaining team morale. Use when reviewing pull requests, establishing review standards, or mentoring developers.
+---
+
+# Code Review Excellence
+
+Transform code reviews from gatekeeping to knowledge sharing through constructive feedback, systematic analysis, and collaborative improvement.
+
+## When to Use This Skill
+
+- Reviewing pull requests and code changes
+- Establishing code review standards for teams
+- Mentoring junior developers through reviews
+- Conducting architecture reviews
+- Creating review checklists and guidelines
+- Improving team collaboration
+- Reducing code review cycle time
+- Maintaining code quality standards
+
+## Core Principles
+
+### 1. The Review Mindset
+
+**Goals of Code Review:**
+
+- Catch bugs and edge cases
+- Ensure code maintainability
+- Share knowledge across team
+- Enforce coding standards
+- Improve design and architecture
+- Build team culture
+
+**Not the Goals:**
+
+- Show off knowledge
+- Nitpick formatting (use linters)
+- Block progress unnecessarily
+- Rewrite to your preference
+
+### 2. Effective Feedback
+
+**Good Feedback is:**
+
+- Specific and actionable
+- Educational, not judgmental
+- Focused on the code, not the person
+- Balanced (praise good work too)
+- Prioritized (critical vs nice-to-have)
+
+```markdown
+❌ Bad: "This is wrong."
+✅ Good: "This could cause a race condition when multiple users
+access simultaneously. Consider using a mutex here."
+
+❌ Bad: "Why didn't you use X pattern?"
+✅ Good: "Have you considered the Repository pattern? It would
+make this easier to test. Here's an example: [link]"
+
+❌ Bad: "Rename this variable."
+✅ Good: "[nit] Consider `userCount` instead of `uc` for
+clarity. Not blocking if you prefer to keep it."
+```
+
+### 3. Review Scope
+
+**What to Review:**
+
+- Logic correctness and edge cases
+- Security vulnerabilities
+- Performance implications
+- Test coverage and quality
+- Error handling
+- Documentation and comments
+- API design and naming
+- Architectural fit
+
+**What Not to Review Manually:**
+
+- Code formatting (use Prettier, Black, etc.)
+- Import organization
+- Linting violations
+- Simple typos
+
+## Review Process
+
+### Phase 1: Context Gathering (2-3 minutes)
+
+```markdown
+Before diving into code, understand:
+
+1. Read PR description and linked issue
+2. Check PR size (>400 lines? Ask to split)
+3. Review CI/CD status (tests passing?)
+4. Understand the business requirement
+5. Note any relevant architectural decisions
+```
+
+### Phase 2: High-Level Review (5-10 minutes)
+
+```markdown
+1. **Architecture & Design**
+   - Does the solution fit the problem?
+   - Are there simpler approaches?
+   - Is it consistent with existing patterns?
+   - Will it scale?
+
+2. **File Organization**
+   - Are new files in the right places?
+   - Is code grouped logically?
+   - Are there duplicate files?
+
+3. **Testing Strategy**
+   - Are there tests?
+   - Do tests cover edge cases?
+   - Are tests readable?
+```
+
+### Phase 3: Line-by-Line Review (10-20 minutes)
+
+```markdown
+For each file:
+
+1. **Logic & Correctness**
+   - Edge cases handled?
+   - Off-by-one errors?
+   - Null/undefined checks?
+   - Race conditions?
+
+2. **Security**
+   - Input validation?
+   - SQL injection risks?
+   - XSS vulnerabilities?
+   - Sensitive data exposure?
+
+3. **Performance**
+   - N+1 queries?
+   - Unnecessary loops?
+   - Memory leaks?
+   - Blocking operations?
+
+4. **Maintainability**
+   - Clear variable names?
+   - Functions doing one thing?
+   - Complex code commented?
+   - Magic numbers extracted?
+```
+
+### Phase 4: Summary & Decision (2-3 minutes)
+
+```markdown
+1. Summarize key concerns
+2. Highlight what you liked
+3. Make clear decision:
+   - ✅ Approve
+   - 💬 Comment (minor suggestions)
+   - 🔄 Request Changes (must address)
+4. Offer to pair if complex
+```
+
+## Review Techniques
+
+### Technique 1: The Checklist Method
+
+```markdown
+## Security Checklist
+
+- [ ] User input validated and sanitized
+- [ ] SQL queries use parameterization
+- [ ] Authentication/authorization checked
+- [ ] Secrets not hardcoded
+- [ ] Error messages don't leak info
+
+## Performance Checklist
+
+- [ ] No N+1 queries
+- [ ] Database queries indexed
+- [ ] Large lists paginated
+- [ ] Expensive operations cached
+- [ ] No blocking I/O in hot paths
+
+## Testing Checklist
+
+- [ ] Happy path tested
+- [ ] Edge cases covered
+- [ ] Error cases tested
+- [ ] Test names are descriptive
+- [ ] Tests are deterministic
+```
+
+### Technique 2: The Question Approach
+
+Instead of stating problems, ask questions to encourage thinking:
+
+```markdown
+❌ "This will fail if the list is empty."
+✅ "What happens if `items` is an empty array?"
+
+❌ "You need error handling here."
+✅ "How should this behave if the API call fails?"
+
+❌ "This is inefficient."
+✅ "I see this loops through all users. Have we considered
+the performance impact with 100k users?"
+```
+
+### Technique 3: Suggest, Don't Command
+
+````markdown
+## Use Collaborative Language
+
+❌ "You must change this to use async/await"
+✅ "Suggestion: async/await might make this more readable:
+`typescript
+    async function fetchUser(id: string) {
+        const user = await db.query('SELECT * FROM users WHERE id = ?', id);
+        return user;
+    }
+    `
+What do you think?"
+
+ERROR: Reconnecting... 1/5
+ERROR: Reconnecting... 2/5
+codex
+I’ve finished the anchor-to-revision comparison. The refactor fixed the Round 1 story and removed the original AdaIN mismatch, but the new core risk is now cross-client comparability of `z_sty` under FedBN, plus the proposal’s new `bn.track_running_stats=False` inference rule, which weakens the claimed stability.
+codex
+**7 Scores**
+
+1. Problem-Anchor Fit: 8.6/10  
+The revision now directly attacks both anchor bottlenecks: `sem_classifier` drift is removed by Fixed ETF, and `z_sty`/style-bank are finally used at inference. The only anchor tension is that `source_style_bank` broadcast is, literally, lightweight cross-client style sharing.
+
+2. Novelty / Positioning: 8.7/10  
+Much cleaner. SGPA is now the clear idea, and the FedDEAP comparison is finally framed as orthogonal rather than adversarial.
+
+3. Contribution Quality: 9.0/10  
+This is the biggest improvement from Round 1. The “2.5 contributions” sprawl is mostly gone. SGPA is the method; ETF is supporting infrastructure.
+
+4. Technical Soundness: 8.0/10  
+The AdaIN space mismatch is fixed, and the gate is now at least operating in the correct `z_sty` space. The remaining issue is not the formula itself but comparability of cross-client `z_sty` statistics under FedBN-private BN.
+
+5. Feasibility: 8.1/10  
+Operationally feasible and lightweight. The main concern is that the dominant gate now depends on a statistic whose semantics across clients are not yet fully justified, and the current BN inference rule introduces avoidable instability.
+
+6. Validation Plan: 8.3/10  
+The ablation plan is much sharper now: no gate vs single gate vs double gate, ETF as stabilizer, integration claim. I still want a specific sanity check for cross-client `z_sty` comparability and threshold sensitivity.
+
+7. Venue Readiness: 8.5/10  
+The one-line story is now credible and much more submission-shaped. It is not fully READY because the core gate still needs a cleaner FedBN justification.
+
+**OVERALL**: 8.5/10
+
+**VERDICT**: REVISE
+
+**Round 1 Criticals**
+
+1. Contribution Quality 6/10 CRITICAL: **RESOLVED**  
+SGPA is now the dominant named contribution. ETF has been demoted to a stabilizer / cold-start prior, which is the right move.
+
+2. Feasibility 6/10 CRITICAL: **PARTIAL**  
+The original AdaIN mismatch, `B=1` NaN concern, and `exclude_self` ambiguity are addressed.  
+But a new version of the same core issue remains: the replacement gate is only as good as cross-client `z_sty` comparability under FedBN, and `bn.track_running_stats=False` is a bad addition to the inference story.
+
+3. Venue Readiness 6/10 IMPORTANT: **RESOLVED**  
+The framing is now much tighter, the headline is singular, and the differentiation sentence is finally usable.
+
+**Drift Warning**
+
+Yes, one real drift appeared.
+
+The refactor made SGPA the center, which is good. But the dominant mechanism now relies on comparing target `z_sty` to source-client `μ_k` across FedBN-private feature spaces. That statistic is numerically defined, but not yet principled. Also, broadcasting `source_style_bank` is summary-level cross-client style sharing, which slightly drifts from the original non-goal unless you narrow that non-goal more carefully.
+
+**Checks (a-d)**
+
+(a) Is SGPA genuinely dominant now?  
+Yes. SGPA is now the headline contribution. ETF is no longer competing technically, only rhetorically. Keep ETF secondary in title/abstract/tables.
+
+(b) Does the `z_sty`-distance gate respect the Problem Anchor?  
+Yes, on the must-solve bottleneck. It finally uses `z_sty` and the style bank at inference. This is a real improvement.  
+Caveat: because `τ_S` is calibrated from the target first batch, it becomes a relative proximity heuristic, not a purely source-anchored absolute reliability test.
+
+(c) Is FedDEAP differentiation now framed correctly?  
+Yes. “Orthogonal: training-time prompt method vs inference-time prototype correction” is the right framing.
+
+(d) Is `min_k ||normalize(z_sty)-normalize(μ_k)||` well-defined under FedBN-private BN?  
+Numerically yes. Statistically only partially.  
+Also note: your equation says L2 distance while the code uses `1 - cosine`; on normalized vectors these are monotone-equivalent, so this is not a bug, but the notation should be unified.
+
+**FedBN Gate Scrutiny**
+
+The main unresolved issue is this:
+
+- Under FedBN, each client keeps private BN parameters/statistics.
+- So `z_sty` from client A and `μ_k` estimated on client B are not guaranteed to live in a perfectly shared coordinate system.
+- L2 normalization removes norm differences, but it does not remove client-specific affine distortions induced by private BN.
+- Therefore `dist_min` is a usable heuristic, but not yet a cleanly justified cross-client statistic.
+
+A second issue is more concrete:
+
+- `model.eval()` is correct.
+- `torch.no_grad()` is correct.
+- `bn.track_running_stats=False` is not a “guard”; in PyTorch it effectively pushes BN toward batch-stat behavior even in eval.
+- That makes predictions batch-composition-dependent and weakens the stability claim, especially for small batches or `B=1`.
+
+So the gate is much better than Round 1 AdaIN, but it is not fully mathematically clean yet.
+
+**Simplification / Modernization**
+
+This revision is substantially better.
+
+- The method story is now modernized around one nonparametric inference-time module rather than several semi-independent ideas.
+- Deleting AdaIN was the right call.
+- Top-m supports is much cleaner than raw EMA.
+- The remaining simplification I would push is: if `σ_k` is not used, stop centering the story around `(μ, σ)` and either remove `σ` or actually use it.
+
+**Remaining Action Items**
+
+**CRITICAL**
+- Fix the FedBN story for the SGPA gate. Either justify why cross-client `z_sty` means are comparable despite private BN, or constrain the bank/gate so the statistic is computed in a defensible common space. As written, the core gate is still heuristic rather than fully solid.
+
+**IMPORTANT**
+- Remove `bn.track_running_stats=False` from the default inference path. For a stability-first paper, keep `model.eval()` with private FedBN running stats.
+- Replace first-batch threshold calibration with something less order-sensitive: warm-up over several batches, running quantiles, or a source-calibrated percentile.
+- Decide whether `σ_k` matters. If not, delete it from the communicated method and overhead accounting; if yes, use it explicitly.
+- In the abstract/intro, keep ETF clearly subordinate. Do not let the prose drift back to “ETF + SGPA” as co-headlines.
+- Explicitly clarify the non-goal as “no raw feature/sample sharing, only lightweight source-domain summary statistics,” otherwise the anchor mismatch remains visible.
+
+If you fix the FedBN comparability / BN-inference issue cleanly, this moves close to READY. As written, it is a strong REVISE, not yet a 9+.
+tokens used
+9,617
+**7 Scores**
+
+1. Problem-Anchor Fit: 8.6/10  
+The revision now directly attacks both anchor bottlenecks: `sem_classifier` drift is removed by Fixed ETF, and `z_sty`/style-bank are finally used at inference. The only anchor tension is that `source_style_bank` broadcast is, literally, lightweight cross-client style sharing.
+
+2. Novelty / Positioning: 8.7/10  
+Much cleaner. SGPA is now the clear idea, and the FedDEAP comparison is finally framed as orthogonal rather than adversarial.
+
+3. Contribution Quality: 9.0/10  
+This is the biggest improvement from Round 1. The “2.5 contributions” sprawl is mostly gone. SGPA is the method; ETF is supporting infrastructure.
+
+4. Technical Soundness: 8.0/10  
+The AdaIN space mismatch is fixed, and the gate is now at least operating in the correct `z_sty` space. The remaining issue is not the formula itself but comparability of cross-client `z_sty` statistics under FedBN-private BN.
+
+5. Feasibility: 8.1/10  
+Operationally feasible and lightweight. The main concern is that the dominant gate now depends on a statistic whose semantics across clients are not yet fully justified, and the current BN inference rule introduces avoidable instability.
+
+6. Validation Plan: 8.3/10  
+The ablation plan is much sharper now: no gate vs single gate vs double gate, ETF as stabilizer, integration claim. I still want a specific sanity check for cross-client `z_sty` comparability and threshold sensitivity.
+
+7. Venue Readiness: 8.5/10  
+The one-line story is now credible and much more submission-shaped. It is not fully READY because the core gate still needs a cleaner FedBN justification.
+
+**OVERALL**: 8.5/10
+
+**VERDICT**: REVISE
+
+**Round 1 Criticals**
+
+1. Contribution Quality 6/10 CRITICAL: **RESOLVED**  
+SGPA is now the dominant named contribution. ETF has been demoted to a stabilizer / cold-start prior, which is the right move.
+
+2. Feasibility 6/10 CRITICAL: **PARTIAL**  
+The original AdaIN mismatch, `B=1` NaN concern, and `exclude_self` ambiguity are addressed.  
+But a new version of the same core issue remains: the replacement gate is only as good as cross-client `z_sty` comparability under FedBN, and `bn.track_running_stats=False` is a bad addition to the inference story.
+
+3. Venue Readiness 6/10 IMPORTANT: **RESOLVED**  
+The framing is now much tighter, the headline is singular, and the differentiation sentence is finally usable.
+
+**Drift Warning**
+
+Yes, one real drift appeared.
+
+The refactor made SGPA the center, which is good. But the dominant mechanism now relies on comparing target `z_sty` to source-client `μ_k` across FedBN-private feature spaces. That statistic is numerically defined, but not yet principled. Also, broadcasting `source_style_bank` is summary-level cross-client style sharing, which slightly drifts from the original non-goal unless you narrow that non-goal more carefully.
+
+**Checks (a-d)**
+
+(a) Is SGPA genuinely dominant now?  
+Yes. SGPA is now the headline contribution. ETF is no longer competing technically, only rhetorically. Keep ETF secondary in title/abstract/tables.
+
+(b) Does the `z_sty`-distance gate respect the Problem Anchor?  
+Yes, on the must-solve bottleneck. It finally uses `z_sty` and the style bank at inference. This is a real improvement.  
+Caveat: because `τ_S` is calibrated from the target first batch, it becomes a relative proximity heuristic, not a purely source-anchored absolute reliability test.
+
+(c) Is FedDEAP differentiation now framed correctly?  
+Yes. “Orthogonal: training-time prompt method vs inference-time prototype correction” is the right framing.
+
+(d) Is `min_k ||normalize(z_sty)-normalize(μ_k)||` well-defined under FedBN-private BN?  
+Numerically yes. Statistically only partially.  
+Also note: your equation says L2 distance while the code uses `1 - cosine`; on normalized vectors these are monotone-equivalent, so this is not a bug, but the notation should be unified.
+
+**FedBN Gate Scrutiny**
+
+The main unresolved issue is this:
+
+- Under FedBN, each client keeps private BN parameters/statistics.
+- So `z_sty` from client A and `μ_k` estimated on client B are not guaranteed to live in a perfectly shared coordinate system.
+- L2 normalization removes norm differences, but it does not remove client-specific affine distortions induced by private BN.
+- Therefore `dist_min` is a usable heuristic, but not yet a cleanly justified cross-client statistic.
+
+A second issue is more concrete:
+
+- `model.eval()` is correct.
+- `torch.no_grad()` is correct.
+- `bn.track_running_stats=False` is not a “guard”; in PyTorch it effectively pushes BN toward batch-stat behavior even in eval.
+- That makes predictions batch-composition-dependent and weakens the stability claim, especially for small batches or `B=1`.
+
+So the gate is much better than Round 1 AdaIN, but it is not fully mathematically clean yet.
+
+**Simplification / Modernization**
+
+This revision is substantially better.
+
+- The method story is now modernized around one nonparametric inference-time module rather than several semi-independent ideas.
+- Deleting AdaIN was the right call.
+- Top-m supports is much cleaner than raw EMA.
+- The remaining simplification I would push is: if `σ_k` is not used, stop centering the story around `(μ, σ)` and either remove `σ` or actually use it.
+
+**Remaining Action Items**
+
+**CRITICAL**
+- Fix the FedBN story for the SGPA gate. Either justify why cross-client `z_sty` means are comparable despite private BN, or constrain the bank/gate so the statistic is computed in a defensible common space. As written, the core gate is still heuristic rather than fully solid.
+
+**IMPORTANT**
+- Remove `bn.track_running_stats=False` from the default inference path. For a stability-first paper, keep `model.eval()` with private FedBN running stats.
+- Replace first-batch threshold calibration with something less order-sensitive: warm-up over several batches, running quantiles, or a source-calibrated percentile.
+- Decide whether `σ_k` matters. If not, delete it from the communicated method and overhead accounting; if yes, use it explicitly.
+- In the abstract/intro, keep ETF clearly subordinate. Do not let the prose drift back to “ETF + SGPA” as co-headlines.
+- Explicitly clarify the non-goal as “no raw feature/sample sharing, only lightweight source-domain summary statistics,” otherwise the anchor mismatch remains visible.
+
+If you fix the FedBN comparability / BN-inference issue cleanly, this moves close to READY. As written, it is a strong REVISE, not yet a 9+.

@@ -1,0 +1,956 @@
+OpenAI Codex v0.121.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019da5bc-44f0-7da1-a6f3-5c6e3d5cf1b4
+--------
+user
+You are the same senior ML reviewer from Rounds 1-2 (NeurIPS/ICML/ICLR/CVPR, feature-skew cross-domain FL).
+
+[ROUND 3 RE-EVALUATION — address Round 2 critical item]
+
+Round 2 scored OVERALL 8.5/10, REVISE, with ONE remaining CRITICAL:
+- Feasibility PARTIAL: the SGPA z_sty-distance gate is numerically fine but statistically only partial under FedBN — client A's z_sty and client B's μ_k do not share an identical affine coordinate system because each client has private BN.
+
+Plus IMPORTANT items:
+- delete `bn.track_running_stats=False` (weakens stability)
+- replace first-batch quantile calibration with running quantile + warm-up
+- decide σ: either delete it or actually use it
+- keep ETF subordinate in abstract/intro
+- narrow the non-goal to allow lightweight summary-statistics broadcast
+
+The author applied all these fixes. Key change: the gate now operates in a **whitened Mahalanobis space**:
+(1) Server aggregates μ_global and Σ_global = Σ_within + Σ_between (between-client + within-client covariance) and broadcasts μ_global + Σ_inv_sqrt (128×128 matrix, 66KB/round).
+(2) Client whitens both its test z_sty and the source bank μ_k using the same Σ_inv_sqrt; distance in whitened space ≡ Mahalanobis in original space.
+(3) This uses Σ explicitly (so σ is no longer vestigial) AND gives a principled cross-client common coordinate system.
+
+Other fixes applied:
+- removed `bn.track_running_stats=False`, keeping `model.eval()+torch.no_grad()` only
+- running quantile with 5-batch warm-up and EMA updates (no first-batch order dependency)
+- non-goal narrowed: "no raw feature/sample sharing, but lightweight summary statistics (μ, Σ) are allowed, same order of magnitude as FedBN broadcasting"
+- ETF kept subordinate in title/abstract/intro
+
+=== PROBLEM ANCHOR (verbatim, non-goal NARROWED) ===
+
+- Bottom-line: cross-domain FL feature-skew, Plan A + ≥1% AVG, PACS+Office 通用
+- Must-solve: (a) classifier drift; (b) z_sty/style_bank unused at inference
+- Non-goals (narrowed):
+  - no persistent alignment loss
+  - no raw feature/sample sharing, BUT lightweight source-domain summary statistics (μ, Σ) broadcast is allowed (same order of magnitude as FedBN γ/β)
+  - no CLIP/VLM
+  - don't claim "first FL+ETF+decouple"
+- Success: PACS AVG Best ≥81.5%, Office AVG Best ≥84% (w/o SAS) or ≥90.5% (w/ SAS), drop ≤1%, std ≤1.5%
+
+=== REVISED PROPOSAL (Round 2 → Round 3) ===
+
+# FedDSA-SGPA v3 (Mahalanobis Whitening Gate)
+
+## Round 2 Fixes Applied
+1. **Mahalanobis in whitened space** (CRITICAL resolve): whitening via Σ_global eigendecomposition Q Λ^{-1/2} Q^T. Euclidean in whitened space ≡ Mahalanobis in original → provably invariant to cross-client private BN affine distortion as long as aggregate μ_global/Σ_global are globally defined.
+2. **BN inference**: `model.eval() + torch.no_grad()` only (removed track_running_stats=False).
+3. **Running quantile τ_H/τ_S**: 5-batch warm-up, then EMA p50/p30 updates.
+4. **σ used via Mahalanobis**: Σ_global = (1/N)ΣΣ_k + cov_across_k(μ_k), ε=1e-3 regularization.
+5. **ETF subordinate**: paper title "Style-Gated Prototype Adjustment for Federated Domain Generalization" — ETF appears only as "stabilizer / prototype cold-start prior" in §Method.
+6. **Non-goal narrowed**: summary-statistics broadcast explicitly allowed, quantified as ~66KB/round (on par with FedBN γ/β).
+
+## Gate Pseudocode (new)
+```python
+# ===== Server aggregation per round =====
+μ_global = (1/N) Σ_k μ_sty_k                          # [d]
+Σ_within = (1/N) Σ_k Σ_sty_k                          # [d,d]
+Σ_between = (1/N) Σ_k (μ_sty_k-μ_global)(μ_sty_k-μ_global)^T
+Σ_global = Σ_within + Σ_between + ε·I                 # ε=1e-3
+Λ, Q = symeig(Σ_global); Σ_inv_sqrt = Q @ diag(Λ^{-1/2}) @ Q^T
+
+# Broadcast: source_μ_k (N×d), μ_global (d), Σ_inv_sqrt (d×d) ≈ 66KB/round
+
+# ===== Inference (per client) =====
+model.eval()
+μ_k_white = (source_μ_k - μ_global) @ Σ_inv_sqrt      # [N, d], precompute once
+with torch.no_grad():
+  for batch_idx, (x, _) in enumerate(test_loader):
+    z_sem, z_sty = model(x)
+    logits = F.normalize(z_sem, -1) @ M / τ_etf
+    H = entropy(softmax(logits))
+    z_sty_white = (z_sty - μ_global) @ Σ_inv_sqrt
+    dist_min = ((z_sty_white[:,None]-μ_k_white[None])**2).sum(-1).min(-1).values
+    # Running quantile + 5-batch warm-up (warm-up: gate disabled, supports empty)
+    if batch_idx < 5:  # collect stats, no gate
+      buf_H += H.tolist(); buf_D += dist_min.tolist()
+      continue
+    elif batch_idx == 5:
+      τ_H, τ_S = quantile(buf_H, 0.5), quantile(buf_D, 0.3)
+    else:
+      τ_H = 0.95*τ_H + 0.05*quantile(H.cpu(), 0.5)
+      τ_S = 0.95*τ_S + 0.05*quantile(dist_min.cpu(), 0.3)
+    reliable = (H < τ_H) & (dist_min < τ_S)
+    # top-m proto update on z_sem; classification cos(z_sem, proto); fallback = ETF argmax
+```
+
+## Expected Score Changes
+- Feasibility: 8.1 → 9+
+- Validation Focus: 8.3 → 9+ (new ablations: whitening on/off, Σ_within vs Σ_within+Σ_between)
+- Venue: 8.5 → 9+
+- Overall target: **9+, READY**
+
+=== END REVISED PROPOSAL ===
+
+Please:
+1. Re-score the 7 dimensions.
+2. Confirm the Mahalanobis whitening solves the FedBN cross-client comparability issue, OR identify any remaining formal gap.
+3. Verify warm-up + running quantile doesn't introduce a new bug (e.g. first 5 batches never get SGPA classification).
+4. Check ETF subordinate framing is real (not cosmetic).
+5. Confirm non-goal narrowing is defensible (summary statistics broadcast vs raw sample sharing).
+6. If OVERALL ≥ 9 and no drift, output READY. Otherwise list remaining items.
+
+Same output format: 7 scores, overall, verdict, drift warning, simplification/modernization, remaining action items.
+
+codex
+I’m re-evaluating the Round 3 changes against the Round 2 critical item and the stated problem anchor. I’ll first inspect the workspace for the revised draft or notes so I can verify the framing changes against the actual text rather than only the summary.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-ChildItem -Force' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg --files' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+ succeeded in 812ms:
+
+    Directory: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+
+[32;1mMode   [0m[32;1m              LastWriteTime[0m[32;1m         Length[0m[32;1m Name[0m
+[32;1m----   [0m [32;1m             -------------[0m [32;1m        ------[0m [32;1m----[0m
+-a---           2026/4/19     5:10            171 REFINE_STATE.json
+-a---           2026/4/19     5:10          23572 review_prompt_r1_full.txt
+-a---           2026/4/19     5:10           6277 review_prompt_r1.txt
+-a---           2026/4/19     5:21           7852 review_prompt_r2.txt
+-a---           2026/4/19     5:34           5749 review_prompt_r3.txt
+-a---           2026/4/19     5:09          17296 round-0-initial-proposal.md
+-a---           2026/4/19     5:20          12269 round-1-refinement.md
+-a---           2026/4/19     5:22          88507 round-1-review-raw.txt
+-a---           2026/4/19     5:18           4368 round-1-review.md
+-a---           2026/4/19     5:33           8837 round-2-refinement.md
+-a---           2026/4/19     5:31          27784 round-2-review-raw.txt
+-a---           2026/4/19     5:32           3066 round-2-review.md
+-a---           2026/4/19     5:34           6143 round-3-review-raw.txt
+-a---           2026/4/19     5:32            966 score-history.md
+
+
+ succeeded in 851ms:
+score-history.md
+round-3-review-raw.txt
+round-2-review.md
+round-2-review-raw.txt
+round-2-refinement.md
+round-1-review.md
+round-1-review-raw.txt
+round-1-refinement.md
+round-0-initial-proposal.md
+review_prompt_r3.txt
+review_prompt_r2.txt
+review_prompt_r1_full.txt
+review_prompt_r1.txt
+REFINE_STATE.json
+
+codex
+I found the Round 2 refinement, prior review, and the Round 3 prompt. Next I’m checking whether the actual wording reflects the claimed fixes, especially the whitening argument, ETF placement, and the narrowed non-goal.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Raw round-2-refinement.md' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Raw round-2-review.md' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Raw review_prompt_r3.txt' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+ succeeded in 946ms:
+# Round 2 Refinement — FedDSA-SGPA (Mahalanobis + Whitening + running quantile)
+
+## Problem Anchor (Copy Verbatim, UPDATED non-goal)
+
+- **Bottom-line problem**: (unchanged) 跨域 FL,在 Plan A 之上 +≥1% AVG,PACS+Office 通用,无持续崩溃机制
+- **Must-solve bottleneck**: (unchanged) (a) sem_classifier 漂移;(b) z_sty + style_bank 推理未用
+- **Non-goals (NARROWED per Round 2 feedback)**:
+  - 不引入持续对齐损失
+  - **不共享 raw feature/sample**,但允许 **lightweight source-domain summary statistics (μ_sty_k, Σ_sty_k)** 广播用于 test-time shift detection — 和 FedBN 广播 γ/β 同量级 (每轮 N × 2 × d_sty = 4×2×128 = 1024 floats)
+  - 不用 CLIP/VLM
+  - 不抢 "FL+ETF+decouple 第一"
+
+## Anchor Check
+- 原两个 bottleneck 依然被直接 attack ✅
+- Non-goal 从 "不跨客户端风格共享" 放宽到 "不共享 raw feature,但允许 summary stats" — 这是必要的 narrowing,因为 Round 2 指出 source_style_bank 广播是 lightweight style sharing 的子集
+
+## Simplicity Check
+- **Dominant**: 仍是 SGPA 单点贡献,ETF supporting
+- **新增**: Whitening 不是新贡献,只是 "让 cross-client z_sty 可比的 preprocessing step"
+- **SGPA 实际唯一新机制**: double gate (entropy + Mahalanobis-in-whitened-space) + top-m proto bank
+
+## Changes Made (from Round 1 refinement to Round 2)
+
+### 1. CRITICAL: Mahalanobis gate in whitening space
+- **Reviewer**: "FedBN 私有 BN → z_sty 跨 client affine distortion → L2 dist is heuristic"
+- **New design**:
+  ```python
+  # Server aggregates global whitening stats (running, lightweight):
+  #   μ_global = (1/N) Σ_k μ_sty_k        # [d_sty]
+  #   Σ_global = (1/N) Σ_k Σ_sty_k + cov(μ_sty_k across clients)  # [d_sty, d_sty]
+  # Per round broadcast: (μ_global, Σ_global^{-1/2}) — same size as source_style_bank was
+  
+  # Inference (per client, own test set):
+  z_sty_white = (z_sty - μ_global) @ Σ_global_inv_sqrt     # [B, d_sty], whitened
+  μ_k_white = (μ_k - μ_global) @ Σ_global_inv_sqrt          # [N, d_sty], pre-compute once
+  
+  # Mahalanobis in whitened = Euclidean
+  dist = ((z_sty_white[:, None, :] - μ_k_white[None, :, :]) ** 2).sum(-1)  # [B, N]
+  dist_min = dist.min(dim=-1).values                                        # [B]
+  ```
+- **为什么这有效**:
+  - Whitening 把所有 z_sty 投影到 "cross-client common standard-normal space"
+  - 在白化后空间做 Euclidean ≡ 原始空间 Mahalanobis
+  - 理论上 principled: 假设 z_sty_k ~ N(μ_k, Σ_k),whitening 是最优跨客户端 comparability fix
+  - Σ 终于被用上 (Round 2 抱怨 "σ 未用")
+- **Overhead**: 每轮多广播 Σ^{-1/2} matrix [d×d = 128×128 = 16K floats],仍 lightweight
+- **Numerical guards**: Σ + ε·I (ε=1e-3),`torch.linalg.cholesky()` 或 `symeig` 构造 Σ^{-1/2}
+
+### 2. IMPORTANT: 删除 bn.track_running_stats=False
+- **Reviewer**: "这个 flag 反而把 BN 推向 batch-stat,weakens 稳定"
+- **Action**: 只保留 `model.eval() + torch.no_grad()`,BN 用 FedBN private running stats
+
+### 3. IMPORTANT: Running quantile calibration
+- **Reviewer**: "first-batch quantile is order-sensitive"
+- **New design**:
+  ```python
+  # 推理时维护 running p50/p30 of H and dist_min
+  # 前 W=5 batch 做 warm-up (只记录 stats,不做 gate),之后开始 gate
+  if batch_idx < 5:
+    warm_up_H.append(H); warm_up_dist.append(dist_min)
+    reliable = torch.zeros_like(...).bool()   # warm-up 期间全 False
+  else:
+    if batch_idx == 5:
+      τ_H = quantile(concat(warm_up_H), 0.5)
+      τ_S = quantile(concat(warm_up_dist), 0.3)
+    # 每 batch 小幅 EMA 更新 τ (稳健)
+    τ_H = 0.95*τ_H + 0.05*quantile(H, 0.5)
+    τ_S = 0.95*τ_S + 0.05*quantile(dist_min, 0.3)
+    reliable = (H < τ_H) & (dist_min < τ_S)
+  ```
+- **Impact**: 跨 batch 稳定,不依赖单一 batch 样本;warm-up 期让 bank 收集冷启动
+
+### 4. IMPORTANT: ETF 在 abstract/intro 保持 subordinate
+- **Paper structure 约束**:
+  - Abstract 主语: SGPA, ETF 出现在一句 "we use a fixed ETF classifier as stabilizer"
+  - Intro 主线: "We enable test-time prototype correction in federated DG via disentangled style statistics as reliability signal"
+  - Method section: SGPA 占 60%,ETF 占 20%,integration 占 20%
+  - Title 候选: "Style-Gated Prototype Adjustment for Federated Domain Generalization"
+
+### 5. MINOR: notation 统一
+- Paper 只用一种:"**normalized L2**" (i.e., 1 - cosine on normalized vectors)
+- 代码里 `1 - z_sty_n @ mu_bank_n.T` → 改名 `cos_dist`
+
+---
+
+## Revised Proposal: FedDSA-SGPA v2
+
+### One-Sentence Thesis (unchanged)
+> Disentangled source-domain style statistics serve as a **federated, backprop-free reliability signal** for test-time prototype correction.
+
+### Key Math Update
+
+```python
+# ===== Training: each client per-round =====
+for k in clients:
+  μ_sty_k = z_sty.mean(0)                                # [d_sty]
+  Σ_sty_k = (z_sty - μ_sty_k).T @ (z_sty - μ_sty_k) / (B-1)  # [d_sty, d_sty]
+  upload (μ_sty_k, Σ_sty_k)
+
+# ===== Server aggregation =====
+μ_global = (1/N) Σ_k μ_sty_k                            # [d_sty]
+Σ_within = (1/N) Σ_k Σ_sty_k                            # avg within-client cov
+Σ_between = (1/N) Σ_k (μ_sty_k - μ_global)(μ_sty_k - μ_global)^T  # between-client cov
+Σ_global = Σ_within + Σ_between + ε·I                   # [d_sty, d_sty], ε=1e-3
+Σ_inv_sqrt = symeig(Σ_global).compute_inv_sqrt()        # Q Λ^{-1/2} Q^T
+
+# ===== Broadcast to clients =====
+payload = {
+  'source_μ_k':  {k: μ_sty_k for k in N},               # [N, d_sty]
+  'μ_global':    μ_global,                              # [d_sty]
+  'Σ_inv_sqrt':  Σ_inv_sqrt                             # [d_sty, d_sty]
+}
+
+# ===== Inference (per client) =====
+model.eval()
+# whiten client's own source bank (one-time)
+μ_k_white = (source_μ_k - μ_global) @ Σ_inv_sqrt        # [N, d_sty]
+
+with torch.no_grad():
+  for batch_idx, (x, y) in enumerate(test_loader):
+    z_sem, z_sty = model(x)
+    logits_etf = F.normalize(z_sem, dim=-1) @ M / τ_etf  # [B, K]
+    H = -(softmax(logits_etf) * log_softmax(logits_etf)).sum(-1)
+    
+    # Whiten test z_sty and compute Mahalanobis-in-whitened-space
+    z_sty_white = (z_sty - μ_global) @ Σ_inv_sqrt        # [B, d_sty]
+    dist_mtx = ((z_sty_white[:, None] - μ_k_white[None]) ** 2).sum(-1)  # [B, N]
+    dist_min = dist_mtx.min(-1).values                   # [B]
+    
+    # Running quantile (warm-up first 5 batches)
+    if batch_idx < 5:
+      reliable = torch.zeros(B).bool()
+      warm_up_buffer_H.extend(H.tolist())
+      warm_up_buffer_D.extend(dist_min.tolist())
+    elif batch_idx == 5:
+      τ_H = np.quantile(warm_up_buffer_H, 0.5)
+      τ_S = np.quantile(warm_up_buffer_D, 0.3)
+      reliable = (H < τ_H) & (dist_min < τ_S)
+    else:
+      τ_H = 0.95*τ_H + 0.05*np.quantile(H.cpu(), 0.5)
+      τ_S = 0.95*τ_S + 0.05*np.quantile(dist_min.cpu(), 0.3)
+      reliable = (H < τ_H) & (dist_min < τ_S)
+    
+    # Top-m per-class proto update
+    pred_etf = logits_etf.argmax(1)
+    for c in range(K):
+      mask = reliable & (pred_etf == c)
+      if mask.any():
+        supports[c].extend([(H[i].item(), z_sem[i]) for i in mask.nonzero().flatten()])
+        supports[c] = sorted(supports[c], key=lambda t: t[0])[:m_top]
+        proto[c] = F.normalize(torch.stack([s[1] for s in supports[c]]).mean(0), dim=-1)
+    
+    # Classification
+    proto_tensor = torch.stack(proto)
+    proto_logits = F.normalize(z_sem, dim=-1) @ proto_tensor.T
+    pred_proto = proto_logits.argmax(1)
+    activated = torch.tensor([len(supports[c]) > 0 for c in pred_proto])
+    pred = torch.where(activated, pred_proto, pred_etf)
+```
+
+### Communication Overhead (updated)
+- 每轮 additional: 4×128 (μ_k) + 128×128 (Σ_inv_sqrt) + 128 (μ_global) = 16.6K floats = **66 KB**
+- 与 FedBN 每轮传输 2×number_of_BN_channels γ/β 同量级,trivial
+
+### Failure Modes (updated)
+| 失败模式 | 检测 | Fallback |
+|---------|------|---------|
+| Σ_global 奇异 / 病态 | `torch.linalg.cond(Σ_global)` > 1e6 报警 | ε 增大到 1e-2 |
+| PACS 4 client N=4 太少,Σ_between 秩 ≤ 3 | 监控 Σ_between 特征值分布 | 只用 Σ_within whitening |
+| 前 5 batch warm-up 无 gate → 部分 test 样本没 TTA | 接受,影响 ≤ 5/测试 batch 数 | test_loader 只跑 1 遍 |
+| Whitening 后 dist 分布异常 | 可视化 dist_min 直方图 | 回退纯 entropy gate |
+
+### Validation (unchanged from Round 1 refinement)
+C1 (SGPA +0.5~2%), C2 (ETF no harm + std ↓), C3 (组合达 success condition)
+
+## Expected Score Improvements
+- Feasibility 8.1 → 9+ (Mahalanobis whitening solves cross-client comparability)
+- Validation Focus 8.3 → 9+ (ablation 新增: whitening on/off, Mahalanobis vs L2)
+- Venue 8.5 → 9+ (FedBN 理论 justification 到位)
+- Overall 8.5 → **9+** target
+
+
+ succeeded in 975ms:
+# Round 2 Review — Codex GPT-5.4 xhigh
+
+## 评分汇总 (跳升)
+
+| 维度 | R1 | **R2** | Δ |
+|------|-----|------|---|
+| Problem Fidelity | 8 | 8.6 | +0.6 |
+| Method Specificity | 8 | 8.7 | +0.7 |
+| **Contribution Quality** | 6 | **9.0** | **+3.0 ★ RESOLVED** |
+| Frontier Leverage | 8 | 8.7 | +0.7 |
+| **Feasibility** | 6 | 8.1 | +2.1 (PARTIAL) |
+| Validation Focus | 8 | 8.3 | +0.3 |
+| **Venue Readiness** | 6 | **8.5** | **+2.5 ★ RESOLVED** |
+| **OVERALL** | 7.2 | **8.5** | **+1.3** |
+| Verdict | REVISE | **REVISE** (逼近 READY) | — |
+
+## Round 1 CRITICAL 处理状态
+
+| Item | R2 Status |
+|------|----------|
+| 1. Contribution sprawl | ✅ **RESOLVED** — SGPA 单点贡献 |
+| 2. AdaIN 数学 bug | 🟡 **PARTIAL** — AdaIN 删掉了,但新问题:FedBN 下 z_sty 跨 client 可比性 |
+| 3. Venue 叙事 | ✅ **RESOLVED** — one-liner 清晰 |
+
+## 新 CRITICAL (仅 1 个)
+
+### FedBN 私有 BN 下,跨客户端 z_sty 不在同一坐标系
+- **细节**: 每 client 私有 BN γ/β/running stats → 客户端 A 的 z_sty 和 B 的 μ_k 受不同 affine distortion 影响
+- **L2 normalize 能消尺度,但消不掉 affine**
+- **影响**: `dist_min = min_k ||normalize(z_sty) - normalize(μ_k)||` 是 heuristic 而非 principled
+- **Fix**: 需要 **whitening** 或让 z_sty 头的 BN 走 FedAvg (牺牲 FedBN 原则)
+
+## IMPORTANT 剩余
+
+1. **删除 `bn.track_running_stats=False`** — 实际上会把 BN 推向 batch-stat,weakens 稳定性声明。保留 `model.eval() + torch.no_grad()` 即可
+2. **first-batch threshold calibration 改为 running quantile** — 当前 order-sensitive
+3. **σ 决断**: σ 在 bank 中广播但未真正用 → 要么删除 σ,要么用 Mahalanobis 距离 `(z_sty-μ)^T Σ^{-1} (z_sty-μ)`
+4. **ETF 在 abstract/intro 保持 subordinate** — 不要重新浮到 headline
+5. **Non-goal narrowing**: 明确说 "no raw feature/sample sharing, only lightweight source-domain summary statistics (μ, Σ) for test-time shift detection" — 把 source_style_bank 广播正当化
+
+## Drift Warning
+
+一个 procedural drift:source_style_bank 广播本身是"lightweight cross-client summary statistics sharing",与原 non-goal "不跨客户端风格共享" 有轻微冲突 → 需要 narrow non-goal 表述
+
+## Checks (a-d)
+
+- (a) SGPA 是真 dominant ✅
+- (b) z_sty gate 用到了 z_sty + style_bank ✅,但 τ_S 从 first-batch calibrate 是 relative 而非 absolute
+- (c) FedDEAP 差异化正确 ✅
+- (d) 跨 client z_sty 可比性 numerically yes,statistically partial — **需要 whitening**
+
+## Action Items → Round 2 Refinement
+
+1. **CRITICAL**: SGPA gate 改为 **Mahalanobis distance in whitening space** — 既用 σ 又解决跨 client 可比
+2. **IMPORTANT**: 删除 bn.track_running_stats=False
+3. **IMPORTANT**: first-batch calibration → running quantile (每 batch 更新 p50/p30)
+4. **IMPORTANT**: non-goal 重写,正当化 summary statistics broadcast
+5. **MINOR**: notation 统一 (L2 vs 1-cosine)
+
+<details>
+<summary>Raw Codex response</summary>
+
+见 `round-2-review-raw.txt`
+</details>
+
+
+ succeeded in 980ms:
+You are the same senior ML reviewer from Rounds 1-2 (NeurIPS/ICML/ICLR/CVPR, feature-skew cross-domain FL).
+
+[ROUND 3 RE-EVALUATION — address Round 2 critical item]
+
+Round 2 scored OVERALL 8.5/10, REVISE, with ONE remaining CRITICAL:
+- Feasibility PARTIAL: the SGPA z_sty-distance gate is numerically fine but statistically only partial under FedBN — client A's z_sty and client B's μ_k do not share an identical affine coordinate system because each client has private BN.
+
+Plus IMPORTANT items:
+- delete `bn.track_running_stats=False` (weakens stability)
+- replace first-batch quantile calibration with running quantile + warm-up
+- decide σ: either delete it or actually use it
+- keep ETF subordinate in abstract/intro
+- narrow the non-goal to allow lightweight summary-statistics broadcast
+
+The author applied all these fixes. Key change: the gate now operates in a **whitened Mahalanobis space**:
+(1) Server aggregates μ_global and Σ_global = Σ_within + Σ_between (between-client + within-client covariance) and broadcasts μ_global + Σ_inv_sqrt (128×128 matrix, 66KB/round).
+(2) Client whitens both its test z_sty and the source bank μ_k using the same Σ_inv_sqrt; distance in whitened space ≡ Mahalanobis in original space.
+(3) This uses Σ explicitly (so σ is no longer vestigial) AND gives a principled cross-client common coordinate system.
+
+Other fixes applied:
+- removed `bn.track_running_stats=False`, keeping `model.eval()+torch.no_grad()` only
+- running quantile with 5-batch warm-up and EMA updates (no first-batch order dependency)
+- non-goal narrowed: "no raw feature/sample sharing, but lightweight summary statistics (μ, Σ) are allowed, same order of magnitude as FedBN broadcasting"
+- ETF kept subordinate in title/abstract/intro
+
+=== PROBLEM ANCHOR (verbatim, non-goal NARROWED) ===
+
+- Bottom-line: cross-domain FL feature-skew, Plan A + ≥1% AVG, PACS+Office 通用
+- Must-solve: (a) classifier drift; (b) z_sty/style_bank unused at inference
+- Non-goals (narrowed):
+  - no persistent alignment loss
+  - no raw feature/sample sharing, BUT lightweight source-domain summary statistics (μ, Σ) broadcast is allowed (same order of magnitude as FedBN γ/β)
+  - no CLIP/VLM
+  - don't claim "first FL+ETF+decouple"
+- Success: PACS AVG Best ≥81.5%, Office AVG Best ≥84% (w/o SAS) or ≥90.5% (w/ SAS), drop ≤1%, std ≤1.5%
+
+=== REVISED PROPOSAL (Round 2 → Round 3) ===
+
+# FedDSA-SGPA v3 (Mahalanobis Whitening Gate)
+
+## Round 2 Fixes Applied
+1. **Mahalanobis in whitened space** (CRITICAL resolve): whitening via Σ_global eigendecomposition Q Λ^{-1/2} Q^T. Euclidean in whitened space ≡ Mahalanobis in original → provably invariant to cross-client private BN affine distortion as long as aggregate μ_global/Σ_global are globally defined.
+2. **BN inference**: `model.eval() + torch.no_grad()` only (removed track_running_stats=False).
+3. **Running quantile τ_H/τ_S**: 5-batch warm-up, then EMA p50/p30 updates.
+4. **σ used via Mahalanobis**: Σ_global = (1/N)ΣΣ_k + cov_across_k(μ_k), ε=1e-3 regularization.
+5. **ETF subordinate**: paper title "Style-Gated Prototype Adjustment for Federated Domain Generalization" — ETF appears only as "stabilizer / prototype cold-start prior" in §Method.
+6. **Non-goal narrowed**: summary-statistics broadcast explicitly allowed, quantified as ~66KB/round (on par with FedBN γ/β).
+
+## Gate Pseudocode (new)
+```python
+# ===== Server aggregation per round =====
+μ_global = (1/N) Σ_k μ_sty_k                          # [d]
+Σ_within = (1/N) Σ_k Σ_sty_k                          # [d,d]
+Σ_between = (1/N) Σ_k (μ_sty_k-μ_global)(μ_sty_k-μ_global)^T
+Σ_global = Σ_within + Σ_between + ε·I                 # ε=1e-3
+Λ, Q = symeig(Σ_global); Σ_inv_sqrt = Q @ diag(Λ^{-1/2}) @ Q^T
+
+# Broadcast: source_μ_k (N×d), μ_global (d), Σ_inv_sqrt (d×d) ≈ 66KB/round
+
+# ===== Inference (per client) =====
+model.eval()
+μ_k_white = (source_μ_k - μ_global) @ Σ_inv_sqrt      # [N, d], precompute once
+with torch.no_grad():
+  for batch_idx, (x, _) in enumerate(test_loader):
+    z_sem, z_sty = model(x)
+    logits = F.normalize(z_sem, -1) @ M / τ_etf
+    H = entropy(softmax(logits))
+    z_sty_white = (z_sty - μ_global) @ Σ_inv_sqrt
+    dist_min = ((z_sty_white[:,None]-μ_k_white[None])**2).sum(-1).min(-1).values
+    # Running quantile + 5-batch warm-up (warm-up: gate disabled, supports empty)
+    if batch_idx < 5:  # collect stats, no gate
+      buf_H += H.tolist(); buf_D += dist_min.tolist()
+      continue
+    elif batch_idx == 5:
+      τ_H, τ_S = quantile(buf_H, 0.5), quantile(buf_D, 0.3)
+    else:
+      τ_H = 0.95*τ_H + 0.05*quantile(H.cpu(), 0.5)
+      τ_S = 0.95*τ_S + 0.05*quantile(dist_min.cpu(), 0.3)
+    reliable = (H < τ_H) & (dist_min < τ_S)
+    # top-m proto update on z_sem; classification cos(z_sem, proto); fallback = ETF argmax
+```
+
+## Expected Score Changes
+- Feasibility: 8.1 → 9+
+- Validation Focus: 8.3 → 9+ (new ablations: whitening on/off, Σ_within vs Σ_within+Σ_between)
+- Venue: 8.5 → 9+
+- Overall target: **9+, READY**
+
+=== END REVISED PROPOSAL ===
+
+Please:
+1. Re-score the 7 dimensions.
+2. Confirm the Mahalanobis whitening solves the FedBN cross-client comparability issue, OR identify any remaining formal gap.
+3. Verify warm-up + running quantile doesn't introduce a new bug (e.g. first 5 batches never get SGPA classification).
+4. Check ETF subordinate framing is real (not cosmetic).
+5. Confirm non-goal narrowing is defensible (summary statistics broadcast vs raw sample sharing).
+6. If OVERALL ≥ 9 and no drift, output READY. Otherwise list remaining items.
+
+Same output format: 7 scores, overall, verdict, drift warning, simplification/modernization, remaining action items.
+
+
+codex
+The revised notes match the claimed fixes at the proposal level. I’m now checking for any residual formal gap in the whitening argument and whether the warm-up logic creates a procedural regression at inference time.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Raw round-1-review.md' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Raw score-history.md' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+ succeeded in 928ms:
+# Round 1 Review — Codex GPT-5.4 xhigh
+
+## 评分汇总
+
+| 维度 | Score | Verdict |
+|------|-------|---------|
+| Problem Fidelity (15%) | 8/10 | Office success condition 数字混乱 (82.55/89.82/90.58) |
+| Method Specificity (25%) | 8/10 | exclude_self / BN eval / std correction 未说明 |
+| **Contribution Quality (25%)** | **6/10** | **CRITICAL — 2.5 个贡献散乱** |
+| Frontier Leverage (15%) | 8/10 | 适合 2025-era,拒绝 CLIP 合理 |
+| **Feasibility (10%)** | **6/10** | **CRITICAL — AdaIN(z_sem) 数学 bug** |
+| Validation Focus (5%) | 8/10 | 去掉 Learnable Proto / FedDEAP 次要 baseline |
+| **Venue Readiness (5%)** | **6/10** | **IMPORTANT — story 不够单点** |
+| **OVERALL** | **7.2/10** | **REVISE** |
+
+## 核心反馈 (3 个 CRITICAL)
+
+### 1. Contribution sprawl (CRITICAL)
+- **问题**: ETF / SATA-gate / T3A-proto 同时抢 novelty headline,读起来像 "borrowed parts + new combination"
+- **修复**: 把 novelty 收拢到 **一个**命名模块 "**Style-Gated Prototype Adjustment (SGPA)**"
+  - Dominant contribution = 用 disentangled style 做 **test-time reliability signal** 指导 prototype 更新
+  - Fixed ETF 降级为 **supporting stabilizer + prototype prior**
+  - C2 要求放宽:ETF "不伤 + 稳定方差 + 给 proto 提供好的冷启动" 即可,不再要求 beat Linear
+
+### 2. AdaIN 在 z_sem 空间的数学 bug (CRITICAL)
+- **问题**:
+  - `z_sem.std(0)` B=1 时 NaN
+  - `μ,σ` 从 `z_sty` 拿,但应用到 `z_sem` 空间不 well-justified
+  - `exclude_self` 在未见 target domain 下无意义
+  - `torch.no_grad()` 不够,需要 `model.eval()` 否则 BN running stats 会污染
+  - ETF 构造 `β` 与 `τ` 冗余,应固定 β=1
+- **修复**: 完全删除 AdaIN(z_sem),改用 **z_sty-space distance gate**:
+  ```
+  # 训练时额外维护 source_style_bank ∈ ℝ^{N×d_sty}
+  reliable = (H < τ_H) & (min_k ||z_sty - μ_k|| < τ_S)
+  ```
+  - 更小 (没有 swap forward pass)
+  - 更符合 disentanglement 叙事 (直接用分离出的 z_sty)
+  - 数值稳定 (两个标量比较)
+- **其他必须修**:
+  - `model.eval()` + `torch.no_grad()` 双保险
+  - `torch.std(..., correction=0)` 或 `var(unbiased=False).sqrt()`
+  - `assert d >= K` for ETF 构造
+  - prototype EMA 换成 "top-m reliable supports per class" (避免脏样本污染)
+
+### 3. Venue 叙事不够单点 (IMPORTANT)
+- **问题**: reviewer 会一句话归纳为 "FedETF-ish classifier + SATA/T3A on disentangled FL backbone"
+- **修复**: paper one-liner =
+  > "Disentangled source-domain style statistics serve as a **federated, backprop-free reliability signal** for test-time prototype correction."
+- **vs FedDEAP 新 rephrase**:
+  > "FedDEAP improves multi-domain FL through CLIP prompt tuning and semantic/domain transformations **during training**. Our contribution is orthogonal: in scratch federated DG, we use disentangled style statistics **only at inference** to decide which unlabeled test samples may update a prototype memory; the fixed ETF head is a stable prior, not the main novelty."
+
+## Simplification Opportunities (按 reviewer)
+- ✂️ 删除 AdaIN(z_sem) → 换 z_sty distance gate
+- ✂️ 删除 "training-inference geometry coherence" headline,ETF 降级为 prototype prior
+- ✂️ 删除 Learnable Proto+CE 和 FedDEAP-adapted-to-ResNet 次要 baseline (不是证 core claim 必需)
+
+## Modernization Opportunities
+- NONE (scratch-CNN 已足够现代,CLIP 会变成 FedDEAP paper)
+
+## Drift Warning
+- NONE,但警告:若 ETF-only 实验失败,不要变成 "pure TTA on Plan A",那会丢失训练端几何叙事
+
+## Mathematical Soundness 剩余 Issues
+- [x] ETF d >= K assert
+- [x] β=1 固定
+- [x] std correction=0
+- [x] model.eval() + no_grad
+- [x] AdaIN space mismatch (通过切换到 z_sty distance gate 消除)
+
+## Action Items → Round 1 Refinement
+1. 改名: **FedDSA-ETA → FedDSA-SGPA (Style-Gated Prototype Adjustment)**
+2. 重写 Contribution Focus: 1 dominant + 1 support (ETF 降级)
+3. 重写 Core Mechanism (2): 从 AdaIN(z_sem) → **z_sty distance gate + entropy**
+4. 新增 Mathematical Correctness 小节 (assert d>=K, eval mode, std correction, top-m proto)
+5. 清理 baseline: 去掉 Learnable Proto 和 FedDEAP 核心 compare
+6. 重写 one-liner + FedDEAP 差异化段落
+
+<details>
+<summary>Raw Codex response (完整原文)</summary>
+
+见 `round-1-review-raw.txt`
+</details>
+
+
+ succeeded in 944ms:
+# Score Evolution — FedDSA-SGPA (formerly FedDSA-ETA)
+
+| Round | PF (15%) | MS (25%) | CQ (25%) | FL (15%) | Feas (10%) | VF (5%) | VR (5%) | Overall | Verdict |
+|-------|----------|----------|----------|----------|------------|---------|---------|---------|---------|
+| 1     | 8        | 8        | 6        | 8        | 6          | 8       | 6       | **7.2** | REVISE  |
+
+## Round 1 Key Issues
+- CRITICAL: Contribution sprawl (3 contributions) → collapse to SGPA
+- CRITICAL: AdaIN(z_sem) math bug → switch to z_sty distance gate
+- IMPORTANT: Venue story not singular → reframe as "federated backprop-free reliability signal"
+
+## Round 2 (8.5/10, REVISE)
+| Round | PF | MS | CQ | FL | Feas | VF | VR | Overall | Verdict |
+|-------|----|----|----|----|------|----|----|---------|---------|
+| 2     | 8.6| 8.7| 9.0| 8.7| 8.1  | 8.3| 8.5| **8.5** | REVISE  |
+
+Changes: CQ+3.0 RESOLVED, VR+2.5 RESOLVED, Feas PARTIAL (FedBN z_sty cross-client comparability)
+
+
+Re-evaluating the revised method against the prior critical item and verifying whether the framing changes are substantive.
+  ✓ Review prior Round 2 critical item and the revised Round 3 proposal text
+  → Assess whether whitening-based Mahalanobis gating closes the FedBN comparability gap and check for residual formal caveats
+  • Evaluate warm-up/running-quantile logic, ETF framing, and narrowed non-goal; then rescore all dimensions
+ERROR: Reconnecting... 1/5
+codex
+I have two concrete findings: the whitening change is strong enough to remove the old critical blocker in practice, but the “provably invariant to private BN affine distortion” claim is still overstated; and the warm-up pseudocode currently skips prediction for the first 5 batches because of the `continue`. I’m pulling the exact locations now so I can tie the final call to the written proposal, not just my paraphrase.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg -n "provably invariant|continue|ETF subordinate|same order of magnitude|summary statistics|symeig|warm-up" review_prompt_r3.txt round-2-refinement.md' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command '$i=0; Get-Content review_prompt_r3.txt | ForEach-Object { $i++; if($i -ge 20 -and $i -le 95){ '"'{0,4}: {1}' -f "'$i, $_ } }' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command '$i=0; Get-Content round-2-refinement.md | ForEach-Object { $i++; if($i -ge 1 -and $i -le 120){ '"'{0,4}: {1}' -f "'$i, $_ } }' in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_feddsa-eta_v1
+ succeeded in 850ms:
+round-2-refinement.md:9:  - **不共享 raw feature/sample**,但允许 **lightweight source-domain summary statistics (μ_sty_k, Σ_sty_k)** 广播用于 test-time shift detection — 和 FedBN 广播 γ/β 同量级 (每轮 N × 2 × d_sty = 4×2×128 = 1024 floats)
+round-2-refinement.md:47:- **Numerical guards**: Σ + ε·I (ε=1e-3),`torch.linalg.cholesky()` 或 `symeig` 构造 Σ^{-1/2}
+round-2-refinement.md:58:  # 前 W=5 batch 做 warm-up (只记录 stats,不做 gate),之后开始 gate
+round-2-refinement.md:61:    reliable = torch.zeros_like(...).bool()   # warm-up 期间全 False
+round-2-refinement.md:71:- **Impact**: 跨 batch 稳定,不依赖单一 batch 样本;warm-up 期让 bank 收集冷启动
+round-2-refinement.md:105:Σ_inv_sqrt = symeig(Σ_global).compute_inv_sqrt()        # Q Λ^{-1/2} Q^T
+round-2-refinement.md:130:    # Running quantile (warm-up first 5 batches)
+round-2-refinement.md:170:| 前 5 batch warm-up 无 gate → 部分 test 样本没 TTA | 接受,影响 ≤ 5/测试 batch 数 | test_loader 只跑 1 遍 |
+review_prompt_r3.txt:10:- replace first-batch quantile calibration with running quantile + warm-up
+review_prompt_r3.txt:12:- keep ETF subordinate in abstract/intro
+review_prompt_r3.txt:22:- running quantile with 5-batch warm-up and EMA updates (no first-batch order dependency)
+review_prompt_r3.txt:23:- non-goal narrowed: "no raw feature/sample sharing, but lightweight summary statistics (μ, Σ) are allowed, same order of magnitude as FedBN broadcasting"
+review_prompt_r3.txt:32:  - no raw feature/sample sharing, BUT lightweight source-domain summary statistics (μ, Σ) broadcast is allowed (same order of magnitude as FedBN γ/β)
+review_prompt_r3.txt:42:1. **Mahalanobis in whitened space** (CRITICAL resolve): whitening via Σ_global eigendecomposition Q Λ^{-1/2} Q^T. Euclidean in whitened space ≡ Mahalanobis in original → provably invariant to cross-client private BN affine distortion as long as aggregate μ_global/Σ_global are globally defined.
+review_prompt_r3.txt:44:3. **Running quantile τ_H/τ_S**: 5-batch warm-up, then EMA p50/p30 updates.
+review_prompt_r3.txt:46:5. **ETF subordinate**: paper title "Style-Gated Prototype Adjustment for Federated Domain Generalization" — ETF appears only as "stabilizer / prototype cold-start prior" in §Method.
+review_prompt_r3.txt:56:Λ, Q = symeig(Σ_global); Σ_inv_sqrt = Q @ diag(Λ^{-1/2}) @ Q^T
+review_prompt_r3.txt:70:    # Running quantile + 5-batch warm-up (warm-up: gate disabled, supports empty)
+review_prompt_r3.txt:73:      continue
+review_prompt_r3.txt:94:3. Verify warm-up + running quantile doesn't introduce a new bug (e.g. first 5 batches never get SGPA classification).
+review_prompt_r3.txt:95:4. Check ETF subordinate framing is real (not cosmetic).
+review_prompt_r3.txt:96:5. Confirm non-goal narrowing is defensible (summary statistics broadcast vs raw sample sharing).
+
+ succeeded in 914ms:
+  20: Other fixes applied:
+  21: - removed `bn.track_running_stats=False`, keeping `model.eval()+torch.no_grad()` only
+  22: - running quantile with 5-batch warm-up and EMA updates (no first-batch order dependency)
+  23: - non-goal narrowed: "no raw feature/sample sharing, but lightweight summary statistics (μ, Σ) are allowed, same order of magnitude as FedBN broadcasting"
+  24: - ETF kept subordinate in title/abstract/intro
+  25: 
+  26: === PROBLEM ANCHOR (verbatim, non-goal NARROWED) ===
+  27: 
+  28: - Bottom-line: cross-domain FL feature-skew, Plan A + ≥1% AVG, PACS+Office 通用
+  29: - Must-solve: (a) classifier drift; (b) z_sty/style_bank unused at inference
+  30: - Non-goals (narrowed):
+  31:   - no persistent alignment loss
+  32:   - no raw feature/sample sharing, BUT lightweight source-domain summary statistics (μ, Σ) broadcast is allowed (same order of magnitude as FedBN γ/β)
+  33:   - no CLIP/VLM
+  34:   - don't claim "first FL+ETF+decouple"
+  35: - Success: PACS AVG Best ≥81.5%, Office AVG Best ≥84% (w/o SAS) or ≥90.5% (w/ SAS), drop ≤1%, std ≤1.5%
+  36: 
+  37: === REVISED PROPOSAL (Round 2 → Round 3) ===
+  38: 
+  39: # FedDSA-SGPA v3 (Mahalanobis Whitening Gate)
+  40: 
+  41: ## Round 2 Fixes Applied
+  42: 1. **Mahalanobis in whitened space** (CRITICAL resolve): whitening via Σ_global eigendecomposition Q Λ^{-1/2} Q^T. Euclidean in whitened space ≡ Mahalanobis in original → provably invariant to cross-client private BN affine distortion as long as aggregate μ_global/Σ_global are globally defined.
+  43: 2. **BN inference**: `model.eval() + torch.no_grad()` only (removed track_running_stats=False).
+  44: 3. **Running quantile τ_H/τ_S**: 5-batch warm-up, then EMA p50/p30 updates.
+  45: 4. **σ used via Mahalanobis**: Σ_global = (1/N)ΣΣ_k + cov_across_k(μ_k), ε=1e-3 regularization.
+  46: 5. **ETF subordinate**: paper title "Style-Gated Prototype Adjustment for Federated Domain Generalization" — ETF appears only as "stabilizer / prototype cold-start prior" in §Method.
+  47: 6. **Non-goal narrowed**: summary-statistics broadcast explicitly allowed, quantified as ~66KB/round (on par with FedBN γ/β).
+  48: 
+  49: ## Gate Pseudocode (new)
+  50: ```python
+  51: # ===== Server aggregation per round =====
+  52: μ_global = (1/N) Σ_k μ_sty_k                          # [d]
+  53: Σ_within = (1/N) Σ_k Σ_sty_k                          # [d,d]
+  54: Σ_between = (1/N) Σ_k (μ_sty_k-μ_global)(μ_sty_k-μ_global)^T
+  55: Σ_global = Σ_within + Σ_between + ε·I                 # ε=1e-3
+  56: Λ, Q = symeig(Σ_global); Σ_inv_sqrt = Q @ diag(Λ^{-1/2}) @ Q^T
+  57: 
+  58: # Broadcast: source_μ_k (N×d), μ_global (d), Σ_inv_sqrt (d×d) ≈ 66KB/round
+  59: 
+  60: # ===== Inference (per client) =====
+  61: model.eval()
+  62: μ_k_white = (source_μ_k - μ_global) @ Σ_inv_sqrt      # [N, d], precompute once
+  63: with torch.no_grad():
+  64:   for batch_idx, (x, _) in enumerate(test_loader):
+  65:     z_sem, z_sty = model(x)
+  66:     logits = F.normalize(z_sem, -1) @ M / τ_etf
+  67:     H = entropy(softmax(logits))
+  68:     z_sty_white = (z_sty - μ_global) @ Σ_inv_sqrt
+  69:     dist_min = ((z_sty_white[:,None]-μ_k_white[None])**2).sum(-1).min(-1).values
+  70:     # Running quantile + 5-batch warm-up (warm-up: gate disabled, supports empty)
+  71:     if batch_idx < 5:  # collect stats, no gate
+  72:       buf_H += H.tolist(); buf_D += dist_min.tolist()
+  73:       continue
+  74:     elif batch_idx == 5:
+  75:       τ_H, τ_S = quantile(buf_H, 0.5), quantile(buf_D, 0.3)
+  76:     else:
+  77:       τ_H = 0.95*τ_H + 0.05*quantile(H.cpu(), 0.5)
+  78:       τ_S = 0.95*τ_S + 0.05*quantile(dist_min.cpu(), 0.3)
+  79:     reliable = (H < τ_H) & (dist_min < τ_S)
+  80:     # top-m proto update on z_sem; classification cos(z_sem, proto); fallback = ETF argmax
+  81: ```
+  82: 
+  83: ## Expected Score Changes
+  84: - Feasibility: 8.1 → 9+
+  85: - Validation Focus: 8.3 → 9+ (new ablations: whitening on/off, Σ_within vs Σ_within+Σ_between)
+  86: - Venue: 8.5 → 9+
+  87: - Overall target: **9+, READY**
+  88: 
+  89: === END REVISED PROPOSAL ===
+  90: 
+  91: Please:
+  92: 1. Re-score the 7 dimensions.
+  93: 2. Confirm the Mahalanobis whitening solves the FedBN cross-client comparability issue, OR identify any remaining formal gap.
+  94: 3. Verify warm-up + running quantile doesn't introduce a new bug (e.g. first 5 batches never get SGPA classification).
+  95: 4. Check ETF subordinate framing is real (not cosmetic).
+
+ succeeded in 920ms:
+   1: # Round 2 Refinement — FedDSA-SGPA (Mahalanobis + Whitening + running quantile)
+   2: 
+   3: ## Problem Anchor (Copy Verbatim, UPDATED non-goal)
+   4: 
+   5: - **Bottom-line problem**: (unchanged) 跨域 FL,在 Plan A 之上 +≥1% AVG,PACS+Office 通用,无持续崩溃机制
+   6: - **Must-solve bottleneck**: (unchanged) (a) sem_classifier 漂移;(b) z_sty + style_bank 推理未用
+   7: - **Non-goals (NARROWED per Round 2 feedback)**:
+   8:   - 不引入持续对齐损失
+   9:   - **不共享 raw feature/sample**,但允许 **lightweight source-domain summary statistics (μ_sty_k, Σ_sty_k)** 广播用于 test-time shift detection — 和 FedBN 广播 γ/β 同量级 (每轮 N × 2 × d_sty = 4×2×128 = 1024 floats)
+  10:   - 不用 CLIP/VLM
+  11:   - 不抢 "FL+ETF+decouple 第一"
+  12: 
+  13: ## Anchor Check
+  14: - 原两个 bottleneck 依然被直接 attack ✅
+  15: - Non-goal 从 "不跨客户端风格共享" 放宽到 "不共享 raw feature,但允许 summary stats" — 这是必要的 narrowing,因为 Round 2 指出 source_style_bank 广播是 lightweight style sharing 的子集
+  16: 
+  17: ## Simplicity Check
+  18: - **Dominant**: 仍是 SGPA 单点贡献,ETF supporting
+  19: - **新增**: Whitening 不是新贡献,只是 "让 cross-client z_sty 可比的 preprocessing step"
+  20: - **SGPA 实际唯一新机制**: double gate (entropy + Mahalanobis-in-whitened-space) + top-m proto bank
+  21: 
+  22: ## Changes Made (from Round 1 refinement to Round 2)
+  23: 
+  24: ### 1. CRITICAL: Mahalanobis gate in whitening space
+  25: - **Reviewer**: "FedBN 私有 BN → z_sty 跨 client affine distortion → L2 dist is heuristic"
+  26: - **New design**:
+  27:   ```python
+  28:   # Server aggregates global whitening stats (running, lightweight):
+  29:   #   μ_global = (1/N) Σ_k μ_sty_k        # [d_sty]
+  30:   #   Σ_global = (1/N) Σ_k Σ_sty_k + cov(μ_sty_k across clients)  # [d_sty, d_sty]
+  31:   # Per round broadcast: (μ_global, Σ_global^{-1/2}) — same size as source_style_bank was
+  32:   
+  33:   # Inference (per client, own test set):
+  34:   z_sty_white = (z_sty - μ_global) @ Σ_global_inv_sqrt     # [B, d_sty], whitened
+  35:   μ_k_white = (μ_k - μ_global) @ Σ_global_inv_sqrt          # [N, d_sty], pre-compute once
+  36:   
+  37:   # Mahalanobis in whitened = Euclidean
+  38:   dist = ((z_sty_white[:, None, :] - μ_k_white[None, :, :]) ** 2).sum(-1)  # [B, N]
+  39:   dist_min = dist.min(dim=-1).values                                        # [B]
+  40:   ```
+  41: - **为什么这有效**:
+  42:   - Whitening 把所有 z_sty 投影到 "cross-client common standard-normal space"
+  43:   - 在白化后空间做 Euclidean ≡ 原始空间 Mahalanobis
+  44:   - 理论上 principled: 假设 z_sty_k ~ N(μ_k, Σ_k),whitening 是最优跨客户端 comparability fix
+  45:   - Σ 终于被用上 (Round 2 抱怨 "σ 未用")
+  46: - **Overhead**: 每轮多广播 Σ^{-1/2} matrix [d×d = 128×128 = 16K floats],仍 lightweight
+  47: - **Numerical guards**: Σ + ε·I (ε=1e-3),`torch.linalg.cholesky()` 或 `symeig` 构造 Σ^{-1/2}
+  48: 
+  49: ### 2. IMPORTANT: 删除 bn.track_running_stats=False
+  50: - **Reviewer**: "这个 flag 反而把 BN 推向 batch-stat,weakens 稳定"
+  51: - **Action**: 只保留 `model.eval() + torch.no_grad()`,BN 用 FedBN private running stats
+  52: 
+  53: ### 3. IMPORTANT: Running quantile calibration
+  54: - **Reviewer**: "first-batch quantile is order-sensitive"
+  55: - **New design**:
+  56:   ```python
+  57:   # 推理时维护 running p50/p30 of H and dist_min
+  58:   # 前 W=5 batch 做 warm-up (只记录 stats,不做 gate),之后开始 gate
+  59:   if batch_idx < 5:
+  60:     warm_up_H.append(H); warm_up_dist.append(dist_min)
+  61:     reliable = torch.zeros_like(...).bool()   # warm-up 期间全 False
+  62:   else:
+  63:     if batch_idx == 5:
+  64:       τ_H = quantile(concat(warm_up_H), 0.5)
+  65:       τ_S = quantile(concat(warm_up_dist), 0.3)
+  66:     # 每 batch 小幅 EMA 更新 τ (稳健)
+  67:     τ_H = 0.95*τ_H + 0.05*quantile(H, 0.5)
+  68:     τ_S = 0.95*τ_S + 0.05*quantile(dist_min, 0.3)
+  69:     reliable = (H < τ_H) & (dist_min < τ_S)
+  70:   ```
+  71: - **Impact**: 跨 batch 稳定,不依赖单一 batch 样本;warm-up 期让 bank 收集冷启动
+  72: 
+  73: ### 4. IMPORTANT: ETF 在 abstract/intro 保持 subordinate
+  74: - **Paper structure 约束**:
+  75:   - Abstract 主语: SGPA, ETF 出现在一句 "we use a fixed ETF classifier as stabilizer"
+  76:   - Intro 主线: "We enable test-time prototype correction in federated DG via disentangled style statistics as reliability signal"
+  77:   - Method section: SGPA 占 60%,ETF 占 20%,integration 占 20%
+  78:   - Title 候选: "Style-Gated Prototype Adjustment for Federated Domain Generalization"
+  79: 
+  80: ### 5. MINOR: notation 统一
+  81: - Paper 只用一种:"**normalized L2**" (i.e., 1 - cosine on normalized vectors)
+  82: - 代码里 `1 - z_sty_n @ mu_bank_n.T` → 改名 `cos_dist`
+  83: 
+  84: ---
+  85: 
+  86: ## Revised Proposal: FedDSA-SGPA v2
+  87: 
+  88: ### One-Sentence Thesis (unchanged)
+  89: > Disentangled source-domain style statistics serve as a **federated, backprop-free reliability signal** for test-time prototype correction.
+  90: 
+  91: ### Key Math Update
+  92: 
+  93: ```python
+  94: # ===== Training: each client per-round =====
+  95: for k in clients:
+  96:   μ_sty_k = z_sty.mean(0)                                # [d_sty]
+  97:   Σ_sty_k = (z_sty - μ_sty_k).T @ (z_sty - μ_sty_k) / (B-1)  # [d_sty, d_sty]
+  98:   upload (μ_sty_k, Σ_sty_k)
+  99: 
+ 100: # ===== Server aggregation =====
+ 101: μ_global = (1/N) Σ_k μ_sty_k                            # [d_sty]
+ 102: Σ_within = (1/N) Σ_k Σ_sty_k                            # avg within-client cov
+ 103: Σ_between = (1/N) Σ_k (μ_sty_k - μ_global)(μ_sty_k - μ_global)^T  # between-client cov
+ 104: Σ_global = Σ_within + Σ_between + ε·I                   # [d_sty, d_sty], ε=1e-3
+ 105: Σ_inv_sqrt = symeig(Σ_global).compute_inv_sqrt()        # Q Λ^{-1/2} Q^T
+ 106: 
+ 107: # ===== Broadcast to clients =====
+ 108: payload = {
+ 109:   'source_μ_k':  {k: μ_sty_k for k in N},               # [N, d_sty]
+ 110:   'μ_global':    μ_global,                              # [d_sty]
+ 111:   'Σ_inv_sqrt':  Σ_inv_sqrt                             # [d_sty, d_sty]
+ 112: }
+ 113: 
+ 114: # ===== Inference (per client) =====
+ 115: model.eval()
+ 116: # whiten client's own source bank (one-time)
+ 117: μ_k_white = (source_μ_k - μ_global) @ Σ_inv_sqrt        # [N, d_sty]
+ 118: 
+ 119: with torch.no_grad():
+ 120:   for batch_idx, (x, y) in enumerate(test_loader):
+
+Completed the re-evaluation and identified one remaining theory-claim overreach and one warm-up pseudocode bug.
+  ✓ Review prior Round 2 critical item and the revised Round 3 proposal text
+  ✓ Assess whether whitening-based Mahalanobis gating closes the FedBN comparability gap and check for residual formal caveats
+  ✓ Evaluate warm-up/running-quantile logic, ETF framing, and narrowed non-goal; then rescore all dimensions
+codex
+**Findings**
+1. Major: the Round 2 FedBN comparability blocker is materially improved, but the claim in [review_prompt_r3.txt](D:/桌面文件/联邦学习/obsidian_exprtiment_results/refine_logs/2026-04-19_feddsa-eta_v1/review_prompt_r3.txt):42 is still too strong. Pooled Mahalanobis / whitening is invariant to a shared affine transform, not arbitrary client-specific FedBN transforms. So this is now a principled common metric under a pooled second-order model, not a proof that private-BN coordinate mismatch is fully eliminated.
+2. Important: the warm-up code in [review_prompt_r3.txt](D:/桌面文件/联邦学习/obsidian_exprtiment_results/refine_logs/2026-04-19_feddsa-eta_v1/review_prompt_r3.txt):71-73 has a real single-pass bug. `continue` means the first 5 batches emit no prediction. The earlier logic in [round-2-refinement.md](D:/桌面文件/联邦学习/obsidian_exprtiment_results/refine_logs/2026-04-19_feddsa-eta_v1/round-2-refinement.md):58-69 was correct: warm-up should set `reliable=False`, still output ETF fallback, and optionally buffer/replay if needed.
+
+## 评分汇总
+
+| 维度 | R2 | **R3** | 结论 |
+|------|----|------|------|
+| Problem Fidelity | 8.6 | **9.0** | non-goal narrowing now matches what is actually broadcast |
+| Method Specificity | 8.7 | **9.1** | whitening + pooled covariance + running quantile are much clearer |
+| Contribution Quality | 9.0 | **9.2** | SGPA remains dominant; ETF is properly secondary |
+| Frontier Leverage | 8.7 | **8.9** | good 2025-era scratch FL-DG positioning, no CLIP drift |
+| Feasibility | 8.1 | **8.7** | old CRITICAL mostly resolved, but not a full affine-invariance proof |
+| Validation Focus | 8.3 | **9.0** | whitening on/off and `Σ_within` vs `Σ_within+Σ_between` are the right ablations |
+| Venue Readiness | 8.5 | **8.9** | close, but wording/pseudocode still need cleanup |
+| **OVERALL** | **8.5** | **9.0** | **REVISE** |
+
+## Checks
+
+- Mahalanobis whitening: practically yes, formally partial. It gives a defensible shared metric and is enough to remove the old CRITICAL as a practical blocker, but it does not justify the phrase “provably invariant to cross-client private BN affine distortion.”
+- Warm-up + running quantile: the idea is good and removes first-batch order sensitivity. The only bug is the current `continue`; warm-up batches should still get ETF predictions. They do not need SGPA updates during warm-up.
+- ETF subordinate framing: yes, this is real at the proposal level. Title, one-line thesis, and method emphasis are SGPA-first; ETF is a stabilizer / cold-start prior, not the headline contribution.
+- Non-goal narrowing: yes, defensible. “No raw sample or per-instance feature sharing; lightweight client-level summary statistics are allowed” is a clean and honest scope statement.
+
+## Drift Warning
+
+Minor claim drift only: “provably invariant” overstates what pooled whitening establishes. Method drift from the anchor is otherwise gone.
+
+## Simplification / Modernization
+
+- Keep the method at `SGPA + pooled whitening + top-m proto`. Do not add extra adaptation losses or client-specific alignment modules.
+- Replace `symeig` with `torch.linalg.eigh` in pseudocode/implementation.
+- Report actual bytes against FedBN on the used backbone instead of only saying “same order of magnitude.”
+
+## Remaining Action Items
+
+1. Rewrite the claim from “provably invariant to private BN affine distortion” to “provides a shared Mahalanobis metric under a pooled second-order approximation.”
+2. Fix warm-up pseudocode so first 5 batches still produce ETF predictions; if desired, buffer/replay them after threshold initialization.
+3. Add one diagnostic figure or table showing distance distributions before/after whitening, plus `whitening on/off` and `Σ_within` vs `Σ_within+Σ_between`.
+4. In the paper text, say explicitly: “no raw sample or per-instance feature sharing; only client-level summary statistics `(μ, Σ)` are broadcast.”
+
+This is one small revision away from READY, but not READY yet.
+tokens used
+33,042
+**Findings**
+1. Major: the Round 2 FedBN comparability blocker is materially improved, but the claim in [review_prompt_r3.txt](D:/桌面文件/联邦学习/obsidian_exprtiment_results/refine_logs/2026-04-19_feddsa-eta_v1/review_prompt_r3.txt):42 is still too strong. Pooled Mahalanobis / whitening is invariant to a shared affine transform, not arbitrary client-specific FedBN transforms. So this is now a principled common metric under a pooled second-order model, not a proof that private-BN coordinate mismatch is fully eliminated.
+2. Important: the warm-up code in [review_prompt_r3.txt](D:/桌面文件/联邦学习/obsidian_exprtiment_results/refine_logs/2026-04-19_feddsa-eta_v1/review_prompt_r3.txt):71-73 has a real single-pass bug. `continue` means the first 5 batches emit no prediction. The earlier logic in [round-2-refinement.md](D:/桌面文件/联邦学习/obsidian_exprtiment_results/refine_logs/2026-04-19_feddsa-eta_v1/round-2-refinement.md):58-69 was correct: warm-up should set `reliable=False`, still output ETF fallback, and optionally buffer/replay if needed.
+
+## 评分汇总
+
+| 维度 | R2 | **R3** | 结论 |
+|------|----|------|------|
+| Problem Fidelity | 8.6 | **9.0** | non-goal narrowing now matches what is actually broadcast |
+| Method Specificity | 8.7 | **9.1** | whitening + pooled covariance + running quantile are much clearer |
+| Contribution Quality | 9.0 | **9.2** | SGPA remains dominant; ETF is properly secondary |
+| Frontier Leverage | 8.7 | **8.9** | good 2025-era scratch FL-DG positioning, no CLIP drift |
+| Feasibility | 8.1 | **8.7** | old CRITICAL mostly resolved, but not a full affine-invariance proof |
+| Validation Focus | 8.3 | **9.0** | whitening on/off and `Σ_within` vs `Σ_within+Σ_between` are the right ablations |
+| Venue Readiness | 8.5 | **8.9** | close, but wording/pseudocode still need cleanup |
+| **OVERALL** | **8.5** | **9.0** | **REVISE** |
+
+## Checks
+
+- Mahalanobis whitening: practically yes, formally partial. It gives a defensible shared metric and is enough to remove the old CRITICAL as a practical blocker, but it does not justify the phrase “provably invariant to cross-client private BN affine distortion.”
+- Warm-up + running quantile: the idea is good and removes first-batch order sensitivity. The only bug is the current `continue`; warm-up batches should still get ETF predictions. They do not need SGPA updates during warm-up.
+- ETF subordinate framing: yes, this is real at the proposal level. Title, one-line thesis, and method emphasis are SGPA-first; ETF is a stabilizer / cold-start prior, not the headline contribution.
+- Non-goal narrowing: yes, defensible. “No raw sample or per-instance feature sharing; lightweight client-level summary statistics are allowed” is a clean and honest scope statement.
+
+## Drift Warning
+
+Minor claim drift only: “provably invariant” overstates what pooled whitening establishes. Method drift from the anchor is otherwise gone.
+
+## Simplification / Modernization
+
+- Keep the method at `SGPA + pooled whitening + top-m proto`. Do not add extra adaptation losses or client-specific alignment modules.
+- Replace `symeig` with `torch.linalg.eigh` in pseudocode/implementation.
+- Report actual bytes against FedBN on the used backbone instead of only saying “same order of magnitude.”
+
+## Remaining Action Items
+
+1. Rewrite the claim from “provably invariant to private BN affine distortion” to “provides a shared Mahalanobis metric under a pooled second-order approximation.”
+2. Fix warm-up pseudocode so first 5 batches still produce ETF predictions; if desired, buffer/replay them after threshold initialization.
+3. Add one diagnostic figure or table showing distance distributions before/after whitening, plus `whitening on/off` and `Σ_within` vs `Σ_within+Σ_between`.
+4. In the paper text, say explicitly: “no raw sample or per-instance feature sharing; only client-level summary statistics `(μ, Σ)` are broadcast.”
+
+This is one small revision away from READY, but not READY yet.

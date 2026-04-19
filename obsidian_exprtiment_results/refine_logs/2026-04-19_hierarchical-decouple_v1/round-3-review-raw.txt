@@ -1,0 +1,317 @@
+OpenAI Codex v0.121.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-19_hierarchical-decouple_v1
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019da503-c79b-7101-8d64-0e040de63fce
+--------
+user
+[Round 3 re-evaluation]
+
+I addressed all Round 2 CRITICAL feedback. Please re-score.
+
+Key changes:
+
+1. [CRITICAL fix] Locked loss formula: cosine decorrelation (F.normalize applied, NO /HW divisor). Loss values now in [0,1], interpretable.
+
+```python
+def layer_decorr_loss(ibn):
+    xin = F.normalize(ibn._cache_in.flatten(2), dim=2)   # [B, Cin, HW] unit
+    xbn = F.normalize(ibn._cache_bn.flatten(2), dim=2)   # [B, Cbn, HW] unit
+    corr = torch.bmm(xin, xbn.transpose(1, 2))           # [B, Cin, Cbn]
+    return corr.square().mean()
+```
+
+2. [CRITICAL rename] "Hierarchical IBN-..." → **"Early-Split IN-BN Decorrelation for FedBN (ES-IBND)"**. Matches actual implementation (just 2 early BNs, not depth hierarchy).
+
+3. [CRITICAL wording] "0 new trainable parameters" → **"no added trainable parameters"** (avoids BN-count nitpicks).
+
+4. [CRITICAL reporting] Main table reports all 4 metrics: AVG Best / AVG Last / ALL Best / ALL Last.
+
+5. [Simplification] Locked defaults: num_ibn=2, in_ratio=0.5, λ_orth_layer=0.5. No broad search. λ sweep only as appendix.
+
+=== REVISED PROPOSAL ===
+
+# Research Proposal Round 2: Early-Split IN-BN Decorrelation for FedBN (ES-IBND)
+
+## Problem Anchor (preserved)
+
+- Under K=4 FedBN cross-domain FL, Plan A decouples ONLY at final projection. Backbone mid-layers polluted. 85+ downstream experiments stuck at Plan A ceiling.
+- Must-solve: shallow decouple, no direct backbone signal, downstream prototype/alignment all fail.
+- Non-goals: prototype routing, new trainables >10% backbone, backbone resize, VLM/CLIP, K>4.
+- Constraints: AlexNet/ResNet-18, FedBN local, Plan A cos²+HSIC stays, 3-seed {2,15,333}, must beat PACS Plan A 82.31% by +0.5%, <150 LOC, no added trainable.
+- Success: PACS AVG Best ≥ 82.81%, AVG Last ≥ 81.67% (+0.5 over Plan A); IBN-only shows L_orth_layer has independent contribution.
+
+## Technical Gap
+Plan A's cos²(z_sem, z_sty) only at final projection. Backbone conv/BN receive indirect gradient. FDSE uses new per-layer params (DSE≈DFE/94). **ES-IBND: no added trainable, only normalization scheme + spatial cosine decorrelation.**
+
+## Method Thesis
+
+> Headline: "Replacing early FedBN layers with split IN/BN plus pairwise spatial cosine decorrelation improves cross-domain FL **without adding trainable parameters**."
+
+Early-split (first 2 BNs → IBN) + spatial cosine decorrelation as front-end regularization supporting Plan A's end-layer orthogonal constraint. NOT a claim of persistent style/semantic decomposition.
+
+## Contribution Focus
+
+- SINGLE main contribution: **Early-Split IN-BN Decorrelation (ES-IBND)** for FedBN
+- NO optional support
+- Non-contributions: prototype routing, alignment, style sharing
+
+## Proposed Method
+
+### Complexity Budget
+- Frozen: backbone conv/linear, Plan A L_orth_end (λ=1.0), L_HSIC (λ=0.0 inherited from EXP-017), sem_head, style_head, classifier
+- Replaced: bn1, bn2 → IBN instances (IN affine=False, BN on half channels)
+- New: L_orth_layer (spatial cosine decorrelation, no params)
+- **No added trainable parameters**
+- 2 new hyperparameters: num_ibn=2 (locked), λ_orth_layer=0.5 (locked)
+
+### IBN Module (cache-based, no forward hook)
+```python
+class IBN(nn.Module):
+    def __init__(self, channels, in_ratio=0.5):
+        super().__init__()
+        self.in_ch = int(channels * in_ratio)
+        self.bn_ch = channels - self.in_ch
+        self.instance_norm = nn.InstanceNorm2d(self.in_ch, affine=False)
+        self.batch_norm = nn.BatchNorm2d(self.bn_ch)
+        self._cache_in, self._cache_bn = None, None
+    def forward(self, x):
+        xin, xbn = torch.split(x, [self.in_ch, self.bn_ch], dim=1)
+        out_in = self.instance_norm(xin)
+        out_bn = self.batch_norm(xbn)
+        self._cache_in, self._cache_bn = out_in, out_bn
+        return torch.cat([out_in, out_bn], dim=1)
+```
+
+### Core Mechanism — Spatial Cosine Decorrelation (R2 locked formula)
+```python
+def layer_decorr_loss(ibn):
+    xin = F.normalize(ibn._cache_in.flatten(2), dim=2)   # [B, Cin, HW]
+    xbn = F.normalize(ibn._cache_bn.flatten(2), dim=2)   # [B, Cbn, HW]
+    corr = torch.bmm(xin, xbn.transpose(1, 2))           # [B, Cin, Cbn]
+    return corr.square().mean()
+
+L_orth_layer = (1 / N_IBN) * sum_l layer_decorr_loss(ibn_l)
+```
+
+No /HW divisor. Loss values in [0, 1], interpretable.
+
+### Total Loss
+L = L_CE + 1.0 * L_orth_end + 0.0 * L_HSIC + 0.5 * L_orth_layer
+
+### Integration
+- feddsa_scheduled.py AlexNetEncoder: self.bn1 = IBN(64); self.bn2 = IBN(192)
+- Client.train(): forward pass, then iterate self.ibn_layers to sum decorrelation loss
+- ~80 LOC, no forward hooks
+
+## Claim-Driven Validation
+
+### Claim A (main): ES-IBND > Plan A PACS AVG Best by ≥ +0.5% AND decorrelation loss has independent contribution
+
+Configs (3):
+  A.1 Plan A orth_only
+  A.2 IBN-only (IBN replaces BN, NO L_orth_layer) ← isolation control
+  A.3 ES-IBND (IBN + L_orth_layer, λ=0.5)
+
+PACS 3 seeds, R=200. Main table reports ALL 4 metrics: AVG Best / AVG Last / ALL Best / ALL Last.
+
+Decisive:
+  - A.3 AVG Best ≥ 82.81%
+  - A.3 AVG Last ≥ 81.67% (+0.5 over Plan A's 81.17)
+  - A.3 > A.2 (decorrelation loss independent contribution)
+  - A.2 vs A.1 (IBN structural DG effect)
+
+### Claim B (mechanism diagnostic): ES-IBND's end-layer cos² lower than Plan A's
+
+Zero GPU overhead. Track end cos² evolution. Evidence early decorrelation propagates.
+
+### Budget: ~15 GPU-hours (parallel 3)
+
+=== END PROPOSAL ===
+
+Please confirm:
+1. Is the locked loss formula now precisely defined and free of the R2 inconsistency?
+2. Is the renamed scope (ES-IBND, not "hierarchical") appropriately modest?
+3. Are the 4 metrics (Best/Last × ALL/AVG) sufficient for venue-ready reporting?
+4. Is this now READY (overall ≥ 9) or do you need more refinement?
+
+If minor issues remain, indicate exact single-line fixes.
+
+Output in English.
+
+**Evaluating metrics for reporting**
+
+I’m questioning if four metrics are enough for venue-ready reporting: Best/Last and AVG/ALL. I should clarify what "ALL" means — perhaps it refers to averaging across all clients. For the main venue-ready table, it might be sufficient. However, for events like NeurIPS or ICLR, I wonder if a per-domain breakdown could be necessary. I think including at least one per-domain variance in the appendix would be wise, especially since there were previously requirements for per-domain reporting.
+codex
+I’m re-scoring against the cleaned mechanism, not the earlier drafts. The remaining question is no longer “is this mathematically broken,” but “is this narrow, implementable, and paper-worthy enough to clear a venue bar without inflating the claim.”
+**Considering proposal readiness**
+
+I’m continuing my analysis and thinking maybe the overall score should be around 8.8. I need to compute individual scores: PF 9.5, MS 8.5, CQ 8.5, FL 9, Feas 9, VF 8.5, VR 8, which could average to about 8.7. However, READY requires a score of at least 9, with no drift and a strong contribution. I feel like the proposal still needs revisions since it's missing a couple of key elements.
+**Inspecting technical details**
+
+I need to be precise with the technical aspects. I’m looking at using Instance Batch Normalization (IBN) with split channels. Replacing Batch Normalization (BN) with IBN might change the parameter count, but I’ve read that it shouldn’t add trainable parameters. It seems replacing a full BN with half channels and no affine reduces parameters. Although there are still BN statistics on half channels, they're not trainable. A potential concern is whether reducing BN channels could affect semantics, but that's testable. Also, switching BNs in ResNet-18 isn't straightforward since it primarily details AlexNet.
+**Clarifying method specifics**
+
+If the user wants to claim across both networks, I realize the method specifics for ResNet still feel a bit underspecified. It would be helpful to mention if ResNet is included and to specify exact insertion sites, like stem bn1 or layer1.0.bn1, or perhaps using the IBN-a/b style. But the key question remains: is this proposal now READY? I'm eager to have clarity on that!
+**Clarifying reporting metrics**
+
+I think I need to address the terms like "ALL Best / ALL Last," which seem unclear and not standard. I might suggest using "micro avg over all clients/domains" or "pooled test acc" instead. 
+
+Also, should I recommend including confidence intervals or standard deviations? Since there are at least three seeds, reporting the mean ± std seems crucial for variance, but the user suggests that four metrics are enough for venue-ready reporting. I’m leaning towards saying four metrics alone aren't sufficient; I should advocate for including the mean ± std and a compact per-domain breakdown in the appendix.
+**Assessing success criteria**
+
+I see that the success criterion is to achieve +0.5 over Plan A on PACS and AVG Last. However, that +0.5 gain across just three seeds might be too small to be significant; it could be within the noise level. 
+
+I feel like we need to establish a more stable margin above +0.5 or avoid overlapping variance to be convincing. The reviewer may not find a +0.5 gain impressive unless it's consistent across seeds. I should consider mentioning that if gains fall between 0.4-0.6 with overlapping variance, it signals weak venue readiness. Still, stable gains could change that.
+**Refining the proposal**
+
+I could say that the proposal is now in a paper shape, and I would stop revising the mechanism. The next step is to ask whether the data supports it. When they inquire about more refinement, I can mention that only minor wording and reporting changes are left; the mechanism itself is ready to go. It might also be useful to note a specific single-line fix: changing `Plan A cos²+HSIC stays` to `Plan A objective stays; HSIC coefficient remains 0.0 as in EXP-017`.
+**Refining validation details**
+
+I need to clarify the validation table caption by explicitly defining `AVG` and `ALL`, including the format `mean ± std over 3 seeds`. If ResNet-18 stays relevant, I should add a note to replace the stem BN and first BN in layer1. If not, ResNet-18 should be removed from the main claim. I think I should emphasize `A.3 > A.2 on AVG Last` as the primary metric since the Best can be noisy. This feels important for strengthening the claim.
+**Evaluating success criteria and reporting**
+
+The success criteria include both A.3 AVG Best ≥ 82.81 and AVG Last ≥ 81.67, which is good. But maybe I should require both for A.3 > A.2. I'm thinking about discussing metric sufficiency, mentioning that “Best/Last x ALL/AVG are sufficient,” while emphasizing the need for seed variance and a per-domain appendix. I suspect there are no blocker issues, just presentation concerns. I could say something like, “No mechanism blocker remains; issues are about reporting and hygiene.” I'll structure my response to include a summary, confirmations, scores, verdicts, and fixes for minor issues.
+**Clarifying dimension scores**
+
+I think I should mention that there are no dimensions below 7, which means there are no critical weaknesses left. However, the user might want to know about each dimension below 7 only if applicable. Since none are lower than 7, I can state, "No dimension below 7." I also need to ensure that the language is clear and concise, avoiding any unnecessary fluff. Let’s draft something complete yet straightforward.
+**Evaluating score options**
+
+I’m considering a score of 8.9, but I might lean towards 8.8 for now since that contributes incrementally. I’ll need to provide rationales for these scores: PF 9 seems tightly matched to the anchored problem, while MS 9 has a locked formula and clear implementation. However, I still sense slight ambiguity if the ResNet insertion sites remain a factor. Let’s clarify this further to ensure accuracy.
+**Reviewing table fixes**
+
+Alright, I need to make some fixes! First, I’ll replace "Plan A cos²+HSIC stays" with "Plan A objective stays; HSIC coefficient remains 0.0 from EXP-017." Next, in the main table caption, I should explicitly define "AVG" and "ALL" and report every number as "mean ± std" over three seeds.
+
+If ResNet-18 is part of the claim, I have to specify the two exact BN sites. If not, I may need to move it to an appendix. I need to make some adjustments to Claim A, requiring "A.3 > A.2" on "AVG Last" as the primary criterion, with "AVG Best" being supportive. We should mention that no extra experiments are needed, and I'd prefer not to add more ablations beyond the three-way control. I could use short paragraphs or flat bullets instead of nested ones.
+
+Let's outline the final structure with sections for Direct Checks, Scores, Remaining Fixes, and Verdict, since complexity is moderate. Markdown tables are okay, but we should avoid dimensions below 7. I think including a weighted formula could be helpful overall.
+codex
+**Direct Checks**
+
+1. **Locked loss formula**
+Yes. It is now precisely defined and free of the Round 2 inconsistency.
+
+`F.normalize(..., dim=2)` makes each channel’s spatial response a unit vector over `HW`, and
+`torch.bmm(xin, xbn.transpose(1, 2))`
+therefore computes pairwise spatial cosine similarities between IN-channel and BN-channel maps. Squaring and averaging gives a valid cosine-decorrelation penalty in `[0, 1]`.
+
+This is now a coherent objective. I would describe it exactly as:
+“pairwise spatial cosine decorrelation between IN and BN channel groups.”
+
+2. **Renamed scope**
+Yes. `ES-IBND` is appropriately modest. Dropping “hierarchical” is the right correction.
+
+3. **Reporting sufficiency**
+`Best/Last × AVG/ALL` is a good main-table core, but not quite sufficient by itself for venue-ready reporting. You still want:
+- `mean ± std` over the 3 seeds for every scalar
+- one compact per-domain appendix table or worst-domain check, so reviewers cannot argue the gain comes from hiding a domain crash
+
+That is reporting hygiene, not scope creep.
+
+4. **READY or not**
+Still **REVISE**, but only lightly. The mechanism itself is now proposal-ready. What keeps it below `READY` is not a method blocker; it is that the paper remains empirically fragile and slightly under-specified on presentation.
+
+**Scores**
+
+| Dimension | Score | Reason |
+|---|---:|---|
+| 1. Problem Fidelity | 9 | Still tightly anchored to the original shallow-decouple problem. |
+| 2. Method Specificity | 9 | The core loss is now mathematically valid and implementation is concrete. |
+| 3. Contribution Quality | 8 | Focused and elegant, but still a modest contribution whose strength depends on clean evidence. |
+| 4. Frontier Leverage | 9 | Correct restraint; no FM-era component is naturally needed here. |
+| 5. Feasibility | 9 | Cheap, clear, and straightforward to implement. |
+| 6. Validation Focus | 8 | The `Plan A / IBN-only / ES-IBND` trio is the right minimal ablation set. |
+| 7. Venue Readiness | 8 | Close, but not 9+ yet because reporting/scope hygiene still needs tightening and the claim is only as strong as a stable `Last` gain. |
+
+**Overall: 8.7/10**
+
+No dimension is below 7.
+
+**Remaining Issues**
+
+There is no longer a core mechanism blocker. The remaining risk is mostly paper-framing risk:
+
+- The contribution is now clear, but still incremental. That is acceptable only if `A.3 > A.2 > A.1` is clean and stable, especially on `AVG Last`.
+- `AVG Best` cannot carry the paper by itself. If the gain is only in `Best` and not `Last`, reviewers will discount it.
+- `AlexNet/ResNet-18` is still slightly broad unless you specify the exact ResNet insertion sites or keep the main claim centered on AlexNet.
+
+**Exact Single-Line Fixes**
+
+- Replace `Plan A cos²+HSIC stays` with `Plan A objective stays unchanged; HSIC coefficient remains 0.0 per EXP-017.`
+- In Claim A, make `AVG Last` the primary decision metric and treat `AVG Best` as supportive.
+- In the main table caption, define `AVG` and `ALL` explicitly and report every value as `mean ± std` over 3 seeds.
+- If `ResNet-18` remains in scope, add one line specifying the exact BN layers replaced; otherwise keep the main claim on AlexNet and move ResNet to appendix.
+
+**Verdict**
+
+**REVISE**
+
+This is the first version I would call mechanism-ready. I would stop revising the core idea and run it. If results come back with a clean `A.3 > A.2 > A.1`, including `AVG Last`, this becomes a defensible minimal paper. If the gain is only marginal or only appears in `Best`, I would not add more modules; I would treat that as evidence that Plan A is already near the ceiling in this regime.
+tokens used
+32,480
+**Direct Checks**
+
+1. **Locked loss formula**
+Yes. It is now precisely defined and free of the Round 2 inconsistency.
+
+`F.normalize(..., dim=2)` makes each channel’s spatial response a unit vector over `HW`, and
+`torch.bmm(xin, xbn.transpose(1, 2))`
+therefore computes pairwise spatial cosine similarities between IN-channel and BN-channel maps. Squaring and averaging gives a valid cosine-decorrelation penalty in `[0, 1]`.
+
+This is now a coherent objective. I would describe it exactly as:
+“pairwise spatial cosine decorrelation between IN and BN channel groups.”
+
+2. **Renamed scope**
+Yes. `ES-IBND` is appropriately modest. Dropping “hierarchical” is the right correction.
+
+3. **Reporting sufficiency**
+`Best/Last × AVG/ALL` is a good main-table core, but not quite sufficient by itself for venue-ready reporting. You still want:
+- `mean ± std` over the 3 seeds for every scalar
+- one compact per-domain appendix table or worst-domain check, so reviewers cannot argue the gain comes from hiding a domain crash
+
+That is reporting hygiene, not scope creep.
+
+4. **READY or not**
+Still **REVISE**, but only lightly. The mechanism itself is now proposal-ready. What keeps it below `READY` is not a method blocker; it is that the paper remains empirically fragile and slightly under-specified on presentation.
+
+**Scores**
+
+| Dimension | Score | Reason |
+|---|---:|---|
+| 1. Problem Fidelity | 9 | Still tightly anchored to the original shallow-decouple problem. |
+| 2. Method Specificity | 9 | The core loss is now mathematically valid and implementation is concrete. |
+| 3. Contribution Quality | 8 | Focused and elegant, but still a modest contribution whose strength depends on clean evidence. |
+| 4. Frontier Leverage | 9 | Correct restraint; no FM-era component is naturally needed here. |
+| 5. Feasibility | 9 | Cheap, clear, and straightforward to implement. |
+| 6. Validation Focus | 8 | The `Plan A / IBN-only / ES-IBND` trio is the right minimal ablation set. |
+| 7. Venue Readiness | 8 | Close, but not 9+ yet because reporting/scope hygiene still needs tightening and the claim is only as strong as a stable `Last` gain. |
+
+**Overall: 8.7/10**
+
+No dimension is below 7.
+
+**Remaining Issues**
+
+There is no longer a core mechanism blocker. The remaining risk is mostly paper-framing risk:
+
+- The contribution is now clear, but still incremental. That is acceptable only if `A.3 > A.2 > A.1` is clean and stable, especially on `AVG Last`.
+- `AVG Best` cannot carry the paper by itself. If the gain is only in `Best` and not `Last`, reviewers will discount it.
+- `AlexNet/ResNet-18` is still slightly broad unless you specify the exact ResNet insertion sites or keep the main claim centered on AlexNet.
+
+**Exact Single-Line Fixes**
+
+- Replace `Plan A cos²+HSIC stays` with `Plan A objective stays unchanged; HSIC coefficient remains 0.0 per EXP-017.`
+- In Claim A, make `AVG Last` the primary decision metric and treat `AVG Best` as supportive.
+- In the main table caption, define `AVG` and `ALL` explicitly and report every value as `mean ± std` over 3 seeds.
+- If `ResNet-18` remains in scope, add one line specifying the exact BN layers replaced; otherwise keep the main claim on AlexNet and move ResNet to appendix.
+
+**Verdict**
+
+**REVISE**
+
+This is the first version I would call mechanism-ready. I would stop revising the core idea and run it. If results come back with a clean `A.3 > A.2 > A.1`, including `AVG Last`, this becomes a defensible minimal paper. If the gain is only marginal or only appears in `Best`, I would not add more modules; I would treat that as evidence that Plan A is already near the ceiling in this regime.

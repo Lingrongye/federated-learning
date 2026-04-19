@@ -1,0 +1,172 @@
+You are a senior ML reviewer for a top venue (NeurIPS/ICML/ICLR/CVPR).
+This is an early-stage, method-first research proposal in federated learning.
+
+Your job is NOT to reward extra modules, contribution sprawl, or a giant benchmark checklist.
+Your job IS to stress-test whether the proposed method:
+(1) still solves the original anchored problem,
+(2) is concrete enough to implement,
+(3) presents a focused, elegant contribution,
+(4) uses foundation-model-era techniques appropriately when they are the natural fit.
+
+Review principles:
+- Prefer the smallest adequate mechanism over a larger system.
+- Penalize parallel contributions that make the paper feel unfocused.
+- If a modern LLM/VLM/Diffusion/RL route would clearly produce a better paper, say so concretely.
+- If the proposal is already modern enough, do NOT force trendy components.
+- Do not ask for extra experiments unless they are needed to prove the core claims.
+
+Read the Problem Anchor first. If your suggested fix would change the problem being solved, call that out explicitly as drift.
+
+Important context (the author already ran 85+ experiments):
+- Plan A orth_only (cos² + HSIC at final projection layer) is strongest config on PACS (AVG Best 82.31%)
+- All prototype-routing / alignment / style-sharing methods (SCPR v1 1024d pool5 + v2 128d z_sty, M3, InfoNCE, MSE anchor, alpha-sparsity) **all fail** to beat Plan A
+- Prior SCPR v1/v2 just concluded: style key choice (1024d vs 128d) doesn't matter; K=4 attention collapses
+- Author hypothesizes root cause: Plan A's decouple is only at the last layer → backbone mid layers already polluted → downstream alignment is futile
+- Author's new proposal: **Hierarchical IBN-Orthogonal Decoupling (HIBD)** — replace 2 early BNs with IBN (Instance-Batch Norm parallel, from IBN-Net ECCV 2018), add per-layer cos² orthogonal loss between IN-channel and BN-channel outputs. 0 new trainable params, ~100 lines.
+
+Key competitor: FDSE (CVPR 2025) uses per-layer DFE+DSE structural decomposition with new group-convolution parameters. HIBD's sharpest differentiation: 0 new parameters, just normalization scheme.
+
+=== PROPOSAL ===
+
+# Research Proposal Round 0: Hierarchical IBN-Augmented Decoupling (HIBD)
+
+## Problem Anchor
+
+- **Bottom-line**: Under K=4 FedBN cross-domain FL, current FedDSA Plan A decouples ONLY at the final projection layer. Mid-layer backbone features are already polluted by domain shift. 85+ downstream prototype/alignment experiments all fail because they operate on polluted features.
+- **Must-solve**: (1) shallow decouple; (2) Plan A is ceiling; (3) need sharper+lighter than FDSE's DSE; (4) style/semantic separation theory not connected to FL pipeline.
+- **Non-goals**: prototype routing, new trainables >10% backbone, backbone resize, VLM/CLIP, K > 4.
+- **Constraints**: AlexNet/ResNet-18 backbone, FedBN BN locality, cos²+HSIC Plan A stays, 3-seed {2,15,333}, must beat PACS Plan A 82.31% by +0.5% (→ 82.81%), code <150 lines, 0 new trainable.
+- **Success**: PACS AVG Best >= 82.81%; Office >= 83.05%; R=20 sanity shows per-layer cos²(IN_l, BN_l) drops from 0.5+ to <0.3; <150 LOC; 0 new trainable.
+
+## Technical Gap
+
+Plan A's `L_orth = cos²(z_sem, z_sty)` at final 128d projection. Backbone conv/BN layers receive only indirect gradient → weak decouple signal at front → mid-features polluted. All 85+ downstream methods operate on polluted features → stuck at Plan A ceiling.
+
+FDSE uses per-layer DFE(shared)+DSE(local-erase) with ~DSE=DFE/94 new params. **HIBD differentiation**: 0 new params, only normalization scheme change.
+
+IBN-Net (Pan 2018 ECCV): Instance Normalization channels naturally separate style; Batch Normalization channels preserve content. IN+BN parallel (IBN-b type) gives +2-3% DG in single-machine experiments. **We port IBN to FedBN + add explicit orthogonal loss**.
+
+## Method Thesis
+
+Upgrade FedDSA's "final-layer cos²" to "**hierarchical IBN-orthogonal decouple**" — replace 2 early BN layers with IBN (IN and BN parallel), explicitly enforce cos² orthogonality between IN-channel and BN-channel outputs at each IBN layer. Style (IN channel) separates from semantic (BN channel) early in backbone, not just at the end.
+
+## Contribution Focus
+
+- SINGLE main contribution: Hierarchical IBN-Orthogonal Decoupling (HIBD) — per-layer IBN + orthogonal loss, 0 new trainable.
+- NO optional supporting contribution (avoid sprawl).
+- Non-contributions: no prototype routing, no InfoNCE, no style sharing.
+
+## Proposed Method
+
+### Complexity Budget
+- Reused/frozen: backbone conv/linear, Plan A cos²+HSIC at final layer, sem_head/style_head, classifier, FedBN locality
+- New: 2 BN layers → IBN (same overall params due to InstanceNorm affine=False, BN on half channels); 1 new loss term (L_orth_layer); 2 new hyperparameters (num_ibn, λ_orth_layer)
+- 0 NEW TRAINABLE PARAMETERS
+
+### IBN Module
+
+```python
+class IBN(nn.Module):
+    def __init__(self, channels, in_ratio=0.5):
+        super().__init__()
+        self.in_ch = int(channels * in_ratio)
+        self.bn_ch = channels - self.in_ch
+        self.instance_norm = nn.InstanceNorm2d(self.in_ch, affine=False)  # 0 params
+        self.batch_norm = nn.BatchNorm2d(self.bn_ch)                      # usual gamma/beta
+    def forward(self, x):
+        x_in, x_bn = torch.split(x, [self.in_ch, self.bn_ch], dim=1)
+        out_in = self.instance_norm(x_in)
+        out_bn = self.batch_norm(x_bn)
+        return torch.cat([out_in, out_bn], dim=1)
+```
+
+### Core Mechanism — Per-layer Orthogonal Loss
+
+For each IBN layer l, take spatial mean pool of IN/BN channel outputs, then cos² orthogonality:
+
+```
+in_feat_l = global_avg_pool(out_in_l)     # [B, C_in]
+bn_feat_l = global_avg_pool(out_bn_l)     # [B, C_bn]
+# both L2 normalized along channel dim
+cos_sim_l = (normalize(in_feat_l) * normalize(bn_feat_l)).sum(dim=1)  # [B]
+L_orth_layer_l = (cos_sim_l ** 2).mean()
+L_orth_layer = (1/N_IBN) * sum_l L_orth_layer_l
+```
+
+Total loss:
+```
+L = L_CE + 1.0 * L_orth_end(Plan A) + 0.0 * L_HSIC + 0.5 * L_orth_layer(NEW)
+```
+
+### Integration
+
+- Hook: `FedDSA_CVPR25/algorithm/feddsa_scheduled.py` FedDSAModel class
+- Replace `bn1`, `bn2` (AlexNet early BNs, after conv1/conv2) with IBN instances
+- Register forward hook to collect IN/BN outputs at each IBN layer for L_orth_layer
+- 0 backbone resize, ~100 LOC total change
+
+### FedBN Rule for IBN
+- IN channel: parameter-free, per-sample normalize, no FL sync issue
+- BN channel on half channels: same as Plan A FedBN (local running_mean/var)
+
+### Failure Modes
+
+| Failure | Signal | Fallback |
+|---------|--------|----------|
+| L_orth_layer never drops | cos²(IN_l,BN_l) stuck >0.5 20+ rounds | check IN actually normalizes spatial; check pool dim |
+| PACS < Plan A | 3-seed AVG Best < 82.31% | reduce num_ibn 2→1 or λ_layer 0.5→0.1 |
+| Small batch instability | loss NaN / sudden drop | switch IN channel to GroupNorm(affine=False) |
+| Decouple active but no acc gain | cos² drops but AVG not improving | evidence Plan A is already ceiling; method essentially fails |
+
+### Novelty/Elegance
+
+- ~100 LOC, 0 new trainables, 1 new loss, 2 new hyperparameters
+- IBN-Net + explicit orthogonal loss + FedBN = novel 2×2 cell (IBN + FL + orth)
+- Theoretically grounded: IBN-Net DG success + Plan A orth framework
+- Sharply lighter than FDSE (DSE ≈ DFE/94 new params)
+
+## Claim-Driven Validation
+
+### Claim A (main): HIBD > Plan A on PACS AVG Best by ≥ +0.5%
+
+- Configs:
+  A.1 Plan A orth_only (82.31%)
+  A.2 HIBD (num_ibn=2, λ_layer=0.5)
+- 3 seeds; R=200; PACS
+- Expected: A.2 ≥ 82.81%, per-domain Art/Sketch not crashed
+- **Fast-validation gate**: R=20 sanity shows per-layer cos²(IN_l, BN_l) drops from 0.5+ to <0.3
+
+### Claim B (mechanism, diagnostic-only): Hierarchical decouple signal propagates from front to back
+
+- Track: per-layer cos²(IN_l, BN_l) evolution + final-layer cos²(z_sem, z_sty) evolution
+- Expected: HIBD's final-layer cos² also lower than Plan A's final-layer cos² (front-decouple eases end-decouple)
+- Zero extra GPU cost
+
+## Budget
+- ~17 GPU-hours total
+- 3 days end-to-end
+
+=== END PROPOSAL ===
+
+Score 7 dimensions 1-10:
+1. Problem Fidelity
+2. Method Specificity
+3. Contribution Quality
+4. Frontier Leverage
+5. Feasibility
+6. Validation Focus
+7. Venue Readiness
+
+Overall (1-10, weighted): PF 15%, MS 25%, CQ 25%, FL 15%, Feas 10%, VF 5%, VR 5%.
+
+For each < 7: weakness + concrete method-level fix + priority (CRITICAL/IMPORTANT/MINOR).
+Plus: Simplification Opportunities, Modernization Opportunities, Drift Warning, Verdict (READY/REVISE/RETHINK).
+
+Verdict rule:
+- READY: overall >= 9, no drift, focused dominant contribution, no complexity bloat
+- REVISE: promising but not at READY bar
+- RETHINK: core mechanism or framing fundamentally off
+
+This proposal is itself a pivot AFTER 85+ failures. Please be especially strict on whether HIBD is a real mechanism-level contribution vs just "throw IBN + orth loss and hope for best".
+
+Output in English.
