@@ -1,0 +1,26 @@
+# EXP-102 Office R200: Plan A + pooled whitening ONLY (no centers, no diag)
+# 目的: 量化 pooled whitening broadcast 单独对 Plan A 的贡献
+algo_para:
+- 1.0    # lo
+- 0.1    # tau_etf (无效, use_etf=0)
+- 128    # pd
+- 10     # warmup_r
+- 1e-3   # eps_sigma
+- 2      # min_clients_whiten
+- 0      # diag = OFF
+- 0      # use_etf = 0 (Linear)
+- 1      # use_whitening = 1 (关键: 保留广播)
+- 0      # use_centers = 0 (不收集 class_centers)
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

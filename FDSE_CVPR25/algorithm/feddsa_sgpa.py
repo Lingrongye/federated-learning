@@ -195,6 +195,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'min_clients_whiten': 2,  # 最少几个 client 才构造 whitening
             'diag': 0,        # 0=off, 1=enable DiagnosticLogger
             'use_etf': 1,     # 1=Fixed ETF (SGPA), 0=普通 Linear (对照)
+            'use_whitening': 1,  # 1=广播 pooled whitening (μ_global,Σ_inv_sqrt), 0=不广播
+            'use_centers': 1,    # 1=Client 收集并上传 class_centers, 0=不收集
         })
         self.sample_option = 'full'
 
@@ -234,6 +236,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             c.diag_enabled = diag_on
             c.diag_interval = 5  # Client 端每 5 轮记 Layer 1 (训练端)
             c.diag_log_dir = diag_root
+            c.use_centers = self.use_centers  # 传给 Client 控制 class_centers 收集
 
     def _init_agg_keys(self):
         """FedBN + style_head 本地; M buffer 参与聚合但因 seeded 一致所以不影响."""
@@ -277,7 +280,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                 self.style_bank[cid] = style
 
         # 3. Rebuild pooled whitening once we have enough clients
-        if len(self.style_bank) >= self.min_clients_whiten:
+        # (按 use_whitening flag 开关, 消融实验用)
+        if getattr(self, 'use_whitening', 1) == 1 and len(self.style_bank) >= self.min_clients_whiten:
             self._compute_pooled_whitening()
 
         # 4. Diagnostic: Layer 2 指标 (client_center_variance + param_drift)
@@ -545,8 +549,10 @@ class Client(flgo.algorithm.fedbase.BasicClient):
 
         # Class centers (for Layer 2: client_center_variance).
         # 缺失类用 NaN 填充 (而非 0), server 端按类过滤避免假 variance.
+        # 按 use_centers flag 开关, 消融实验用 (默认 1).
         self._local_class_centers = None
-        if last_epoch_z_sem:
+        use_centers_flag = getattr(self, 'use_centers', 1)
+        if use_centers_flag == 1 and last_epoch_z_sem:
             Z_sem = torch.cat(last_epoch_z_sem, dim=0)
             Y = torch.cat(last_epoch_y, dim=0)
             K = self.model.num_classes
@@ -790,11 +796,14 @@ def init_global_module(object):
     num_classes = _resolve_num_classes(task)
 
     # 读 use_etf from algo_para (index 7, zero-based)
-    # init_algo_para 顺序: lo, tau_etf, pd, warmup_r, eps_sigma, min_clients_whiten, diag, use_etf
+    # init_algo_para 顺序: lo, tau_etf, pd, warmup_r, eps_sigma, min_clients_whiten,
+    #                     diag, use_etf, use_whitening, use_centers
     use_etf = True  # default
     algo_para = object.option.get('algo_para', None)
     if algo_para is not None and len(algo_para) >= 8:
         use_etf = bool(int(algo_para[7]))
+    # use_whitening / use_centers 不影响 model 结构, 但由 Server.initialize 通过
+    # self.use_whitening / self.use_centers 控制 (见上方 init_algo_para)
 
     object.model = FedDSASGPAModel(
         num_classes=num_classes, feat_dim=1024, proj_dim=128,

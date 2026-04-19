@@ -1,0 +1,27 @@
+# EXP-104 Office R200: Plan A + whitening + centers, BUT diag=0
+# = 同 EXP-100 Linear 配置但不跑 diag 框架
+# 目的: 查 diag 框架本身是否有副作用
+algo_para:
+- 1.0    # lo
+- 0.1    # tau_etf (无效)
+- 128    # pd
+- 10     # warmup_r
+- 1e-3   # eps_sigma
+- 2      # min_clients_whiten
+- 0      # diag = OFF (vs EXP-100 diag=1)
+- 0      # use_etf = 0 (Linear)
+- 1      # use_whitening = 1
+- 1      # use_centers = 1
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
