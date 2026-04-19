@@ -1,0 +1,28 @@
+# EXP-106 Office R200: Plan A + whitening + lambda_etf_pull=0.01 (Codex 推荐小范围)
+# 对照 EXP-102 whitening only (89.26% baseline) 看 soft ETF pull 能否 on-top 提分
+algo_para:
+- 1.0    # lo
+- 0.1    # tau_etf
+- 128    # pd
+- 10     # warmup_r
+- 1e-3   # eps_sigma
+- 2      # min_clients_whiten
+- 1      # diag = ON (跟踪 intra_cls/etf_align/loss_etf_pull)
+- 0      # use_etf = 0 (Linear)
+- 1      # use_whitening = 1 (EXP-102 winning config)
+- 0      # use_centers = 0
+- 0      # se = 0
+- 0.01   # lambda_etf_pull = 0.01 (Codex 推荐小范围起点)
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
