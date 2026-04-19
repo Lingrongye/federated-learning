@@ -338,37 +338,57 @@ class TestProtoFill:
 
 class TestProtoETFOffset:
     def test_aligned(self):
-        """proto = M[:, c] → offset = 0."""
+        """proto = M[:, c] → offset = 0, all valid."""
         K, d = 4, 8
         M = torch.randn(d, K)
         proto = [M[:, c].clone() for c in range(K)]
-        mean_off, _ = DL.proto_etf_offset(proto, M, K)
+        mean_off, offsets, n_valid = DL.proto_etf_offset(proto, M, K)
         assert abs(mean_off) < 1e-5
+        assert n_valid == K
+        assert all(o is not None and abs(o) < 1e-5 for o in offsets)
 
     def test_opposite(self):
-        """proto = -M[:, c] → offset = 2."""
+        """proto = -M[:, c] → offset = 2, all valid."""
         K, d = 4, 8
         M = torch.randn(d, K)
         proto = [-M[:, c].clone() for c in range(K)]
-        mean_off, offsets = DL.proto_etf_offset(proto, M, K)
-        assert all(abs(o - 2.0) < 1e-5 for o in offsets)
+        mean_off, offsets, n_valid = DL.proto_etf_offset(proto, M, K)
+        assert n_valid == K
+        assert all(o is not None and abs(o - 2.0) < 1e-5 for o in offsets)
+        assert abs(mean_off - 2.0) < 1e-5
 
-    def test_none_proto(self):
-        """proto[c] = None → offset = 0 (跳过)."""
+    def test_none_proto_returns_nan_not_zero(self):
+        """CRITICAL FIX: proto[c] = None → mean=nan, n_valid=0 (不能当 0!)."""
         K, d = 4, 8
         M = torch.randn(d, K)
         proto = [None] * K
-        mean_off, offsets = DL.proto_etf_offset(proto, M, K)
-        assert mean_off == 0.0
-        assert all(o == 0.0 for o in offsets)
+        mean_off, offsets, n_valid = DL.proto_etf_offset(proto, M, K)
+        assert math.isnan(mean_off)
+        assert n_valid == 0
+        assert all(o is None for o in offsets)
 
-    def test_zero_proto(self):
-        """proto[c] 是零向量 → offset = 0."""
+    def test_zero_proto_returns_nan(self):
+        """零向量被识别为 invalid, 不混入 mean."""
         K, d = 4, 8
         M = torch.randn(d, K)
         proto = [torch.zeros(d) for _ in range(K)]
-        mean_off, _ = DL.proto_etf_offset(proto, M, K)
-        assert mean_off == 0.0
+        mean_off, offsets, n_valid = DL.proto_etf_offset(proto, M, K)
+        assert math.isnan(mean_off)
+        assert n_valid == 0
+        assert all(o is None for o in offsets)
+
+    def test_mixed_valid_invalid(self):
+        """部分 valid: mean 只对 valid 取."""
+        K, d = 4, 8
+        M = torch.randn(d, K)
+        # valid: c=0,1 对齐 (offset=0); invalid: c=2,3
+        proto = [M[:, 0].clone(), M[:, 1].clone(), None, torch.zeros(d)]
+        mean_off, offsets, n_valid = DL.proto_etf_offset(proto, M, K)
+        assert n_valid == 2
+        assert abs(mean_off) < 1e-5
+        assert offsets[0] is not None and abs(offsets[0]) < 1e-5
+        assert offsets[2] is None
+        assert offsets[3] is None
 
 
 class TestFallbackRate:
@@ -490,6 +510,211 @@ class TestRecordAndDump:
 # =========================================================================
 
 
+class TestEdgeCasesEmptyInputs:
+    """Codex MUST_FIX: degenerate inputs 不能 crash, 应返回 nan."""
+
+    def test_client_center_variance_empty(self):
+        assert math.isnan(DL.client_center_variance([]))
+
+    def test_client_center_variance_single(self):
+        """N=1 不能估方差 → nan."""
+        c = torch.randn(7, 128)
+        assert math.isnan(DL.client_center_variance([c]))
+
+    def test_param_drift_empty(self):
+        global_p = torch.zeros(10)
+        assert math.isnan(DL.param_drift([], global_p))
+
+    def test_gate_rates_empty(self):
+        H = torch.zeros(0)
+        d = torch.zeros(0)
+        r = DL.gate_rates(H, d, 1.0, 1.0)
+        assert all(math.isnan(v) for v in r.values())
+
+    def test_dist_distribution_empty(self):
+        r = DL.dist_distribution(torch.zeros(0))
+        assert all(math.isnan(v) for v in r.values())
+
+    def test_fallback_rate_empty(self):
+        assert math.isnan(DL.fallback_rate(torch.zeros(0, dtype=torch.bool)))
+
+    def test_prediction_accuracy_empty_with_labels(self):
+        r = DL.prediction_accuracy(torch.zeros(0, dtype=torch.long),
+                                    torch.zeros(0, dtype=torch.long),
+                                    torch.zeros(0, dtype=torch.long))
+        assert math.isnan(r['proto_acc'])
+        assert math.isnan(r['pred_agree'])
+
+
+class TestNaNInfSerialization:
+    """Codex MUST_FIX: NaN/Inf → null, 否则 JSON 非法."""
+
+    def test_nan_becomes_null(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dl = DL(client_id=0, stage='train', log_dir=tmpdir, dump_every_n=1)
+            dl.record(1, {'bad_metric': float('nan'), 'good': 0.5})
+            content = dl.log_path.read_text(encoding='utf-8').strip()
+            # json.loads strict mode 不接受 NaN
+            d = json.loads(content)  # 不应抛
+            assert d['bad_metric'] is None
+            assert d['good'] == 0.5
+
+    def test_inf_becomes_null(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dl = DL(client_id=0, stage='train', log_dir=tmpdir, dump_every_n=1)
+            dl.record(1, {'inf_metric': float('inf'),
+                          'ninf_metric': float('-inf')})
+            d = json.loads(dl.log_path.read_text(encoding='utf-8').strip())
+            assert d['inf_metric'] is None
+            assert d['ninf_metric'] is None
+
+    def test_tensor_with_nan(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dl = DL(client_id=0, stage='train', log_dir=tmpdir, dump_every_n=1)
+            t = torch.tensor([1.0, float('nan'), 3.0])
+            dl.record(1, {'arr': t})
+            d = json.loads(dl.log_path.read_text(encoding='utf-8').strip())
+            assert d['arr'] == [1.0, None, 3.0]
+
+    def test_scalar_nan_tensor(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dl = DL(client_id=0, stage='train', log_dir=tmpdir, dump_every_n=1)
+            dl.record(1, {'val': torch.tensor(float('nan'))})
+            d = json.loads(dl.log_path.read_text(encoding='utf-8').strip())
+            assert d['val'] is None
+
+
+class TestCloseAndContextManager:
+    """Codex SHOULD_FIX: finalization API, 避免最后 <dump_every_n 数据丢失."""
+
+    def test_close_flushes_remaining(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dl = DL(client_id=0, stage='train', log_dir=tmpdir, dump_every_n=10)
+            dl.record(1, {'a': 1})
+            dl.record(2, {'a': 2})
+            dl.record(3, {'a': 3})
+            # Without close, these 3 would be lost
+            dl.close()
+            path = dl.log_path
+            assert path.exists()
+            lines = path.read_text(encoding='utf-8').strip().split('\n')
+            assert len(lines) == 3
+
+    def test_close_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dl = DL(client_id=0, stage='train', log_dir=tmpdir, dump_every_n=10)
+            dl.record(1, {'a': 1})
+            dl.close()
+            dl.close()  # 第二次不应 crash
+            lines = dl.log_path.read_text(encoding='utf-8').strip().split('\n')
+            assert len(lines) == 1
+
+    def test_record_after_close_raises(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dl = DL(client_id=0, stage='train', log_dir=tmpdir, dump_every_n=10)
+            dl.close()
+            with pytest.raises(RuntimeError):
+                dl.record(1, {'a': 1})
+
+    def test_context_manager(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with DL(client_id=0, stage='train', log_dir=tmpdir, dump_every_n=10) as dl:
+                dl.record(1, {'x': 1.0})
+                dl.record(2, {'x': 2.0})
+            # exit 自动 close + flush
+            path = Path(tmpdir) / 'diag_train_client0.jsonl'
+            lines = path.read_text(encoding='utf-8').strip().split('\n')
+            assert len(lines) == 2
+
+
+class TestRunIdNaming:
+    """Codex SHOULD_FIX: run_id 区分多次运行."""
+
+    def test_run_id_suffix(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dl1 = DL(client_id=0, stage='train', log_dir=tmpdir,
+                     dump_every_n=1, run_id='run1')
+            dl2 = DL(client_id=0, stage='train', log_dir=tmpdir,
+                     dump_every_n=1, run_id='run2')
+            dl1.record(1, {'a': 1})
+            dl2.record(1, {'a': 2})
+            assert (Path(tmpdir) / 'diag_train_client0_run1.jsonl').exists()
+            assert (Path(tmpdir) / 'diag_train_client0_run2.jsonl').exists()
+
+    def test_no_run_id_backward_compat(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dl = DL(client_id=0, stage='train', log_dir=tmpdir, dump_every_n=1)
+            dl.record(1, {'a': 1})
+            assert (Path(tmpdir) / 'diag_train_client0.jsonl').exists()
+
+
+class TestBfloat16Compat:
+    """Codex SHOULD_FIX: bfloat16/half precision 输入不能 crash."""
+
+    def test_dist_distribution_bfloat16(self):
+        # cpu bfloat16 支持基本算子, 但 .numpy() 之前需要 cast
+        arr = torch.tensor([1.0, 2.0, 3.0, 4.0]).to(torch.bfloat16)
+        r = DL.dist_distribution(arr)
+        # 不 crash, 返回值合理
+        assert 0.9 <= r['dist_min_min'] <= 1.1
+        assert 3.9 <= r['dist_min_max'] <= 4.1
+
+    def test_sigma_cond_float16(self):
+        Sigma = torch.eye(4).to(torch.float16)
+        cond = DL.sigma_condition_number(Sigma)
+        assert abs(cond - 1.0) < 0.1  # float16 精度下仍接近 1
+
+
+class TestFeatureNormStats:
+    """Metric 新增: z_sty/z_sem norm 分布."""
+
+    def test_basic(self):
+        z = torch.tensor([[3.0, 4.0], [6.0, 8.0], [0.0, 0.0]])
+        r = DL.feature_norm_stats(z, name='z_sty')
+        assert abs(r['z_sty_norm_mean'] - 5.0) < 1e-5  # (5+10+0)/3
+        assert abs(r['z_sty_norm_min']) < 1e-5
+        assert abs(r['z_sty_norm_max'] - 10.0) < 1e-5
+
+    def test_empty(self):
+        z = torch.zeros(0, 128)
+        r = DL.feature_norm_stats(z, name='z')
+        assert all(math.isnan(v) for v in r.values())
+
+    def test_single_sample_std_zero(self):
+        z = torch.tensor([[3.0, 4.0]])
+        r = DL.feature_norm_stats(z)
+        assert abs(r['z_norm_mean'] - 5.0) < 1e-5
+        assert r['z_norm_std'] == 0.0
+
+
+class TestPerClassAccuracy:
+    """Metric 新增: per-class accuracy + zero-support detection."""
+
+    def test_uniform(self):
+        K = 3
+        labels = torch.tensor([0, 0, 1, 1, 2, 2])
+        pred = torch.tensor([0, 0, 1, 1, 2, 2])  # all correct
+        r = DL.per_class_accuracy(pred, labels, K)
+        assert r['min_class_acc'] == 1.0
+        assert r['mean_class_acc'] == 1.0
+        assert r['zero_support_class_count'] == 0
+
+    def test_min_class_lower(self):
+        K = 3
+        labels = torch.tensor([0, 0, 1, 1, 2, 2])
+        pred = torch.tensor([0, 0, 1, 1, 0, 2])  # class 2: 50%
+        r = DL.per_class_accuracy(pred, labels, K)
+        assert r['min_class_acc'] == 0.5
+        assert abs(r['mean_class_acc'] - (1.0 + 1.0 + 0.5) / 3) < 1e-5
+
+    def test_zero_support(self):
+        K = 3
+        labels = torch.tensor([0, 0, 0])  # 没有 class 1, 2
+        pred = torch.tensor([0, 0, 0])
+        r = DL.per_class_accuracy(pred, labels, K)
+        assert r['zero_support_class_count'] == 2
+
+
 class TestEndToEnd:
     def test_full_training_round(self):
         """模拟一轮训练: 计算所有 Layer 1 指标并 record."""
@@ -558,7 +783,9 @@ class TestEndToEnd:
             metrics.update(DL.whitening_reduction(z_sty_raw, z_sty_white, mu_raw, mu_white))
             metrics['sigma_cond'] = DL.sigma_condition_number(Sigma)
             _, metrics['proto_fill_mean'] = DL.proto_fill(supports, K)
-            metrics['proto_etf_offset_mean'], _ = DL.proto_etf_offset(proto, M, K)
+            mean_off, _, n_valid = DL.proto_etf_offset(proto, M, K)
+            metrics['proto_etf_offset_mean'] = mean_off
+            metrics['proto_n_valid'] = n_valid
             metrics['fallback_rate'] = DL.fallback_rate(activated)
             metrics.update(DL.prediction_accuracy(pred_proto, pred_etf, labels))
 

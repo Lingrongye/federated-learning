@@ -192,13 +192,30 @@ with torch.no_grad():
 # 9. 推理端: proto_acc vs etf_acc per domain
 ```
 
-## 六、测试验证结果 ✅
+## 六、测试验证结果 ✅ (经过 codex 审核 + 修复后)
 
 **文件**: `FDSE_CVPR25/tests/test_sgpa_diagnostic_logger.py`
 **运行**: `D:/anaconda/python.exe -m pytest FDSE_CVPR25/tests/test_sgpa_diagnostic_logger.py -v`
 
-### 测试结果 (2026-04-19 跑通)
-- **53 / 53 tests passed** (4.59 秒,零失败)
+### Codex GPT-5.4 xhigh 代码审核 (2026-04-19)
+- 初版 OVERALL 6/10 REVISE,找出 3 个 MUST_FIX + 7 个 SHOULD_FIX
+- **MUST_FIX 全部修复**:
+  1. `proto_etf_offset` 不再把 invalid proto 当 offset=0 (现在返回 nan + n_valid count,暴露 cold-start)
+  2. 所有 empty tensor / empty client list 返回 nan 而非 crash
+  3. NaN/Inf 在 JSON 写入时转 null (通过 `_sanitize_for_json` 递归处理)
+- **SHOULD_FIX 已修**:
+  - 加 `close()` 方法 + context manager (`__enter__/__exit__`) 防止最后 <dump_every_n 数据丢失
+  - `run_id` 参数区分多次运行,避免日志混合
+  - `sigma_condition_number` 只 upcast half/bfloat16,float64 保持精度
+  - `dist_distribution` 支持 bfloat16 (通过 `.float()` cast)
+  - `gate_rates` docstring 改为 "marginal rates",不误导
+- **新增 metric (SUGGESTIONS)**:
+  - `feature_norm_stats(z, name)` — 暴露 z_sty/z_sem 坍塌/爆炸
+  - `per_class_accuracy(pred, labels, K)` — min_class_acc + zero_support_class_count
+
+### 测试结果 (修复后)
+- **79 / 79 tests passed** (3.44 秒,零失败)
+- 初版 53 → 修复后 79 (新增 26 个测试覆盖 codex 指出的 bug)
 - 覆盖:
   - TestOrthogonality × 4 (identical, orthogonal, antiparallel, B=1 edge case)
   - TestETFAlignment × 4 (perfect, random, missing_classes, empty_batch)
