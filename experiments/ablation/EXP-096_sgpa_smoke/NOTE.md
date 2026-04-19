@@ -127,3 +127,68 @@ nohup $PY run_single.py --task office_caltech10_c4 --algorithm feddsa_sgpa --gpu
 3. **EXP-099**: 独立 script 测试 SGPA 完整推理路径 (test_with_sgpa),验证 proto_vs_etf_gain
 4. **EXP-100**: 对照组 Linear classifier R200 on Office (同配置) 量化 ETF 贡献
 
+---
+
+## 附加: v3 diag=1 完整诊断数据 (2026-04-19 22:55)
+
+v3 启用 DiagnosticLogger 后重跑 seed=2 R50,accuracy 与 v2 基本一致 (AVG Best 84.98% vs 84.47%, 非确定性波动),但多产出完整 Layer 1 + Layer 2 诊断。
+
+### R50 accuracy (v3)
+| 指标 | R0 | R50 | max |
+|------|-----|-----|-----|
+| AVG | 10.84% | 83.09% | **84.98%** |
+| ALL | 8.79% | 76.97% | 77.78% |
+| CE loss | 2.50 | 0.65 | — |
+
+### Layer 1 (Client 0 train diag, R5→R50 10 records)
+
+| Round | orth | etf_align | intra_cls_sim | inter_cls_sim | loss_task |
+|-------|------|-----------|---------------|---------------|-----------|
+| R5 | 0.0037 | 0.30 | 0.66 | 0.64 | 1.28 |
+| R30 | 0.0005 | 0.79 | 0.81 | **-0.07** | 0.008 |
+| R50 | 0.0003 | **0.83** | 0.85 | **-0.08** | 0.003 |
+
+### Layer 2 (Server agg, R1→R50 50 records)
+
+| Round | client_center_var | param_drift | n_valid_cls |
+|-------|-------------------|-------------|-------------|
+| R1 | 0.0254 | 0.749 | 10 |
+| R26 | 0.0027 | 0.046 | 10 |
+| R50 | **0.0019** | **0.003** | 10 |
+
+### 🔥 关键发现:Neural Collapse 在 FedDSA-SGPA 里首次被观测到
+
+1. **etf_align 从 R5=0.30 → R50=0.83** — z_sem 正在对齐单纯形 ETF 顶点 (理论上限=1)
+2. **inter_cls_sim R50=-0.08, 理论单纯形下界=-1/(K-1)=-1/9=-0.111** — 我们达到理论最优类分离的 **72%**
+3. **client_center_var R50=0.0019 (R1=0.025, -93%)** — Fixed ETF 作为跨 client shared anchor 极其有效
+4. **param_drift R50=0.003 (R1=0.749, -99.6%)** — FedAvg 完全收敛,classifier 漂移被 ETF 根除
+5. CE loss R50=0.003 — 训练端已饱和
+
+**这就是 "为什么 smoke test R50 就超 Plan A R200" 的根因证据**:ETF 几何约束 + 正交解耦让 z_sem 极快对齐单纯形顶点 (Neural Collapse 的 NC2 性质),而 Plan A 的 Linear classifier 没有这个内在几何引导,所以需要更长训练才能让 backbone 自发找到类中心。
+
+### 诊断文件位置
+
+```
+FDSE_CVPR25/task/office_caltech10_c4/diag_logs/R50_S2/
+├── diag_aggregate_client-1.jsonl   7.7 KB, 50 rounds
+├── diag_train_client0.jsonl        5.6 KB, 10 records (R5,10,...,50)
+├── diag_train_client1.jsonl        5.6 KB
+├── diag_train_client2.jsonl        5.7 KB
+└── diag_train_client3.jsonl        5.6 KB
+```
+
+### 3 个 bug 修复记录
+
+| Version | Bug | Fix |
+|---------|-----|-----|
+| v1 | `num_classes=7` 默认值与 Office K=10 不匹配导致 CUDA assert | `_MODEL_MAP` 按 task 前缀 dispatch (commit `cf0c47a`) |
+| v2 | Client 缺失类 `centers[c]=0` 会误导 `client_center_var` | NaN-fill + server 端按类过滤 (commit `32ebc8e`) |
+| v2 | `Client.initialize` hard-override `self.diag_log_dir=None` 覆盖 Server 设值 → Layer 1 完全不写 | 用 `getattr(self, 'diag_log_dir', None)` 保留 Server 设值 (commit `926bf18`) |
+
+### 下一步更新 (EXP-097 优先级)
+
+- [ ] **EXP-097 Office 3-seed × R200**: 验证 84.98% 不是 seed=2 运气,同时观察 etf_align 是否 R200 能更接近 1
+- [ ] **EXP-098 PACS 3-seed × R200**: K=7 下 inter_cls_sim 理论下界 = -1/6 = -0.167
+- [ ] **EXP-099 独立 SGPA 推理 script**: 测 proto_vs_etf_gain (Layer 3 指标)
+- [ ] **EXP-100 Linear 对照 R200 on Office**: 同训练配置换回 `nn.Linear(128, K)`, 量化 "ETF 本身" 的贡献
+
