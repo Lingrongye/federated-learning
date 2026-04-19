@@ -293,6 +293,98 @@ class TestSGPAInferenceLogic:
 # ============================================================
 
 
+class TestUseETFFlag:
+    """Linear 对照 (use_etf=0) vs ETF (use_etf=1) 路径测试."""
+
+    def test_etf_default(self):
+        """默认 use_etf=True, 有 M buffer, head is None."""
+        m = FedDSASGPAModel(num_classes=10)
+        assert m.use_etf is True
+        assert hasattr(m, 'M') and m.M.shape == (128, 10)
+        assert m.head is None
+
+    def test_linear_mode_has_trainable_head(self):
+        """use_etf=False → head 是 nn.Linear, 可训参数."""
+        m = FedDSASGPAModel(num_classes=10, use_etf=False)
+        assert m.use_etf is False
+        assert isinstance(m.head, torch.nn.Linear)
+        assert m.head.weight.shape == (10, 128)
+        # head 参数应在 parameters() 里
+        param_ids = {id(p) for p in m.parameters()}
+        assert id(m.head.weight) in param_ids
+        assert id(m.head.bias) in param_ids
+
+    def test_linear_mode_still_has_M_buffer(self):
+        """use_etf=False 时 M 仍作为 buffer 存在 (供诊断 etf_align 不 crash)."""
+        m = FedDSASGPAModel(num_classes=10, use_etf=False)
+        assert hasattr(m, 'M') and m.M.shape == (128, 10)
+        # 但 M 不在 parameters (还是 buffer)
+        param_ids = {id(p) for p in m.parameters()}
+        assert id(m.M) not in param_ids
+
+    def test_classify_etf_path(self):
+        """ETF 路径: logits = normalize(z_sem) @ M / tau."""
+        torch.manual_seed(0)
+        m = FedDSASGPAModel(num_classes=10, tau_etf=0.1, use_etf=True)
+        m.eval()
+        z_sem = torch.randn(4, 128)
+        with torch.no_grad():
+            logits = m.classify(z_sem)
+            expected = F.normalize(z_sem, dim=-1) @ m.M / 0.1
+        assert torch.allclose(logits, expected, atol=1e-5)
+
+    def test_classify_linear_path(self):
+        """Linear 路径: logits = head(z_sem)."""
+        torch.manual_seed(0)
+        m = FedDSASGPAModel(num_classes=10, use_etf=False)
+        m.eval()
+        z_sem = torch.randn(4, 128)
+        with torch.no_grad():
+            logits = m.classify(z_sem)
+            expected = m.head(z_sem)
+        assert torch.allclose(logits, expected, atol=1e-5)
+
+    def test_etf_vs_linear_shape_identical(self):
+        """两个路径输出 shape 完全一致 (都是 [B, K])."""
+        torch.manual_seed(0)
+        m_etf = FedDSASGPAModel(num_classes=10, use_etf=True)
+        m_lin = FedDSASGPAModel(num_classes=10, use_etf=False)
+        m_etf.eval(); m_lin.eval()
+        x = torch.randn(5, 3, 224, 224)
+        with torch.no_grad():
+            l_etf = m_etf(x)
+            l_lin = m_lin(x)
+        assert l_etf.shape == l_lin.shape == (5, 10)
+
+    def test_linear_gradient_flow(self):
+        """use_etf=False 下 CE loss 对 head 和 backbone 都有梯度."""
+        torch.manual_seed(0)
+        m = FedDSASGPAModel(num_classes=7, use_etf=False)
+        m.train()
+        x = torch.randn(4, 3, 224, 224)
+        y = torch.randint(0, 7, (4,))
+        logits = m(x)
+        loss = F.cross_entropy(logits, y)
+        loss.backward()
+        # head 有梯度
+        assert m.head.weight.grad is not None
+        assert m.head.weight.grad.norm().item() > 0
+        # backbone 有梯度
+        assert m.encoder.fc1.weight.grad is not None
+        assert m.encoder.fc1.weight.grad.norm().item() > 0
+        # M buffer 无梯度
+        assert m.M.grad is None
+
+    def test_etf_head_param_count_zero(self):
+        """ETF 模型相比 Linear 模型少了 K*(d+1) 可训参数 (head weight + bias)."""
+        m_etf = FedDSASGPAModel(num_classes=10, use_etf=True)
+        m_lin = FedDSASGPAModel(num_classes=10, use_etf=False)
+        n_etf = sum(p.numel() for p in m_etf.parameters() if p.requires_grad)
+        n_lin = sum(p.numel() for p in m_lin.parameters() if p.requires_grad)
+        # Linear head = 128*10 + 10 = 1290
+        assert n_lin - n_etf == 128 * 10 + 10
+
+
 class TestEndToEnd:
     def test_model_forward_with_random_batch(self):
         """端到端 smoke: model(x) 不 crash, 产出合理 logits."""

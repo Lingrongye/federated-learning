@@ -1,0 +1,24 @@
+# EXP-098 PACS R200: FedDSA-SGPA on PACS (use_etf=1), 4-outlier feature skew stress test
+# Waits for GPU (SCPR v2 still running on PACS slots)
+algo_para:
+- 1.0    # lo = lambda_orth
+- 0.1    # tau_etf
+- 128    # pd = proj_dim
+- 10     # warmup_r
+- 1e-3   # eps_sigma
+- 2      # min_clients_whiten
+- 1      # diag = ON
+- 1      # use_etf = 1
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5              # PACS 惯例 E=5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

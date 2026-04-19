@@ -117,14 +117,26 @@ def build_etf_matrix(feat_dim: int, num_classes: int, seed: int = 0) -> torch.Te
 
 
 class FedDSASGPAModel(fuf.FModule):
-    """FedDSA-SGPA model: AlexNet + dual head + Fixed ETF classifier."""
+    """FedDSA-SGPA model: AlexNet + dual head + (Fixed ETF | Linear) classifier.
+
+    use_etf 控制分类头类型 (保持其他所有基础设施不变, 纯控制变量对照):
+      - use_etf=True  (default): Fixed Simplex ETF buffer, 零可训参数, 所有 client seeded 一致
+      - use_etf=False: 普通 nn.Linear(proj_dim, K), 参加 FedAvg 聚合 (Plan A 风格)
+
+    两个分支都支持:
+      - encode / get_semantic / get_style 双头接口不变
+      - classify() 统一入口 (forward 内部调用)
+      - ETF 路径 logits = normalize(z_sem) @ M / τ_etf
+      - Linear 路径 logits = head(z_sem)
+    """
 
     def __init__(self, num_classes=7, feat_dim=1024, proj_dim=128,
-                 tau_etf=0.1, etf_seed=0):
+                 tau_etf=0.1, etf_seed=0, use_etf=True):
         super().__init__()
         self.num_classes = num_classes
         self.proj_dim = proj_dim
         self.tau_etf = tau_etf
+        self.use_etf = use_etf
 
         self.encoder = AlexNetEncoder()
         self.semantic_head = nn.Sequential(
@@ -133,9 +145,17 @@ class FedDSASGPAModel(fuf.FModule):
         self.style_head = nn.Sequential(
             nn.Linear(feat_dim, proj_dim), nn.ReLU(), nn.Linear(proj_dim, proj_dim)
         )
-        # Fixed Simplex ETF buffer (所有 client 共享, 不参加聚合漂移)
-        M = build_etf_matrix(proj_dim, num_classes, seed=etf_seed)
-        self.register_buffer('M', M)
+        if use_etf:
+            # Fixed Simplex ETF buffer (所有 client 共享, 不参加聚合漂移)
+            M = build_etf_matrix(proj_dim, num_classes, seed=etf_seed)
+            self.register_buffer('M', M)
+            self.head = None  # explicit None, forward 走 classify() ETF 路径
+        else:
+            # 普通 Linear head, Plan A 风格 (参加 FedAvg)
+            self.head = nn.Linear(proj_dim, num_classes)
+            # 仍 register 一个 dummy M (全零) 以便 diag Layer 1 的 etf_alignment 不 crash
+            # (虽然 alignment 对 Linear 没意义, 但至少不报错. 诊断会自然显示 align ≈ 0)
+            self.register_buffer('M', build_etf_matrix(proj_dim, num_classes, seed=etf_seed))
 
     def encode(self, x):
         return self.encoder(x)
@@ -147,9 +167,11 @@ class FedDSASGPAModel(fuf.FModule):
         return self.style_head(h)
 
     def classify(self, z_sem: torch.Tensor) -> torch.Tensor:
-        """统一分类接口: logits = normalize(z_sem) @ M / τ_etf."""
-        z_norm = F.normalize(z_sem, dim=-1)
-        return z_norm @ self.M / self.tau_etf
+        """统一分类接口. ETF: normalize(z_sem) @ M / τ; Linear: head(z_sem)."""
+        if self.use_etf:
+            z_norm = F.normalize(z_sem, dim=-1)
+            return z_norm @ self.M / self.tau_etf
+        return self.head(z_sem)
 
     def forward(self, x):
         h = self.encode(x)
@@ -166,12 +188,13 @@ class Server(flgo.algorithm.fedbase.BasicServer):
     def initialize(self):
         self.init_algo_para({
             'lo': 1.0,        # lambda_orth
-            'tau_etf': 0.1,   # Fixed ETF temperature
+            'tau_etf': 0.1,   # Fixed ETF temperature (use_etf=0 时无意义但仍传递)
             'pd': 128,        # proj_dim
             'warmup_r': 10,   # warmup rounds before enabling style bank
             'eps_sigma': 1e-3,  # Σ_global 正则化
             'min_clients_whiten': 2,  # 最少几个 client 才构造 whitening
             'diag': 0,        # 0=off, 1=enable DiagnosticLogger
+            'use_etf': 1,     # 1=Fixed ETF (SGPA), 0=普通 Linear (对照)
         })
         self.sample_option = 'full'
 
@@ -737,23 +760,39 @@ def init_local_module(object):
 
 
 # Task prefix → num_classes dispatch (与 feddsa_scheduled.py 保持一致)
-_MODEL_MAP = {
-    'PACS': lambda: FedDSASGPAModel(num_classes=7, feat_dim=1024, proj_dim=128),
-    'office': lambda: FedDSASGPAModel(num_classes=10, feat_dim=1024, proj_dim=128),
-    'domainnet': lambda: FedDSASGPAModel(num_classes=10, feat_dim=1024, proj_dim=128),
+_TASK_NUM_CLASSES = {
+    'PACS': 7,
+    'office': 10,
+    'domainnet': 10,
 }
 
 
+def _resolve_num_classes(task_name: str) -> int:
+    for prefix, K in _TASK_NUM_CLASSES.items():
+        if prefix.lower() in task_name.lower():
+            return K
+    return 7  # fallback
+
+
 def init_global_module(object):
-    """只 server 创建 global model, client init 时 deepcopy."""
+    """只 server 创建 global model, client init 时 deepcopy.
+
+    从 option['algo_para'] 里读 use_etf (第 8 个参数, 按 init_algo_para 顺序),
+    若未传则默认 use_etf=1 (ETF).
+    """
     if 'Server' not in object.__class__.__name__:
         return
     task = os.path.basename(object.option['task'])
-    for prefix, factory in _MODEL_MAP.items():
-        if prefix.lower() in task.lower():
-            object.model = factory().to(object.device)
-            return
-    # Fallback: PACS-like 7 classes
+    num_classes = _resolve_num_classes(task)
+
+    # 读 use_etf from algo_para (index 7, zero-based)
+    # init_algo_para 顺序: lo, tau_etf, pd, warmup_r, eps_sigma, min_clients_whiten, diag, use_etf
+    use_etf = True  # default
+    algo_para = object.option.get('algo_para', None)
+    if algo_para is not None and len(algo_para) >= 8:
+        use_etf = bool(int(algo_para[7]))
+
     object.model = FedDSASGPAModel(
-        num_classes=7, feat_dim=1024, proj_dim=128
+        num_classes=num_classes, feat_dim=1024, proj_dim=128,
+        use_etf=use_etf,
     ).to(object.device)
