@@ -1,0 +1,24 @@
+# EXP-096 Office smoke test: FedDSA-SGPA R50, seed=2 (1 seed only)
+# Purpose: 验证 Fixed ETF classifier + SGPA inference pipeline 可跑通, CE loss 下降, 不 NaN
+# 不是最终性能实验 — 3-seed R200 留在后续 EXP 做
+algo_para:
+- 1.0    # lo = lambda_orth
+- 0.1    # tau_etf (Fixed ETF 温度)
+- 128    # pd = proj_dim
+- 10     # warmup_r (聚合 whitening 前的 warmup 轮)
+- 1e-3   # eps_sigma
+- 2      # min_clients_whiten
+- 0      # diag = off (smoke test 不启用 diagnostic logger, 第二轮再加)
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 50       # smoke test: R50 not R200
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
