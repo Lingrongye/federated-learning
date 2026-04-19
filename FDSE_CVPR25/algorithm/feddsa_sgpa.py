@@ -605,9 +605,24 @@ def init_local_module(object):
     pass
 
 
+# Task prefix → num_classes dispatch (与 feddsa_scheduled.py 保持一致)
+_MODEL_MAP = {
+    'PACS': lambda: FedDSASGPAModel(num_classes=7, feat_dim=1024, proj_dim=128),
+    'office': lambda: FedDSASGPAModel(num_classes=10, feat_dim=1024, proj_dim=128),
+    'domainnet': lambda: FedDSASGPAModel(num_classes=10, feat_dim=1024, proj_dim=128),
+}
+
+
 def init_global_module(object):
-    num_classes = getattr(object, 'num_classes', 7)
-    proj_dim = 128
+    """只 server 创建 global model, client init 时 deepcopy."""
+    if 'Server' not in object.__class__.__name__:
+        return
+    task = os.path.basename(object.option['task'])
+    for prefix, factory in _MODEL_MAP.items():
+        if prefix.lower() in task.lower():
+            object.model = factory().to(object.device)
+            return
+    # Fallback: PACS-like 7 classes
     object.model = FedDSASGPAModel(
-        num_classes=num_classes, feat_dim=1024, proj_dim=proj_dim
+        num_classes=7, feat_dim=1024, proj_dim=128
     ).to(object.device)
