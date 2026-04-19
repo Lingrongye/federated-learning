@@ -2,7 +2,41 @@
 
 > **提问**:总结 SCPR 方案到知识笔记
 > **Refine 结果**:GPT-5.4 xhigh 5 轮审核,**9.1/10 READY** ✅
+> **实验 verdict(2026-04-19 更新)**:❌ **全面证伪** — 见文末"实验结果"章节
 > **Session**:`obsidian_exprtiment_results/refine_logs/2026-04-18_SCPR_v1/`
+
+---
+
+## ⚠️ 实验结果汇报(EXP-095,在全部设计之后)
+
+**📉 Claim A/B/C 全部证伪**:
+
+| Claim | 预期 | 实际 | Δ |
+|-------|------|------|---|
+| A: PACS SCPR > M3 uniform(AVG Best 3-seed)| A.3 ≥ A.2 + 0.5% | A.3 81.60 < A.2 81.84 | **−0.24** ❌ |
+| A': M3 uniform > Plan A | A.2 > 82.31 | A.2 81.84 | **−0.47** ❌ |
+| B: Office SCPR ≥ SAS(AVG Best 3-seed) | B.3 ≥ 84.40 | B.3 83.21 | **−1.19** ❌ |
+| C: τ 扫单峰 | 中间 τ 最优 | 双峰(0.1/3.0 高) | ❌ |
+| 附录 SCPR+SAS 叠加 | ≥ max(独立) | 82.68 < 83.21 & 84.40 | **−1.72** ❌ |
+
+**失败的真实根因**:
+1. **K=4 客户端下 self-mask 后 style 区分度不足** — attention 塌缩到 uniform
+2. **Plan A(sm=0 不跑 InfoNCE)本来就是最优** — 任何加 InfoNCE 的变体都引入 noise
+3. **M3 +5.09% 不可跨架构泛化** — 原 adaptive 128d z_sem 的优势在 scheduled 1024d 失效
+4. **Formal MaxEnt derivation 的线性噪声假设在小 K 下不成立**
+
+**论文叙事大调整**:
+- 删除 "Share" 章节(所有共享机制都失败:EXP-059 z_sem AdaIN / EXP-078d h-AdaIN+InfoNCE / EXP-095 SCPR)
+- 主贡献回归 **Decouple**(正交解耦)+ 可选 **SAS**(Office 单 outlier 场景)
+- SCPR 作为 negative result 记录在案 — 给社区避坑(4-client FedBN 下 prototype sharing 徒劳)
+
+---
+
+## 📄 原设计方案(保留作为方法论参考)
+
+以下是 SCPR 设计时期的完整方案记录 — 虽然方法证伪,但 formal derivation、refine workflow 和 codex review 流程都是优秀的研究实践记录。
+
+---
 
 ---
 
