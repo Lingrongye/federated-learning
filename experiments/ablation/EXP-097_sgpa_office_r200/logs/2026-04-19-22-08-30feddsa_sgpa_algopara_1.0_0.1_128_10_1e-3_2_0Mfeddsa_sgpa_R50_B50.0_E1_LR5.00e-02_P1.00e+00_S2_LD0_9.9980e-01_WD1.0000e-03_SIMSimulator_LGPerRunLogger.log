@@ -1,0 +1,10 @@
+2026-04-19 22:08:30,766 fflow.py init [line:848] INFO PROCESS ID:	187484
+2026-04-19 22:08:30,767 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-19 22:08:30,767 fflow.py init [line:852] INFO BENCHMARK:	benchmark.office_caltech10_classification
+2026-04-19 22:08:30,767 fflow.py init [line:853] INFO TASK:			task/office_caltech10_c4
+2026-04-19 22:08:30,767 fflow.py init [line:854] INFO MODEL:		algorithm.feddsa_sgpa
+2026-04-19 22:08:30,767 fflow.py init [line:855] INFO ALGORITHM:	feddsa_sgpa
+2026-04-19 22:08:30,769 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'algorithm.feddsa_sgpa.Server'>, 4 <class 'algorithm.feddsa_sgpa.Client'>
+2026-04-19 22:08:31,839 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-19 22:08:31,990 fflow.py init [line:931] INFO Ready to start.
+2026-04-19 22:08:31,991 fedbase.py run [line:300] INFO --------------Initial Evaluation--------------
