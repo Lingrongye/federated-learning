@@ -8,7 +8,7 @@ algo_para:
 - 10     # warmup_r (聚合 whitening 前的 warmup 轮)
 - 1e-3   # eps_sigma
 - 2      # min_clients_whiten
-- 0      # diag = off (smoke test 不启用 diagnostic logger, 第二轮再加)
+- 1      # diag = ON (记 Layer 1 每 5 轮 / Layer 2 每轮)
 learning_rate: 0.05
 batch_size: 50
 weight_decay: 1e-3

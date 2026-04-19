@@ -33,6 +33,13 @@ import torch.nn.functional as F
 import flgo.algorithm.fedbase
 import flgo.utils.fmodule as fuf
 
+# DiagnosticLogger (21 指标, 零训练开销,可通过 algo_para `diag=0` 关闭)
+try:
+    from diagnostics import SGPADiagnosticLogger as DL
+except ImportError:
+    # Allow running without diagnostics module (degenerates gracefully)
+    DL = None
+
 
 # ============================================================
 # Model: AlexNet encoder + dual-head + Fixed Simplex ETF classifier
@@ -177,12 +184,29 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.mu_global = None      # [d]
         self.sigma_inv_sqrt = None  # [d, d]
 
+        # Diagnostic logger (Layer 2 — server-side: client_center_variance, param_drift)
+        self.dl_agg = None
+        diag_root = None  # 默认: 即使 diag=0 也有定义, 避免 NameError
+        if self.diag == 1 and DL is not None:
+            task_name = os.path.basename(self.option.get('task', 'unknown'))
+            seed_str = self.option.get('seed', 'x')
+            diag_root = os.path.join(
+                'task', task_name, 'diag_logs',
+                f'R{self.num_rounds}_S{seed_str}',
+            )
+            self.dl_agg = DL(client_id=-1, stage='aggregate',
+                             log_dir=diag_root, dump_every_n=1)
+
         # Pass config
+        diag_on = (self.diag == 1 and DL is not None)
         for c in self.clients:
             c.lambda_orth = self.lo
             c.tau_etf = self.tau_etf
             c.proj_dim = self.pd
             c.warmup_rounds = self.warmup_r
+            c.diag_enabled = diag_on
+            c.diag_interval = 5  # Client 端每 5 轮记 Layer 1 (训练端)
+            c.diag_log_dir = diag_root
 
     def _init_agg_keys(self):
         """FedBN + style_head 本地; M buffer 参与聚合但因 seeded 一致所以不影响."""
@@ -215,6 +239,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
 
         models = res['model']
         style_stats_list = res['style_stats']
+        class_centers_list = res.get('class_centers', [None] * len(models))
 
         # 1. Aggregate shared parameters (FedAvg, excl. style_head/BN/M)
         self._aggregate_shared(models)
@@ -227,6 +252,32 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         # 3. Rebuild pooled whitening once we have enough clients
         if len(self.style_bank) >= self.min_clients_whiten:
             self._compute_pooled_whitening()
+
+        # 4. Diagnostic: Layer 2 指标 (client_center_variance + param_drift)
+        if self.dl_agg is not None:
+            metrics = {}
+            # client_center_variance: 只对所有 client 都有样本的类算方差
+            # (NaN-filled 缺失类会让 stack 混入 zero, 导致假 variance)
+            valid_centers = [c for c in class_centers_list if c is not None]
+            if len(valid_centers) >= 2:
+                stacked = torch.stack(valid_centers, dim=0)  # [N, K, d]
+                nan_mask = stacked.isnan().any(dim=-1)       # [N, K]
+                all_valid_cls = ~nan_mask.any(dim=0)         # [K] True iff 所有 client 都有此类
+                if all_valid_cls.any():
+                    filtered = stacked[:, all_valid_cls, :]   # [N, K_valid, d]
+                    metrics['client_center_var'] = DL.client_center_variance(
+                        [filtered[i] for i in range(filtered.shape[0])])
+                    metrics['n_valid_classes'] = int(all_valid_cls.sum().item())
+            # param_drift: 聚合前各 client conv1.weight 与 global 的 L2 距离
+            try:
+                global_w = self.model.encoder.features.conv1.weight.detach().cpu().flatten()
+                client_ws = [m.encoder.features.conv1.weight.detach().cpu().flatten()
+                             for m in models]
+                metrics['param_drift'] = DL.param_drift(client_ws, global_w)
+            except (AttributeError, RuntimeError):
+                pass
+            if metrics:
+                self.dl_agg.record(round_id=self.current_round, metrics_dict=metrics)
 
     def _aggregate_shared(self, models):
         """FedAvg on shared keys only (sample-size weighted)."""
@@ -301,6 +352,7 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         self.loss_fn = nn.CrossEntropyLoss()
         self.current_round = 0
         self._local_style_stats = None
+        self._local_class_centers = None  # [K, proj_dim], 供 Server Layer 2 用
         # SGPA inference state (推理时动态维护)
         self.sgpa_supports = None  # {c: list of (H, z_sem)}
         self.sgpa_proto = None     # [K, d] F.normalize 后的 proto
@@ -312,6 +364,11 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         self.source_mu_k = None
         self.mu_global = None
         self.sigma_inv_sqrt = None
+        # Diagnostic logger (by server in Server.initialize; default None = disabled)
+        self.diag_enabled = False
+        self.diag_interval = 5
+        self.diag_log_dir = None
+        self._dl_train = None  # lazy-init 在第一次 train 时
 
     def reply(self, svr_pkg):
         self.unpack(svr_pkg)
@@ -344,23 +401,48 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         return {
             'model': copy.deepcopy(self.model.to('cpu')),
             'style_stats': self._local_style_stats,
+            'class_centers': self._local_class_centers,  # for Layer 2 diag
         }
+
+    def _maybe_init_diag_logger(self):
+        """Lazy-init diag logger (client id 可能在 initialize 时还没绑定)."""
+        if not self.diag_enabled or DL is None or self._dl_train is not None:
+            return
+        if self.diag_log_dir is None:
+            return
+        self._dl_train = DL(
+            client_id=getattr(self, 'id', 0),
+            stage='train',
+            log_dir=self.diag_log_dir,
+            dump_every_n=1,
+        )
 
     @fuf.with_multi_gpus
     def train(self, model, *args, **kwargs):
-        """Plan A orth_only 训练 + 收集 (μ_sty, Σ_sty) 本地统计."""
+        """Plan A orth_only 训练 + 收集 (μ_sty, Σ_sty) + Layer 1 diagnostics."""
         model.train()
         optimizer = self.calculator.get_optimizer(
             model, lr=self.learning_rate,
             weight_decay=self.weight_decay, momentum=self.momentum
         )
 
+        self._maybe_init_diag_logger()
+        should_log_diag = (
+            self._dl_train is not None
+            and (self.current_round % self.diag_interval == 0)
+        )
+
         # Online style stats accumulator (128d z_sty)
         style_sum = None
         style_sq_sum = None
         style_n = 0
-        # 保存最后一轮 epoch 所有 z_sty 样本以便算 full covariance
         last_epoch_z_sty = []
+        # Class-mean accumulator (供 Layer 2 诊断)
+        last_epoch_z_sem = []
+        last_epoch_y = []
+
+        # Layer 1 诊断: 只在 last batch 算 (单一时刻,稳定)
+        diag_snapshot = None  # will hold (z_sem, z_sty, y, loss_task, loss_orth)
 
         num_steps = self.num_steps
         steps_per_epoch = max(1, len(self.train_data) // self.batch_size)
@@ -394,7 +476,11 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             if step >= last_epoch_start:
                 with torch.no_grad():
                     z_sty_det = z_sty.detach().cpu()
+                    z_sem_det = z_sem.detach().cpu()
+                    y_det = y.detach().cpu()
                     last_epoch_z_sty.append(z_sty_det)
+                    last_epoch_z_sem.append(z_sem_det)
+                    last_epoch_y.append(y_det)
                     b = z_sty_det.size(0)
                     batch_mu = z_sty_det.mean(dim=0)
                     batch_sq = (z_sty_det ** 2).mean(dim=0)
@@ -407,17 +493,60 @@ class Client(flgo.algorithm.fedbase.BasicClient):
                         style_sq_sum += batch_sq * b
                         style_n += b
 
+            # Layer 1 诊断 snapshot: 最后一步保留 (z_sem, z_sty, y)
+            if should_log_diag and step == num_steps - 1:
+                diag_snapshot = (
+                    z_sem.detach().cpu(),
+                    z_sty.detach().cpu(),
+                    y.detach().cpu(),
+                    loss_task.item(),
+                    loss_orth.item(),
+                )
+
         # Store (μ, Σ) for server
         if style_n >= 4 and last_epoch_z_sty:
             mu = style_sum / style_n
-            # Full covariance Σ from stacked samples
-            Z = torch.cat(last_epoch_z_sty, dim=0)  # [N, d]
+            Z = torch.cat(last_epoch_z_sty, dim=0)
             N = Z.size(0)
             Z_centered = Z - mu.unsqueeze(0)
-            sigma = (Z_centered.t() @ Z_centered) / max(N - 1, 1)  # [d, d]
+            sigma = (Z_centered.t() @ Z_centered) / max(N - 1, 1)
             self._local_style_stats = (mu.clone(), sigma.clone())
         else:
             self._local_style_stats = None
+
+        # Class centers (for Layer 2: client_center_variance).
+        # 缺失类用 NaN 填充 (而非 0), server 端按类过滤避免假 variance.
+        self._local_class_centers = None
+        if last_epoch_z_sem:
+            Z_sem = torch.cat(last_epoch_z_sem, dim=0)
+            Y = torch.cat(last_epoch_y, dim=0)
+            K = self.model.num_classes
+            d = Z_sem.shape[-1]
+            centers = torch.full((K, d), float('nan'))
+            for c in range(K):
+                mask = Y == c
+                if mask.sum() > 0:
+                    centers[c] = Z_sem[mask].mean(dim=0)
+            self._local_class_centers = centers
+
+        # Layer 1 诊断写入 (6 指标, 每 diag_interval round 一次)
+        if diag_snapshot is not None:
+            z_sem_d, z_sty_d, y_d, lt, lo = diag_snapshot
+            K = self.model.num_classes
+            M_cpu = self.model.M.detach().cpu()
+            metrics = {
+                'orth': DL.orthogonality(z_sem_d, z_sty_d),
+                'etf_align_mean': DL.etf_alignment(z_sem_d, y_d, M_cpu, K)[0],
+                'intra_cls_sim': DL.intra_class_similarity(z_sem_d, y_d, K),
+                'inter_cls_sim': DL.inter_class_similarity(z_sem_d, y_d, K),
+                'loss_task': lt,
+                'loss_orth': lo,
+            }
+            # 新增: z_sem/z_sty norm 分布 (暴露 head 坍塌/爆炸)
+            metrics.update(DL.feature_norm_stats(z_sem_d, name='z_sem'))
+            metrics.update(DL.feature_norm_stats(z_sty_d, name='z_sty'))
+            self._dl_train.record(
+                round_id=self.current_round, metrics_dict=metrics)
 
     # ----------------------------------------------------------------
     # SGPA Inference (backprop-free, warmup-safe, top-m proto bank)
