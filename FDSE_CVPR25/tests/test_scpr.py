@@ -48,7 +48,8 @@ class MockServer:
     def __init__(self, scpr_mode, scpr_tau_val=0.3):
         self.scpr_mode = scpr_mode
         self.scpr_tau_val = scpr_tau_val
-        self.style_bank = {}
+        self.style_bank = {}          # SAS: 1024d pool5
+        self.scpr_style_bank = {}     # SCPR: 128d z_sty (NEW 2026-04-19)
         self.client_class_protos = {}
 
 
@@ -141,6 +142,36 @@ def test_scpr_mode2_requires_style():
 
     payload = srv._compute_scpr_payload(target_cid=0)
     assert payload is None, "scpr=2 should return None when target style missing"
+
+
+def test_scpr_mode2_prefers_scpr_style_bank_over_sas():
+    """NEW 2026-04-19: SCPR should use its own 128d z_sty bank, not SAS's 1024d h bank.
+
+    When both banks are populated, SCPR must consult scpr_style_bank (128d),
+    NOT the legacy 1024d style_bank. This encodes the style-key fix.
+    """
+    srv = MockServer(scpr_mode=2, scpr_tau_val=0.001)  # tiny tau → one-hot to nearest
+
+    # SAS bank: all 4 clients equal (pretend pool5 averages close, noisy)
+    srv.style_bank = {k: (torch.ones(1024), torch.ones(1024)) for k in range(4)}
+
+    # SCPR bank: 128d z_sty; client 0 is close to client 3 but far from 1 and 2
+    # so if SCPR uses scpr_style_bank it should nearest-match client 3
+    srv.scpr_style_bank = {
+        0: (torch.tensor([1.0] * 128), torch.ones(128)),
+        1: (torch.tensor([-1.0] * 128), torch.ones(128)),  # opposite
+        2: (torch.tensor([-1.0] * 128), torch.ones(128)),  # opposite
+        3: (torch.tensor([0.95] * 128), torch.ones(128)),  # near client 0
+    }
+    srv.client_class_protos = make_class_proto_bank(4, 7)
+
+    payload = srv._compute_scpr_payload(target_cid=0)
+    assert payload is not None
+    ws = payload['weights']
+    # With tiny tau SCPR should one-hot to client 3 (nearest in z_sty space),
+    # which proves SCPR consulted scpr_style_bank, not the all-equal style_bank.
+    assert 3 in ws and ws[3] > 0.95, \
+        "SCPR should use scpr_style_bank: expected ws[3]≈1 (nearest in 128d), got %s" % ws
 
 
 # ============================================================

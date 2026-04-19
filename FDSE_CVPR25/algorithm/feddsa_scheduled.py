@@ -169,8 +169,11 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         # sas-FH (A2/C1/C2)：per-client classifier head states
         self.client_head_states = {}
 
-        # Style bank
+        # Style bank (1024d pool5 μ/σ — used by SAS for parameter-space routing)
         self.style_bank = {}
+        # SCPR-dedicated style bank (128d z_sty μ/σ — post-decouple, per FINAL_PROPOSAL)
+        # Introduced 2026-04-19 after EXP-095 v1 was found to wrongly share SAS's 1024d bank
+        self.scpr_style_bank = {}
         # Global semantic prototypes
         self.global_semantic_protos = {}
         # SCPR: per-(client, class) prototypes bank (domain-indexed)
@@ -424,8 +427,11 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             return {'weights': weights, 'protos': source_protos_raw}
 
         if self.scpr_mode == 2:
-            # Style-weighted softmax (SCPR main method). Requires style bank.
-            target_style = self.style_bank.get(target_cid)
+            # Style-weighted softmax (SCPR main method).
+            # Uses the SCPR-dedicated 128d z_sty bank (post-decouple), NOT the SAS 1024d h bank.
+            # This aligns with FINAL_PROPOSAL: s_k := normalize(E_{x ∈ D_k}[z_sty(x)]).
+            bank = self.scpr_style_bank if self.scpr_style_bank else self.style_bank
+            target_style = bank.get(target_cid)
             if target_style is None:
                 return None
             target_vec = self._extract_style_vec(target_style)
@@ -434,7 +440,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             source_vecs = []
             source_protos = {}
             for cid in source_cids_raw:
-                src_style = self.style_bank.get(cid)
+                src_style = bank.get(cid)
                 if src_style is None:
                     continue
                 src_vec = self._extract_style_vec(src_style)
@@ -486,18 +492,22 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                     if head_state:
                         self.client_head_states[cid] = head_state
 
-        # Collect style bank
+        # Collect style bank (1024d pool5 — for SAS)
         for cid, style in zip(self.received_clients, style_stats_list):
             if style is not None:
                 self.style_bank[cid] = style
 
         # SCPR: update per-(client, class) prototype bank (domain-indexed)
+        # and per-client z_sty-based style bank (128d post-decouple, for SCPR attention)
         if self.scpr_mode > 0:
-            for cid, protos in zip(self.received_clients, protos_list):
+            style_stats_scpr_list = res.get('style_stats_scpr', [None] * len(self.received_clients))
+            for cid, protos, sty_scpr in zip(self.received_clients, protos_list, style_stats_scpr_list):
                 if protos is not None and len(protos) > 0:
                     self.client_class_protos[cid] = {
                         c: p.detach().clone().cpu() for c, p in protos.items()
                     }
+                if sty_scpr is not None:
+                    self.scpr_style_bank[cid] = sty_scpr
 
         # Aggregate global protos (weighted mean)
         self._aggregate_protos(protos_list, proto_counts_list)
@@ -663,6 +673,7 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         self.scpr_mode = 0
         self.scpr_tau_val = 0.3
         self.scpr_payload = None
+        self._local_style_stats_scpr = None  # 128d z_sty μ/σ, populated in train()
 
     def reply(self, svr_pkg):
         model, global_protos, style_bank, current_round = self.unpack(svr_pkg)
@@ -699,7 +710,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             'model': copy.deepcopy(self.model.to('cpu')),
             'protos': self._local_protos,
             'proto_counts': self._local_proto_counts,
-            'style_stats': self._local_style_stats,
+            'style_stats': self._local_style_stats,            # 1024d pool5 (SAS interface)
+            'style_stats_scpr': getattr(self, '_local_style_stats_scpr', None),  # 128d z_sty (SCPR)
             'grad_conflict': self._grad_conflict_log,
         }
 
@@ -764,9 +776,13 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         # Online accumulators
         proto_sum = {}
         proto_count = {}
-        style_sum = None
+        style_sum = None          # 1024d pool5 mean (SAS)
         style_sq_sum = None
         style_n = 0
+        # SCPR dedicated: 128d z_sty mean (post-decouple, per FINAL_PROPOSAL)
+        style_sum_scpr = None
+        style_sq_sum_scpr = None
+        style_n_scpr = 0
 
         num_steps = self.num_steps
         steps_per_epoch = max(1, len(self.train_data) // self.batch_size)
@@ -873,6 +889,7 @@ class Client(flgo.algorithm.fedbase.BasicClient):
                 with torch.no_grad():
                     z_det = z_sem.detach().cpu()
                     h_det = h.detach()
+                    z_sty_det = z_sty.detach()      # 128d post-decouple (for SCPR)
 
                     for i, label in enumerate(y):
                         c = label.item()
@@ -884,6 +901,7 @@ class Client(flgo.algorithm.fedbase.BasicClient):
                             proto_count[c] += 1
 
                     b = h_det.size(0)
+                    # SAS style stats: 1024d pool5 (pre-decouple)
                     batch_mu = h_det.mean(dim=0).cpu()
                     batch_sq = (h_det ** 2).mean(dim=0).cpu()
                     if style_sum is None:
@@ -894,6 +912,17 @@ class Client(flgo.algorithm.fedbase.BasicClient):
                         style_sum += batch_mu * b
                         style_sq_sum += batch_sq * b
                         style_n += b
+                    # SCPR style stats: 128d z_sty (post-decouple per FINAL_PROPOSAL)
+                    batch_mu_scpr = z_sty_det.mean(dim=0).cpu()
+                    batch_sq_scpr = (z_sty_det ** 2).mean(dim=0).cpu()
+                    if style_sum_scpr is None:
+                        style_sum_scpr = batch_mu_scpr * b
+                        style_sq_sum_scpr = batch_sq_scpr * b
+                        style_n_scpr = b
+                    else:
+                        style_sum_scpr += batch_mu_scpr * b
+                        style_sq_sum_scpr += batch_sq_scpr * b
+                        style_n_scpr += b
 
         # Store for pack()
         self._local_protos = {c: proto_sum[c] / proto_count[c] for c in proto_sum}
@@ -905,6 +934,14 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             self._local_style_stats = (mu, var.clamp(min=1e-6).sqrt())
         else:
             self._local_style_stats = None
+
+        # SCPR style stats (128d z_sty post-decouple)
+        if style_n_scpr > 1:
+            mu_s = style_sum_scpr / style_n_scpr
+            var_s = style_sq_sum_scpr / style_n_scpr - mu_s ** 2
+            self._local_style_stats_scpr = (mu_s, var_s.clamp(min=1e-6).sqrt())
+        else:
+            self._local_style_stats_scpr = None
 
     # ----------------------------------------------------------------
     # Gradient Conflict Logger
