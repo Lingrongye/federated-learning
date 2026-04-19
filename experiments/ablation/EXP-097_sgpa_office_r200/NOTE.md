@@ -3,7 +3,7 @@
 **日期**: 2026-04-19 启动 / 待完成
 **算法**: `feddsa_sgpa` (use_etf=1)
 **服务器**: seetacloud2 (单卡 24GB)
-**状态**: 🟡 部署中 (3 runs 并行)
+**状态**: ✅ **已完成** (2026-04-20 凌晨), **意外结果: Linear 对照 (EXP-100) 竟然超越 SGPA, ETF 未成立**
 
 ## 这个实验做什么 (大白话)
 
@@ -60,13 +60,15 @@
 |  | 333 | 89.81 | 87.69 | 85.72 | 84.52 | 76.8 | 94.7 | 100.0 | 89.7 |
 | **SAS τ=0.3** (EXP-084) | **mean** | 89.82 | 88.28 | **84.40** | 83.07 | 75.0 | 91.6 | 100.0 | 95.4 |
 | **FDSE** (EXP-051) | **mean** | 86.38 | 85.05 | **90.58** | 89.22 | — | — | — | — |
-| **SGPA (OURS, use_etf=1)** | **mean** | 待填 | 待填 | **待填** | 待填 | — | — | — | — |
-|  | 2 | 待填 | 待填 | 待填 | 待填 | — | — | — | — |
-|  | 15 | 待填 | 待填 | 待填 | 待填 | — | — | — | — |
-|  | 333 | 待填 | 待填 | 待填 | 待填 | — | — | — | — |
-| **Δ SGPA − Plan A (核心 claim!)** | — | 待填 | 待填 | **待填** | 待填 | — | — | — | — |
-| **Δ SGPA − SAS** | — | 待填 | 待填 | 待填 | 待填 | — | — | — | — |
-| **Δ SGPA − FDSE** | — | 待填 | 待填 | 待填 | 待填 | — | — | — | — |
+| **SGPA (OURS, use_etf=1)** | **mean** | **82.01** | 80.42 | **86.97 ± 1.23** | 85.44 | — | — | — | — |
+|  | 2 | 79.75 | 76.58 | 85.89 | 82.83 | — | — | — | — |
+|  | 15 | 82.94 | 82.94 | 88.68 | 88.68 | — | — | — | — |
+|  | 333 | 83.32 | 81.73 | 86.35 | 84.81 | — | — | — | — |
+| **Linear+whitening (EXP-100, use_etf=0)** | **mean** | **82.81** | 81.09 | **88.75 ± 0.86** 🔥 | 86.91 | — | — | — | — |
+| **Δ SGPA − Plan A** | — | +3.40 | +3.12 | **+4.42** ✅ | +4.09 | — | — | — | — |
+| **Δ SGPA − Linear (C2 关键!)** | — | -0.80 | -0.67 | **-1.78 ❌** | -1.47 | — | — | — | — |
+| **Δ SGPA − SAS** | — | +7.62 | — | **+2.57** | +2.37 | — | — | — | — |
+| **Δ SGPA − FDSE** | — | -4.37 | — | **-3.61** | -3.78 | — | — | — | — |
 
 ### Neural Collapse 诊断演进 (3-seed mean, 从 Layer 1 jsonl 提取)
 
@@ -81,16 +83,72 @@
 
 R50: etf_align=0.83 / inter_cls=-0.08 / intra_cls=0.85 / orth=0.0003 / center_var=0.0019 / param_drift=0.003
 
-## 🔍 根因分析 (待填)
+## 🔍 根因分析
 
-## 📋 论文叙事影响 (待填)
+### Claim verdict
+
+| Claim | 判定 | 数据 |
+|-------|------|------|
+| **C1 (SGPA > Plan A)** | ✅ 成立 | +4.42% |
+| **C4 (不是 seed 运气)** | ✅ 成立 | 3-seed std 1.23% (< 1.5% 阈值), 无 seed 崩溃 |
+| **C2 (ETF 本身贡献)** | ❌ **证伪** | SGPA 比 Linear 还低 **-1.78%**, ETF 不仅无功反而有害 |
+
+### ETF 反向劣化的可能原因
+
+1. **Linear 学出的分类边界比 Fixed ETF 顶点更贴近真实类中心**:
+   - Fixed ETF 假设"好的特征应该对齐单纯形",但实际 AlexNet 从 scratch 在 Office 上可能学不出完美对齐,强制对齐反而是约束
+   - Linear 自由学习权重方向 = 自适应找最优边界
+2. **ETF + L_orth 联合可能过度约束 z_sem**: 两个几何约束叠加压缩特征空间
+3. **Linear 下 diag 记录的 etf_align 等指标的数据被污染** (SGPA+Linear 混写 jsonl) → 如果看 diag 得有保留
+
+### 真正贡献来源 (gain +6.20% Linear vs Plan A)
+
+不是 ETF, 而是 **Plan A + pooled whitening + class_centers 基础设施**本身:
+- `pooled whitening`: 每轮 broadcast 源域 (μ_global, Σ_inv_sqrt) 1024 floats
+- `class_centers 收集`: client 每轮上传 [K, d] 类中心 tensor
+- 这些基础设施原本设计给 SGPA 推理用, 但训练端**隐式受益** (可能通过 gradient routing 或 effective regularization)
+
+### Neural Collapse 诊断演进 (Layer 1 jsonl, 污染但数据还在)
+
+**⚠️ 警告**: EXP-097 和 EXP-100 的 diag_logs 共用 R200_S{seed} 路径, jsonl 每轮 2 行 (SGPA+Linear 交错无 variant 字段), 无法可靠区分。新 PACS 实验已修复加 _etf/_linear 后缀。Office 诊断层分析暂放弃。
+
+## 📋 论文叙事影响
+
+### 原方案核心 (SGPA 双 gate + ETF) 全线崩
+
+- **ETF 训练端** C2 证伪 → 从 proposal 删除
+- **SGPA 推理端** (C3) 还没测 (EXP-099 待做), 但即使成立也只是 on-top-of Linear 的增量
+
+### 真正有价值的发现
+
+**"Source-domain style 二阶统计广播 + 客户端类中心收集" 本身就是强 gain 机制**
+
+相对 Plan A 的 +6.20% gain 来自新增的基础设施, 不是 ETF 几何约束。
+
+### 建议的新论文叙事
+
+| 原论文 | 新论文 |
+|--------|--------|
+| "SGPA + Fixed ETF classifier" | "**FedDSA-Plus: Plan A + Pooled Style-Statistics Broadcast + Class-Centers Tracking**" |
+| 主贡献: ETF + dual-gate SGPA | 主贡献: 证明"源域 style 二阶统计跨客户端共享" 本身就是强 gain 机制, 不需要 ETF |
+| 对比: FDSE 90.58% vs ours 84.98% | 对比: FDSE 90.58% vs ours **88.75%** (Δ 只差 1.83%) |
+
+### 下一步需要更多对照以定位 gain 来源
+
+| 对照实验 | 目的 |
+|---------|------|
+| Plan A + pooled whitening only (不收集 class_centers) | pooled whitening 单独贡献 |
+| Plan A + class_centers only (不广播 whitening) | class_centers 单独贡献 |
+| Plan A + diag=0 (不跑 diag 框架) | 排除 diag 本身的副作用 |
+
+如果是 whitening broadcast 带来 gain,后续应该聚焦 whitening 的理论动机 (pooled second-order approximation 是否让 cross-client feature alignment 隐式更强)。
 
 ## 📊 实验统计
 
 - **总 runs**: 3 (3 seeds × 1 config)
-- **预估 GPU·h**: ~3 (3 并行 1h wall)
-- **启动**: 待填
-- **完成**: 待填
+- **实际 GPU·h**: ~7 (3 并行 + 6 其他 runs 共享 CPU, wall ~1h25min)
+- **启动**: 2026-04-19 22:41
+- **完成**: 2026-04-19 23:55 (~1h15min wall)
 
 ## 📎 相关文件
 

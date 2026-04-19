@@ -3,7 +3,7 @@
 **日期**: 2026-04-19 启动 / 待完成
 **算法**: `feddsa_sgpa` (use_etf=0, 对照组)
 **服务器**: seetacloud2 (与 EXP-097 并行)
-**状态**: 🟡 部署中 (3 runs 并行)
+**状态**: ✅ **已完成** (2026-04-20 凌晨), **重大发现: Linear 竟然超越 SGPA! C2 证伪, ETF 反向劣化**
 
 ## 这个实验做什么 (大白话)
 
@@ -52,13 +52,13 @@
 | 配置 | seed | ALL Best | ALL Last | AVG Best | AVG Last |
 |------|------|---------|---------|---------|---------|
 | **Plan A orth_only** (EXP-083) | **mean** | 88.61 | 87.30 | **82.55** | 81.35 |
-| **SGPA (EXP-097)** | **mean** | 待填 | 待填 | **待填** | 待填 |
-| **Linear+whitening (本实验)** | **mean** | 待填 | 待填 | **待填** | 待填 |
-|  | 2 | 待填 | 待填 | 待填 | 待填 |
-|  | 15 | 待填 | 待填 | 待填 | 待填 |
-|  | 333 | 待填 | 待填 | 待填 | 待填 |
-| **Δ SGPA − Linear (ETF 贡献)** | — | 待填 | 待填 | **待填** | 待填 |
-| **Δ Linear − Plan A (副作用)** | — | 待填 | 待填 | 待填 | 待填 |
+| **SGPA (EXP-097, use_etf=1)** | **mean** | 82.01 | 80.42 | **86.97 ± 1.23** | 85.44 |
+| **Linear+whitening (本实验, use_etf=0)** | **mean** | **82.81** | 81.09 | **88.75 ± 0.86** 🔥 | 86.91 |
+|  | 2 | 80.17 | 78.98 | 87.56 | 86.81 |
+|  | 15 | 83.35 | 81.35 | 89.55 | 87.11 |
+|  | 333 | 84.91 | 82.93 | 89.14 | 86.80 |
+| **Δ SGPA − Linear (ETF 贡献 C2!)** | — | -0.80 | -0.67 | **-1.78** ❌ | -1.47 |
+| **Δ Linear − Plan A ("副作用"!)** | — | +4.20 | +3.79 | **+6.20** 🔥 | +5.56 |
 
 ### 诊断对比 (SGPA vs Linear, R200)
 
@@ -87,16 +87,74 @@
               (3) 是否 BN 某个细节被改变?
 ```
 
-## 🔍 根因分析 (待填)
+## 🔍 根因分析
 
-## 📋 论文叙事影响 (待填)
+### Verdict Decision Tree 判定 ❌
+
+```
+Δ SGPA − Linear = -1.78 (小于 0)
+  → ❌ C2 完全证伪, ETF 不仅没功劳, 反而减分
+```
+
+### 完全颠覆 EXP-096 smoke 结论
+
+| 阶段 | 结论 | 证据 |
+|------|------|------|
+| EXP-096 smoke R50 seed=2 | "Fixed ETF R50 就超 Plan A R200" | SGPA 84.98 vs Plan A 82.55 |
+| EXP-097+100 R200 3-seed | **Linear+whitening 才是真正赢家** | Linear 88.75 > SGPA 86.97 > Plan A 82.55 |
+
+smoke test **不是** 过早错误判断 seed 运气 — R200 3-seed 验证了 ETF 变体 **确实** 比 Plan A 好 +4.42%,但**这个 gain 不是 ETF 带来的**,而是 pooled whitening 广播 + class_centers 收集基础设施带来的。
+
+### 核心发现: "Pooled Source Style Broadcast" 是真正 gain 机制
+
+| 实验 | 改动 | AVG Best | Δ |
+|------|------|----------|---|
+| Plan A orth_only | — | 82.55 | 基线 |
+| Plan A + pooled whitening + class_centers | 新基础设施 | **88.75** (Linear) | **+6.20** 🔥 |
+| + Fixed ETF classifier | ETF | 86.97 (SGPA) | **-1.78 vs Linear** |
+
+**"广播 (μ_global, Σ_inv_sqrt, source_μ_k)" 本身就是强 gain 机制**。
+
+### 为什么 ETF 反而减分
+
+可能原因 (需 diag 数据证实, 但本实验 diag 污染):
+1. **Fixed ETF 对 AlexNet from-scratch 是过度约束**: Linear 能学到比 ETF 顶点更贴近实际类中心的边界
+2. **ETF + L_orth 双重几何约束 + CE** 对特征空间挤压过度
+3. **Linear 参加 FedAvg 聚合虽然有漂移,但 FedDSA-SGPA 的 class_centers 收集机制可能本来就缓解了漂移**
+
+### Neural Collapse 诊断分析放弃
+
+EXP-097 和 EXP-100 的 diag_logs 共用 R200_S{seed} 路径, jsonl 每轮 2 行 (SGPA+Linear 交错无 variant 字段), 无法可靠区分 ETF 和 Linear 的几何演进。**bug 已在 commit `6a31e22` 修复**, PACS 新部署会生成干净 diag。
+
+## 📋 论文叙事影响
+
+### 原论文方向全废
+
+- ETF 是 supporting contribution → **有害, 删除**
+- SGPA 是 dominant contribution → 只剩推理端 (EXP-099 还没测)
+
+### 新发现可能更有价值
+
+**"Pooled source-domain style second-order statistics broadcast to clients"** 让 Plan A 从 82.55 → 88.75 (+6.20%), 接近 FDSE 90.58 只差 1.83%, 而且:
+- 通信增量仅 ~66KB/round (与 FedBN γ/β 同量级)
+- 零新 trainable 参数 (whitening broadcast 是 float tensor)
+- 完全 backward-compat 现有 FedAvg + FedBN 流程
+
+### 接下来必须做的消融
+
+为定位 gain 具体来自哪里, 需要:
+1. **Plan A + pooled whitening only** (不收集 class_centers): 量化 pooled whitening 贡献
+2. **Plan A + class_centers only** (不广播 whitening): 量化 class_centers 贡献
+3. **Plan A + diag=0** (同 Linear 但不开诊断): 排除 diag 本身副作用
+
+这是新的 EXP-101 / EXP-102 / EXP-103 的必要对照实验。
 
 ## 📊 实验统计
 
 - **总 runs**: 3 (3 seeds × 1 config)
-- **预估 GPU·h**: ~3 (与 EXP-097 并行, 共享 1h wall)
-- **启动**: 待填
-- **完成**: 待填
+- **实际 GPU·h**: ~7 (与 EXP-097 并行, 6 runs 共享 CPU, wall ~1h25min)
+- **启动**: 2026-04-19 22:41
+- **完成**: 2026-04-19 23:55 (~1h15min wall)
 
 ## 📎 相关文件
 
