@@ -1,0 +1,10 @@
+2026-04-18 01:48:54,879 fflow.py init [line:848] INFO PROCESS ID:	107257
+2026-04-18 01:48:54,880 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-18 01:48:54,880 fflow.py init [line:852] INFO BENCHMARK:	task.PACS_c4
+2026-04-18 01:48:54,880 fflow.py init [line:853] INFO TASK:			task/PACS_c4
+2026-04-18 01:48:54,880 fflow.py init [line:854] INFO MODEL:		task.PACS_c4.model.default_model
+2026-04-18 01:48:54,880 fflow.py init [line:855] INFO ALGORITHM:	standalone
+2026-04-18 01:48:54,882 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'algorithm.standalone.Server'>, 4 <class 'algorithm.standalone.Client'>
+2026-04-18 01:48:54,882 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-18 01:48:54,882 fflow.py init [line:931] INFO Ready to start.
+2026-04-18 01:48:54,883 standalone.py run [line:14] INFO --------------Initial Evaluation--------------
