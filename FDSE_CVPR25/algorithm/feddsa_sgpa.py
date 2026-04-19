@@ -364,10 +364,12 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         self.source_mu_k = None
         self.mu_global = None
         self.sigma_inv_sqrt = None
-        # Diagnostic logger (by server in Server.initialize; default None = disabled)
-        self.diag_enabled = False
-        self.diag_interval = 5
-        self.diag_log_dir = None
+        # Diagnostic logger: flgo lifecycle 是 Server.initialize() 先, Client.initialize() 后.
+        # Server 已经在它的 initialize 里 set c.diag_enabled/diag_interval/diag_log_dir,
+        # 这里 *不能* hard-override, 用 getattr 保留 server 设值.
+        self.diag_enabled = getattr(self, 'diag_enabled', False)
+        self.diag_interval = getattr(self, 'diag_interval', 5)
+        self.diag_log_dir = getattr(self, 'diag_log_dir', None)
         self._dl_train = None  # lazy-init 在第一次 train 时
 
     def reply(self, svr_pkg):
