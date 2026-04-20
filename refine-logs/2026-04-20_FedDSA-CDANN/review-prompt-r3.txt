@@ -1,0 +1,24 @@
+[Round 3 re-evaluation]
+
+I revised the proposal based on your Round 2 feedback. Please re-evaluate.
+
+Key changes made in Round 2:
+1. CRITICAL fix: precisely reframed the mechanism. The shared `dom_head` is NOT adversarially optimized - it minimizes standard CE on both branches. The asymmetry is purely in the ENCODER gradient direction: GRL reverses z_sem → encoder gradient; z_sty → encoder gradient stays positive. The prose and math now match this exactly.
+2. IMPORTANT fix: replaced "training dom_head accuracy" with a FROZEN POST-HOC linear probe. After R200 training, we freeze all params and train a fresh Linear(128, N_clients) probe on final z_sem and z_sty separately, reporting probe_sem (expected ≈ 1/N, random) and probe_sty (expected ≈ 1.0). This is now the representation-level disentanglement diagnostic.
+3. IMPORTANT fix: C-port (DINOv2 frozen backbone) is now CLEARLY auxiliary sanity check, not a second contribution. Paper has ONE dominant contribution only. C-port goes to appendix, claim is just "not AlexNet-specific".
+4. Simplification: compute-tight table drops AVG Last, keeps AVG Best + mechanism metrics (probe acc + z_sty_norm).
+
+=== REVISED PROPOSAL ===
+<paste-proposal-here>
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score the same 7 dimensions and overall
+- State whether the Problem Anchor is preserved or drifted
+- Judge whether the mechanism description is now precisely framed (not overstated)
+- Judge whether the frozen probe diagnostic is a clean representation-level validation
+- Judge whether the single-contribution focus is now crisp enough for top venue
+- Focus new critiques on whether anything is still keeping this from READY
+- Use the verdict rule: READY only if overall score >= 9 and no blocking issue remains
+
+Same output format: 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items.

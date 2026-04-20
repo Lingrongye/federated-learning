@@ -1,0 +1,29 @@
+[Round 2 re-evaluation]
+
+I revised the proposal based on your feedback. Please re-evaluate.
+
+First, check whether the original Problem Anchor is still preserved.
+Second, judge whether the method is now more concrete, more focused, and more current.
+
+Key changes made in Round 1:
+1. Merged `dom_head_sem` + `dom_head_sty` into ONE shared `dom_head`. Asymmetry is now purely in gradient direction (GRL reverses z_sem path, positive for z_sty path).
+2. Downgraded "Dataset Boundary Diagnosis" from supporting contribution to supporting analysis (z_sty probe now counts as evidence, not contribution). Replaced with a "domain confusion readout" metric directly aligned with the mechanism claim.
+3. Narrowed the claim scope to `client=domain FedDG where style may carry class signal`. Removed all "adaptive across datasets" language. Made DomainNet / multi-domain-per-client extension explicitly future work.
+4. Added one Portability Check (C-port) with frozen DINOv2-S/14 backbone, only on PACS R100 1 seed (~2h). All CDANN mechanism preserved, only encoder swapped.
+5. Froze the "minor details" flagged in R1: domain losses on post-whitening features; inference uses only z_sem; dom_head shares optimizer/LR.
+6. Deleted fallback `HSIC(z_sty, y) = 0` (conflicted with the anchor that style can be class-relevant on PACS).
+
+=== REVISED PROPOSAL ===
+<paste-proposal-here>
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score the same 7 dimensions and overall
+- State whether the Problem Anchor is preserved or drifted
+- State whether the dominant contribution is now sharper or still too broad
+- State whether the method is simpler or still overbuilt
+- State whether the frontier leverage is now appropriate or still old-school / forced
+- Focus new critiques on missing mechanism, weak training signal, weak integration point, pseudo-novelty, or unnecessary complexity
+- Use the same verdict rule: READY only if overall score >= 9 and no blocking issue remains
+
+Same output format: 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items.

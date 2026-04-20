@@ -1,0 +1,21 @@
+[Round 4 re-evaluation]
+
+I revised the proposal based on your Round 3 feedback. Please re-evaluate.
+
+Key changes made in Round 3:
+1. CRITICAL fix: probe protocol now trains on FROZEN TRAIN features and reports on HELD-OUT TEST features. No leakage.
+2. CRITICAL fix: added one PACS-only frozen CLASS probe on z_sty (probe_sty_class: Linear(128, K_classes) on z_sty → y). This directly validates the anchor-specific claim that "class-relevant style got misassigned to z_sty and then erased by whitening" - not just domain disentanglement. Expected PACS CDANN ≥40% vs baseline ≈15%.
+3. IMPORTANT fix: removed "2024-2026 30-paper review gap" novelty language. Replaced with narrower mechanism-minimality framing: "minimal repair for whitening-induced style collapse in client=domain FedDG when style carries class signal".
+
+=== REVISED PROPOSAL ===
+<paste-proposal-here>
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score the same 7 dimensions and overall
+- State whether the anchor is preserved (should be)
+- Judge whether the class-level probe evidence now aligns with the anchor claim
+- Judge whether the novelty framing is now narrower and more defensible
+- Use the verdict rule: READY only if overall score >= 9 and no blocking issue remains
+
+Same output format: 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items.

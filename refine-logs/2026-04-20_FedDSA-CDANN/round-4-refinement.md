@@ -1,0 +1,244 @@
+# Round 4 Refinement — FedDSA-CDANN v4 (final sprint to READY)
+
+## Problem Anchor (verbatim)
+
+见 R0. 不变.
+
+## Anchor Check
+
+- V4 仍完全解决 anchor. 本轮只做 3 点**写作 discipline** 调整, 不改 method.
+
+## Simplicity Check
+
+- Dominant contribution: 不变
+- Components: 不变
+- 改动范围: 纯 framing
+
+## Changes Made
+
+### 1. Class probe 措辞: "consistent with anchor" 而非 "formal proof" (R4 IMPORTANT)
+
+- **Reviewer said**: "Describe the class probe as evidence consistent with the anchor, not as formal proof of the full causal chain."
+- **Action**: 改 Claim C-main 的 probe description 段落:
+
+**V3**:
+> **关键**: V3 - V2 的 `probe_sty_class` 差距证明 z_sty 正向监督是**必要**的
+
+**V4**:
+> **关键 observation**: V3 - V2 的 `probe_sty_class` 差距 **consistent with** "z_sty 正向监督保留了 class-relevant style" 的 anchor claim. 这是 representation-level evidence aligned with the claimed failure mode, not a formal proof of the full causal chain from "whitening erased" → "CDANN preserved" (后者需要 counterfactual 因果分析, 本文未做).
+
+- **Reasoning**: 避免 overclaim. reviewer 更吃 "honest evidence alignment" 比 "causal proof".
+- **Impact**: Contribution Quality 保持 9, Venue Readiness +0.5.
+
+### 2. 明确三 probe 都在 post-whitening feature space (R4 IMPORTANT)
+
+- **Reviewer said**: "Make explicit in the paper that all three probes are run on the same post-whitening feature space, since the claimed failure mode is whitening-induced collapse."
+- **Action**: 在 Proposed Method 的 Probe Protocol 段顶部加一条:
+
+> **Critical detail**: 所有三个 frozen probe (`probe_sem_domain`, `probe_sty_domain`, `probe_sty_class`) **输入均为 post-whitening features** (同 sem_classifier 训练时的 feature space). 这对 anchor 至关重要 — 因为 claimed failure mode 是 "whitening-induced style collapse", probe 必须在 whitening 之后的 feature space 里验证, 才能直接反映 whitening 的影响.
+
+- **Reasoning**: 如果 probe 输入是 pre-whitening, 就绕过了 failure mode, 证据不可信.
+- **Impact**: Method Specificity 保持 9, Validation Focus 保持 9.
+
+### 3. One-sentence novelty discipline (R4 IMPORTANT)
+
+- **Reviewer said**: "Keep the paper disciplined around one sentence of novelty: shared non-adversarial domain discriminator plus asymmetric encoder-gradient supervision is the minimal repair for whitening-induced style collapse."
+- **Action**: 把 Method Thesis 和 Novelty Argument 的描述都**锁到同一句话**, 不再有任何扩展表达.
+
+**V4 锁定 novelty 句**:
+
+> **Novelty**: A shared non-adversarial domain discriminator plus asymmetric encoder-gradient supervision (GRL on z_sem path only) is the minimal repair for whitening-induced style collapse in client=domain FedDG when style carries class signal.
+
+这一句话在三个位置出现: Method Thesis, Novelty Argument, Abstract (未来 paper). 不做任何变体.
+
+- **Reasoning**: 防止 reviewer 读不同段落看到不同侧重. 一句话 novelty 让 claim 彻底 crisp.
+- **Impact**: Venue Readiness 从 8→9 可能 (最后 gap).
+
+### 4. 主文表格收缩 (R4 Simplification)
+
+- **Reviewer said**: "Keep only PACS `probe_sty_class` in the main text; move Office class-probe numbers to appendix."
+- **Action**: Headline table 只列 PACS 的 `probe_sty_class`, Office 版本进 appendix.
+- **Reasoning**: 主文 focus 在 anchor 的 "PACS-like style-carries-class" 场景.
+
+---
+
+## Revised Proposal (V4 final, full anchored)
+
+# FedDSA-CDANN v4: Minimal Repair for Whitening-Induced Style Collapse in client=domain FedDG
+
+## Problem Anchor
+
+- **Bottom-line problem**: 联邦学习中跨域客户端 (Feature-skew FL) 的语义-风格解耦对不同数据集性质 (风格是语义核心 vs nuisance) 的自适应处理. FedDSA-SGPA 的 Linear+whitening 在 Office +6.20pp, PACS -1.49pp.
+- **Must-solve bottleneck**: 现有统计解耦 (cos²=0 + HSIC) **没告诉模型什么是风格**, PACS z_sty_norm 被 whitening 从 3.12 塌到 0.15 (-95%), class-relevant 信号丢失.
+- **Non-goals**: 不追求万能机制; 不用 LLM/VLM teacher; 不做 label noise / 少样本.
+- **Constraints**: seetacloud2 4090; Office + PACS client=domain bijection; AlexNet from scratch (+ DINOv2 appendix sanity).
+- **Success**: PACS 3-seed AVG Best ≥ 82.2, Office ≥ 88.0, `probe_sty_class` PACS ≥ 40% (baseline ≈ 15%).
+
+## Technical Gap
+
+**Observed failure mode** (measurable): 在 `client=domain` FedDG, FedDSA-SGPA Linear+whitening 出现:
+- Office AVG Best 88.75 (vs Plan A 82.55, **+6.20pp**)
+- PACS AVG Best 80.20 (vs Plan A 81.69, **-1.49pp**)
+- PACS z_sty_norm 轨迹: R10=3.12 → R200=0.15 (**塌 95%**)
+- Office z_sty_norm R200=2.21 (稳定)
+
+**Root cause**: `L_orth + HSIC` 只要求统计独立, 无方向. 当风格携带 class 信号时, 特征可能错归到 z_sty, 随后 whitening 磨掉.
+
+**Smallest adequate intervention**: 给解耦加方向性 supervision. Domain label = client id (zero annotation). 一个 shared non-adversarial `dom_head` (两路都 minimize standard CE) + **GRL 只作用在 z_sem encoder 路径** = repair 这个 failure mode 的最小改动.
+
+## Method Thesis
+
+**Novelty (one sentence, 锁定)**: A shared non-adversarial domain discriminator plus asymmetric encoder-gradient supervision (GRL on z_sem path only) is the minimal repair for whitening-induced style collapse in `client=domain` FedDG when style carries class signal.
+
+**Why smallest adequate**: 1 MLP (9K params) + 1 GRL (无参) + 3 行 loss; encoder/whitening/聚合不动.
+
+## Contribution Focus
+
+- **Dominant contribution (sole)**: 上面 one-sentence 的 minimal repair, 配 frozen post-hoc class probe 作 representation-level evidence.
+- **Appendix sanity check (not a contribution)**: DINOv2 frozen encoder portability 验证 mechanism not AlexNet-specific.
+- **Non-contributions**: 不 claim 新聚合 / 新 whitening / 新分类器 / "all datasets" / theoretical convergence.
+
+## Proposed Method
+
+### Complexity Budget
+
+- **Frozen / reused**: AlexNet encoder, 双头 sem/sty, sem_classifier, pooled whitening, L_orth + HSIC, FedBN
+- **New trainable**: **1** — `dom_head`: MLP 128→64→N_clients (~9K params)
+- **GRL**: no params
+- **Post-hoc eval (not new trainable)**: 3 个 frozen linear probes (sem→domain, sty→domain, sty→class)
+
+### System Overview
+
+```
+                                                     ┌── sem_classifier(z_sem) ── L_CE(y)          [encoder 正向 task]
+  x ─ encoder ─ feature ─┬─ sem_head → z_sem ─ (wh) ─┤
+                         │                            └── dom_head(GRL(z_sem, λ)) ── L_CE(d)        [dom_head 正向 CE; encoder 被 GRL 反向推]
+                         └─ sty_head → z_sty ─ (wh) ──── dom_head(z_sty) ── L_CE(d)                 [dom_head 正向 CE; encoder 正向]
+
+  z_sem ⊥ z_sty:  λ_orth · cos² + λ_hsic · HSIC
+
+  dom_head 自身 non-adversarial (两路都 minimize CE).
+  Asymmetry 在 encoder 两条 upstream path 的梯度方向上.
+```
+
+### Core Mechanism (精确表述)
+
+- **dom_head objective**: standard CE discriminator:
+  ```
+  L_dom_head_update = CE(d, dom_head(GRL(z_sem))) + CE(d, dom_head(z_sty))
+  ```
+  两路都 minimize, 非对抗.
+- **Encoder gradient flows**:
+  - `z_sem → sem_classifier`: 正向 task supervision
+  - `z_sem → GRL → dom_head`: encoder 路径梯度被反转 → z_sem 被推成 domain-indistinguishable
+  - `z_sty → dom_head`: encoder 路径梯度不反转 → z_sty 被推成 domain-discriminative
+- **Asymmetry location**: 不在 head objective, 在 encoder 的 upstream path gradient direction.
+
+### Loss
+
+```python
+dom_head = Linear(128, 64) → ReLU → Dropout(0.1) → Linear(64, N_clients)
+
+L_task    = CE(y, sem_classifier(z_sem))
+L_dec     = λ_orth · cos²(z_sem, z_sty) + λ_hsic · HSIC(z_sem, z_sty)
+L_dom_sem = CE(d, dom_head(GRL(z_sem, λ_adv)))
+L_dom_sty = CE(d, dom_head(z_sty))
+L_total   = L_task + L_dec + L_dom_sem + L_dom_sty
+```
+
+- λ_adv(r) = min(1.0, max(0, (r - 20) / 20))
+- Features into dom_head: post-whitening z_sem / z_sty
+- Inference: only z_sem → sem_classifier
+
+### Aggregation
+
+- `dom_head` FedAvg (本地单域 degenerate; 聚合后跨 client 共享才能区分 N domain)
+
+### Integration (codebase change)
+
+- File: `FDSE_CVPR25/algorithm/feddsa_sgpa.py`
+- 新增: GRL 类 + dom_head MLP + L_dom 计算 + FedAvg 白名单 + algo_para `ca` 开关
+- 估计代码行数: ~50 行
+
+### Probe Protocol (R3 修正 + R4 post-whitening 澄清)
+
+**Critical detail**: 所有三个 frozen probe 的**输入均为 post-whitening features** (同 sem_classifier 训练时的 feature space). 因为 claimed failure mode 是 whitening-induced collapse, probe 必须在 whitening 之后验证, 才能反映 whitening 的影响.
+
+```python
+# After R200, freeze encoder / heads / whitening.
+# Train probes on frozen TRAIN features (aggregated across clients).
+# Report test accuracies on held-out TEST features.
+Z_sem_train, Z_sty_train, D_train, Y_train = aggregate_across_clients(train_loader)
+Z_sem_test,  Z_sty_test,  D_test,  Y_test  = aggregate_across_clients(test_loader)
+
+probe_sem_dom = LogReg().fit(Z_sem_train, D_train)   # → domain
+probe_sty_dom = LogReg().fit(Z_sty_train, D_train)   # → domain
+probe_sty_cls = LogReg().fit(Z_sty_train, Y_train)   # → class (KEY anchor evidence)
+
+report_test_accs(probe_sem_dom, probe_sty_dom, probe_sty_cls)
+```
+
+### Training Plan
+
+- Joint, λ_adv 三段 schedule
+- 其他同 EXP-102: LR=0.05, E=1 Office / E=5 PACS, R=200
+- λ_orth=1.0, λ_hsic=0.1
+
+### Failure Modes
+
+- **FM1: 对抗发散** — λ_adv schedule + grad clip=10
+- **FM2: dom_head 欠拟合** — Dropout + FedAvg 聚合
+- **FM3: z_sty 过度携带** (λ_adv 太大) — 检测 `probe_sty_cls` 过高 + sem_classifier 掉; 降 λ_adv 到 0.5 (不加 HSIC(z_sty,y) 约束)
+- **FM4: Office 不需 CDANN** — scope 已限 "style carries class signal", Office parity 即可
+
+### Novelty Argument (R4 锁定 one-sentence)
+
+**A shared non-adversarial domain discriminator plus asymmetric encoder-gradient supervision (GRL on z_sem path only) is the minimal repair for whitening-induced style collapse in client=domain FedDG when style carries class signal.**
+
+关键 delta vs 最近 prior:
+- **Deep Feature Disentanglement SCL (Cog. Comp. 2025)**: non-FL + symmetric positive + separate heads. 我们: FL + asymmetric encoder-gradient + shared non-adversarial head.
+- **FedPall (ICCV 2025)**: adversarial in mixed space, erase domain. 我们: preserve domain info in z_sty.
+- **ADCOL / Federated Adversarial DA**: erase-all. 我们: asymmetric preserve.
+
+---
+
+## Claim-Driven Validation Sketch
+
+### Claim C-main (Primary)
+
+- **Experiment**: PACS R200 3 seeds + Office R200 3 seeds, vs Linear+whitening baseline
+- **Headline metrics** (主文 table, R4 收缩):
+  - AVG Best
+  - `probe_sem_domain` (expect ≈ random 1/N), `probe_sty_domain` (expect ≈ 1.0)
+  - **PACS `probe_sty_class`** (KEY: CDANN expect ≥ 40%, baseline ≈ 15%) — Office 版本进 appendix
+  - z_sty_norm R200
+- **Expected**:
+  - PACS AVG Best 82-84 (from -1.49pp 回到 ≥0 vs Plan A 81.69)
+  - Office AVG Best ≥ 88.0
+  - PACS `probe_sty_class` 差 25pp+ (CDANN vs baseline)
+  - z_sty_norm R200 ≥ 1.5 (from 0.15)
+
+### Claim C-ablate (必做)
+
+- **Experiment**: PACS R200 2 seeds × 3 variants (baseline / z_sem-only / full CDANN)
+- **Expected**: V3 > V2 ≥ V1 on AVG Best **AND** PACS `probe_sty_class`
+- **Key observation**: `probe_sty_class` V3 - V2 gap **consistent with** anchor claim "z_sty 正向监督保留了 class-relevant style". 这是 representation-level evidence aligned with failure mode, not formal causal proof.
+
+### Appendix sanity C-port
+
+- PACS R100 1 seed, encoder → frozen DINOv2-S/14
+- Expected: AVG Best ≥ AlexNet CDANN, 证 mechanism not AlexNet-specific
+
+## Experiment Handoff
+
+- Must-prove: C-main (12h), C-ablate (24h)
+- Appendix: C-port (2h), probes (30min)
+- Total: ~41 GPU·h single 4090
+
+## Compute & Timeline
+
+- Day 1 code + 单测 (3h)
+- Day 2 pilot PACS+Office R100 (2.5h)
+- Day 3-5 full C-main + C-ablate (~36h 并行)
+- Day 6 C-port + probes + NOTE
+- Day 7 Codex re-review + 知识笔记

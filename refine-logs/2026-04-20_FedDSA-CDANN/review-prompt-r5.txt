@@ -1,0 +1,25 @@
+[Round 5 re-evaluation — final sprint to READY]
+
+I applied your Round 4 feedback. All three items are addressed:
+
+1. IMPORTANT fix: Class probe is now described as "evidence consistent with the anchor", not "formal proof of the full causal chain". Explicit disclaimer that formal causal proof would require counterfactual analysis which we do not claim.
+
+2. IMPORTANT fix: All three frozen probes are now explicitly labeled as operating on POST-WHITENING features, with a "Critical detail" note in the Probe Protocol section explaining this is essential because the claimed failure mode is whitening-induced collapse.
+
+3. IMPORTANT fix: Locked down ONE novelty sentence that appears verbatim in Method Thesis, Novelty Argument, and (future) Abstract: "A shared non-adversarial domain discriminator plus asymmetric encoder-gradient supervision (GRL on z_sem path only) is the minimal repair for whitening-induced style collapse in client=domain FedDG when style carries class signal."
+
+No other method changes. This is a framing/evidence discipline sprint only.
+
+=== REVISED PROPOSAL ===
+<paste-proposal-here>
+=== END REVISED PROPOSAL ===
+
+This is Round 5 (the last allowed by protocol MAX_ROUNDS=5). Please make a final judgment:
+- Re-score the 7 dimensions and overall
+- Is the anchor preserved? (yes expected)
+- Is the framing now genuinely sharp enough to pass the top-venue novelty bar, OR is the novelty ceiling still the main blocker that prevents READY?
+- Verdict: READY / REVISE / RETHINK using the same rule (READY requires overall ≥ 9 AND no blocking issue)
+
+If you believe the paper is near ceiling and further refinement cannot materially change the score, say that explicitly. I will accept REVISE if the remaining gap is a true novelty-ceiling issue rather than a fixable weakness.
+
+Same output format: 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items.
