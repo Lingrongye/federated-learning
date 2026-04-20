@@ -12,7 +12,7 @@ algo_para:
 - 0      # ue = 0 (use_etf=0, Linear classifier)
 - 1      # uw = 1 (use_whitening=1, 保持与 EXP-098 Linear 对照基础)
 - 1      # uc = 1 (use_centers=1, 严格对齐 EXP-098 PACS baseline, 保持最小变动只改 ca)
-- 0      # se = 0
+- 1      # se = 1 (保存 checkpoint 供 frozen probe 使用)
 - 0      # lp = 0
 - 1      # ca = 1 (CDANN ON)
 learning_rate: 0.05

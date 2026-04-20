@@ -12,7 +12,7 @@ algo_para:
 - 0      # ue = 0 (use_etf=0, Linear classifier)
 - 1      # uw = 1 (use_whitening=1, 保持 Office +6.20pp gain 基础)
 - 0      # uc = 0 (use_centers=0, 同 EXP-102)
-- 0      # se = 0 (不保存 checkpoint; 如需 frozen probe 单独重跑 se=1 版)
+- 1      # se = 1 (保存 checkpoint to /root/fl_checkpoints/, 供 frozen probe 脚本使用)
 - 0      # lp = 0 (不启用 lambda_etf_pull)
 - 1      # ca = 1 (CDANN ON: dom_head + GRL on z_sem encoder path)
 learning_rate: 0.05
