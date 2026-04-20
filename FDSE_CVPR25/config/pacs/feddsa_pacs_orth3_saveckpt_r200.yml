@@ -1,0 +1,31 @@
+# EXP-111: PACS 强正交 lo=3.0 + whitening + se=1 (ca=0, no CDANN)
+# 目的: 验证"加强正交能否降低 probe_sty_class 非线性泄漏"
+# 对照: EXP-108 PACS CDANN (probe_sty_class MLP ≈ 0.91)
+#        EXP-109 PACS orth_only lo=1 (反事实 baseline)
+algo_para:
+- 3.0    # lo ★ 强正交
+- 0.1    # te
+- 128    # pd
+- 10     # wr
+- 1e-3   # es
+- 2      # mcw
+- 1      # dg = 1 (diag)
+- 0      # ue = 0
+- 1      # uw = 1
+- 1      # uc = 1
+- 1      # se = 1
+- 0      # lp = 0
+- 0      # ca = 0
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
