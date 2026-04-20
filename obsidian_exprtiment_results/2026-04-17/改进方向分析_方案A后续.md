@@ -59,11 +59,11 @@
 
 ## 📋 下一步部署（已完成）
 
-| EXP | 内容 | 服务器 | ETA |
-|-----|------|--------|-----|
-| EXP-086 | PACS 方案 A × 3-seed (主) | SC2 | 3-4h |
-| EXP-088 | Office sas_tau 5 档扫 | SC2 | ~1h |
-| **EXP-091** | **LR=0.025 + sas 组合 × PACS/Office × 3-seed** | Lab-lry | ~4h |
+| EXP         | 内容                                           | 服务器     | ETA  |
+| ----------- | -------------------------------------------- | ------- | ---- |
+| EXP-086     | PACS 方案 A × 3-seed (主)                       | SC2     | 3-4h |
+| EXP-088     | Office sas_tau 5 档扫                          | SC2     | ~1h  |
+| **EXP-091** | **LR=0.025 + sas 组合 × PACS/Office × 3-seed** | Lab-lry | ~4h  |
 
 ## 🔧 后续若验证成功可做
 

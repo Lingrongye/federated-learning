@@ -1,0 +1,42 @@
+You are a senior ML reviewer for a top venue (NeurIPS/ICML/ICLR/CVPR/ICCV).
+
+This is a PATCH proposal to a previously-refined method (FedDSA-CDANN, 8.75/10 after 5 rounds of your review). The CDANN method has been fully implemented, trained on Office + PACS 3-seeds, and evaluated with frozen post-hoc linear probes.
+
+CRITICAL CONTEXT: The user discovered that the Office baseline (Linear+whitening, no CDANN) probe_sty_class = 0.958, while CDANN = 0.962. The difference is only 0.4pp, meaning **CDANN's claimed "anchor evidence" (preserving class-relevant style in z_sty) is largely not a CDANN contribution but an artifact of the two-head linear-projection structure itself**. This empirically falsifies the anchor from the previous refinement round.
+
+The author wants to know:
+1. Is the new Symmetric CDANN proposal (adding L_cls_sty with GRL on z_sty path to make z_sty class-blind) technically sound?
+2. Does this kind of dual-adversarial disentanglement have precedent?
+3. Is there a reasonable expectation it will actually work, given that the baseline already has 95.8% probe_sty_class (meaning z_sty is inherently linearly separable for class regardless of mechanism)?
+4. Are there hidden failure modes beyond what the author listed?
+
+Please review specifically for:
+- **Logical consistency**: Given the probe result, is adding more GRL even the right direction? Could it be that linear probes are inherently bad at detecting disentanglement success?
+- **Precedent existence**: Has "dual-adversarial on decoupled features in FL" been done? Cite specific papers if relevant.
+- **Expected outcome realism**: Is "probe_sty_class drops from 95.8% to ≤ 25%" realistic given the encoder-shared architecture?
+- **Novel contribution assessment**: Is this patch a real contribution or just a technical fix to a broken method?
+- **Risk/reward**: Is this worth 25 GPU·h given the high uncertainty?
+
+Score these 7 dimensions from 1-10 (Weighted: Problem Fidelity 15%, Method Specificity 25%, Contribution Quality 25%, Frontier Leverage 15%, Feasibility 10%, Validation Focus 5%, Venue Readiness 5%):
+
+1. Problem Fidelity
+2. Method Specificity
+3. Contribution Quality
+4. Frontier Leverage
+5. Feasibility
+6. Validation Focus
+7. Venue Readiness
+
+OVERALL SCORE and VERDICT: READY / REVISE / RETHINK / ABANDON.
+
+VERDICT RULE:
+- READY: >= 9, no blocking concerns
+- REVISE: promising but needs work
+- RETHINK: fundamental issue with approach
+- ABANDON: better to stop and not pursue (either no real gain, or other approach dominates)
+
+Do NOT pad with "this is interesting". Be brutally honest. The user has limited GPU budget and wants to know if this path is worth pursuing or if they should pivot (e.g., to just running Plan A as baseline on PACS since EXP-080 Plan A achieves 81.69 which is already higher than current CDANN 80.08).
+
+=== PROPOSAL ===
+<paste-proposal-here>
+=== END PROPOSAL ===
