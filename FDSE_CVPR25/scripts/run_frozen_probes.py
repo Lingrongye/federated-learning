@@ -100,11 +100,23 @@ def main():
     server.model.load_state_dict(global_state, strict=False)
     client_states = torch.load(ckpt_dir / 'client_models.pt', map_location=device)
     whitening = torch.load(ckpt_dir / 'whitening.pt', map_location=device)
+    # client_models.pt 是 list (按 client index 存), 不是 dict!
     for cid, c in enumerate(clients):
-        if str(cid) in client_states:
-            c.model.load_state_dict(client_states[str(cid)], strict=False)
+        if isinstance(client_states, list):
+            if cid < len(client_states):
+                missing, unexpected = c.model.load_state_dict(client_states[cid], strict=False)
+                if missing or unexpected:
+                    print(f"[probe] client {cid} load warning: missing={len(missing)} unexpected={len(unexpected)}")
+        elif isinstance(client_states, dict):
+            if str(cid) in client_states:
+                c.model.load_state_dict(client_states[str(cid)], strict=False)
         # 把 model 移到 device (load_state_dict 恢复后 weights 可能在 CPU)
         c.model = c.model.to(device)
+        # Debug: verify load worked
+        if cid == 0:
+            import itertools
+            p_name, p_val = next(itertools.dropwhile(lambda kv: kv[0] == 'M', c.model.state_dict().items()))
+            print(f"[probe] client 0 {p_name[:40]} sum = {p_val.sum().item():.4f}")
         c.mu_global = whitening.get('mu_global', None)
         c.sigma_inv_sqrt = whitening.get('sigma_inv_sqrt', None)
         c.source_mu_k = whitening.get('source_mu_k', None)
