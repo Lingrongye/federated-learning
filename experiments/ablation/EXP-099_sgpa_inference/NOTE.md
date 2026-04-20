@@ -78,25 +78,31 @@
 
 **诊断**: 默认 τ_H_q=0.5 / τ_S_q=0.3 的 warmup 校准下, 没有 query 同时通过两 gate.
 
-### 消融
+### 消融 (⛔ 未跑 — 主 claim 已证伪, 消融无意义)
 
-| 配置 | AVG acc | reliable_rate | proto_etf_offset |
-|------|---------|---------------|------------------|
-| ETF argmax | 待填 | N/A | N/A |
-| entropy-only gate | 待填 | 待填 | 待填 |
-| dist-only gate | 待填 | 待填 | 待填 |
-| no-gate (T3A) | 待填 | 1.0 (等价无 gate) | 待填 |
-| **SGPA full** | 待填 | 待填 | 待填 |
+C3 已在 SGPA full 配置下被完全证伪 (fallback_rate=1.00 意味着 proto 机制从未触发), 继续 ablate 各 gate 变体**无法翻转结论**. 因此以下消融被**正式放弃**, 不再作 TODO:
+
+| 配置 | AVG acc | reliable_rate | proto_etf_offset | 状态 |
+|------|---------|---------------|------------------|------|
+| ETF argmax | 86.67 | N/A | N/A | = SGPA fallback, 同 full |
+| entropy-only gate | N/A | N/A | N/A | **已放弃** (主 claim 证伪) |
+| dist-only gate | N/A | N/A | N/A | **已放弃** |
+| no-gate (T3A) | N/A | 1.0 | N/A | **已放弃** |
+| **SGPA full** | 86.67 | 0.00 | 0.00 | 主证据 (证伪) |
 
 ### Layer 3 诊断 (单 client 代表)
 
+**⛔ 未记录** — 因为 fallback_rate=1.00, top-m proto bank 未被触发, 对应 Layer 3 的 entropy/dist gate 统计在 inference 过程中从未被 activate (代码路径: warmup → gate check → 全部 fail → fallback ETF). 因此以下指标**不存在 meaningful 值**:
+
 | 指标 | 值 | 说明 |
 |------|-----|------|
-| reliable_rate | 待填 | 目标 [0.3, 0.7] |
-| entropy_rate | 待填 | 仅熵 gate 通过率 |
-| dist_rate | 待填 | 仅距离 gate 通过率 |
-| dist_min p50 | 待填 | 白化后距离中位数 |
-| whitening_reduction ratio | 待填 | 白化前后 cross-client scatter 比 |
+| reliable_rate | **0.0** (all clients) | 双 gate 从未通过 |
+| entropy_rate | N/A | 不单独记录, 双 gate AND 后总 rate=0 |
+| dist_rate | N/A | 同上 |
+| dist_min p50 | N/A | 未统计 |
+| whitening_reduction ratio | N/A | 未统计 |
+
+**⚠️ 如果未来要"救活"SGPA 推理 (Option A 调 τ_H_q 0.5→0.8)**, 需要重写 inference 脚本加 gate 统计, 再跑 3 seeds 看 reliable_rate ∈ [0.3, 0.7].
 | sigma_cond | 待填 | Σ_global 条件数 (<1e4 健康) |
 | proto_fill_mean | 待填 | per-class support 平均数 |
 | proto_etf_offset_mean | 待填 | > 0.1 说明 proto 校正 ETF vertex |

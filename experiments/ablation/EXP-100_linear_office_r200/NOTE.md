@@ -65,14 +65,22 @@
 | **Δ Linear − Plan A ("副作用"!)** | — | +4.20 | +3.79 | **+6.20** 🔥 | +5.56 | -0.3/+0.3 | -2.5/-0.7 | ±0/±0 | ±0/-1.1 |
 | **Δ Linear − SAS (τ=0.3 EXP-084)** | — | +4.48 | +4.35 | **+4.35** | +3.84 | -2.7/-3.3 | -3.2/-1.0 | ±0/±0 | -1.1/-1.1 |
 
-### 诊断对比 (SGPA vs Linear, R200)
+### 诊断对比 (SGPA vs Linear, R200, 3-seed mean)
 
-| 指标 | SGPA (EXP-097) | Linear+whitening (本) | 说明 |
-|------|---------------|----------------------|------|
-| etf_align R200 | 待填 | 待填 | Linear 应 ~0, SGPA 应 ≥ 0.9 |
-| inter_cls_sim R200 | 待填 | 待填 | Linear 应 > 0.2, SGPA 应 ≤ -0.09 |
-| client_center_var R200 | 待填 | 待填 | Linear 应明显更大 |
-| param_drift R200 | 待填 | 待填 | Linear 应 > SGPA 数倍 |
+| 指标 | SGPA (EXP-097) | Linear+whitening (本) | Δ Linear-SGPA | 说明 |
+|------|---------------|----------------------|---------------|------|
+| etf_align R200 | **0.8765** | **0.3561** | -0.52 | Linear 无 ETF 约束, align 很低 ✓ |
+| inter_cls_sim R200 | -0.0941 | -0.0409 | +0.053 | Linear **类间分离略差** (没到 Office K=10 下界 -0.111) |
+| intra_cls_sim R200 | 0.8648 | 0.9462 | **+0.081** | **Linear 类内更紧密** ✅ |
+| z_sem_norm R200 | 2.773 | 12.213 | +9.44 | Linear z_sem 不被 ETF 压, norm 大 4.4 倍 |
+| z_sty_norm R200 | 2.288 | 2.182 | -0.11 | 几乎一致 |
+| param_drift R200 | 0.00220 | 0.00372 | +0.00152 | Linear 漂移稍大但同级别 |
+| client_center_var R200 | 0.00110 | **N/A (use_centers=0)** | — | EXP-100 关了 center 收集 |
+
+**关键诊断启示**:
+- **Linear+whitening 的赢家地位来自 intra_cls_sim 高 8pp** (类内紧密度强, CE 训练自由度大)
+- ETF 虽然 etf_align 接近完美 (0.88), inter_cls 更分离, 但**强制对齐牺牲了类内紧密度** → 分类精度反低
+- 验证了 "Fixed ETF 是几何 over-constraint" 的 reviewer 假设
 
 ## 🔍 Verdict Decision Tree
 

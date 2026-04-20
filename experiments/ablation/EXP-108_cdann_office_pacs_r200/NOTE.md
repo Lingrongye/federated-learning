@@ -77,78 +77,116 @@ L = L_task + λ_orth · L_orth + λ_hsic · HSIC + L_dom_sem + L_dom_sty
 - d = client id (每 client 内 batch 内所有样本同 domain label)
 - Inference 只走 z_sem → sem_classifier
 
-## 🏆 完整结果 (3-seed mean) — 待回填
+## 🏆 完整结果 (3-seed mean, 2026-04-21 回填)
 
 ### C-main 主对比
 
 **per-domain (Caltech/Amazon/DSLR/Webcam 或 Art/Cart/Photo/Sketch) 格式 Best/Last:**
 
-#### Office
+#### Office (✅ 3 seeds 全部完成)
 
 | 配置 | seed | ALL Best | ALL Last | AVG Best | AVG Last | Caltech | Amazon | DSLR | Webcam |
 |------|------|---------|---------|---------|---------|---------|--------|------|--------|
 | **Plan A orth_only** (EXP-083) | **mean** | 88.61 | 87.30 | **82.55** | 81.35 | 72.6/70.2 | 90.9/88.1 | 100.0/97.8 | 94.3/93.1 |
-| **Linear+whitening** (EXP-102, baseline) | **mean** | 82.81 | 81.09 | **88.75 ± 0.86** | 86.91 | 72.3/70.5 | 88.4/87.4 | 100.0/97.8 | 94.3/92.0 |
-| **CDANN (本实验)** | **mean** | 待填 | 待填 | **待填** | 待填 | — | — | — | — |
-|  | 2 | 待填 | 待填 | 待填 | 待填 | — | — | — | — |
-|  | 15 | 待填 | 待填 | 待填 | 待填 | — | — | — | — |
-|  | 333 | 待填 | 待填 | 待填 | 待填 | — | — | — | — |
-| **Δ CDANN − Linear+whitening** | — | 待填 | 待填 | **待填** | 待填 | — | — | — | — |
+| **Linear+whitening diag=1** (EXP-100) | **mean** | 82.81 | 81.09 | **88.75 ± 0.86** | 86.91 | 72.3/70.5 | 88.4/87.4 | 100.0/97.8 | 94.3/92.0 |
+| **whiten_only diag=0** (EXP-102) | **mean** | 83.61 | 82.14 | **89.26 ± 0.83** | 87.52 | 72.6/72.6 | 90.2/87.7 | 100.0/97.8 | 94.3/92.0 |
+| **CDANN (本实验)** | **mean** | **83.87 ± 1.31** | **82.67 ± 0.93** | **89.54 ± 0.49** 🔥 | **87.40 ± 0.78** | 72.9/72.6 | 89.8/89.5 | 100.0/95.6 | 95.4/92.0 |
+|  | 2 | 82.14 | 81.36 | 88.91 | 88.27 | 71.4/72.3 | 84.2/84.2 | 100.0/100.0 | 100.0/96.6 |
+|  | 15 | 84.14 | 83.33 | 90.11 | 87.54 | 72.3/73.2 | 91.6/90.5 | 100.0/93.3 | 96.6/93.1 |
+|  | 333 | 85.33 | 83.32 | 89.58 | 86.39 | 75.0/72.3 | 93.7/93.7 | 100.0/93.3 | 89.7/86.2 |
+| **Δ CDANN − Linear+whitening EXP-100** | — | +1.06 | +1.58 | **+0.79** ✅ | +0.49 | +0.6/+2.1 | +1.4/+2.1 | ±0/-2.2 | +1.1/±0 |
+| **Δ CDANN − whiten_only EXP-102** | — | +0.26 | +0.53 | **+0.28** ✅ | -0.12 | +0.3/±0 | -0.4/+1.8 | ±0/-2.2 | +1.1/±0 |
 
-#### PACS
+#### PACS (⏳ CDANN 3 runs 仍在训练中 R185-190, 待完成回填)
 
 | 配置 | seed | AVG Best | AVG Last | Art | Cart | Photo | Sketch |
 |------|------|---------|---------|-----|------|-------|--------|
 | **Plan A orth_only** (EXP-080) | **mean** | **81.69** | 73.87 | — | — | — | — |
+| **Plan A smoke** (EXP-107, seed=2 only) | 2 | 80.47 | 79.88 | — | — | — | — |
 | **SGPA (use_etf=1)** (EXP-098) | **mean** | 78.96 ± 0.37 | 73.77 | 62.6/54.6 | 85.0/78.9 | 80.0/74.3 | 88.2/87.3 |
 | **Linear+whitening (baseline)** (EXP-098) | **mean** | 80.20 ± 0.94 | 79.36 | 63.4/61.4 | 86.0/84.0 | 81.8/82.4 | 89.5/89.5 |
-| **CDANN (本实验)** | **mean** | **待填** | 待填 | — | — | — | — |
-|  | 2 | 待填 | 待填 | — | — | — | — |
-|  | 15 | 待填 | 待填 | — | — | — | — |
-|  | 333 | 待填 | 待填 | — | — | — | — |
-| **Δ CDANN − Linear+whitening** | — | 待填 | 待填 | — | — | — | — |
-| **Δ CDANN − Plan A** | — | 待填 | 待填 | — | — | — | — |
+| **CDANN (本实验) R190** | 2 | **80.84** (R169) | pending | — | — | — | — |
+|  | 15 | 79.99 | pending | — | — | — | — |
+|  | 333 | 79.40 | pending | — | — | — | — |
+|  | **current max mean** | **80.08** | — | — | — | — | — |
+| **Δ CDANN − Linear+whitening** | — | pending | pending | — | — | — | — |
+| **Δ CDANN − Plan A** | — | pending | pending | — | — | — | — |
+
+### 📌 重要发现 (2026-04-21 诊断)
+
+**原 anchor claim "whitening 磨掉 z_sty 的类信号" 需要修正**:
+- EXP-107 Plan A smoke (**无 whitening**) PACS z_sty_norm R10=3.12 → R200=**0.146**
+- EXP-098 Linear+**whitening** PACS z_sty_norm R10=3.12 → R200=**0.146**
+- **两者几乎完全一致** → z_sty 塌缩**不是 whitening 引起**, 是 PACS 训练过程中 encoder 自然压缩 z_sty
+- CDANN 的正向 L_dom_sty 监督**抵抗了这种压缩** (CDANN z_sty_norm R100=10+, 67× baseline)
+
+**修正后的 claim**: **"Training-induced style collapse in PACS; CDANN's positive domain supervision on z_sty prevents it."**
 
 ## 🔬 诊断指标对比 (Layer 1+2+CDANN, R200 mean)
 
 **这是本实验的关键诊断预留** — CDANN 的所有新 metrics 都会被 diag jsonl 记录, 对比 baseline 就能量化 CDANN 机制是否生效.
 
-### Layer 1 (Train-time, 4-client mean at R200)
+### Layer 1 (Train-time, 4-client mean)
 
-| 指标 | Linear+whitening (EXP-098/102) | **CDANN (本)** | Δ 预期 |
-|------|-------------------------------|---------------|--------|
-| intra_cls_sim R200 | Office 0.954 / PACS 0.999 | 待填 | ≈ 保持 |
-| inter_cls_sim R200 | Office 0.051 / PACS -0.172 | 待填 | ≈ 保持 |
-| **z_sem_norm** R200 | Office 12.39 / PACS 5.79 | 待填 | 期望稳定 (不因 GRL 坍塌) |
-| **z_sty_norm** R200 | Office 2.21 / PACS **0.15** | 待填 | **PACS 期望 ≥ 1.5** (风格保留) |
-| loss_task R200 | Office 0.0018 / PACS 0.0019 | 待填 | ≈ 保持 |
-| loss_orth R200 | — | 待填 | ≈ 保持 |
+**PACS CDANN (R100 snapshot, 3-seed mean)** vs **baseline EXP-098 Linear+whitening R200**:
 
-### CDANN 训练指标 (首次记录, R0-200 trajectory)
+| 指标 | EXP-098 Linear+whitening (R200) | EXP-107 Plan A smoke (R200) | **CDANN (R100)** | Δ (CDANN vs baseline) |
+|------|---------------------------------|-----------------------------|------------------|----------------------|
+| intra_cls_sim | 0.999 | — | 0.989 (s=2) / 0.965 (s=15) / 0.990 (s=333) | -0.01 (几乎一致) |
+| inter_cls_sim | -0.172 | — | -0.169 / -0.160 / -0.169 | -0.003 (接近) |
+| **z_sem_norm** | 5.79 | — | 4.17 / 4.31 / 4.14 | 约 -1.6 (CDANN 略压) |
+| **z_sty_norm** 🔥 | **0.146** | **0.146** | **10.12 / 10.14 / 9.87** | **+9.9 (保留 67×)** ✅ |
+| loss_task R100 | ~0.002 | — | ~0.003 | ≈ 保持 |
 
-| 指标 | 含义 | 期望轨迹 |
-|------|------|---------|
-| **lambda_adv** | GRL 反向梯度强度 | R0-20=0, R20-40 ramp, R40+=1.0 |
-| **loss_dom_sem** | dom_head 在 z_sem 上的 CE | R0-20 随机 (~log N=1.4), R40+ 由于 GRL 对抗应**上升**至 ~log N |
-| **loss_dom_sty** | dom_head 在 z_sty 上的 CE | R0-20 随机, R40+ 由于正向监督应**下降**接近 0 |
-| **dom_sem_acc_train** | z_sem → domain 训练 acc | R40+ 期望接近 25% (随机) |
-| **dom_sty_acc_train** | z_sty → domain 训练 acc | R40+ 期望接近 100% |
+**Office CDANN (R200 snapshot)** — R200 已完成:
+- intra/inter 数据需单独提 (Office diag=1 已记录, 见 `R200_S*_cdann/`)
+- z_sty_norm Office CDANN 预计与 baseline 持平 (Office 风格弱, 磨不磨都差不多)
 
-### Layer 2 (Server-side, R200)
+### CDANN 训练指标 (PACS seed=2 实测轨迹)
 
-| 指标 | Linear+whitening | **CDANN** | Δ 预期 |
-|------|------------------|-----------|--------|
-| client_center_var | Office 待查 / PACS 0.00078 | 待填 | 接近 |
-| param_drift | Office 0.0032 / PACS 0.007 | 待填 | 接近 |
+| Round | λ_adv | L_dom_sem | L_dom_sty | sem_acc | sty_acc | 解读 |
+|-------|-------|-----------|-----------|---------|---------|------|
+| 5 | 0.00 | 0.000 | 0.000 | 0.000 | 0.000 | warmup gate 关闭 ✅ |
+| 20 | 0.00 | 0.00482 | 0.00022 | 1.000 | 1.000 | warmup 末 (λ=0 但 loss 已算, 旧代码 pre-fix) |
+| 40 | 1.00 | 0.00347 | 0.00002 | 1.000 | 1.000 | full CDANN 全开 |
+| 80 | 1.00 | 0.00215 | 0.00004 | 1.000 | 1.000 | 稳定 |
+| 100 | 1.00 | 0.00224 | 0.00004 | 1.000 | 1.000 | 稳定 |
 
-### Frozen Post-hoc Probes (训完后单独跑, C-probe + C-domain 核心证据)
+**诊断 verdict**:
+- ✅ **λ_adv schedule 执行正确** (R0-20=0, R40 全开)
+- ✅ **L_dom_sty 接近 0**: 正向监督完美 (z_sty 100% 分域)
+- ❌ **L_dom_sem 接近 0 不是 ~log(4)=1.39**: GRL 反向**未有效压制**, dom_head 仍 100% 从 z_sem 分域
+- **mechanism 2/3 生效**: 正向监督 成功, 反向 GRL 失败 (典型 DANN in FL 失败模式 — FedBN 本地 BN 让特征天然携带 client-specific shift)
 
-| Probe | Linear+whitening baseline | **CDANN** | 期望 |
-|-------|---------------------------|-----------|------|
-| probe_sem_domain (z_sem → domain) | 高 (无 GRL 压制) | **待填** | ≈ 0.25 (1/N=4) random |
-| probe_sty_domain (z_sty → domain) | 中等 | **待填** | **≈ 0.95** (正向监督成功) |
-| **probe_sty_class** (z_sty → class, PACS) | **≈ 15%** (whitening 磨) | **待填** | **≥ 40%** (风格保留类信号) |
-| probe_sty_class (z_sty → class, Office) | ≈ 15-20% | **待填** | 20-30% (Office 风格不强, neutral) |
+### Layer 2 (Server-side, PACS CDANN R80 实测)
+
+| Seed | client_center_var (R10→R80) | param_drift (R10→R80) |
+|------|-----------------------------|-----------------------|
+| s=2 | 0.01904 → **0.00109** | 0.18784 → **0.02319** |
+| s=15 | 0.01867 → **0.00095** | 0.17206 → **0.02188** |
+| s=333 | 0.01726 → **0.00096** | 0.17422 → **0.02201** |
+| **mean R80** | **0.00100** | **0.02236** |
+| vs baseline EXP-098 R200 | 0.00078 | 0.007 | **CDANN 略高但同数量级, 无异常** |
+| vs EXP-098 ETF R200 (失败案例) | 0.00027 | **0.253** (60× 暴涨异常) | CDANN 稳定, 无 ETF 后期漂移 ✅ |
+
+### Frozen Post-hoc Probes (Office 4 ckpts 已跑, PACS 待训练完成)
+
+**Office Probe Results** (pre-whitening features, train 80% / test 20% split, seed=42):
+
+| Checkpoint | probe_sem_domain | probe_sty_domain | probe_sty_class | 解读 |
+|-----------|------------------|------------------|-----------------|------|
+| EXP-105 Linear+whitening (baseline s=2) | **0.514** | 0.930 | **0.958** | 基线状态 |
+| CDANN s=2 | **1.000** ⚠️ | 1.000 | 0.950 | 两个 z 都完美分域 |
+| CDANN s=15 | 0.996 ⚠️ | 1.000 | 0.956 | |
+| CDANN s=333 | 0.996 ⚠️ | 1.000 | 0.965 | |
+
+**Office Probe Verdict** (意外结论):
+- ❌ `probe_sem_domain` 期望 ≈ 0.25 但 CDANN 实际 1.00 → **GRL 未磨掉 z_sem 的 domain 信息** (FedBN 副作用)
+- ✅ `probe_sty_domain` CDANN 100% → 正向监督完美
+- ⚠️ `probe_sty_class` = 0.95-0.96 → Office 上**z_sem 和 z_sty 都含类信号**, 因 Office 风格弱, 双头训练后两者都是 class-discriminative
+- **Office AVG Best 提升 (+0.79pp) 不是来自 "z_sem 变 domain-blind", 而是解耦结构+正向监督带来的间接效果**
+
+**PACS Probe 待 CDANN 完成后跑**. 预期 PACS probe_sty_class ≥ 40% (baseline ≈ 15% whitening 磨后).
 
 **关键 claim 证据**: PACS 的 `probe_sty_class` 差距 (CDANN - baseline) ≥ 25pp 则 C-probe 成立.
 
