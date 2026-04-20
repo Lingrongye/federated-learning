@@ -1,0 +1,19 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+[load] task=office_caltech10_c4, seed=2, R=200, use_etf=0, use_whitening=1
+[flgo] server initialized, num_clients=4
+[ckpt] global_state loaded to server.model
+[ckpt] whitening loaded: N_clients=4, d=128
+[ckpt] client BN states loaded
+[client 0] {'sgpa_acc': 0.6696428656578064, 'etf_acc': 0.6696428656578064, 'proto_vs_etf_gain': 0.0, 'reliable_rate': 0.0, 'fallback_rate': 1.0, 'n_samples': 112, 'client_id': 0}
+[client 1] {'sgpa_acc': 0.8315789699554443, 'etf_acc': 0.8315789699554443, 'proto_vs_etf_gain': 0.0, 'reliable_rate': 0.0, 'fallback_rate': 1.0, 'n_samples': 95, 'client_id': 1}
+[client 2] {'sgpa_acc': 1.0, 'etf_acc': 1.0, 'proto_vs_etf_gain': 0.0, 'reliable_rate': 0.0, 'fallback_rate': 1.0, 'n_samples': 15, 'client_id': 2}
+[client 3] {'sgpa_acc': 0.9655172228813171, 'etf_acc': 0.9655172228813171, 'proto_vs_etf_gain': 0.0, 'reliable_rate': 0.0, 'fallback_rate': 1.0, 'n_samples': 29, 'client_id': 3}
+
+=== SGPA Inference Summary ===
+  sgpa_acc_mean: 0.8667
+  etf_acc_mean: 0.8667
+  proto_vs_etf_gain_mean: 0.0000
+  reliable_rate_mean: 0.0000
+  fallback_rate_mean: 1.0000
+[save] ../experiments/ablation/EXP-099_sgpa_inference/s2_result.json
