@@ -1,9 +1,9 @@
 # EXP-099: SGPA 推理独立 script — 测 Layer 3 完整 13 指标
 
-**日期**: 2026-04-19 设计 / 待实现
-**算法**: 独立推理 script, 加载 EXP-096/097 训练好的 checkpoint
-**服务器**: CPU 可做 (0 GPU 成本)
-**状态**: 🟡 script 待写 (等 EXP-097 checkpoint 出来再运行)
+**日期**: 2026-04-19 设计 / 2026-04-20 10:30 完成 seed=2 推理
+**算法**: 独立推理 script, 加载 EXP-105 (whitening + se=1) R200 seed=2 checkpoint
+**服务器**: seetacloud2 GPU 0 (30s)
+**状态**: 🔴 **C3 证伪** — fallback_rate=1.00, proto_vs_etf_gain=0
 
 ## 这个实验做什么 (大白话)
 
@@ -55,15 +55,28 @@
 | EMA decay | 0.95 |
 | GPU | 可 CPU, 但有 GPU 更快 |
 
-## 🏆 完整结果 (4-client mean) — 待回填
+## 🏆 完整结果 (2026-04-20, seed=2 only)
 
 ### Claim C3 主对比
 
 | 推理方式 | Client mean AVG | Caltech | Amazon | DSLR | Webcam |
 |---------|-----------------|---------|--------|------|--------|
-| **ETF argmax** (baseline) | 待填 | — | — | — | — |
-| **SGPA full** (OURS) | 待填 | — | — | — | — |
-| **Δ SGPA − ETF** (C3 核心) | **待填** | — | — | — | — |
+| **ETF fallback** (baseline) | 86.67 | 66.96 | 83.16 | 100.00 | 96.55 |
+| **SGPA full** | 86.67 | 66.96 | 83.16 | 100.00 | 96.55 |
+| **Δ SGPA − ETF (C3 核心)** | **+0.00** | — | — | — | — |
+
+**🔴 C3 证伪**: proto_vs_etf_gain = 0.00 全 client.
+
+### 根因 (诊断指标)
+
+| 指标 | 值 | 说明 |
+|------|-----|------|
+| reliable_rate | **0.00** | 所有 query 都没进 reliable 集合 (双 gate 太严) |
+| fallback_rate | **1.00** | 全部回退到 ETF |
+| proto_vs_etf_gain | **0.00** | SGPA 预测 ≡ ETF fallback 预测 |
+| proto bank 是否命中 | ❌ | 未触发 top-m proto 分类 |
+
+**诊断**: 默认 τ_H_q=0.5 / τ_S_q=0.3 的 warmup 校准下, 没有 query 同时通过两 gate.
 
 ### 消融
 
@@ -89,21 +102,19 @@
 | proto_etf_offset_mean | 待填 | > 0.1 说明 proto 校正 ETF vertex |
 | fallback_rate | 待填 | < 0.3 说明 SGPA 大部分接管 |
 
-## 🔍 Verdict Decision Tree
+## 🔍 Verdict Decision Tree — 落在 "proto_vs_etf_gain = 0" 分支
 
 ```
-proto_vs_etf_gain ≥ +0.5%
-  → ✅ C3 成立, SGPA 推理端是论文真 dominant contribution
-  → 扩到 PACS 验证 (EXP-098)
-
-proto_vs_etf_gain ∈ [0, +0.5%]
-  → ⚠️ SGPA 推理微弱 +, 算 nice-to-have
-  → 论文可能需要强化 ETF 训练端故事
-
-proto_vs_etf_gain < 0
-  → ❌ SGPA 推理反而 hurt (脏样本污染 proto)
-  → 必须调 τ_H/τ_S/m_top, 或放弃 SGPA 推理 claim
+→ ❌ C3 证伪: SGPA 推理 = ETF fallback, 无任何 proto 校正
+→ 决策选项:
+   (A) 调阈值: τ_H_q 从 0.5 → 0.8 (放宽), τ_S_q 从 0.3 → 0.5 (放宽)
+   (B) 改 gate 设计: 双 gate AND → OR (任一通过即 reliable)
+   (C) 放弃推理端 SGPA claim, 回到训练端故事:
+       - Linear + whitening (EXP-102 89.26) 才是真正 dominant contribution
+       - 论文叙事转向: "FedBN + pooled whitening broadcast" 足以解释 +6.20pp gain
 ```
+
+**暂定**: 选 (C) — SGPA 推理太复杂, Linear+whitening 已经很强且可解释. 下一步做 EXP-106 pull 扩 seed 看 soft ETF pull 是否给训练端再提 0.5pp.
 
 ## 📊 实验统计
 

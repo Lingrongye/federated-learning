@@ -1,7 +1,7 @@
 # EXP-106: Lambda ETF-Pull Office R200 — 平衡类间分离 + 类内紧密
 
-**日期**: 2026-04-20 启动 / 待完成
-**状态**: 🟡 部署中
+**日期**: 2026-04-20 启动 / 2026-04-20 04:27 完成 (seed=2 pilot)
+**状态**: 🟢 Pilot 完成 (3 λ × s=2), rescue from log (JSON save 失败: 文件名 >255 字节)
 **前置**: Codex REVISE verdict 实施:
   - ✅ use_etf=0 guard 加了
   - ✅ n_c < 2 singleton class 跳过
@@ -58,17 +58,51 @@ loss = loss_task + λ_orth * loss_orth + λ_pull * loss_etf_pull
 | 0.01  | AVG Best ≥ 89.50 (+0.2 over EXP-102) | λ 范围不对 |
 | 0.03  | 可能最好或最差 (边界探索) | ETF 约束太强 |
 
-## 结果 (待回填)
+## 结果 (2026-04-20 rescue from log)
 
-| λ | seed | AVG Best | AVG Last | intra_cls_sim R200 | etf_align R200 | loss_etf_pull R200 |
-|---|------|----------|----------|--------------------|-----------------|---------------------|
-| 0.003 | 2 | 待填 | 待填 | 待填 | 待填 | 待填 |
-| 0.01  | 2 | 待填 | 待填 | 待填 | 待填 | 待填 |
-| 0.03  | 2 | 待填 | 待填 | 待填 | 待填 | 待填 |
+**⚠️ 保存 record 失败**: 文件名长度 278 字节 > ext4 NAME_MAX 255 字节
+- flgo log 完整 (有每个 round 的 `mean_local_test_accuracy`), 从 log rescue 出结果
+- 需要修 `feddsa_sgpa.py` 的 `hparam_names_in_filename` 压缩 alias (见 **待办** 段)
 
-**对照 (已有)**:
-- EXP-102 λ=0 mean 89.26 (intra=0.941 ± Linear; etf_align=-0.002)
-- EXP-097 use_etf=1 (硬 ETF) mean 86.97 (intra=0.909; etf_align=0.951)
+### Seed=2 Pilot 结果
+
+| λ | seed | Max | Max@round | Last R200 | vs EXP-102 seed=2 Last |
+|---|------|-----|-----------|-----------|------------------------|
+| **EXP-102 whiten only** | 2 | **88.13** | @R45 | **86.74** | (baseline) |
+| 0.003 | 2 | 87.98 | @R34 | 83.88 | **-2.86** ❌ 后期崩 |
+| 0.01  | 2 | 88.09 | @R42 | **87.46** | **+0.72** ✅ |
+| 0.03  | 2 | **88.39** | @R53 | 86.74 | **+0.00** 持平 |
+
+**观察**:
+1. **λ=0.01 last 最稳** — 后期不崩反升 0.72pp
+2. **λ=0.03 peak 最高** — 88.39 超 baseline peak 88.13 (+0.26pp)
+3. **λ=0.003 崩盘** — Last 83.88, 反证 "λ 越小越保守" 错误 (小 λ 梯度噪声反而干扰训练)
+4. 所有变体 max 都出现在 R34-53 早期 — 后期 CE 拉扯把 pull 的早期收益抵消
+
+### vs 其他 ablation (已有 3-seed mean)
+
+| 方法 | AVG Best (R200) | AVG Last | 解释 |
+|------|-----------------|----------|------|
+| EXP-097 hard ETF (use_etf=1) | 86.97 | — | 硬对齐, 牺牲 intra tightness |
+| EXP-102 whitening only | **89.26** | — | 3-seed mean, 当前 best |
+| EXP-106 λ=0.03 (s=2 only) | 88.39 | 86.74 | **peak 超 seed=2 baseline**, 但只 1 seed |
+
+### 下一步决策
+
+**方案 A**: 扩 λ=0.01 和 λ=0.03 到 3 seeds (s=15, s=333)
+- λ=0.01 last 最稳, 值得看是否泛化
+- λ=0.03 peak 最高
+- 估时: 6 runs × 46min ≈ 4.6h (seetacloud2 单卡 4090)
+
+**方案 B**: 承认 pull 机制 marginal, 聚焦 SGPA 诊断 (EXP-099 fallback_rate=1.00 问题)
+
+**倾向**: 方案 A, 但先修文件名问题避免 rescue
+
+## 待办
+
+- [ ] **修 `feddsa_sgpa.py` 的 hparam_names_in_filename**: 压缩 alias, 避免 >255 字节 (此 bug 影响所有带 12 algo_para 的实验)
+- [ ] 方案 A: 扩 λ=0.01 + λ=0.03 × s={15, 333} 4 runs
+- [ ] 同步 Obsidian
 
 ## 📎 相关
 
