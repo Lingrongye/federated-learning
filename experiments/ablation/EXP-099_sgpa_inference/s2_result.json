@@ -1,0 +1,62 @@
+{
+  "sgpa_acc_mean": 0.866684764623642,
+  "sgpa_acc_std": 0.12999878225973605,
+  "etf_acc_mean": 0.866684764623642,
+  "etf_acc_std": 0.12999878225973605,
+  "proto_vs_etf_gain_mean": 0.0,
+  "proto_vs_etf_gain_std": 0.0,
+  "reliable_rate_mean": 0.0,
+  "reliable_rate_std": 0.0,
+  "fallback_rate_mean": 1.0,
+  "fallback_rate_std": 0.0,
+  "per_client": [
+    {
+      "sgpa_acc": 0.6696428656578064,
+      "etf_acc": 0.6696428656578064,
+      "proto_vs_etf_gain": 0.0,
+      "reliable_rate": 0.0,
+      "fallback_rate": 1.0,
+      "n_samples": 112,
+      "client_id": 0
+    },
+    {
+      "sgpa_acc": 0.8315789699554443,
+      "etf_acc": 0.8315789699554443,
+      "proto_vs_etf_gain": 0.0,
+      "reliable_rate": 0.0,
+      "fallback_rate": 1.0,
+      "n_samples": 95,
+      "client_id": 1
+    },
+    {
+      "sgpa_acc": 1.0,
+      "etf_acc": 1.0,
+      "proto_vs_etf_gain": 0.0,
+      "reliable_rate": 0.0,
+      "fallback_rate": 1.0,
+      "n_samples": 15,
+      "client_id": 2
+    },
+    {
+      "sgpa_acc": 0.9655172228813171,
+      "etf_acc": 0.9655172228813171,
+      "proto_vs_etf_gain": 0.0,
+      "reliable_rate": 0.0,
+      "fallback_rate": 1.0,
+      "n_samples": 29,
+      "client_id": 3
+    }
+  ],
+  "meta": {
+    "task": "office_caltech10_c4",
+    "seed": 2,
+    "num_rounds": 200,
+    "num_clients": 4,
+    "use_etf": 0,
+    "use_whitening": 1,
+    "use_centers": 0,
+    "tau_etf": 0.1,
+    "lambda_orth": 1.0,
+    "timestamp": 1776629531
+  }
+}
