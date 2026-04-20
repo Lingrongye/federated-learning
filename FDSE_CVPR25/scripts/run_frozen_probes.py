@@ -28,6 +28,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 
 FDSE_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(FDSE_ROOT))
@@ -37,10 +38,16 @@ from algorithm.feddsa_sgpa import FedDSASGPAModel, _resolve_num_classes, _resolv
 
 
 def collect_features(client, is_train: bool, device: str):
-    """Collect post-whitening z_sem, z_sty from client's train/test loader."""
+    """Collect post-whitening z_sem, z_sty from client's data loader.
+
+    Note: flgo.init(num_rounds=0) 可能未触发 test_data split, 所以我们只用
+    client.train_data 收集全部 features, 在 sklearn 那边 train_test_split 80/20.
+    """
+    data = client.train_data
+    if data is None:
+        raise RuntimeError(f"client {getattr(client, 'id', '?')} train_data is None")
     loader = client.calculator.get_dataloader(
-        client.train_data if is_train else client.test_data,
-        batch_size=client.batch_size
+        data, batch_size=client.batch_size
     )
     z_sem_list, z_sty_list, y_list = [], [], []
     client.model.eval()
@@ -113,28 +120,28 @@ def main():
         c.sigma_inv_sqrt = whitening.get('sigma_inv_sqrt', None)
         c.source_mu_k = whitening.get('source_mu_k', None)
 
-    # Collect features per client
-    Z_sem_train, Z_sty_train, Y_train, D_train = [], [], [], []
-    Z_sem_test, Z_sty_test, Y_test, D_test = [], [], [], []
+    # Collect features per client (only train_data, split 80/20 via sklearn)
+    Z_sem_all, Z_sty_all, Y_all, D_all = [], [], [], []
     for cid, c in enumerate(clients):
         print(f'[probe] client {cid}: collecting features...')
-        z_sem_tr, z_sty_tr, y_tr = collect_features(c, is_train=True, device=device)
-        z_sem_te, z_sty_te, y_te = collect_features(c, is_train=False, device=device)
-        Z_sem_train.append(z_sem_tr); Z_sty_train.append(z_sty_tr); Y_train.append(y_tr)
-        D_train.append(np.full(len(y_tr), cid))
-        Z_sem_test.append(z_sem_te); Z_sty_test.append(z_sty_te); Y_test.append(y_te)
-        D_test.append(np.full(len(y_te), cid))
+        z_sem, z_sty, y = collect_features(c, is_train=True, device=device)
+        Z_sem_all.append(z_sem); Z_sty_all.append(z_sty); Y_all.append(y)
+        D_all.append(np.full(len(y), cid))
 
-    Z_sem_train = np.vstack(Z_sem_train)
-    Z_sty_train = np.vstack(Z_sty_train)
-    Y_train = np.concatenate(Y_train)
-    D_train = np.concatenate(D_train)
-    Z_sem_test = np.vstack(Z_sem_test)
-    Z_sty_test = np.vstack(Z_sty_test)
-    Y_test = np.concatenate(Y_test)
-    D_test = np.concatenate(D_test)
+    Z_sem_all = np.vstack(Z_sem_all)
+    Z_sty_all = np.vstack(Z_sty_all)
+    Y_all = np.concatenate(Y_all)
+    D_all = np.concatenate(D_all)
 
-    print(f'[probe] total train samples: {len(Y_train)}, test: {len(Y_test)}')
+    # Stratified 80/20 split (seed固定确保复现)
+    idx_train, idx_test = train_test_split(
+        np.arange(len(Y_all)), test_size=0.2, random_state=42, stratify=D_all)
+    Z_sem_train = Z_sem_all[idx_train]; Z_sem_test = Z_sem_all[idx_test]
+    Z_sty_train = Z_sty_all[idx_train]; Z_sty_test = Z_sty_all[idx_test]
+    Y_train = Y_all[idx_train];         Y_test = Y_all[idx_test]
+    D_train = D_all[idx_train];         D_test = D_all[idx_test]
+
+    print(f'[probe] total: {len(Y_all)}, train: {len(Y_train)}, test: {len(Y_test)}')
 
     # Fit 3 probes on train features, evaluate on test
     results = {}
