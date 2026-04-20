@@ -107,6 +107,8 @@ def main():
     for cid, c in enumerate(clients):
         if str(cid) in client_states:
             c.model.load_state_dict(client_states[str(cid)], strict=False)
+        # 把 model 移到 device (load_state_dict 恢复后 weights 可能在 CPU)
+        c.model = c.model.to(device)
         c.mu_global = whitening.get('mu_global', None)
         c.sigma_inv_sqrt = whitening.get('sigma_inv_sqrt', None)
         c.source_mu_k = whitening.get('source_mu_k', None)
