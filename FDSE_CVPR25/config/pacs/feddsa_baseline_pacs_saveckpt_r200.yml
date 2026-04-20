@@ -1,0 +1,30 @@
+# Temporary: PACS Linear+whitening baseline (NO CDANN) + se=1 checkpoint
+# 目的: 跑一份 baseline probe 对照, 验证 CDANN 的 probe_sty_class 0.96 是否真的 > baseline
+# 严格对齐 EXP-098 config (use_etf=0, use_whitening=1, use_centers=1, diag=1) + 加 se=1
+algo_para:
+- 1.0    # lo
+- 0.1    # te
+- 128    # pd
+- 10     # wr
+- 1e-3   # es
+- 2      # mcw
+- 1      # dg = 1 (diag)
+- 0      # ue = 0 (Linear, same as EXP-098)
+- 1      # uw = 1 (whitening on, same as EXP-098)
+- 1      # uc = 1 (use_centers=1, default same as EXP-098)
+- 1      # se = 1 (保存 checkpoint, 关键)
+- 0      # lp = 0
+- 0      # ca = 0 (CDANN OFF, 这就是 baseline)
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
