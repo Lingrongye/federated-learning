@@ -58,22 +58,11 @@ def collect_features(client, is_train: bool, device: str):
             h = client.model.encode(x)
             z_sem = client.model.get_semantic(h)
             z_sty = client.model.get_style(h)
-            # Apply whitening if available (post-whitening features)
-            if client.mu_global is not None and client.sigma_inv_sqrt is not None:
-                mu_g = client.mu_global.to(device)
-                W = client.sigma_inv_sqrt.to(device)
-                # Note: whitening applied on z_sty only in current FedDSA-SGPA pipeline.
-                # For symmetry we also center z_sem; Downstream probe only cares about
-                # the same feature space as sem_classifier sees at training time.
-                z_sem_c = z_sem - mu_g.unsqueeze(0)
-                z_sem_w = z_sem_c @ W
-                z_sty_c = z_sty - mu_g.unsqueeze(0)
-                z_sty_w = z_sty_c @ W
-                z_sem_list.append(z_sem_w.cpu())
-                z_sty_list.append(z_sty_w.cpu())
-            else:
-                z_sem_list.append(z_sem.cpu())
-                z_sty_list.append(z_sty.cpu())
+            # 注意: 训练时 dom_head 看到的是 pre-whitening z_sem/z_sty
+            # (Client.train 直接 dom_head(z_sem), 无 whitening). 所以 probe 也用
+            # pre-whitening 保持和训练时特征空间一致.
+            z_sem_list.append(z_sem.cpu())
+            z_sty_list.append(z_sty.cpu())
             y_list.append(y.cpu())
     Z_sem = torch.cat(z_sem_list, dim=0).numpy()
     Z_sty = torch.cat(z_sty_list, dim=0).numpy()
