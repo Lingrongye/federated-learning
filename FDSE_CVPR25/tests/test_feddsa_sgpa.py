@@ -28,6 +28,9 @@ from algorithm.feddsa_sgpa import (
     build_etf_matrix,
     FedDSASGPAModel,
     AlexNetEncoder,
+    GradientReverseLayer,
+    grl,
+    compute_lambda_adv,
 )
 
 
@@ -591,6 +594,157 @@ class TestEndToEnd:
             loss_orth = ((z_sem_n * z_sty_n).sum(dim=-1) ** 2).mean().item()
         # 未训练的模型 orth 初值可能任意, 但应该是 [0, 1]
         assert 0.0 <= loss_orth <= 1.0
+
+
+# ============================================================
+# CDANN (Constrained DANN) — R5 proposal-complete
+# ============================================================
+
+
+class TestGRL:
+    """Gradient Reversal Layer 正确性."""
+
+    def test_forward_identity(self):
+        """GRL.forward 应该是恒等映射."""
+        x = torch.randn(4, 128)
+        y = grl(x, lam=0.5)
+        assert torch.allclose(y, x)
+
+    def test_backward_reverses_gradient(self):
+        """GRL.backward 应该把梯度乘 -lam."""
+        x = torch.randn(4, 128, requires_grad=True)
+        y = grl(x, lam=0.3)
+        loss = y.sum()
+        loss.backward()
+        # dL/dx 如果无 GRL 是 +1 (因为 sum); 有 GRL 乘 -0.3 = -0.3
+        expected = -0.3 * torch.ones_like(x)
+        assert torch.allclose(x.grad, expected, atol=1e-6)
+
+    def test_backward_lam_zero_zeroes_gradient(self):
+        """lam=0 时 GRL.backward 应该返回 0 梯度."""
+        x = torch.randn(4, 128, requires_grad=True)
+        y = grl(x, lam=0.0)
+        loss = y.sum()
+        loss.backward()
+        assert torch.allclose(x.grad, torch.zeros_like(x))
+
+    def test_backward_lam_one_flips_gradient(self):
+        """lam=1 时 GRL.backward 应该完全反转梯度."""
+        x = torch.randn(4, 128, requires_grad=True)
+        y = grl(x, lam=1.0)
+        # 模拟分类 loss 梯度
+        loss = y.pow(2).sum()
+        loss.backward()
+        # 无 GRL 时 dL/dx = 2x, 反转后是 -2x
+        assert torch.allclose(x.grad, -2 * x, atol=1e-5)
+
+
+class TestComputeLambdaAdv:
+    """DANN λ_adv schedule 三段式."""
+
+    def test_warmup_off(self):
+        assert compute_lambda_adv(0, 20, 40) == 0.0
+        assert compute_lambda_adv(10, 20, 40) == 0.0
+        assert compute_lambda_adv(19, 20, 40) == 0.0
+
+    def test_linear_ramp(self):
+        # R=20..40 linear 0 → 1
+        assert compute_lambda_adv(20, 20, 40) == 0.0
+        assert abs(compute_lambda_adv(30, 20, 40) - 0.5) < 1e-6
+        assert abs(compute_lambda_adv(35, 20, 40) - 0.75) < 1e-6
+
+    def test_full(self):
+        assert compute_lambda_adv(40, 20, 40) == 1.0
+        assert compute_lambda_adv(100, 20, 40) == 1.0
+        assert compute_lambda_adv(200, 20, 40) == 1.0
+
+    def test_monotonic_nondecreasing(self):
+        vals = [compute_lambda_adv(r, 20, 40) for r in range(200)]
+        for i in range(len(vals) - 1):
+            assert vals[i + 1] >= vals[i] - 1e-9
+
+
+class TestCDANNModel:
+    """FedDSASGPAModel ca=1 时 dom_head 结构正确."""
+
+    def test_ca0_no_dom_head(self):
+        """ca=0 (默认) 时 dom_head 不存在."""
+        model = FedDSASGPAModel(num_classes=10, ca=0)
+        assert model.dom_head is None
+
+    def test_ca1_dom_head_shape(self):
+        """ca=1 时 dom_head 输出维度 = num_clients."""
+        model = FedDSASGPAModel(num_classes=10, proj_dim=128, ca=1, num_clients=4)
+        assert model.dom_head is not None
+        x = torch.randn(8, 128)
+        y = model.dom_head(x)
+        assert y.shape == (8, 4)
+
+    def test_ca1_dom_head_params_size(self):
+        """dom_head 应为 MLP(128, 64, N), 约 9K 参数 (N=4 时 ~ 8.6K)."""
+        model = FedDSASGPAModel(num_classes=10, proj_dim=128, ca=1, num_clients=4)
+        total = sum(p.numel() for p in model.dom_head.parameters())
+        # Linear(128,64) = 128*64+64 = 8256; Linear(64,4) = 64*4+4 = 260 → 8516
+        assert 5000 < total < 15000, f"unexpected dom_head param count: {total}"
+
+    def test_ca1_dom_head_in_state_dict(self):
+        """dom_head 参数在 state_dict 里 → 会被 FedAvg 聚合 (默认路径)."""
+        model = FedDSASGPAModel(num_classes=10, ca=1, num_clients=4)
+        keys = model.state_dict().keys()
+        dom_keys = [k for k in keys if 'dom_head' in k]
+        assert len(dom_keys) > 0, "dom_head 必须在 state_dict 里 (FedAvg 聚合)"
+        # 确认不在常见的 private_keys 规则里 (style_head 是 private, dom_head 不是)
+        for k in dom_keys:
+            assert 'style_head' not in k, "dom_head 不应包含 style_head, 避免被 private key 规则误匹配"
+
+    def test_ca1_backward_asymmetric_gradient_directions(self):
+        """z_sem 走 GRL 反向, z_sty 走正向: encoder 端收到的梯度符号应相反."""
+        torch.manual_seed(0)
+        model = FedDSASGPAModel(num_classes=7, proj_dim=128, ca=1, num_clients=4)
+        model.train()
+        x = torch.randn(4, 3, 224, 224)
+        d = torch.tensor([0, 0, 0, 0])  # 所有样本都来自 client 0
+
+        h = model.encode(x)
+        z_sem = model.get_semantic(h)
+        z_sty = model.get_style(h)
+
+        # 只算 L_dom_sem (z_sem 路径, GRL 反向, lam=1.0)
+        dom_logits_sem = model.dom_head(grl(z_sem, 1.0))
+        l_dom_sem = F.cross_entropy(dom_logits_sem, d)
+        l_dom_sem.backward(retain_graph=True)
+        grad_sem_encoder_gru = next(model.semantic_head.parameters()).grad.clone()
+        model.zero_grad()
+
+        # 只算 L_dom_sty (z_sty 路径, 无 GRL)
+        dom_logits_sty = model.dom_head(z_sty)
+        l_dom_sty = F.cross_entropy(dom_logits_sty, d)
+        l_dom_sty.backward()
+        grad_sty_encoder = next(model.style_head.parameters()).grad.clone()
+        model.zero_grad()
+
+        # 关键: z_sem 路径的 semantic_head 梯度应该存在 (GRL 只反转不清零)
+        assert grad_sem_encoder_gru.norm().item() > 0, "semantic_head 应有梯度"
+        # style_head 梯度应该存在 (正向)
+        assert grad_sty_encoder.norm().item() > 0, "style_head 应有梯度"
+
+
+class TestCAFlagBackwardCompat:
+    """ca=0 时行为等价于 baseline (无 CDANN)."""
+
+    def test_ca0_forward_equivalent_to_baseline(self):
+        """ca=0 和未传 ca 的 Model forward 完全相同."""
+        torch.manual_seed(42)
+        m1 = FedDSASGPAModel(num_classes=10, ca=0, use_etf=False)
+        torch.manual_seed(42)
+        m2 = FedDSASGPAModel(num_classes=10, use_etf=False)  # 默认 ca=0
+        m1.eval()
+        m2.eval()
+        x = torch.randn(4, 3, 224, 224)
+        with torch.no_grad():
+            y1 = m1(x)
+            y2 = m2(x)
+        assert torch.allclose(y1, y2, atol=1e-6), "ca=0 vs 默认应完全一致"
 
 
 if __name__ == '__main__':

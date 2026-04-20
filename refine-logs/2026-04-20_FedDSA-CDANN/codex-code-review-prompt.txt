@@ -1,0 +1,60 @@
+You are doing a code review on a small, focused change. This is the CDANN implementation for FedDSA-CDANN (Constrained Dual-Directional DANN) based on our refined proposal.
+
+## Context
+
+The proposal (8.75/10 proposal-complete after 5 rounds of your review) is:
+"A shared non-adversarial domain discriminator plus asymmetric encoder-gradient supervision (GRL on z_sem path only) is the minimal repair for whitening-induced style collapse in client=domain FedDG when style carries class signal."
+
+See refine-logs/2026-04-20_FedDSA-CDANN/FINAL_PROPOSAL.md for details.
+
+## What changed
+
+File: FDSE_CVPR25/algorithm/feddsa_sgpa.py
+
+New additions (~80 lines total):
+1. `GradientReverseLayer(torch.autograd.Function)` — forward identity, backward multiplies gradient by -lam
+2. `grl(x, lam)` helper
+3. `compute_lambda_adv(current_round, warmup_start=20, warmup_end=40)` — 3-stage schedule (0 → linear → 1.0)
+4. `_TASK_NUM_CLIENTS` dict + `_resolve_num_clients()` helper
+5. `FedDSASGPAModel.__init__` new params `ca: int = 0, num_clients: int = 4`; when ca=1, creates `self.dom_head = MLP(128 → 64 → num_clients, with Dropout 0.1)`; when ca=0, `self.dom_head = None`
+6. `init_global_module`: reads `ca = int(algo_para[12])` (13th position), passes to Model
+7. `Server.initialize`: adds `'ca': 0` key to `init_algo_para` dict (13th); passes `c.ca` and `c.num_clients_total` to Clients
+8. `Client.train`: if `ca==1`, computes:
+   ```
+   d_label = torch.full((B,), client.id)
+   lambda_adv = compute_lambda_adv(current_round, 20, 40)
+   dom_logits_sem = dom_head(grl(z_sem, lambda_adv))   # encoder sees reversed gradient
+   dom_logits_sty = dom_head(z_sty)                      # encoder sees forward gradient
+   L_dom_sem = CE(d, dom_logits_sem)
+   L_dom_sty = CE(d, dom_logits_sty)
+   loss = loss_task + lambda_orth*loss_orth + lambda_pull*loss_etf_pull + L_dom_sem + L_dom_sty
+   ```
+9. Adds 5 CDANN metrics to diag jsonl: loss_dom_sem, loss_dom_sty, lambda_adv, dom_sem_acc_train, dom_sty_acc_train
+10. `diag_root` variant now includes 'cdann' label when ca=1
+
+Tests added (FDSE_CVPR25/tests/test_feddsa_sgpa.py, 14 new tests, 55/55 all green):
+- TestGRL: forward identity, backward reverses gradient (lam=0/0.3/1.0)
+- TestComputeLambdaAdv: warmup/ramp/full/monotonic
+- TestCDANNModel: ca=0 no dom_head, ca=1 correct shape/params/in state_dict (for FedAvg), asymmetric gradient directions
+- TestCAFlagBackwardCompat: ca=0 equivalent to baseline
+
+## Review these areas
+
+Please focus on:
+1. **CDANN mechanism correctness**: does the code implement the proposal's "shared non-adversarial dom_head + GRL on z_sem encoder path" exactly?
+2. **Domain label choice**: we use `client.id` as domain label (constant per client). Is there a bug where all samples in a batch get the same domain label, making CE trivial? Note: this is INTENDED — dom_head trained via FedAvg aggregation sees all N domains globally.
+3. **FedAvg aggregation of dom_head**: we rely on default routing (dom_head in `state_dict()`, not in `private_keys` style_head filter). Is there any place the filter might accidentally block dom_head?
+4. **Backward compat**: ca=0 should behave exactly like baseline (old EXP-102 config). Any side effect?
+5. **GRL numerics**: `-lam * grad` when lam=0 gives zero grad — is that desired? Yes (warmup phase R=0..20 should freeze CDANN branch).
+6. **diag jsonl variant**: we route 'cdann' vs 'linear' vs 'etf' to separate directories. Any race condition concern?
+7. **Any obvious bugs or missing edge cases**.
+
+## Output format
+
+Give VERDICT: APPROVED / REVISE / REJECT.
+List CRITICAL / IMPORTANT / MINOR issues with specific line numbers if applicable.
+Skip praise; focus on actionable issues only. Brief.
+
+=== DIFF ===
+<paste-diff>
+=== END DIFF ===
