@@ -28,6 +28,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
 
 FDSE_ROOT = Path(__file__).resolve().parent.parent
@@ -144,19 +145,33 @@ def main():
 
     print(f'[probe] total: {len(Y_all)}, train: {len(Y_train)}, test: {len(Y_test)}')
 
-    # Fit 3 probes on train features, evaluate on test
+    # Fit probes: 4 targets × 2 classifiers (linear + MLP)
+    # MLP probe 目的: 检测非线性泄漏 (Codex R2 要求). 如 linear probe 已崩但 MLP 仍强,
+    # 说明主干泄漏是非线性可读的, CLUB 无望; 如两者都掉, CLUB 值得试.
     results = {}
-    for name, X_tr, y_tr, X_te, y_te in [
+    probe_targets = [
         ('probe_sem_domain', Z_sem_train, D_train, Z_sem_test, D_test),
         ('probe_sty_domain', Z_sty_train, D_train, Z_sty_test, D_test),
+        ('probe_sem_class',  Z_sem_train, Y_train, Z_sem_test, Y_test),
         ('probe_sty_class',  Z_sty_train, Y_train, Z_sty_test, Y_test),
-    ]:
+    ]
+    for name, X_tr, y_tr, X_te, y_te in probe_targets:
+        # Linear
         clf = LogisticRegression(max_iter=500, multi_class='multinomial')
         clf.fit(X_tr, y_tr)
-        train_acc = clf.score(X_tr, y_tr)
-        test_acc = clf.score(X_te, y_te)
-        print(f'[probe] {name}: train={train_acc:.4f}, test={test_acc:.4f}')
-        results[name] = {'train_acc': float(train_acc), 'test_acc': float(test_acc)}
+        lin_tr = clf.score(X_tr, y_tr); lin_te = clf.score(X_te, y_te)
+        # MLP (2-layer, hidden=64)
+        mlp = MLPClassifier(hidden_layer_sizes=(64,), max_iter=500,
+                            random_state=42, early_stopping=True,
+                            validation_fraction=0.1)
+        mlp.fit(X_tr, y_tr)
+        mlp_tr = mlp.score(X_tr, y_tr); mlp_te = mlp.score(X_te, y_te)
+        print(f'[probe] {name}: lin train={lin_tr:.4f} test={lin_te:.4f} | '
+              f'mlp train={mlp_tr:.4f} test={mlp_te:.4f}')
+        results[name] = {
+            'linear': {'train_acc': float(lin_tr), 'test_acc': float(lin_te)},
+            'mlp':    {'train_acc': float(mlp_tr), 'test_acc': float(mlp_te)},
+        }
 
     # Random baselines (for context)
     results['random_baseline_domain'] = 1.0 / len(clients)
@@ -171,14 +186,23 @@ def main():
         json.dump(results, f, indent=2, ensure_ascii=False)
     print(f'[probe] saved to {args.output}')
 
-    # Pretty-print verdict
+    # Pretty-print verdict (linear / MLP)
     print('\n=== Frozen Probe Verdict ===')
-    print(f'probe_sem_domain test: {results["probe_sem_domain"]["test_acc"]:.3f} '
-          f'(expect ≈ {results["random_baseline_domain"]:.3f} random)')
-    print(f'probe_sty_domain test: {results["probe_sty_domain"]["test_acc"]:.3f} '
-          f'(expect → 1.0)')
-    print(f'probe_sty_class  test: {results["probe_sty_class"]["test_acc"]:.3f} '
-          f'(KEY: PACS ≥ 0.40, Office ~ 0.20-0.30, baseline ≈ {results["random_baseline_class"]:.3f})')
+    rb_d = results["random_baseline_domain"]; rb_c = results["random_baseline_class"]
+    for name in ['probe_sem_domain', 'probe_sty_domain', 'probe_sem_class', 'probe_sty_class']:
+        r = results[name]
+        print(f'{name}: lin={r["linear"]["test_acc"]:.3f}  mlp={r["mlp"]["test_acc"]:.3f}')
+    print(f'(random: domain={rb_d:.3f}, class={rb_c:.3f})')
+    print('\n=== Codex Stage-1 判据 (probe_sty_class) ===')
+    r = results['probe_sty_class']
+    lin = r['linear']['test_acc']; mlp = r['mlp']['test_acc']
+    if mlp > 0.85:
+        verdict = 'MLP 仍高 → 主干非线性泄漏, CLUB 无望, 走诊断路'
+    elif mlp < 0.35:
+        verdict = 'MLP 已低 → 本来就没非线性泄漏, CLUB 空间小, 走诊断路'
+    else:
+        verdict = 'MLP 中间带 → CLUB 值得一试 Stage-1 pilot'
+    print(f'linear={lin:.3f}  mlp={mlp:.3f}  → {verdict}')
 
 
 if __name__ == '__main__':
