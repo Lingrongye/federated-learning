@@ -186,24 +186,24 @@ class FedDSASGPAModel(fuf.FModule):
 
 class Server(flgo.algorithm.fedbase.BasicServer):
     def initialize(self):
+        # key 名全部短 alias, 避免 flgo record 文件名溢出 ext4 NAME_MAX 255 字节:
+        # lo=lambda_orth, te=tau_etf, pd=proj_dim, wr=warmup_rounds, es=eps_sigma,
+        # mcw=min_clients_whiten, dg=diag, ue=use_etf, uw=use_whitening,
+        # uc=use_centers, se=save_endpoint, lp=lambda_etf_pull
         self.init_algo_para({
             'lo': 1.0,        # lambda_orth
-            'tau_etf': 0.1,   # Fixed ETF temperature (use_etf=0 时无意义但仍传递)
+            'te': 0.1,        # tau_etf: Fixed ETF temperature
             'pd': 128,        # proj_dim
-            'warmup_r': 10,   # warmup rounds before enabling style bank
-            'eps_sigma': 1e-3,  # Σ_global 正则化
-            'min_clients_whiten': 2,  # 最少几个 client 才构造 whitening
-            'diag': 0,        # 0=off, 1=enable DiagnosticLogger
-            'use_etf': 1,     # 1=Fixed ETF (SGPA), 0=普通 Linear (对照)
-            'use_whitening': 1,  # 1=广播 pooled whitening (μ_global,Σ_inv_sqrt), 0=不广播
-            'use_centers': 1,    # 1=Client 收集并上传 class_centers, 0=不收集
-            'se': 0,             # 1=训练结束后保存 global_model + source_style_bank + whitening 到 ~/fl_checkpoints/
-            'lambda_etf_pull': 0.0,  # 软性 ETF pull regularization (仅 use_etf=0 生效):
-                                     # 0=关闭 (默认, 等同 Plan A Linear+whitening)
-                                     # >0=加 L_pull = mean_{c: n_c>=2} (1 - cos(z_sem_c_mean, M[:,c])).
-                                     # 平衡类间分离 (ETF 优势) + 类内紧密 (Linear 优势).
-                                     # Codex REVISE 后推荐范围: {0.001, 0.003, 0.01, 0.03, 0.1}.
-                                     # use_etf=1 时会 silently no-op (避免模糊 hybrid).
+            'wr': 10,         # warmup_rounds before enabling style bank
+            'es': 1e-3,       # eps_sigma: Σ_global 正则化
+            'mcw': 2,         # min_clients_whiten
+            'dg': 0,          # diag: 0=off, 1=enable DiagnosticLogger
+            'ue': 1,          # use_etf: 1=Fixed ETF, 0=Linear
+            'uw': 1,          # use_whitening: 1=广播 pooled whitening, 0=不广播
+            'uc': 1,          # use_centers: 1=收集 class_centers, 0=不收集
+            'se': 0,          # save_endpoint: 1=训练末保存 checkpoint
+            'lp': 0.0,        # lambda_etf_pull: 软性 ETF pull regularization (仅 use_etf=0 生效).
+                              # 推荐范围 {0.001, 0.003, 0.01, 0.03, 0.1}. use_etf=1 时 silently no-op.
         })
         self.sample_option = 'full'
 
@@ -221,11 +221,11 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         # 或重跑实验时 jsonl 互相污染 (R200_S2 SGPA 和 R200_S2 Linear 共享同一文件夹 race condition)
         self.dl_agg = None
         diag_root = None
-        if self.diag == 1 and DL is not None:
+        if self.dg == 1 and DL is not None:
             task_name = os.path.basename(self.option.get('task', 'unknown'))
             seed_str = self.option.get('seed', 'x')
-            # get use_etf to disambiguate variant (already set as self.use_etf via init_algo_para)
-            variant = 'etf' if getattr(self, 'use_etf', 1) == 1 else 'linear'
+            # variant: 用 server.ue (from init_algo_para) 区分 etf/linear, 避免 jsonl 污染
+            variant = 'etf' if getattr(self, 'ue', 1) == 1 else 'linear'
             diag_root = os.path.join(
                 'task', task_name, 'diag_logs',
                 f'R{self.num_rounds}_S{seed_str}_{variant}',
@@ -234,17 +234,17 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                              log_dir=diag_root, dump_every_n=1)
 
         # Pass config
-        diag_on = (self.diag == 1 and DL is not None)
+        diag_on = (self.dg == 1 and DL is not None)
         for c in self.clients:
             c.lambda_orth = self.lo
-            c.tau_etf = self.tau_etf
+            c.tau_etf = self.te
             c.proj_dim = self.pd
-            c.warmup_rounds = self.warmup_r
+            c.warmup_rounds = self.wr
             c.diag_enabled = diag_on
             c.diag_interval = 5  # Client 端每 5 轮记 Layer 1 (训练端)
             c.diag_log_dir = diag_root
-            c.use_centers = self.use_centers  # 传给 Client 控制 class_centers 收集
-            c.lambda_etf_pull = float(self.lambda_etf_pull)
+            c.use_centers = self.uc  # 传给 Client 控制 class_centers 收集
+            c.lambda_etf_pull = float(self.lp)
 
     def _init_agg_keys(self):
         """FedBN + style_head 本地; M buffer 参与聚合但因 seeded 一致所以不影响."""
@@ -288,8 +288,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                 self.style_bank[cid] = style
 
         # 3. Rebuild pooled whitening once we have enough clients
-        # (按 use_whitening flag 开关, 消融实验用)
-        if getattr(self, 'use_whitening', 1) == 1 and len(self.style_bank) >= self.min_clients_whiten:
+        # (按 uw flag 开关, 消融实验用)
+        if getattr(self, 'uw', 1) == 1 and len(self.style_bank) >= self.mcw:
             self._compute_pooled_whitening()
 
         # 3.5. Save checkpoint at last round (if se=1, for EXP-099 SGPA inference)
@@ -388,10 +388,10 @@ class Server(flgo.algorithm.fedbase.BasicServer):
             'seed': seed,
             'num_rounds': self.num_rounds,
             'num_clients': len(self.clients),
-            'use_etf': int(self.use_etf),
-            'use_whitening': int(getattr(self, 'use_whitening', 1)),
-            'use_centers': int(getattr(self, 'use_centers', 1)),
-            'tau_etf': float(self.tau_etf),
+            'use_etf': int(self.ue),
+            'use_whitening': int(getattr(self, 'uw', 1)),
+            'use_centers': int(getattr(self, 'uc', 1)),
+            'tau_etf': float(self.te),
             'lambda_orth': float(self.lo),
             'timestamp': int(time.time()),
         }
@@ -431,13 +431,13 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         diffs = mu_stack - mu_global.unsqueeze(0)  # [N, d]
         sigma_between = diffs.t() @ diffs / len(cids)  # [d, d]
 
-        sigma_global = sigma_within + sigma_between + self.eps_sigma * torch.eye(d)
+        sigma_global = sigma_within + sigma_between + self.es * torch.eye(d)
 
         # 确保对称 (避免 eigh 数值噪声)
         sigma_global = 0.5 * (sigma_global + sigma_global.t())
         # torch.linalg.eigh 要求 symmetric, upcast float64 for stability
         L, Q = torch.linalg.eigh(sigma_global.double())
-        L = L.clamp(min=self.eps_sigma)
+        L = L.clamp(min=self.es)
         inv_sqrt_L = L.pow(-0.5)
         sigma_inv_sqrt = (Q @ torch.diag(inv_sqrt_L) @ Q.t()).float()
 
