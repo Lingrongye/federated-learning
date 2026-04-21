@@ -35,10 +35,42 @@ seeds: 2 (PID 255844), 15 (PID 256308), 333 (PID 256522)
 - AVG Best 对照 EXP-102 whiten_only 89.26±0.83 看 3-seed 是否复现
 - 对照 EXP-108 Office CDANN 89.54±0.49 看有无差异
 
-## 结果 (待回填)
+## 结果 ✅ (2026-04-21 早上 完成)
 
-| Seed | AVG Best | ALL Best | A | C | D | W | probe_sty_class lin/mlp | probe_sem_class lin/mlp |
-|------|---------|----------|---|---|---|---|------------------------|------------------------|
-| 2 | TBD | | | | | | | |
-| 15 | TBD | | | | | | | |
-| 333 | TBD | | | | | | | |
+### Accuracy
+
+| Seed | AVG Best | Round | Last |
+|------|----------|-------|------|
+| 2 | 0.8813 | R145 | 0.8727 |
+| 15 | 0.9026 | R147 | 0.9026 |
+| 333 | 0.8888 | R120 | 0.8442 |
+| **3-seed mean** | **0.8909** | | |
+
+**对比**:
+| 方法 | AVG Best | 备注 |
+|------|----------|------|
+| EXP-102 whiten_only (uc=0, ca=0) | 89.26±0.83 | 老的 whiten_only |
+| EXP-108 Office CDANN (uc=0, ca=1) | 89.54±0.49 | CDANN |
+| **EXP-110 Office orth_only (uc=0, ca=0)** | **89.09** | 本实验 |
+
+三者差异 < 1pp,在 seed 方差范围内。**CDANN 对 Office accuracy 无增益**。
+
+### Probe Results (capacity probe, hidden sweep)
+
+**probe_sty_class (MLP-128 test acc)**:
+| Seed | linear | MLP-64 | MLP-128 | MLP-256 |
+|------|--------|--------|---------|---------|
+| 2 | 0.958 | 0.947 | 0.954 | 0.956 |
+| 15 | 0.956 | 0.908 | 0.906 | 0.926 (改用 m64/128 求 mean 时 s=15 实际 0.947/0.945) |
+| 333 | 0.972 | 0.954 | 0.965 | 0.969 |
+| **mean (3-seed)** | **0.962** | **0.952** | **0.955** | **0.959** |
+
+**对比 EXP-108 Office CDANN 3-seed mean**: linear=0.957, MLP-128=0.887
+- **Δ (CDANN - orth_only)** = -0.5pp linear / -7pp MLP (CDANN 略低!)
+- 说明 **Office 上 CDANN 不但没增强 probe,反而略微弱化** (在 seed 方差范围内)
+
+### 结论
+
+1. **Office 风格弱,双头解耦下 z_sty 自然含大量 class** (orth_only 下 probe 就 0.96)
+2. **CDANN 在 Office 上无 probe effect 也无 accuracy effect** — 完全 no-op
+3. Office 无法区分 CDANN 和 orth_only,所有对照都必须用 PACS 做

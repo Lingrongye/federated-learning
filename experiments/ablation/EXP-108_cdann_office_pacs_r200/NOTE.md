@@ -197,6 +197,34 @@ L = L_task + λ_orth · L_orth + λ_hsic · HSIC + L_dom_sem + L_dom_sty
 | **预期 baseline** (EXP-098 Linear+whitening, z_sty_norm R200=0.146) | ~0.5+ | ~0.5+ | **≈ 0.15** | z_sty 被压到 2% 能量, 几乎无类信号 |
 | **Δ CDANN vs baseline (预期)** | — | — | **+80pp+** 🔥 | C-probe 铁证 |
 
+### Capacity Probe (hidden sweep + MLP) — 2026-04-21 新增
+
+**目的**: Codex R2 review 要求验证"linear probe 高是因为类信息结构性泄漏,还是 probe 容量上限"。跑 MLP probe hidden ∈ {16, 64, 128, 256}。
+
+**PACS CDANN probe_sty_class** (脚本: `scripts/run_capacity_probes.py`):
+| seed | linear | MLP-16 | MLP-64 | MLP-128 | MLP-256 |
+|------|--------|--------|--------|---------|---------|
+| 2 | 0.963 | 0.959 | 0.953 | 0.962 | 0.962 |
+| 15 | 0.960 | 0.949 | 0.957 | 0.949 | 0.954 |
+| 333 | 0.963 | 0.911 | 0.964 | 0.962 | 0.965 |
+| **3-seed mean** | **0.962** | **0.940** | **0.958** | **0.958** | **0.960** |
+
+**Office CDANN probe_sty_class**:
+| seed | linear | MLP-16 | MLP-64 | MLP-128 | MLP-256 |
+|------|--------|--------|--------|---------|---------|
+| 2 | 0.950 | 0.457† | 0.906 | 0.873 | 0.908 |
+| 15 | 0.956 | 0.873 | 0.908 | 0.906 | 0.926 |
+| 333 | 0.965 | 0.116† | 0.875 | 0.882 | 0.875 |
+| **mean (m64+)** | **0.957** | - | **0.896** | **0.887** | **0.903** |
+
+† MLP-16 早停不稳定,容量太小+小数据偶发欠拟合
+
+**关键结论**:
+- **PACS z_sty 对 class 的映射几乎"完全线性可读"** (linear 0.963 ≈ MLP 0.960) → 信息是浅层/平凡暴露的
+- **Office 也类似**,MLP 只比 linear 低 5pp (主要是早停欠拟合造成,非 probe 上限)
+- **probe 容量不是瓶颈**: hidden=64 已经看到饱和
+- **对 CLUB 的意义**: CLUB 目的是压非线性 MI 上界,但这里 MI 几乎是线性的。CLUB 只能重复 linear GRL,**无结构性增益**
+
 ### 🔥 C-probe Verdict (PACS anchor 核心证据)
 
 **CDANN probe_sty_class = 0.962, random = 0.143, 预期 baseline ≈ 0.15**

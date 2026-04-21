@@ -43,10 +43,28 @@ seeds: 2 (PID 247627, 启动 03:00 之前), 15 (PID 255317, 03:00), 333 (PID 255
 - AVG Best: 和 EXP-108 CDANN 比较看 CDANN 是否有 accuracy 增益
 - EXP-080 orth_hparam_sweep 里 PACS orth_only lo=1 single-seed 是 81.69。3-seed mean 会是多少?
 
-## 结果 (待回填)
+## 结果
 
-| Seed | AVG Best | ALL Best | Sketch | Art | Photo | Cartoon | probe_sty_class lin/mlp | probe_sem_class lin/mlp | 备注 |
-|------|---------|----------|--------|-----|-------|---------|------------------------|------------------------|------|
-| 2 | TBD | | | | | | | | PID 247627 (最长,已 3h+) |
-| 15 | TBD | | | | | | | | PID 255317 |
-| 333 | TBD | | | | | | | | PID 255604 |
+### Accuracy (2026-04-21 陆续回填)
+
+PACS client 顺序: [Photo, Art, Cartoon, Sketch] (需从 task 定义核实)
+
+| Seed | AVG Best (round) | Last | c0 | c1 | c2 | c3 | 状态 |
+|------|-----------------|------|----|----|----|----|------|
+| 2 | **0.8223** (R181) | 0.8141 | 0.6667 | 0.8889 | 0.8383 | 0.8954 | ✅ 跑完 |
+| 15 | TBD | | | | | | 🔄 PID 255317 还在跑 |
+| 333 | TBD | | | | | | 🔄 PID 255604 还在跑 |
+
+### Probe Results (capacity probe, hidden sweep)
+
+待 probe 完成后回填。s=2 ckpt = `sgpa_PACS_c4_s2_R200_1776725714`。
+
+### 对比 (已有数据)
+
+| 方法 | AVG Best |
+|------|----------|
+| EXP-080 orth_only lo=1 single-seed | 81.69 |
+| **EXP-109 orth_only s=2 (R200 ca=0)** | **82.23** |
+| EXP-108 CDANN s=2 (待核实) | 80.xx |
+
+初步: **orth_only s=2 = 82.23** 比 EXP-108 CDANN 单 seed 的 80.xx 略高 → **说明 CDANN 没有 accuracy 上的增益**,反而可能微幅伤害主任务 (待 3-seed 均值确认)。
