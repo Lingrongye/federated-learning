@@ -225,11 +225,33 @@ L = L_task + λ_orth · L_orth + λ_hsic · HSIC + L_dom_sem + L_dom_sty
 - **probe 容量不是瓶颈**: hidden=64 已经看到饱和
 - **对 CLUB 的意义**: CLUB 目的是压非线性 MI 上界,但这里 MI 几乎是线性的。CLUB 只能重复 linear GRL,**无结构性增益**
 
-### 🔥 C-probe Verdict (PACS anchor 核心证据)
+### 🔥 C-probe Verdict — **已于 2026-04-21 反事实实验颠覆**
 
-**CDANN probe_sty_class = 0.962, random = 0.143, 预期 baseline ≈ 0.15**
-→ **CDANN 保留 z_sty 的 class 判别能力几乎完整 (96%)**, 而 baseline 的 z_sty 被压到 0.146 norm 后几乎不含类信号.
-→ **anchor claim "CDANN preserved class-relevant style that would otherwise be lost" 完全成立**.
+**原结论** (2026-04-20): CDANN probe_sty_class = 0.962 vs 预期 baseline 0.15 → **anchor claim 成立**。
+
+**⚠️ 更新 (2026-04-21, EXP-109 反事实 probe 结果)**:
+
+实际测到 PACS orth_only (ca=0) s=2 probe_sty_class:
+- linear = **0.240** (不是预期的 0.15,但也远低于 CDANN 0.963)
+- MLP-256 = 0.813
+
+对比 CDANN s=2:
+- linear = 0.963 → **Δ = +72pp**
+
+**新解读 (颠覆 anchor claim)**:
+- orth_only 本来就让 z_sty 几乎不含 class (linear 0.24,接近 random 0.14)
+- **CDANN 反向破坏了解耦**: 把 class 信息从 z_sem 路径挤进 z_sty 路径
+- 机制: GRL on z_sem 削弱 z_sem 的 domain 信号 + 非对抗 dom_head(z_sty) 让 z_sty 吸收 domain → encoder 将 class 线索更多经由 z_sty 传出
+- **原 claim "CDANN preserved class-relevant style" 是错的**: CDANN 不是"保留",是"**错误灌入**"
+
+**accuracy 也印证**:
+- EXP-108 CDANN PACS s=2 80.xx (待确认)
+- EXP-109 orth_only PACS s=2 = **0.8223** (ca=0 反事实高 ~2pp)
+- → CDANN 的 GRL 机制**同时伤害了主任务 accuracy**
+
+**结论**: EXP-108 CDANN 方向**彻底失败**,无任何 research value。正确方向是 orth_only (clean decoupling),进一步 EXP-111 测强正交 lo=10 能否把 probe 压到 random。
+
+详见: `obsidian_exprtiment_results/2026-04-21/关键实验发现备忘.md` 发现 4。
 
 ## 🔍 Verdict Decision Tree
 

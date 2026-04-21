@@ -57,7 +57,23 @@ PACS client 顺序: [Photo, Art, Cartoon, Sketch] (需从 task 定义核实)
 
 ### Probe Results (capacity probe, hidden sweep)
 
-待 probe 完成后回填。s=2 ckpt = `sgpa_PACS_c4_s2_R200_1776725714`。
+s=2 ckpt = `sgpa_PACS_c4_s2_R200_1776725714` (✅ 2026-04-21 probe 完成)
+
+**probe_sty_class**:
+| Seed | linear | MLP-16 | MLP-64 | MLP-128 | MLP-256 |
+|------|--------|--------|--------|---------|---------|
+| 2 | **0.240** | 0.268 | 0.694 | 0.713 | **0.813** |
+| 15 | TBD | | | | |
+| 333 | TBD | | | | |
+
+**对比 EXP-108 CDANN s=2**: linear=0.963 m256=0.962
+**Δ (CDANN - orth_only s=2)**: **+72pp linear / +15pp m256**
+
+**核心发现 🔥**:
+- orth_only 的 z_sty **几乎不含 class 信号** (linear 0.24 接近 random 0.14)
+- CDANN 的 z_sty 反而被灌了 class (0.96) — CDANN 的"anchor claim" 彻底破产
+- m256=0.813 表明 orth_only 下非线性 probe 能挖出更多残留 class 但仍远低于 CDANN
+- **orth_only 才是真正的 clean decoupling**
 
 ### 对比 (已有数据)
 
