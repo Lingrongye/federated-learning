@@ -19,6 +19,7 @@ available via ca flag if needed, but default ca=0 in new configs).
 """
 
 import copy
+import os
 
 import torch
 import torch.nn as nn
@@ -410,3 +411,46 @@ class Client(_BaseClient):
 
             self._dl_train.record(
                 round_id=self.current_round, metrics_dict=metrics)
+
+
+# ============================================================
+# flgo hook: construct global model (Server-side)
+# ============================================================
+
+
+def init_global_module(object):
+    """Build FedDSAVIBModel with algo_para-driven flags (vib is index 13).
+
+    algo_para order (extended from feddsa_sgpa's 13 base keys, total 20):
+      [0] lo  [1] te  [2] pd  [3] wr  [4] es  [5] mcw  [6] dg
+      [7] ue  [8] uw  [9] uc  [10] se [11] lp [12] ca
+      [13] vib [14] us [15] lib [16] lsc [17] vws [18] vwe [19] sct
+    """
+    if 'Server' not in object.__class__.__name__:
+        return
+
+    task = os.path.basename(object.option['task'])
+    num_classes = _resolve_num_classes(task)
+    num_clients = _resolve_num_clients(task)
+
+    use_etf = True
+    ca = 0
+    vib = 0
+    algo_para = object.option.get('algo_para', None)
+    if algo_para is not None:
+        if len(algo_para) >= 8:
+            use_etf = bool(int(algo_para[7]))
+        if len(algo_para) >= 13:
+            ca = int(algo_para[12])
+        if len(algo_para) >= 14:
+            vib = int(algo_para[13])
+
+    object.model = FedDSAVIBModel(
+        num_classes=num_classes,
+        feat_dim=1024,
+        proj_dim=128,
+        use_etf=use_etf,
+        ca=ca,
+        num_clients=num_clients,
+        vib=vib,
+    ).to(object.device)
