@@ -1,0 +1,36 @@
+# EXP-113 方案 A: FedDSA-VIB (vib=1, us=0)
+# Base: EXP-109 orth_only + add VIB (stochastic sem_head + KL to prototype prior)
+algo_para:
+- 1.0    # lo lambda_orth
+- 0.1    # te tau_etf
+- 128    # pd proj_dim
+- 10     # wr warmup_rounds
+- 1e-3   # es eps_sigma
+- 2      # mcw min_clients_whiten
+- 1      # dg diag on
+- 0      # ue use_etf=0 (Linear)
+- 1      # uw use_whitening on
+- 1      # uc use_centers on (for prototype aggregation!)
+- 1      # se save checkpoint
+- 0      # lp lambda_etf_pull off
+- 0      # ca CDANN off
+- 1      # vib ★ VIB ON
+- 0      # us SupCon off (use base InfoNCE-less path)
+- 1.0    # lib lambda_IB
+- 1.0    # lsc lambda_SupCon (unused, us=0)
+- 20     # vws VIB warmup start
+- 50     # vwe VIB warmup end
+- 0.07   # sct SupCon tau (unused)
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
