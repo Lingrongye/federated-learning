@@ -1,0 +1,35 @@
+Review 4 Python files for bugs. DO NOT load any skill. DO NOT search web. Read files directly from the workspace.
+
+Files to review:
+- D:\桌面文件\联邦学习\FDSE_CVPR25\algorithm\common\vib.py (VIB semantic head + KL + EMA prototype)
+- D:\桌面文件\联邦学习\FDSE_CVPR25\algorithm\common\supcon.py (Khosla 2020 SupCon + Wang-Isola diag)
+- D:\桌面文件\联邦学习\FDSE_CVPR25\algorithm\common\diagnostic_ext.py (KL-collapse / R_d / IRM)
+- D:\桌面文件\联邦学习\FDSE_CVPR25\algorithm\feddsa_sgpa_vib.py (Client/Server/Model extending feddsa_sgpa)
+
+Context: new algorithm for federated disentanglement. 3 variants controlled by 2 flags (vib, us). See refine-logs/2026-04-22_FedDSA-Swap/round-3-revised-proposal.md for spec.
+
+Critical bugs to hunt (assess each 1-2 sentences):
+
+1. **algo_para long-tail compat**: Server.init_algo_para adds 7 new keys (vib/us/lib/lsc/vws/vwe/sct) to parent's 13. Does flgo tolerate configs that specify only 13 values (new keys take default) or does it require exact count?
+
+2. **_init_agg_keys coverage**: check 'log_var_head', 'log_sigma_prior', 'prototype_ema', 'prototype_init' all get private. Any substring collision? (e.g., does 'head' substring accidentally match both log_var_head and sem_classifier?)
+
+3. **iterate() timing**: super().iterate() in parent already consumes res['class_centers'] from communicate(). Does self.clients[i]._local_class_centers still hold last-round value after super().iterate() returns, so _update_prototype_ema can use it?
+
+4. **mu_sem vs z_sem use**: CE uses stochastic z_sem (through reparameterize); L_orth + SupCon + class_centers use mu_sem (deterministic). Is this split correct for gradient flow + stability?
+
+5. **VIBSemanticHead.update_prototype_ema first call**: When prototype_init=False and new_prototypes has NaN (class not in any client batch), the direct copy will set prototype_ema[c] = NaN. Potential bug.
+
+6. **log_var range**: clamp [-5, 2] → sigma range [0.082, 2.72]. For small batch=50 and reparameterize, does this explode at init (log_var_head weights randn → could start near 0 → sigma≈1, OK)?
+
+7. **SupCon anchor-with-no-positive**: PACS batch=50, 4 clients → 12.5 per client, 7 classes → some classes have 1 or 0 samples. Verify valid_mask logic avoids div-by-zero.
+
+8. **KL closed-form**: 0.5 * Σ_d [log(var_p/var_q) + (var_q + (mu_q-mu_p)²)/var_p - 1]. Standard Gaussian KL should also yield this when both diagonal. Confirm sign and layout.
+
+9. **stop_grad on prior_mu**: prior_mu.detach() — does ∂KL/∂mu_q still flow back correctly? (yes, should: KL = ... + (mu_q - const)²/var_p, gradient w.r.t. mu_q is 2(mu_q - const)/var_p)
+
+10. **FedDSAVIBModel ghost params**: super().__init__ creates baseline semantic_head then we REPLACE it. Does the old semantic_head's state_dict keys leak? (The replacement via assignment should remove old from state_dict since it's via named child.)
+
+Output: one short paragraph per question (1-2 lines), then OVERALL VERDICT: READY_TO_RUN / FIX_BEFORE_RUN / BROKEN.
+
+Cap response at 1500 words.

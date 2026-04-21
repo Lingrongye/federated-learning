@@ -16,7 +16,7 @@ algo_para:
 - 0      # ca CDANN off
 - 1      # vib ★ VIB ON
 - 0      # us SupCon off (use base InfoNCE-less path)
-- 1.0    # lib lambda_IB
+- 0.01   # lib lambda_IB (Alemi 2017 standard β ≈ 0.01)
 - 1.0    # lsc lambda_SupCon (unused, us=0)
 - 20     # vws VIB warmup start
 - 50     # vwe VIB warmup end

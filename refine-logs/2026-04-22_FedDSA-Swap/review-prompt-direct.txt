@@ -1,0 +1,37 @@
+DO NOT load any skill. DO NOT search web. Respond directly based on the text below.
+
+You are a senior ML reviewer (NeurIPS/ICML level). Review this federated learning disentanglement proposal. Be brutally honest. The author has failed 2 prior approaches (RETHINK verdicts).
+
+## Empirical context (facts, not opinions):
+- Original FedDSA already has: L_CE + L_aug (AdaIN using bank stats) + L_orth + L_HSIC + L_InfoNCE
+- EXP-109 orth_only: PACS probe_sty_class linear=0.24, MLP-256=0.81
+- EXP-111 lo=3 (strong orth): linear=0.34, MLP-64=0.20 best, MLP-256=0.71 (still leaks)
+- EXP-059 showed: AdaIN in h-space (1024d) > AdaIN in z_sty-space (128d) by +2.54pp
+- 5 papers read: DSN, MUNIT, von Kügelgen 2021, Moyer 2018, FediOS 2025
+
+## Proposal FedDSA-Swap (key deltas vs original FedDSA):
+
+1. Add L_swap: use batch-internal z_sty shuffle (perm), MLP(z_sty_other) → (γ, β), apply FiLM z_sem_swap = γ·z_sem + β, classify z_sem_swap to original y. Weight 1.0.
+2. Add L_cycle_sem: apply own style again, L2 distance to original z_sem. Weight 0.3.
+3. Downweight L_orth to 0.1.
+4. Evaluation: add Moyer 0/1/2/3 layer post-hoc probe sweep (novel in FL).
+
+## Predicted: MLP-256 probe 0.71 → 0.40-0.50, PACS acc 80.64 → 81.0-82.0.
+
+## Answer these in order (be concise but concrete):
+
+1. **Is L_swap genuinely different from L_aug?** (original L_aug uses global bank μ/σ AdaIN; new L_swap uses batch z_sty via MLP-learned γ/β). Answer YES or NO with reason. If it's "same mechanism, different source", say so plainly.
+
+2. **Does MUNIT cycle consistency transfer without decoder?** (MUNIT uses decoder+GAN to force cycle; ours has no image reconstruction, only feature L2). Answer YES / PARTIAL / NO with reason.
+
+3. **Does von Kügelgen Thm 4.4 apply?** (Thm 4.4 requires aug-based positive pair from same-content augmentation. L_swap uses batch-internal shuffle — is that same-content augmentation?). Answer YES / NO.
+
+4. **Is Moyer probe sweep alone a venue-level contribution?** Or must it accompany method innovation? Answer: (a) MAIN contribution possible, (b) ONLY supporting, (c) already done somewhere FL.
+
+5. **Score 7 dimensions 1-10**: Problem Fidelity, Method Specificity, Contribution Quality, Frontier Leverage, Feasibility, Validation Focus, Venue Readiness. Give ONE-line reason each.
+
+6. **OVERALL SCORE (weighted) and VERDICT**: READY (≥9) / REVISE (7-8.5) / RETHINK (5.5-7) / ABANDON (<5.5).
+
+7. **If RETHINK or ABANDON**: What concrete pivot would get to ≥7 with high probability? Be specific — which loss to add, which architecture change, which theory to lean on. Given constraint: cannot change topic direction (must stay within dual-head + style prototype + semantic prototype framework).
+
+Respond in structured markdown. No more than 1500 words total.

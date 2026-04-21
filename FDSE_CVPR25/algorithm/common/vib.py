@@ -21,6 +21,9 @@ import torch.nn as nn
 LOG_VAR_MIN = -5.0
 LOG_VAR_MAX = 2.0
 PROTOTYPE_EMA_BETA = 0.99
+# Clamp learnable log_sigma_prior to prevent 200-round drift
+LOG_SIGMA_PRIOR_MIN = -2.0
+LOG_SIGMA_PRIOR_MAX = 2.0
 
 
 class VIBSemanticHead(nn.Module):
@@ -82,9 +85,13 @@ class VIBSemanticHead(nn.Module):
         kl_loss = None
         if training and y is not None and bool(self.prototype_init.item()):
             prior_mu = self.prototype_ema[y].detach()  # stop-grad
-            prior_log_var = (
-                2.0 * self.log_sigma_prior[y].unsqueeze(-1).expand_as(mu)
+            # Clamp log_sigma_prior to prevent long-run drift (Review fix #5)
+            log_sigma_clamped = torch.clamp(
+                self.log_sigma_prior[y],
+                LOG_SIGMA_PRIOR_MIN,
+                LOG_SIGMA_PRIOR_MAX,
             )
+            prior_log_var = 2.0 * log_sigma_clamped.unsqueeze(-1).expand_as(mu)
             kl_loss = kl_gaussian_closed_form(mu, log_var, prior_mu, prior_log_var)
 
         return z_sem, mu, log_var, kl_loss

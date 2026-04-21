@@ -15,7 +15,7 @@ algo_para:
 - 0     # ca
 - 1     # vib
 - 0     # us
-- 1.0   # lib
+- 0.01  # lib (Alemi 2017 standard β)
 - 1.0   # lsc
 - 2     # vws start earlier for smoke
 - 4     # vwe end earlier

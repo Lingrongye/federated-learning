@@ -16,7 +16,7 @@ algo_para:
 - 0      # ca
 - 1      # vib ★
 - 1      # us ★ SupCon ON
-- 1.0    # lib
+- 0.01   # lib
 - 1.0    # lsc
 - 20     # vws
 - 50     # vwe

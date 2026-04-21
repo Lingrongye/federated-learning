@@ -1,0 +1,58 @@
+You are a senior ML reviewer for a top venue (NeurIPS/ICML/ICLR/CVPR/ICCV).
+
+This is a NEW PROPOSAL for FedDSA-Swap, a federated learning disentanglement method. The user has failed with multiple prior approaches (CDANN, Symmetric CDANN, Purify-then-Share — all RETHINK by you in prior rounds).
+
+**CRITICAL CONTEXT** (empirical findings from experiments):
+- EXP-108 CDANN PACS probe_sty_class linear=0.962, MLP-256=0.962 (total failure: class leaked into z_sty)
+- EXP-109 orth_only (no CDANN, just L_orth) linear=0.24, MLP-256=0.81 (line works, nonlinear leaks)
+- EXP-111 lo=3 strong orth: MLP-64=0.20 (best), MLP-256=0.71 (still leaks)
+- EXP-059 showed AdaIN in h-space (1024d) > AdaIN in z_sty-space (128d) by +2.54pp
+- Original FedDSA already has: L_CE + L_aug (bank-style AdaIN) + L_orth + L_HSIC + L_InfoNCE
+
+**USER's CONSTRAINT**: Cannot change topic direction. Must stay within dual-head decoupling + style prototype + semantic prototype framework.
+
+**Phase 0-3 调研** (5 papers deep-read):
+- DSN NeurIPS'16: L_difference alone gives +2.09pp, full decoder gives +2.6pp more. Not effective against nonlinear probe. Decoder path ruled out.
+- MUNIT ECCV'18: content/style swap + cycle consistency forces disentanglement (decoder needed for image synthesis, but idea transferable to feature space).
+- von Kügelgen NeurIPS'21: Theorem 4.4 — contrastive loss + style-only augmentation provably block-identifies content up to smooth invertible transform.
+- Moyer NeurIPS'18: 8-year-old paper predicting exactly our phenomenon (weak adversary converges but strong post-hoc probe breaks). Suggested 0/1/2/3 layer post-hoc adversary sweep as gold standard.
+- FediOS ML'25: Latest FL orthogonal method. Zero probe validation. Predicted to break harder under our MLP-256 probe.
+
+Now the user proposes FedDSA-Swap (see PROPOSAL below). Please review specifically for:
+
+- **Logical consistency**: Is L_swap actually different from existing L_aug? Or is this just relabeling?
+- **Novelty reality check**: Is MUNIT's cycle consistency meaningful in the discriminative, no-decoder FL setting?
+- **Theoretical grounding**: Does von Kügelgen Thm 4.4 apply to L_swap (which uses batch-internal shuffling, not aug-based positive pair)? Or is this misappropriating the theorem?
+- **Evaluation**: Is Moyer-style probe sweep a viable paper contribution? Or only evaluation (not method) contribution?
+- **Fuse mechanism**: MLP-learned γ/β (FiLM) vs static AdaIN — is there direct evidence MLP is better in feature space? EXP-059 shows AdaIN in z_sty-space is worse than h-space; does MLP modulation avoid this?
+- **Risk assessment**: Is L_swap actually going to push MLP-256 down to 0.40-0.50, or is this wishful thinking?
+
+Score these 7 dimensions from 1-10 (Weighted: Problem Fidelity 15%, Method Specificity 25%, Contribution Quality 25%, Frontier Leverage 15%, Feasibility 10%, Validation Focus 5%, Venue Readiness 5%):
+
+1. Problem Fidelity
+2. Method Specificity
+3. Contribution Quality (核心,最严)
+4. Frontier Leverage
+5. Feasibility
+6. Validation Focus
+7. Venue Readiness
+
+OVERALL SCORE and VERDICT: READY / REVISE / RETHINK / ABANDON.
+
+VERDICT RULE:
+- READY: >= 9, no blocking concerns
+- REVISE: promising but needs work (7-8.5)
+- RETHINK: fundamental issue (5.5-7)
+- ABANDON: better to stop
+
+**BE BRUTALLY HONEST**. Don't pad. If this is just incremental repackaging of original FedDSA, say so. If the novelty is only in evaluation (Moyer sweep) not method, say so. The user has limited time/GPU and wants to know if this is publishable at NeurIPS/ICML/ICLR/CVPR/ICCV or only at a workshop/weaker venue.
+
+Also answer these 4 specific questions the author asked:
+1. Is L_swap truly different from existing L_aug, or just relabeling?
+2. Is MLP-learned γ/β really better than static AdaIN in our setting?
+3. Does MUNIT cycle consistency transfer to discriminative FL without decoder? Does the "cycle" still mean cycle?
+4. Can Moyer sweep alone carry a paper, or must it accompany method innovation?
+
+=== PROPOSAL ===
+<paste the round-0-initial-proposal.md content here>
+=== END PROPOSAL ===

@@ -96,14 +96,25 @@ class Server(_BaseServer):
         # Parent reads algo_para; we add 2 new keys: vib, us, plus hyperparams
         super().initialize()
         # Pass VIB/SupCon config to clients
+        vib_val = int(getattr(self, 'vib', 0))
+        us_val = int(getattr(self, 'us', 0))
+        lib_val = float(getattr(self, 'lib', 0.01))
+        lsc_val = float(getattr(self, 'lsc', 1.0))
+        vws_val = int(getattr(self, 'vws', 20))
+        vwe_val = int(getattr(self, 'vwe', 50))
+        sct_val = float(getattr(self, 'sct', 0.07))
         for c in self.clients:
-            c.vib = int(getattr(self, 'vib', 0))
-            c.us = int(getattr(self, 'us', 0))
-            c.lambda_ib = float(getattr(self, 'lib', 1.0))
-            c.lambda_supcon = float(getattr(self, 'lsc', 1.0))
-            c.vib_warmup_start = int(getattr(self, 'vws', 20))
-            c.vib_warmup_end = int(getattr(self, 'vwe', 50))
-            c.supcon_tau = float(getattr(self, 'sct', 0.07))
+            c.vib = vib_val
+            c.us = us_val
+            c.lambda_ib = lib_val
+            c.lambda_supcon = lsc_val
+            c.vib_warmup_start = vws_val
+            c.vib_warmup_end = vwe_val
+            c.supcon_tau = sct_val
+        # ★ Review fix #16: log resolved algo_para at init for deployment safety
+        print(f"[FedDSA-VIB init] vib={vib_val} us={us_val} lib={lib_val} "
+              f"lsc={lsc_val} vws={vws_val} vwe={vwe_val} sct={sct_val}",
+              flush=True)
 
     def init_algo_para(self, defaults):
         """Extend parent's algo_para with new VIB/SupCon keys."""
@@ -156,12 +167,22 @@ class Server(_BaseServer):
             self._update_prototype_ema()
 
     def _update_prototype_ema(self):
-        """Aggregate class_centers across clients and update VIBSemanticHead.prototype_ema."""
-        # class_centers_list was collected during super().iterate()
-        # but parent's iterate consumed `res` — we need to recollect or hook earlier.
-        # Simpler: iterate over self.clients and pull latest _local_class_centers.
+        """Aggregate class_centers across CURRENT ROUND clients and update prototype_ema.
+
+        Fix (2026-04-22 Codex final review): originally iterated over ALL self.clients,
+        which under proportion<1 would mix STALE centers from prior rounds into the
+        prototype prior. Now only read from clients that actually participated this
+        round via self.received_clients.
+        """
+        # Resolve current-round participants (fall back to all clients if attr missing)
+        participating_ids = getattr(self, 'received_clients', None)
+        if participating_ids is None:
+            participating_ids = list(range(len(self.clients)))
         centers_per_client = []
-        for c in self.clients:
+        for cid in participating_ids:
+            if cid >= len(self.clients):
+                continue
+            c = self.clients[cid]
             ct = getattr(c, '_local_class_centers', None)
             if ct is not None:
                 centers_per_client.append(ct)
@@ -190,6 +211,41 @@ class Server(_BaseServer):
 
 
 class Client(_BaseClient):
+    def unpack(self, svr_pkg):
+        """Override parent unpack to also skip VIB-private keys from global overwrite.
+
+        VIB Fix 1 (CRITICAL, 2026-04-22):
+          - log_var_head (σ-head) parameters MUST stay local (domain-conditional).
+          - log_sigma_prior (per-class σ prior) MUST stay local.
+          - prototype_ema / prototype_init: server pushes these DOWN; we overwrite.
+        """
+        global_model = svr_pkg['model']
+        if self.model is None:
+            self.model = global_model
+        else:
+            local_dict = self.model.state_dict()
+            global_dict = global_model.state_dict()
+            for key in local_dict.keys():
+                # Parent's existing skips
+                if 'style_head' in key:
+                    continue
+                if 'bn' in key.lower() and ('running_' in key or 'num_batches_tracked' in key):
+                    continue
+                if key.endswith('.M') or key == 'M':
+                    continue
+                # ★ VIB skip: keep σ-head local
+                if 'log_var_head' in key:
+                    continue
+                if 'log_sigma_prior' in key:
+                    continue
+                # ★ prototype_ema/init: server-managed, DO overwrite (explicit for clarity)
+                local_dict[key] = global_dict[key]
+            self.model.load_state_dict(local_dict)
+        self.current_round = svr_pkg['current_round']
+        self.source_mu_k = svr_pkg.get('source_mu_k', None)
+        self.mu_global = svr_pkg.get('mu_global', None)
+        self.sigma_inv_sqrt = svr_pkg.get('sigma_inv_sqrt', None)
+
     def initialize(self):
         super().initialize()
         # Preserve Server-assigned flags if already set (handles init order

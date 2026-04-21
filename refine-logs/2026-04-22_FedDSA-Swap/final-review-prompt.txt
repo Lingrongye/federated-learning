@@ -1,0 +1,40 @@
+DO NOT load any skill. DO NOT search web. This is the FINAL code review before deploying 21 GPU runs.
+
+Context: a previous Review Agent found 3 BLOCKING issues and I fixed them. I need you to verify the fixes are correct AND hunt for any remaining bugs in the overall FL flow.
+
+## What was fixed
+
+1. **Client.unpack bug**: Originally Client inherited parent unpack which only skips style_head/BN/M. Server's private_keys was extended with log_var_head, log_sigma_prior, prototype_ema, prototype_init — but Client didn't respect that and overwrote them each round. FIX: Override Client.unpack in feddsa_sgpa_vib.py to skip log_var_head and log_sigma_prior (but let prototype_ema/init flow server→client).
+
+2. **lib=1.0 too large**: VIB β standard is 0.01 (Alemi 2017). I had 1.0 → KL dominated loss. FIX: all 4 configs using vib=1 now have lib=0.01.
+
+3. **Office uc mismatch**: Original EXP-110 orth_only baseline used uc=0, new VIB Office configs use uc=1. FIX: added `config/office/feddsa_orth_uc1_office_r200.yml` as uc=1 baseline, will run 3-seed alongside VIB for fair comparison.
+
+## Verify these answers
+
+Please check the following and answer concisely (2-3 sentences each):
+
+**A. Client.unpack fix correctness** (file: `D:\桌面文件\联邦学习\FDSE_CVPR25\algorithm\feddsa_sgpa_vib.py`, new `Client.unpack` method ~line 172-200):
+- Does it correctly skip `log_var_head` but still copy `prototype_ema` down? (server → client should flow for prototype)
+- Are there any OTHER VIB-related state_dict keys I might have missed that should stay local?
+
+**B. lib=0.01 sanity**:
+- For VIB with clamp log_var ∈ [-5, 2] → σ ∈ [0.082, 2.72], a batch of 50 samples, prior N(prototype_ema[y], σ²_prior=1.0 per class via log_sigma_prior clamp), what's typical KL range? With lib=0.01, will VIB loss be comparable magnitude to CE (typically ~1-2)?
+
+**C. Any remaining FL flow bugs**:
+- Server.iterate calls super().iterate() then _update_prototype_ema(). Parent consumes res['class_centers'] inside super. We re-read self.clients[i]._local_class_centers. Is _local_class_centers still valid after super() returns? (I claim yes because parent doesn't clear it, but verify).
+- init_global_module hook reads algo_para[13] for vib flag. If config has fewer than 14 values, vib defaults to 0 (baseline). Is that safe?
+- Any race condition between prototype_ema state in server.model vs in clients' copies?
+
+**D. Subtle issues that could make runs silently bad**:
+- Is log_var_head really trainable after we skip it in unpack? (It participates in Client.optimizer because we call `optimizer = self.calculator.get_optimizer(model, ...)` — does model include log_var_head? Yes, it's registered as semantic_head.log_var_head.)
+- Will `prototype_ema` being a `buffer` cause issues when server does `copy.deepcopy(self.model)` in pack? (Should be fine, buffers copy correctly.)
+- Check if `c.vib = int(getattr(self, 'vib', 0))` in Server.initialize actually reads the `vib` value from `algo_para[13]` correctly — trace through flgo's init_algo_para.
+
+**E. Deployment readiness**:
+- 3-seed {2, 15, 333} alignment check with existing baselines (EXP-108 CDANN, EXP-109 orth_only, EXP-110 Office orth, EXP-111 strong orth). Are new runs directly comparable? Any train_holdout / batch_size / lr differences I missed?
+- Record JSON filename length for 20 algo_para values + full config name. Smoke test showed 247 chars, well under 255. OK?
+
+**Output format**: answer A-E concisely. Then a single line: "FINAL VERDICT: READY_TO_DEPLOY" or "FINAL VERDICT: FIX_BEFORE_DEPLOY (describe fix)".
+
+Keep response under 1000 words.

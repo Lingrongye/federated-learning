@@ -1,0 +1,136 @@
+DO NOT load any skill. DO NOT search web. Respond directly in structured markdown.
+
+You are the same senior ML reviewer (NeurIPS/ICML level) who reviewed this author's prior FedDSA-Swap proposal in Round 1 and gave it RETHINK (6.2/10). The author accepted your pivot (drop swap, add Moyer-style VIB + prototype prior + optional SupCon, don't use adversary, keep L_orth weight).
+
+This is now Round 2. The author presents **TWO parallel variants** (not merged):
+- **Variant A: FedDSA-VIB** — minimal change: add VIB only
+- **Variant B: FedDSA-VSC** — VIB + replace InfoNCE with SupCon
+
+Author has done self-review (scored A=7.0 B=7.2 REVISE) and listed real blockers.
+
+Your task:
+1. Read Round 2 proposal + self-review
+2. Score A and B separately (7 dims each)
+3. Identify any NEW issues the author missed in self-review
+4. Give final verdict: READY (≥9) / REVISE (7-8.5) / RETHINK (5.5-7) / ABANDON
+
+Be **brutally honest**. This is attempt #4 (after CDANN/Symmetric CDANN/Purify-Share/Swap all RETHINK). If Round 2 has fundamental flaw, say ABANDON the direction entirely.
+
+## Empirical context (unchanged)
+- Original FedDSA has: L_CE + L_aug (h-space AdaIN) + L_orth + L_HSIC + L_InfoNCE (prototype pull)
+- orth_only PACS 80.64 ± 1.46, MLP-256 probe = 0.81
+- EXP-111 lo=3: MLP-64=0.20 best, MLP-256=0.71 (strong orth still leaks)
+- EXP-059: AdaIN in h-space > z_sty-space by 2.54 pp
+
+## ROUND 2 PROPOSAL (A + B)
+
+### A: FedDSA-VIB
+```
+L_A = L_CE + λ_aug L_aug(h-space) + λ_IB L_VIB + λ_orth L_orth + λ_hsic L_HSIC + λ_sem L_InfoNCE
+
+VIB:
+  encoder outputs (μ_sem, log_var_sem) instead of z_sem
+  z_sem ~ N(μ_sem, σ²_sem) with reparameterize (train)
+  prior = N(semantic_prototype[y], σ²_prior)  where σ_prior is fixed (0.3 / 1.0 / 3.0 ablation)
+  L_VIB = closed-form KL(q || prior)
+
+Warmup: λ_IB = 0 at R0-20, linear 0→1 at R20-50, full at R50+
+log_var clamp: [-5, 2]
+```
+
+### B: FedDSA-VSC
+Same as A but:
+- Replace L_InfoNCE (sample vs prototype) with **L_SupCon** (multi-positive: all same-class samples in batch)
+- SupCon = Khosla et al. NeurIPS 2020
+- Retains everything else from A
+
+### Why 2 parallel runs (not merged)
+A-alone ablates whether VIB is sufficient. B-vs-A ablates whether SupCon upgrade helps.
+
+## Diagnostic Suite (50+ metrics)
+
+### VIB diagnostics
+KL_mean (0.5-2.0 healthy), sigma_sem_mean (0.1-1.0), sigma_sem_max (<2), rate R, distortion D, z_sem_to_prior_cos (>0.7), prior_var_eff.
+
+### SupCon (B only)
+pos_sim_mean (>0.7), neg_sim_mean (<0.2), alignment & uniformity (Wang-Isola 2020), n_positive_avg.
+
+### Prototype
+prototype_drift_L2, intra_class_z_to_proto_cos (>0.8), inter_class_proto_min_cos (<0.3), proto_active_classes.
+
+### Proxy probe (every 20 rounds, 500 sample subset)
+proxy_probe_sty_class_{linear,MLP64,MLP256}, proxy_probe_sem_class_linear, proxy_probe_sem_domain_linear, proxy_probe_sty_domain_linear.
+
+### Gradient
+grad_cos(CE, VIB/SupCon), grad_norm_{CE, VIB, SupCon}.
+
+### Health snapshot every 100 rounds (printed multi-line).
+
+## Post-hoc Moyer Sweep
+0/1/2/3-layer MLP probe with absolute error loss, BN, Adam lr=0.001. On (sty→class, sem→class, sty→domain, sem→domain). Plus Hewitt-Liang selectivity.
+
+## Experimental Matrix
+
+| Method | Status |
+|---|---|
+| M0 orth_only | ✅ done (EXP-109/110) |
+| M1 CDANN | ✅ done (EXP-108) |
+| M2 FDSE (CVPR 2025) | ❌ need run (source in repo) |
+| M3 FediOS (ML 2025) | ❌ need run (arxiv 2311.18559 has code) |
+| M4 FedDSA-VIB | ❌ new |
+| M5 FedDSA-VSC | ❌ new |
+
+Priority 1: M4 + M5 × {PACS, Office} × {seed=2,15,333} = 12 runs.
+Priority 2: +5 seeds (author will do 5 instead of 3 to overcome orth_only std=1.46).
+Priority 2: M2 + M3 as baselines (use paper numbers if code integration too hard).
+
+GPU budget: 4090 × 4 concurrent ≈ 5h/batch, total 1-2 days.
+
+## Expected (author predicted)
+
+| Metric | orth_only | CDANN | A (VIB) | B (VSC) |
+|--------|:--------:|:-----:|:-------:|:-------:|
+| linear probe sty_class | 0.24 | 0.96 | 0.10-0.18 | 0.08-0.15 |
+| MLP-64 | 0.69 | 0.96 | 0.35-0.45 | 0.30-0.40 |
+| MLP-256 | 0.71 | 0.96 | 0.45-0.55 | 0.40-0.50 |
+| 3-layer Moyer | ~0.75 | ~0.90 | 0.50-0.60 | 0.45-0.55 |
+| PACS AVG Best | 80.64 | 80.08 | 80.5-81.5 | 81.0-82.0 |
+| Office AVG Best | 89.09 | 89.54 | 89.0-89.5 | 89.3-89.8 |
+
+## Self-Review (Author's own blocker list)
+
+**Acknowledged blockers**:
+1. Novelty is "combination first in FL", not "component first" — weak to ICML reviewer
+2. orth_only std=1.46 may drown +1pp improvement — author will do 5 seeds
+3. σ_prior and λ_IB warmup are magic numbers — author adds ablation
+4. proxy probe every 10 rounds too slow — author changes to every 20, subset 500
+5. stochastic encoder + FedAvg may be unstable — need sigma_head localization fallback
+6. prototype convergence before prior works — warmup R0-20 handles this
+
+**Author's self-score**:
+- A: 7.0 (REVISE)
+- B: 7.2 (REVISE boundary)
+
+## Your task - answer in order
+
+### 1. Any new blocker the author missed?
+
+### 2. Score A separately (7 dims, weighted same as before: PF 15%, MS 25%, CQ 25%, FL 15%, Feas 10%, VF 5%, VR 5%)
+
+### 3. Score B separately
+
+### 4. Is the A+B dual-experiment design actually useful as ablation, or wasteful?
+
+### 5. Is the diagnostic suite (50+ metrics) sufficient? Missing key diagnostic?
+
+### 6. Will 5 seeds be enough to beat orth_only std=1.46, or need more?
+
+### 7. Do you endorse the "decoder-free VIB with prototype prior" path as a genuine improvement over vanilla FedDSA, or is it incremental?
+
+### 8. Given this is attempt #4 after 3 prior RETHINK, should author continue on this path or ABANDON dual-head decoupling direction entirely?
+
+### 9. Overall verdict for A and for B.
+
+### 10. If not READY, concrete 3 things to add/change to reach READY (no vague advice).
+
+Respond in structured markdown. Maximum 2000 words. Be concrete, no pad.

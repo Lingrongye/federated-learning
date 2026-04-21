@@ -1,0 +1,66 @@
+Role: NeurIPS senior reviewer. You gave Round-1 RETHINK 6.2/10 to FedDSA-Swap. Author followed your pivot.
+
+## Context
+- Original FedDSA: L_CE + L_aug(h-space AdaIN) + L_orth + L_HSIC + L_InfoNCE(prototype pull)
+- orth_only PACS 80.64±1.46, MLP-256 probe=0.81
+- EXP-111 strong orth lo=3: MLP-256=0.71 (still leaks)
+- Attempts #1-3 (CDANN/Sym CDANN/Purify-Share/Swap): all RETHINK
+
+## Round 2 proposal (TWO parallel variants)
+
+**A: FedDSA-VIB** — add VIB only
+```
+L_A = L_CE + λ_aug L_aug + λ_IB L_VIB + λ_orth L_orth + λ_hsic L_HSIC + λ_sem L_InfoNCE
+```
+VIB: stochastic encoder q(z_sem|x)=N(μ,σ²), prior=N(prototype_y, σ²_prior). σ_prior∈{0.3,1,3} ablation. warmup λ_IB R0-20 off, 20-50 linear, 50+ full. log_var clamp [-5,2].
+
+**B: FedDSA-VSC** — A + replace L_InfoNCE with L_SupCon (Khosla 2020)
+
+A and B run as parallel ablation (not merged).
+
+## Diagnostics (50+ metrics)
+VIB: KL, σ mean/max, rate R, distortion D, μ_to_prior_cos
+SupCon (B only): pos_sim, neg_sim, alignment, uniformity, n_positive
+Prototype: drift_L2, z_to_proto_cos, inter_proto_min_cos
+Proxy probe every 20 rounds (500 subset): sty_class {linear, MLP64, MLP256}, sem_class, sty_domain, sem_domain
+Gradient: grad_cos(CE, VIB/SupCon), grad_norm ratios
+Post-hoc: Moyer 0/1/2/3 layer sweep + Hewitt-Liang selectivity
+
+## Experiments
+Priority 1: M4+M5 × {PACS, Office} × {2,15,333} = 12 new runs
+5 seeds (not 3) to beat orth_only std=1.46
+Baselines: orth_only (done), CDANN (done), FDSE & FediOS (paper numbers if code issue)
+
+## Predictions (author)
+| Metric | orth | A | B |
+|---|---|---|---|
+| linear sty_class | 0.24 | 0.10-0.18 | 0.08-0.15 |
+| MLP-256 | 0.71 | 0.45-0.55 | 0.40-0.50 |
+| PACS AVG | 80.64 | 80.5-81.5 | 81.0-82.0 |
+
+## Author's self-review (self-scored A=7.0 B=7.2)
+
+Acknowledged blockers:
+1. Novelty is "FL-first VIB with prototype prior" combination, not component
+2. orth_only std=1.46 may drown +1pp → 5 seeds
+3. σ_prior & λ_IB warmup are magic numbers → ablation
+4. Proxy probe: subset 500 + every 20 rounds
+5. Stochastic encoder + FedAvg might need sigma_head FedBN localization
+
+## Your tasks (answer concisely, <1500 words)
+
+1. **New blocker** author missed?
+
+2. **Score A + B (7 dims)**: Problem Fidelity (15%), Method Specificity (25%), Contribution Quality (25%), Frontier Leverage (15%), Feasibility (10%), Validation Focus (5%), Venue Readiness (5%). Weighted total.
+
+3. **Is dual A/B parallel useful** or waste GPU?
+
+4. **Diagnostic suite sufficient** or missing key metric?
+
+5. **5 seeds enough** vs orth_only std=1.46?
+
+6. **Continue or ABANDON** dual-head direction after 4 attempts?
+
+7. **Final verdict**: READY(≥9)/REVISE(7-8.5)/RETHINK(5.5-7)/ABANDON
+
+8. **If not READY: concrete 3 changes** to reach READY.
