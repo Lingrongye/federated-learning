@@ -192,14 +192,16 @@ class Server(_BaseServer):
 class Client(_BaseClient):
     def initialize(self):
         super().initialize()
-        # Defaults until Server.initialize assigns
-        self.vib = 0
-        self.us = 0
-        self.lambda_ib = 1.0
-        self.lambda_supcon = 1.0
-        self.vib_warmup_start = 20
-        self.vib_warmup_end = 50
-        self.supcon_tau = 0.07
+        # Preserve Server-assigned flags if already set (handles init order
+        # where Server.initialize runs before Client.initialize).
+        # Use getattr to avoid overwriting.
+        self.vib = int(getattr(self, 'vib', 0))
+        self.us = int(getattr(self, 'us', 0))
+        self.lambda_ib = float(getattr(self, 'lambda_ib', 1.0))
+        self.lambda_supcon = float(getattr(self, 'lambda_supcon', 1.0))
+        self.vib_warmup_start = int(getattr(self, 'vib_warmup_start', 20))
+        self.vib_warmup_end = int(getattr(self, 'vib_warmup_end', 50))
+        self.supcon_tau = float(getattr(self, 'supcon_tau', 0.07))
         self._last_kl_mean = 0.0
         self._last_sigma_mean = 0.0
         self._last_supcon_diag = None
