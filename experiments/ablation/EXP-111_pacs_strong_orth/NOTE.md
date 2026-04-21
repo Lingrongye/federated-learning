@@ -50,10 +50,41 @@ PIDs: orth3 256060, orth10 256736
 **趋势**: 加强正交 → accuracy 单调轻伤 (82.23 → 81.33 → 81.03),大约 1pp 每 10× lo。
 **per-client**: Art 和 Photo 客户端掉得较多,Sketch 和 Cartoon 小幅改善。
 
-### Probe Results (capacity probe,待回填完成)
+### Probe Results (capacity probe) ✅
 
-checkpoints:
-- orth3 s=2: `sgpa_PACS_c4_s2_R200_1776735738`
-- orth10 s=2: `sgpa_PACS_c4_s2_R200_1776735958`
+**probe_sty_class (seed=2)**:
+| λ_orth | linear | MLP-16 | MLP-64 | MLP-128 | MLP-256 |
+|-------|--------|--------|--------|---------|---------|
+| 1 (EXP-109 s=2) | 0.240 | 0.268 | 0.694 | 0.713 | 0.813 |
+| **3** | **0.339** | 0.191 | **0.201** 🔥 | 0.548 | 0.714 |
+| **10** | **0.280** | 0.731 | 0.339 | 0.788 | 0.799 |
+| Δ (lo=3 − lo=1) | +0.10 | -0.08 | **-0.49** | -0.17 | -0.10 |
+| Δ (lo=10 − lo=1) | +0.04 | +0.46† | -0.36 | +0.08 | -0.01 |
 
-probe 批处理 `/tmp/probe_all_new_pacs.sh` 已启动 (2026-04-21 早上),结果会自动存到 `capacity_probes/orth3_s2.json` 和 `capacity_probes/orth10_s2.json`。
+† MLP-16 早停欠拟合,忽略
+
+**核心发现 🔥 强正交有 probe 压缩效果,但方向奇怪**:
+- **MLP-64 (最稳)**: lo=1→0.69, **lo=3→0.20**, lo=10→0.34 → lo=3 显著压下了**非线性**读出
+- **linear**: 强正交反而微升 (lo=1 0.24 → lo=3 0.34 / lo=10 0.28) — **加强正交把 z_sty 挤到一个固定 linear 方向**?
+- **MLP-256**: lo=3 0.71,lo=10 0.80 → 足够容量下仍能读出 → 信息还在,只是被"非线性编码"
+- 整体 **lo=3 是 sweet spot** (MLP-64 0.20 最接近 random 0.14)
+
+### 结论
+
+**Accuracy vs probe 权衡**:
+| λ_orth | AVG Best | MLP-64 probe (class 泄漏) |
+|-------|---------|------|
+| 1 | 82.23 | 0.694 |
+| 3 | 81.33 | **0.201** 🏆 |
+| 10 | 81.03 | 0.339 |
+
+- **强正交能降 z_sty 非线性 class probe** (从 0.69 → 0.20,-49pp)
+- **但 accuracy 也掉** (82.23 → 81.33,-0.9pp)
+- lo=3 似乎是 **probe vs acc 的 sweet spot**
+- 但 MLP-256 (high capacity) 下 probe 仍 0.71 → **class 信息没被删除,只是被非线性编码藏起来**
+
+### 下一步建议
+
+1. **lo=3 做 3-seed 验证** 是否稳定 (本次只 s=2)
+2. 考虑 MLP-256 仍能读 0.71 → **正交损失压的是 z_sty 的"结构性"class,没压掉"存在"**
+3. 这是 clean decoupling 的 sweet spot 但不是 zero-class,和"纯化"目标有差距
