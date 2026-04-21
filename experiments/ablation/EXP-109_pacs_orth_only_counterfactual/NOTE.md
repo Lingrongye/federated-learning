@@ -51,9 +51,10 @@ PACS client 顺序: [Photo, Art, Cartoon, Sketch] (需从 task 定义核实)
 
 | Seed | AVG Best (round) | Last | c0 | c1 | c2 | c3 | 状态 |
 |------|-----------------|------|----|----|----|----|------|
-| 2 | **0.8223** (R181) | 0.8141 | 0.6667 | 0.8889 | 0.8383 | 0.8954 | ✅ 跑完 |
-| 15 | TBD | | | | | | 🔄 PID 255317 还在跑 |
-| 333 | TBD | | | | | | 🔄 PID 255604 还在跑 |
+| 2 | **0.8223** (R181) | 0.8141 | 0.6667 | 0.8889 | 0.8383 | 0.8954 | ✅ |
+| 15 | **0.8035** (R197) | 0.8023 | 0.6320 | 0.8630 | 0.8380 | 0.8800 | ✅ |
+| 333 | **0.7935** (R48!) | 0.7830 | 0.6270 | 0.8500 | 0.8080 | 0.8880 | ✅ s=333 早期 peak 异常 |
+| **3-seed mean** | **80.64 ± 1.46** | 79.98 | 0.642 | 0.867 | 0.828 | 0.887 | |
 
 ### Probe Results (capacity probe, hidden sweep)
 
@@ -80,7 +81,10 @@ s=2 ckpt = `sgpa_PACS_c4_s2_R200_1776725714` (✅ 2026-04-21 probe 完成)
 | 方法 | AVG Best |
 |------|----------|
 | EXP-080 orth_only lo=1 single-seed | 81.69 |
-| **EXP-109 orth_only s=2 (R200 ca=0)** | **82.23** |
-| EXP-108 CDANN s=2 (待核实) | 80.xx |
+| **EXP-109 orth_only 3-seed (R200 ca=0)** | **80.64 ± 1.46** |
+| EXP-108 CDANN 3-seed | 80.08 ± 0.60 |
+| Δ orth_only − CDANN | +0.56pp (在 std 范围内,持平) |
+
+**结论**: PACS accuracy 上 CDANN 与 orth_only **统计上持平**。之前 s=2 看起来 orth_only 赢 1.36pp 是 seed 噪声(orth_only s=333 peak 只 79.35,s=15 80.35)。即使 accuracy 持平,**CDANN 在 probe 上的"+72pp"差异仍然颠覆 anchor claim**,只是这个差异**没转化为准确率优势**。
 
 初步: **orth_only s=2 = 82.23** 比 EXP-108 CDANN 单 seed 的 80.xx 略高 → **说明 CDANN 没有 accuracy 上的增益**,反而可能微幅伤害主任务 (待 3-seed 均值确认)。

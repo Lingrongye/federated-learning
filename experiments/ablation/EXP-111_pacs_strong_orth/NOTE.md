@@ -36,10 +36,24 @@ PIDs: orth3 256060, orth10 256736
 - 如果 lo=10 probe 掉且 acc 不掉 → 理想情况 (但 unlikely)
 - 如果 lo=10 probe 不掉且 acc 掉 → 最差情况 (确认无路)
 
-## 结果 (待回填)
+## 结果 (accuracy ✅, probe 待回填)
 
-| λ_orth | AVG Best | ALL Best | Sketch | probe_sty_class lin/mlp | probe_sem_class lin/mlp | cos_sim(z_sem, z_sty) |
-|-------|---------|----------|--------|------------------------|------------------------|----------------------|
-| 1 (EXP-109 s=2) | TBD | | | | | 约 0? |
-| 3 | TBD | | | | | |
-| 10 | TBD | | | | | |
+### Accuracy (seed=2)
+
+| λ_orth | AVG Best | Round | Last | Photo | Art | Cartoon | Sketch |
+|-------|---------|-------|------|-------|-----|---------|--------|
+| 1 (EXP-109 s=2) | 0.8223 | R181 | 0.8141 | 0.667 | 0.889 | 0.838 | 0.895 |
+| **3** | **0.8133** | R166 | 0.8103 | 0.672 | 0.850 | 0.838 | 0.893 |
+| **10** | **0.8103** | R180 | 0.8031 | 0.632 | 0.850 | 0.850 | 0.908 |
+| Δ (lo=10 − lo=1) | -1.2pp | | -1.1pp | -3.5pp | -3.9pp | +1.2pp | +1.3pp |
+
+**趋势**: 加强正交 → accuracy 单调轻伤 (82.23 → 81.33 → 81.03),大约 1pp 每 10× lo。
+**per-client**: Art 和 Photo 客户端掉得较多,Sketch 和 Cartoon 小幅改善。
+
+### Probe Results (capacity probe,待回填完成)
+
+checkpoints:
+- orth3 s=2: `sgpa_PACS_c4_s2_R200_1776735738`
+- orth10 s=2: `sgpa_PACS_c4_s2_R200_1776735958`
+
+probe 批处理 `/tmp/probe_all_new_pacs.sh` 已启动 (2026-04-21 早上),结果会自动存到 `capacity_probes/orth3_s2.json` 和 `capacity_probes/orth10_s2.json`。
