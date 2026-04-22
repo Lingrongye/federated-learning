@@ -12,9 +12,19 @@
       如 Δ > 0.5pp  -> 完整 FedBN 更好, 应该改代码
       如 Δ < -0.5pp -> 半 FedBN 更好 (保留 γ/β 跨域信号), paper 叙事更丰富
 """
-from algorithm.feddsa_scheduled import Server as _Server, Client as _Client, FedDSAModel
+from algorithm.feddsa_scheduled import (
+    Server as _Server,
+    Client as _Client,
+    FedDSAModel,
+    init_global_module,  # ← flgo 需要这个 hook 来构造 Server.model (FedDSAModel)
+    init_local_module,
+    init_dataset,
+)
 
-__all__ = ["Server", "Client", "FedDSAModel"]
+__all__ = [
+    "Server", "Client", "FedDSAModel",
+    "init_global_module", "init_local_module", "init_dataset",
+]
 
 
 class Server(_Server):
