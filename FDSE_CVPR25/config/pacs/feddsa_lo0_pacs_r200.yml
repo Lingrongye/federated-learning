@@ -1,0 +1,28 @@
+# EXP-116: λ_orth=0 对照 (PACS), 验证正交头的绝对贡献
+# 基于 EXP-080 feddsa_orth_lr05.yml 唯一改动: lo 1.0 → 0.0
+# 算法: feddsa_scheduled mode=0 (orth_only base), 无 whitening / 无 centers / 无 ETF
+algo_para:
+- 0.0    # lo ← 关键: 关闭正交损失
+- 0.0    # lh (HSIC, 关)
+- 1.0    # ls (InfoNCE weight, 但 mode=0 不激活)
+- 0.2    # tau
+- 5      # sdn
+- 128    # pd
+- 0      # sm = 0 (orth_only base mode, 不激活 InfoNCE/share/align)
+- 60
+- 30
+- 80
+- 10     # gli
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
