@@ -1,0 +1,17 @@
+# EXP-119 Sanity A: Centralized AlexNet on Office-Caltech10
+# 合并 4 client 所有 training data 到一个 dataloader, 单 GPU 训练
+# 用于检查 AlexNet 在 Office 上的单机 capacity ceiling
+algo_para: []
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
