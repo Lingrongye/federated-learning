@@ -319,16 +319,7 @@ class Client(fab.BasicClient):
         return class_protos, class_counts
 
 
-# ------------------------------------------------------------------
-# Init hooks
-# ------------------------------------------------------------------
-def init_local_module(object):
-    pass
-
-
-def init_dataset(object):
-    pass
-
-
-def init_global_module(object):
-    pass
+# NOTE: intentionally NOT defining init_global_module / init_local_module /
+# init_dataset. flgo falls back to the benchmark's default model hook
+# (benchmark/{office_caltech10,pacs,domainnet}_classification/model/default_model.py)
+# Defining an empty pass hook would silently prevent model construction.

@@ -381,17 +381,8 @@ class Client(fab.BasicClient):
         return stats
 
 
-# ------------------------------------------------------------------
-# Init hook (flgo plumbing) — use default benchmark model
-# ------------------------------------------------------------------
-def init_local_module(object):
-    pass
-
-
-def init_dataset(object):
-    pass
-
-
-def init_global_module(object):
-    # Use the benchmark's default AlexNet (with full BN); no custom model.
-    pass
+# NOTE: intentionally NOT defining init_global_module / init_local_module /
+# init_dataset. flgo falls back to the benchmark's default model hook
+# (benchmark/{office_caltech10,pacs,domainnet}_classification/model/default_model.py)
+# If we define an empty `pass` hook here, flgo will pick it up and
+# silently skip model construction -> server.model is None -> Initial Eval crashes.
