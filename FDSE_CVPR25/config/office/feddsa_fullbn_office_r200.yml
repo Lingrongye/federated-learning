@@ -1,0 +1,28 @@
+# EXP-118: 完整 FedBN 对照 (Office 3-seed R200)
+# 基于 EXP-080 orth_only (Office) 配置, 唯一差别是算法: feddsa_scheduled → feddsa_scheduled_fullbn
+# 其他 algo_para 和 hyperparams 完全一致, 直接对比 γ/β 聚合的影响
+algo_para:
+- 1.0    # lo (λ_orth, 保持 EXP-080 一致)
+- 0.0    # lh (HSIC off)
+- 1.0    # ls (InfoNCE weight, mode=0 不激活)
+- 0.2    # tau
+- 5      # sdn
+- 128    # pd
+- 0      # sm = 0 (orth_only base)
+- 60
+- 30
+- 80
+- 10
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
