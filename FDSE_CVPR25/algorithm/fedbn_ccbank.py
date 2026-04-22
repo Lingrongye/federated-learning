@@ -51,20 +51,42 @@ DEFAULT_ALGO_PARA = [0.5, 0.5, 8, 0.0]
 # ------------------------------------------------------------------
 # Feature extraction helper (penultimate 1024d)
 # ------------------------------------------------------------------
+def _unwrap_alexnet(model):
+    """Unwrap FModule wrappers to reach the raw AlexNet.
+
+    benchmark/{office,pacs,domainnet}_classification/model/default_model.py wraps
+    AlexNet as `self.model`. Some tests use raw AlexNet directly.
+    We walk down `.model` / `.net` chain until we find `.features` (AlexNet's first layer).
+    """
+    inner = model
+    for _ in range(3):  # max 3 levels to prevent infinite loops
+        if hasattr(inner, 'features'):
+            return inner
+        if hasattr(inner, 'model'):
+            inner = inner.model
+            continue
+        if hasattr(inner, 'net'):
+            inner = inner.net
+            continue
+        break
+    return inner  # fallback — will raise AttributeError if no features (caller must handle)
+
+
 def forward_with_feature(model, x):
     """Forward AlexNet and return (logits, penultimate 1024d feature).
 
     Penultimate = output of bn7 + relu (before fc3 classifier).
-    Works with the AlexNet defined in benchmark/office_caltech10_classification/config.py.
+    Works with raw AlexNet OR with Model wrapper from benchmark default_model.
     """
-    h = model.features(x)
-    h = model.avgpool(h)
+    net = _unwrap_alexnet(model)
+    h = net.features(x)
+    h = net.avgpool(h)
     h = torch.flatten(h, 1)
-    h = model.bn6(model.fc1(h))
-    h = model.relu(h)
-    h = model.bn7(model.fc2(h))
-    h = model.relu(h)           # 1024d penultimate, 'h' in our math
-    logits = model.fc3(h)
+    h = net.bn6(net.fc1(h))
+    h = net.relu(h)
+    h = net.bn7(net.fc2(h))
+    h = net.relu(h)           # 1024d penultimate
+    logits = net.fc3(h)
     return logits, h
 
 
@@ -326,7 +348,8 @@ class Client(fab.BasicClient):
 
         # Mix: h_final = α · h_aug + (1-α) · h
         h_final = self.cc_alpha * h_aug + (1 - self.cc_alpha) * h
-        logits_aug = model.fc3(h_final)
+        net = _unwrap_alexnet(model)
+        logits_aug = net.fc3(h_final)
         # Only compute loss on the samples that actually got augmented
         loss_aug = loss_fn(logits_aug[valid_mask], y[valid_mask])
         return loss_aug

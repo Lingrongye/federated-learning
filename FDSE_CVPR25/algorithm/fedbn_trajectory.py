@@ -42,16 +42,33 @@ import flgo.algorithm.fedbase as fab
 DEFAULT_ALGO_PARA = [0.5, 0.5, 0.0, 5]  # eta, lambda_align, proto_ema, warmup_rounds
 
 
+def _unwrap_alexnet(model):
+    """Unwrap FModule wrappers (see fedbn_ccbank._unwrap_alexnet for rationale)."""
+    inner = model
+    for _ in range(3):
+        if hasattr(inner, 'features'):
+            return inner
+        if hasattr(inner, 'model'):
+            inner = inner.model
+            continue
+        if hasattr(inner, 'net'):
+            inner = inner.net
+            continue
+        break
+    return inner
+
+
 def forward_with_feature(model, x):
     """Same helper as fedbn_ccbank, return (logits, penultimate 1024d feature)."""
-    h = model.features(x)
-    h = model.avgpool(h)
+    net = _unwrap_alexnet(model)
+    h = net.features(x)
+    h = net.avgpool(h)
     h = torch.flatten(h, 1)
-    h = model.bn6(model.fc1(h))
-    h = model.relu(h)
-    h = model.bn7(model.fc2(h))
-    h = model.relu(h)
-    logits = model.fc3(h)
+    h = net.bn6(net.fc1(h))
+    h = net.relu(h)
+    h = net.bn7(net.fc2(h))
+    h = net.relu(h)
+    logits = net.fc3(h)
     return logits, h
 
 
