@@ -316,11 +316,13 @@ class Client(fab.BasicClient):
         B, D = h.shape
         device = h.device
 
-        # Compute per-sample self (mu, sigma) over feature dim — for AdaIN normalization
-        # Note: for pooled 1024d feature, "per-sample (mu, sigma)" over feature-axis
-        # follows the MixStyle convention (channel-wise for conv, feature-wise for pooled).
-        mu_self = h.mean(dim=1, keepdim=True)           # [B, 1]
-        sigma_self = h.std(dim=1, keepdim=True) + 1e-5  # [B, 1]
+        # Batch-level per-feature statistics for AdaIN self-normalization.
+        # Bank 里 (mu_other, sig_other) 是 per-feature [D] (来自 _compute_class_stats over class-c
+        # samples), 所以 self-normalization 也必须 per-feature 才 consistent.
+        # 原来的 per-sample scalar (h.mean(dim=1)) 是 LayerNorm-on-feature 语义, 与 bank 不匹配.
+        mu_self = h.mean(dim=0, keepdim=True)                              # [1, D]
+        sigma_self = h.std(dim=0, keepdim=True, unbiased=False) + 1e-5     # [1, D]
+        h_normalized = (h - mu_self) / sigma_self                          # [B, D]
 
         # For each sample, decide if augment and which bank entry to pick
         mask = torch.rand(B, device=device) < self.cc_aug_prob  # [B] bool
@@ -337,10 +339,8 @@ class Client(fab.BasicClient):
             if sampled is None:
                 continue
             mu_other, sig_other = sampled             # each [D]
-            # AdaIN on feature axis: (h - μ_self)/σ_self × σ_other + μ_other
-            # μ_other / σ_other here are per-feature-channel (not scalar), so broadcasting is across channels.
-            # Reuse per-sample scalar (mu_self, sigma_self) for self-normalization.
-            h_aug[i] = ((h[i] - mu_self[i]) / sigma_self[i]) * sig_other + mu_other
+            # AdaIN: h_aug = σ_other * (h - μ_self_batch)/σ_self_batch + μ_other
+            h_aug[i] = h_normalized[i] * sig_other + mu_other
             valid_mask[i] = True
 
         if not valid_mask.any():

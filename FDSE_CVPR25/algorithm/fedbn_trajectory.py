@@ -280,20 +280,33 @@ class Client(fab.BasicClient):
         """L_align = mean_i (1 - cos(h_i, p_hat[y_i])).
 
         Only counts samples whose class is present in pred_protos_gpu (warmup-aware).
+        Vectorised: build a [C_known, D] proto table and gather by y.
         """
-        B = h.shape[0]
-        # Build target tensor: [B, D], fill pred_protos[y_i] or fallback h_i (no gradient contribution)
-        targets = torch.zeros_like(h)
-        mask = torch.zeros(B, dtype=torch.bool, device=h.device)
-        for i in range(B):
-            yi = int(y[i].item())
-            if yi in pred_protos_gpu:
-                targets[i] = pred_protos_gpu[yi]
-                mask[i] = True
-        if not mask.any():
+        if not pred_protos_gpu:
             return torch.tensor(0.0, device=h.device)
+
+        device = h.device
+        # Stack known prototypes into a [C_known, D] table + class_id lookup
+        known_cids = sorted(pred_protos_gpu.keys())
+        proto_table = torch.stack([pred_protos_gpu[c] for c in known_cids], dim=0)  # [C_known, D]
+        # Build class_id -> row index lookup on GPU
+        max_cid = max(known_cids)
+        lookup = torch.full((max_cid + 1,), -1, dtype=torch.long, device=device)
+        for row, cid in enumerate(known_cids):
+            lookup[cid] = row
+
+        # For each sample, look up its row; -1 means class not in known set
+        y_long = y.long()
+        # Guard against y > max_cid
+        in_range = y_long <= max_cid
+        safe_y = torch.where(in_range, y_long, torch.zeros_like(y_long))
+        rows = lookup[safe_y]
+        mask = in_range & (rows >= 0)
+        if not mask.any():
+            return torch.tensor(0.0, device=device)
+
         h_m = h[mask]
-        t_m = targets[mask].detach()    # stop grad on target
+        t_m = proto_table[rows[mask]].detach()  # stop grad on target
         cos = F.cosine_similarity(h_m, t_m, dim=-1)
         loss = (1.0 - cos).mean()
         return loss
