@@ -304,10 +304,77 @@ class PerRunDiagLogger(PerRunLogger):
             raise RuntimeError("Cannot infer num_classes for diagnostic logger")
         return int(last_linear_out)
 
-    def log_once(self, *args, **kwargs):
-        # First: run parent logic (records local_test_accuracy etc.)
-        super().log_once(*args, **kwargs)
+    def _safe_per_client_test(self, flag: str):
+        """Replicate PerRunLogger's per-client test with c.model=None guard.
 
+        FedBN (and similar local-model algorithms) have c.model = None at
+        round 0, before any unpack() has populated the local model. The
+        stock PerRunLogger falls back to `c.test(self.server.model, ...)`
+        but flgo's `@with_multi_gpus` decorator then calls
+        `model.get_device()` which fails if server.model has been wrapped
+        in a way that nulls the reference during parallel init. We guard
+        here by skipping eval when no usable model is available.
+        """
+        metrics = []
+        for c in self.clients:
+            m = c.model if getattr(c, 'model', None) is not None else self.server.model
+            if m is None:
+                metrics.append(None)
+                continue
+            try:
+                metrics.append(c.test(m, flag))
+            except Exception as e:
+                # Keep the run going — log a NaN placeholder
+                print(f"[PerRunDiagLogger] c.test({flag}) failed on client "
+                      f"{getattr(c, 'id', '?')}: {e}")
+                metrics.append(None)
+        return metrics
+
+    def log_once(self, *args, **kwargs):
+        # Replicate PerRunLogger.log_once with None-safety, then run diag.
+        import numpy as _np
+
+        cvals = self._safe_per_client_test('val')
+        ctests = self._safe_per_client_test('test')
+        cdatavols = _np.array([len(c.train_data) for c in self.clients])
+        cdatavols = cdatavols / cdatavols.sum() if cdatavols.sum() > 0 else cdatavols
+
+        def _record(metrics_list, prefix):
+            if len(metrics_list) == 0 or all(m is None for m in metrics_list):
+                return
+            # First non-None metric dict determines keys
+            sample = next((m for m in metrics_list if m is not None), None)
+            if sample is None:
+                return
+            for met_name in sample.keys():
+                vals = [
+                    (m[met_name] if m is not None else float('nan'))
+                    for m in metrics_list
+                ]
+                varr = _np.array(vals, dtype=float)
+                self.output[f'{prefix}_{met_name}_dist'].append(vals)
+                # weighted — skip NaN weights
+                finite = _np.isfinite(varr)
+                if finite.any():
+                    w = cdatavols[finite]
+                    w = w / w.sum() if w.sum() > 0 else w
+                    weighted = float((varr[finite] * w).sum())
+                    self.output[f'{prefix}_{met_name}'].append(weighted)
+                    self.output[f'mean_{prefix}_{met_name}'].append(float(varr[finite].mean()))
+                    self.output[f'std_{prefix}_{met_name}'].append(float(varr[finite].std()))
+                    self.output[f'min_{prefix}_{met_name}'].append(float(varr[finite].min()))
+                    self.output[f'max_{prefix}_{met_name}'].append(float(varr[finite].max()))
+                else:
+                    self.output[f'{prefix}_{met_name}'].append(float('nan'))
+                    self.output[f'mean_{prefix}_{met_name}'].append(float('nan'))
+                    self.output[f'std_{prefix}_{met_name}'].append(float('nan'))
+                    self.output[f'min_{prefix}_{met_name}'].append(float('nan'))
+                    self.output[f'max_{prefix}_{met_name}'].append(float('nan'))
+
+        _record(cvals, 'local_val')
+        _record(ctests, 'local_test')
+
+        # Diagnostic path
         if _run_diag is None:
             return  # diagnostic module not importable — silent skip
 
