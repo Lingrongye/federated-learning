@@ -1,0 +1,3 @@
+/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+Local Training on 6 Clients:   0%|          | 0/6 [00:00<?, ?it/s]Local Training on 6 Clients:  17%|█▋        | 1/6 [00:45<03:48, 45.62s/it]Local Training on 6 Clients:  33%|███▎      | 2/6 [02:19<04:55, 73.89s/it]Local Training on 6 Clients:  50%|█████     | 3/6 [03:28<03:34, 71.54s/it]

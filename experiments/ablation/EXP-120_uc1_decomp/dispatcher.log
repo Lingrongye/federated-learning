@@ -1,0 +1,11 @@
+[2026-04-23 03:35:28] EXP-120 greedy launcher start, MIN_FREE=2800MB
+[03:35:28] LAUNCH only_s2 config=feddsa_sgpa_only_r200.yml seed=2 (free=24129MB)
+[03:35:48] LAUNCH only_s15 config=feddsa_sgpa_only_r200.yml seed=15 (free=23458MB)
+[03:36:08] LAUNCH only_s333 config=feddsa_sgpa_only_r200.yml seed=333 (free=22786MB)
+[03:36:28] LAUNCH w_s2 config=feddsa_sgpa_w_r200.yml seed=2 (free=21575MB)
+[03:36:48] LAUNCH w_s15 config=feddsa_sgpa_w_r200.yml seed=15 (free=20364MB)
+[03:37:08] LAUNCH w_s333 config=feddsa_sgpa_w_r200.yml seed=333 (free=19152MB)
+[03:37:28] LAUNCH c_s2 config=feddsa_sgpa_c_r200.yml seed=2 (free=17941MB)
+[03:37:48] LAUNCH c_s15 config=feddsa_sgpa_c_r200.yml seed=15 (free=16730MB)
+[03:38:08] LAUNCH c_s333 config=feddsa_sgpa_c_r200.yml seed=333 (free=15518MB)
+[2026-04-23 03:38:28] all 9 runs launched, waiting...
