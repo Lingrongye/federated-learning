@@ -1,5 +1,58 @@
 # 面向跨域联邦学习的解耦原型学习 — 研究综述与方向指南
 
+## 零、实验胜负判定硬性要求 (强制,最高优先级)
+
+**实验成功的唯一标准**: 3-seed {2,15,333} mean AVG Best accuracy **必须超过 FDSE 本地复现 baseline** (不是论文数字,而是我们 env 下同 seed 同 config 的真实复现):
+
+| Dataset | FDSE paper | **FDSE 本地复现** | **必须达到** |
+|---------|:---------:|:----------------:|:-----------:|
+| **PACS** AVG Best | 82.17 | **79.91** | 3-seed mean > 79.91 |
+| **Office-Caltech10** AVG Best | 91.58 | **90.58** | 3-seed mean > 90.58 |
+
+**当前进展** (截至 2026-04-21, 3-seed {2,15,333} R200):
+
+| Metric | orth_only | FDSE | Δ |
+|--------|:--------:|:----:|:--:|
+| PACS AVG Best | **80.64** | 79.91 | ✅ **+0.73** |
+| PACS AVG Last | **79.98** | 77.55 | ✅ **+2.43** |
+| Office AVG Best | 89.09 | **90.58** | ❌ **-1.49** |
+| Office AVG Last | 87.32 | **89.22** | ❌ **-1.90** |
+
+**战场判决**:
+- **PACS 全面领先**: Best/Last 都赢,VIB 只需保持不退即可
+- **Office 双指标落后**: Best -1.49, Last -1.90, **必须涨至少 1.5-2pp**
+- **真正的攻坚是 Office** (Best + Last 都要攻)
+
+### 硬性禁止 (不得违反,违反即失败)
+
+1. ❌ **禁止换数据集**: 必须 PACS + Office-Caltech10,不得因为打不过 FDSE 就 pivot 到 FEMNIST / Rotated MNIST / Camelyon17 等"容易打"的场景
+2. ❌ **禁止改 paper 叙事为"诊断论文"**: 必须是 accuracy 直接胜 FDSE 的 method paper,不接受 "FDSE 没做严格评估所以我们赢"
+3. ❌ **禁止用 non-inferior / 持平叙事**: 不接受 "accuracy 不差 FDSE 太多 + probe 好" 的妥协定位
+4. ❌ **禁止"有创新就算赢"**: Novelty 是前提,**accuracy 数字超 FDSE 才是胜利**
+
+### 方案迭代判决
+
+- **3-seed mean accuracy 没达到 FDSE 阈值** → **立即换方法**,不浪费 GPU 在小幅 incremental 优化
+- **3-seed mean accuracy ≥ FDSE 阈值** → 进入 paper 阶段,把 probe / 诊断 / novelty 作为 **bonus contribution**
+- **PACS 过但 Office 没过** (或反之) → 视情况,但**两个都要过才算完全胜利**
+
+### Probe 和诊断的定位
+
+- ✅ **Paper bonus 贡献**: 作为 "method 胜 FDSE 同时更严格评估"
+- ❌ **绝不作主卖点**: 如果 accuracy 没胜,probe/诊断救不回来
+
+### 当前 baseline 差距 (截至 2026-04-21)
+
+| 当前状态 | PACS | Office |
+|---------|:----:|:------:|
+| orth_only 3-seed mean | 80.64 | 89.09 |
+| FDSE 阈值 | 82.17 | 91.58 |
+| **必须涨** | **+1.53** | **+2.49** |
+
+任何新方案 proposal 必须预期 / 实测达到上表涨幅,否则立刻 kill。
+
+---
+
 ## 一、研究背景与问题定义
 
 **核心问题**：联邦学习（FL）中，不同客户端的数据来自不同域（如照片/素描/油画），导致条件特征分布 P(X|Y) 存在显著差异（域偏移/Feature Skew）。传统参数聚合方法（FedAvg）在此场景下性能严重下降。
@@ -783,6 +836,62 @@ nohup $PY run_single.py --task PACS_c4 --algorithm feddsa --gpu 0 \
 - 指定空闲卡：`CUDA_VISIBLE_DEVICES=0` 或 `CUDA_VISIBLE_DEVICES=1`
 - 小实验 batch_size 调小防止 OOM
 - 长时间实验用 `nohup ... &` 后台运行，避免SSH断连中断
+
+### 17.8 GPU 并行原则（强制，最高优先级）
+
+**核心原则**：**只要 GPU 有空闲显存就并行 launch，不要做人为的 wave 串行等待。**
+
+#### 禁止
+
+- ❌ 写 "Wave 1 (6 runs) → wait → Wave 2 (6 runs) → wait → Wave 3 (4 runs) × 3 批" 这种 **chained wait dispatcher**。即使每批的 runs 完成时间接近，后一批 launch 前也会浪费 GPU idle 时间（task 长度不均匀时浪费更严重）。
+- ❌ 固定 `MAX_PARALLEL=6` 这种静态常量 — 显存占用取决于 config（E=1 vs E=5、batch size、proto dim）
+- ❌ 在 Wave 内用 `wait` 等**所有** runs 完成才进下一批
+
+#### 应该
+
+- ✅ **Greedy scheduler**：按 `nvidia-smi --query-gpu=memory.free` 动态 launch。每完成一个 slot 立即补下一个 task。
+- ✅ **显存阈值 `MIN_FREE_MB`** 按 config 估算：Office E=1 ~2.5GB，PACS E=5 ~4.5GB，DomainNet E=5 ~4GB。留 500MB 安全余量。
+- ✅ 同一 GPU 可混跑不同数据集（Office + PACS），只要总显存不超 24GB
+- ✅ Launch 后 `sleep 15-20s` 让进程 ramp up 完整显存再做下一次 check（避免 nvidia-smi 读到还没分配满的 free memory）
+
+#### 标准 Greedy Launcher 模板
+
+```bash
+#!/bin/bash
+TASKS=(
+    "label1|task|algo|config|seed"
+    "label2|task|algo|config|seed"
+    ...
+)
+MIN_FREE_MB=4500  # 按单 run 显存估, 留余量
+for task in "${TASKS[@]}"; do
+    IFS="|" read -r label t algo config seed <<< "$task"
+    while true; do
+        free_mb=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1)
+        if [ "$free_mb" -ge $MIN_FREE_MB ]; then
+            echo "[$(date +%H:%M:%S)] LAUNCH $label (free=${free_mb}MB)"
+            CUDA_VISIBLE_DEVICES=0 $PY run_single.py \
+                --task $t --algorithm $algo --gpu 0 \
+                --config ./$config --logger PerRunLogger --seed $seed \
+                > $LOG/${label}.log 2>&1 &
+            sleep 20  # ramp up 再 check 下一个
+            break
+        fi
+        sleep 45
+    done
+done
+wait
+```
+
+#### 为什么重要
+
+- 24 runs 串行 4 批 × 7h = **21h wall**
+- 24 runs greedy 按显存动态 = **~14-16h wall**（平均 6-8 并行不阻塞）
+- **节省 5-7h wall 时间 = 每次实验提前半天出结果**
+
+#### 历史错误
+
+- EXP-119 Wave 3 原本写成 3 批 × 4 runs × 7h = 21h PACS wall。实际 Wave 2 Office 只用 13.5GB/24GB，Wave 3 的 PACS (~4GB each) 完全可以**立刻并行** 2-3 个到 Wave 2 里，不用等 Wave 2 完成。这个错误让实验 wall 多 5h。已改为 greedy launcher。
 
 ---
 
