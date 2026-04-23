@@ -139,6 +139,56 @@ class AlexNetEncoder(nn.Module):
         return x  # [B, 1024]
 
 
+# ============================================================
+# Digits-5 专用 backbone (对齐 FedBN paper 标准 5-layer CNN)
+# ============================================================
+# 为什么需要: AlexNetEncoder 是 224×224 输入 (feat_dim=1024), 不适合 digit5_c5
+# 任务的 32×32 输入. DigitEncoder 取 FedBN paper DigitModel 去掉最后分类 fc3 后的
+# 结构, 输出 512 维 feature 供 semantic_head / style_head 接.
+#
+# 和 task/digit5_c5/config.py 里的 DigitModel 的对应:
+#   DigitModel = conv1..3 + fc1 + fc2 + fc3 (最后分类层)
+#   DigitEncoder = conv1..3 + fc1 + fc2 (去掉 fc3, 输出 feature)
+# 这保证 FedDSA-SGPA 主路径 encode(x) -> 512d feature 的语义和 FedBN baseline 一致.
+class DigitEncoder(nn.Module):
+    """FedBN 标准 DigitModel 去掉最后 fc3, 输出 512 维 feature.
+
+    结构 (输入 3×32×32 → 输出 512):
+      conv1  3 → 64   5×5 pad=2   BN   ReLU   Pool 2x2  →  64×16×16
+      conv2  64 → 64  5×5 pad=2   BN   ReLU   Pool 2x2  →  64×8×8
+      conv3  64 → 128 5×5 pad=2   BN   ReLU             →  128×8×8
+      flatten → 8192
+      fc1   8192 → 2048  BN   ReLU
+      fc2   2048 →  512  BN   ReLU
+      (no fc3, 分类头由 classify() 或 head 单独做)
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=2)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=5, stride=1, padding=2)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=2)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.fc1 = nn.Linear(128 * 8 * 8, 2048)
+        self.bn4 = nn.BatchNorm1d(2048)
+        self.fc2 = nn.Linear(2048, 512)
+        self.bn5 = nn.BatchNorm1d(512)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.max_pool2d(x, 2)               # 32 -> 16
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = F.max_pool2d(x, 2)               # 16 -> 8
+        x = F.relu(self.bn3(self.conv3(x)))  # 保持 8×8
+        x = x.view(x.size(0), -1)            # flatten (B, 8192)
+        x = F.relu(self.bn4(self.fc1(x)))    # (B, 2048)
+        x = F.relu(self.bn5(self.fc2(x)))    # (B, 512)
+        return x                             # 输出 512 维 feature
+
+
 def build_etf_matrix(feat_dim: int, num_classes: int, seed: int = 0) -> torch.Tensor:
     """Construct Fixed Simplex ETF matrix M ∈ R^{d × K}.
 
@@ -182,7 +232,16 @@ class FedDSASGPAModel(fuf.FModule):
 
     def __init__(self, num_classes=7, feat_dim=1024, proj_dim=128,
                  tau_etf=0.1, etf_seed=0, use_etf=True,
-                 ca: int = 0, num_clients: int = 4):
+                 ca: int = 0, num_clients: int = 4,
+                 backbone: str = 'alexnet'):
+        """
+        Args:
+            backbone: 'alexnet' (PACS/Office/DomainNet, 1024 维) 或
+                      'digit'   (Digits-5 32×32 输入, 512 维)
+                      注意: 传入 feat_dim 必须和 backbone 默认值一致, 否则 encoder
+                      的输出维度和 semantic_head 的输入维度对不上会 shape error.
+                      推荐由 init_global_module 根据 task 名字自动 dispatch.
+        """
         super().__init__()
         self.num_classes = num_classes
         self.proj_dim = proj_dim
@@ -190,8 +249,26 @@ class FedDSASGPAModel(fuf.FModule):
         self.use_etf = use_etf
         self.ca = int(ca)
         self.num_clients = int(num_clients)
+        self.backbone = backbone
 
-        self.encoder = AlexNetEncoder()
+        # --- 根据 backbone dispatch encoder ---
+        # AlexNet (for PACS/Office/DomainNet, 输入 224×224 或 256×256)
+        # DigitEncoder (for Digits-5, 输入 32×32)
+        if backbone == 'digit':
+            self.encoder = DigitEncoder()
+            assert feat_dim == 512, (
+                f"backbone='digit' 要求 feat_dim=512, 收到 {feat_dim}. "
+                f"请 init_global_module 传 feat_dim=512."
+            )
+        else:
+            self.encoder = AlexNetEncoder()
+            assert feat_dim == 1024, (
+                f"backbone='alexnet' 要求 feat_dim=1024, 收到 {feat_dim}."
+            )
+        self.feat_dim = feat_dim
+
+        # --- semantic/style head: feat_dim → proj_dim ---
+        # 维度由 feat_dim 控制, 两种 backbone 都走同样的 2-layer MLP 结构
         self.semantic_head = nn.Sequential(
             nn.Linear(feat_dim, proj_dim), nn.ReLU(), nn.Linear(proj_dim, proj_dim)
         )
@@ -1050,6 +1127,7 @@ _TASK_NUM_CLASSES = {
     'PACS': 7,
     'office': 10,
     'domainnet': 10,
+    'digit5': 10,   # 新增: Digits-5 的 10 个数字 0-9
 }
 
 # Task prefix → num_clients dispatch (for CDANN dom_head output dim)
@@ -1057,7 +1135,26 @@ _TASK_NUM_CLIENTS = {
     'PACS': 4,
     'office': 4,
     'domainnet': 6,
+    'digit5': 5,    # 新增: Digits-5 每个 domain = 一个 client, 共 5 个
 }
+
+# Task prefix → backbone dispatch (for FedDSASGPAModel 构造)
+# 'alexnet' = AlexNet encoder, feat_dim=1024, 用于大图像任务 (PACS/Office/DomainNet)
+# 'digit'   = FedBN DigitModel encoder, feat_dim=512, 用于 Digits-5 32×32 小图
+_TASK_BACKBONE = {
+    'PACS': ('alexnet', 1024),
+    'office': ('alexnet', 1024),
+    'domainnet': ('alexnet', 1024),
+    'digit5': ('digit', 512),
+}
+
+
+def _resolve_backbone(task_name: str):
+    """根据 task 名字前缀选择 backbone, 返回 (backbone_name, feat_dim)."""
+    for prefix, (bn, fd) in _TASK_BACKBONE.items():
+        if prefix.lower() in task_name.lower():
+            return bn, fd
+    return 'alexnet', 1024  # fallback
 
 
 def _resolve_num_classes(task_name: str) -> int:
@@ -1095,7 +1192,12 @@ def init_global_module(object):
         if len(algo_para) >= 13:
             ca = int(algo_para[12])
 
+    # 新增: 根据 task 名字自动选择 backbone + feat_dim
+    # PACS/Office/DomainNet → AlexNet (feat_dim=1024), Digits-5 → DigitModel (512)
+    backbone, feat_dim = _resolve_backbone(task)
+
     object.model = FedDSASGPAModel(
-        num_classes=num_classes, feat_dim=1024, proj_dim=128,
+        num_classes=num_classes, feat_dim=feat_dim, proj_dim=128,
         use_etf=use_etf, ca=ca, num_clients=num_clients,
+        backbone=backbone,
     ).to(object.device)

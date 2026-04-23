@@ -1,0 +1,32 @@
+# Digits-5 FedDSA-SGPA 分解消融 baseline (sgpa_only: uw=0 uc=0):
+# 对照 uw1_uc1 版本, 用于验证 DomainNet 上 +0.26 / Office 上 -0.4 的 regime-dependent
+# 发现是否在 Digits-5 上延续 (Digits-5 是强风格异质, 预期和 DomainNet 方向一致 = +).
+
+algo_para:
+- 1.0     # lo (lambda_orth)
+- 0.1     # te
+- 128     # pd
+- 10      # wr
+- 1e-3    # es
+- 2       # mcw
+- 1       # dg
+- 0       # ue (use_etf=0)
+- 0       # uw (whitening off)
+- 0       # uc (centers off)
+- 0       # se
+- 0       # lp
+- 0       # ca
+
+learning_rate: 0.01
+batch_size: 32
+weight_decay: 1e-5
+lr_scheduler: 0
+learning_rate_decay: 1.0
+num_rounds: 100
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

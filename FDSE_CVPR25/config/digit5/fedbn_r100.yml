@@ -1,0 +1,17 @@
+# Digits-5 FedBN baseline (ICLR 2021).
+# BN 层 running stats 本地化 (不参加 FedAvg 聚合), γ/β 仍聚合.
+# 所有其他超参和 FedAvg 完全一致 (fair comparison).
+
+learning_rate: 0.01
+batch_size: 32
+weight_decay: 1e-5
+lr_scheduler: 0
+learning_rate_decay: 1.0
+num_rounds: 100
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

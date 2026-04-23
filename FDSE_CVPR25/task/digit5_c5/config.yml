@@ -1,0 +1,20 @@
+# Digits-5 任务默认超参数 (可被 config/digit5/*.yml 覆盖)
+# 对齐 FedBN paper + 我们现有 PACS/Office/DomainNet 协议的混合:
+#   - LR=0.01 (FedBN 原始), 比 PACS/Office/DN 的 0.05 小, 因为 Digits CNN 更容易梯度爆炸
+#   - batch=32 (FedBN 原始)
+#   - R=100 (初始保守, 后续可开到 R=200 对齐其他数据集)
+#   - E=1 (FedBN 原始, local step 少, 避免 overfit domain)
+
+learning_rate: 0.01          # FedBN paper 用 0.01 for Digits
+batch_size: 32               # FedBN paper 标准
+weight_decay: 1e-5           # Digits 较小, weight_decay 相应减小 (PACS 用 1e-3)
+lr_scheduler: 0              # 不用 scheduler, 让算法端控制
+learning_rate_decay: 1.0     # 1.0 = 不衰减, 简单场景 flat LR
+num_rounds: 100              # FedBN paper R=100. 我们开 200 对齐其他数据集也 OK
+num_epochs: 1                # FedBN local epoch=1
+clip_grad: 10                # 防梯度爆炸
+proportion: 1.0              # 每轮所有 client 参与 (5 个 client 全都参)
+train_holdout: 0.2           # 20% holdout 做 evaluation, 和 PACS/Office/DN 一致
+local_test: True             # 每 client 本地评估, 符合跨域 DG 场景
+no_log_console: True         # 不打印到 console, 只写 log 文件
+log_file: True               # 写 log 文件到 task/digit5_c5/log/

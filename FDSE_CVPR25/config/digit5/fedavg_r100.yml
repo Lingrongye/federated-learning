@@ -1,0 +1,17 @@
+# Digits-5 基线 FedAvg (最简单, 所有参数 FedAvg 平均).
+# 对齐 FedBN paper (ICLR 2021) 标准 Digits-5 setting:
+#   LR=0.01 / batch=32 / R=100 / E=1 / WD=1e-5
+
+learning_rate: 0.01
+batch_size: 32
+weight_decay: 1e-5
+lr_scheduler: 0
+learning_rate_decay: 1.0   # 不衰减
+num_rounds: 100
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0            # 每轮所有 5 个 client 参与
+train_holdout: 0.2         # 20% 做 val, 和 PACS/Office/DN 一致
+local_test: True
+no_log_console: True
+log_file: True

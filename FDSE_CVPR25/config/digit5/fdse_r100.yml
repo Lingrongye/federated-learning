@@ -1,0 +1,22 @@
+# Digits-5 FDSE baseline (CVPR 2025).
+# 用 DigitModel 的 DSE 版 (fdse.py model_map['digit5'] = Digit5ModelDSE).
+# algo_para 保持 FDSE 原默认 (lmbd=0.01, tau=0.5, beta=0.1) 和其他 3 数据集一致.
+
+algo_para:
+- 0.01    # lmbd: 一致性正则化权重
+- 0.5     # tau: KL 对齐的温度
+- 0.1     # beta: DSE 差异化聚合权重衰减基数
+
+learning_rate: 0.01
+batch_size: 32
+weight_decay: 1e-5
+lr_scheduler: 0
+learning_rate_decay: 1.0
+num_rounds: 100
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

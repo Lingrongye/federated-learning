@@ -339,10 +339,74 @@ class OfficeModel(fuf.FModule):
         return x
 
 
+# ============================================================
+# Digits-5 专用 backbone (FedBN 标准 5-layer CNN 的 DSE 版)
+# ============================================================
+# 为什么需要: FDSE 原 AlexNetEncoder 是 224×224 输入的 5 conv AlexNet, 不适合 digits
+# 的 32×32 小图像. DigitModelEncoderDSE 是 FedBN paper DigitModel 的 DSE 版本,
+# 每个 Conv/FC 都替换成 DSEConv/DSELinear, 保持 FDSE 的"每层做 DFE+DSE 分解"核心思想.
+#
+# 结构 (输入 3×32×32, 输出 512 维 feature, 和 DigitModel 一致去掉最后 fc3 分类头):
+#   conv1  DSEConv(3, 64)   + MaxPool -> 64×16×16
+#   conv2  DSEConv(64, 64)  + MaxPool -> 64×8×8
+#   conv3  DSEConv(64, 128)           -> 128×8×8
+#   flatten -> 8192
+#   fc1   DSELinear(8192, 2048)
+#   fc2   DSELinear(2048, 512)
+# 注意: DSEConv 内部已经带 BN (dse_bn + dfe_bn), 所以不需要额外在这里加 BN.
+class DigitModelEncoderDSE(nn.Module):
+    """FedBN 标准 DigitModel 的 DSE 版 encoder (for digit5_c5 task).
+
+    和原 DigitModel 的对应:
+      原 DigitModel 每个 conv/fc 后面跟 nn.BatchNorm + ReLU,
+      DSE 版把 Conv/Linear 换成 DSEConv/DSELinear (里面已包含 BN + ReLU 激活),
+      所以不需要在外面再包 BN.
+    """
+
+    def __init__(self):
+        super(DigitModelEncoderDSE, self).__init__()
+        # 三个 conv 块, kernel 5×5 padding=2 (和原 DigitModel 一致, 保持 32→16→8 感受野)
+        self.features = nn.Sequential(
+            OrderedDict([
+                ('conv1', DSEConv(3, 64, kernel_size=5, stride=1, padding=2)),
+                ('maxpool1', nn.MaxPool2d(kernel_size=2)),       # 32 -> 16
+                ('conv2', DSEConv(64, 64, kernel_size=5, stride=1, padding=2)),
+                ('maxpool2', nn.MaxPool2d(kernel_size=2)),       # 16 -> 8
+                ('conv3', DSEConv(64, 128, kernel_size=5, stride=1, padding=2)),
+                # conv3 后无 pool, 保持 8×8
+            ])
+        )
+        # 两个 fc 块
+        self.fc1 = DSELinear(128 * 8 * 8, 2048)   # 8192 -> 2048
+        self.fc2 = DSELinear(2048, 512)            # 2048 -> 512
+
+    def forward(self, x):
+        x = self.features(x)                       # (B, 128, 8, 8)
+        x = torch.flatten(x, 1)                    # (B, 8192)
+        x = self.fc1(x)                            # (B, 2048)
+        x = self.fc2(x)                            # (B, 512)
+        return x                                   # 输出 feature, 后接 head 做分类
+
+
+class Digit5ModelDSE(fuf.FModule):
+    """Digits-5 task 的完整 FDSE model (encoder + 线性分类 head)."""
+
+    def __init__(self):
+        super().__init__()
+        self.encoder = DigitModelEncoderDSE()
+        self.head = nn.Linear(512, 10)              # 512 feature -> 10 数字类
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.head(x)
+        return x
+
+
 model_map = {
     'PACS': PACSModel,
     'office': OfficeModel,
     'domainnet': DomainnetModel,
+    'digit5': Digit5ModelDSE,   # 新增: task='digit5_c5' → 走 DigitModel 的 DSE 版
 }
 
 data_map = {

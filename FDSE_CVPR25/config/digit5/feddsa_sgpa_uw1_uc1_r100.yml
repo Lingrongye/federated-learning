@@ -1,0 +1,33 @@
+# Digits-5 FedDSA-SGPA (我们的方法, orth_uc1 等价配置):
+#   lo=1.0, uw=1, uc=1 (SGPA 架构 + pooled whitening + class centers)
+# 对应 PACS/DN 上的 orth_uc1 config (config/pacs/feddsa_orth_uc1_r200.yml 等).
+# algo_para 13 个顺序: lo, te, pd, wr, es, mcw, dg, ue, uw, uc, se, lp, ca
+
+algo_para:
+- 1.0     # lo (lambda_orth)
+- 0.1     # te (tau_etf, unused when ue=0)
+- 128     # pd (proj_dim)
+- 10      # wr (warmup_rounds)
+- 1e-3    # es (eps_sigma)
+- 2       # mcw (min_clients_whiten)
+- 1       # dg (diag on)
+- 0       # ue (use_etf=0, 用 nn.Linear 分类头)
+- 1       # uw (use_whitening=1)
+- 1       # uc (use_centers=1)
+- 0       # se (save_ckpt)
+- 0       # lp (lambda_pull)
+- 0       # ca (CDANN off)
+
+learning_rate: 0.01
+batch_size: 32
+weight_decay: 1e-5
+lr_scheduler: 0
+learning_rate_decay: 1.0
+num_rounds: 100
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
