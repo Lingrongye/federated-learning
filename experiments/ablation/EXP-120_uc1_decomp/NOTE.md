@@ -113,17 +113,69 @@ orth_uc1 - orth_only = **+0.26** (SGPA 架构 + whitening + centers 三者合计
 
 **但所有 3 变体仍输 FedBN 89.75 (-0.61~-1.07pp)**, Office 攻关仍未破局. 下一方向: **排除 whitening/centers, 尝试 logit-level calibration / class-conditional classifier bank** (因为 Office 的问题不在 feature space 的对齐, 可能在 classifier 层的校准).
 
-## 🟡 DomainNet 状态 (回填中, 最终结果后更新)
+## 🟠 DomainNet 部分数据 (2026-04-23 14:30 中途 kill, R=104-106/200, ~53% 训练)
 
-9 runs 在 lab-lry GPU 1 继续跑. ~14:00-16:00 完成后回填. 预期检验:
-- 若 sgpa_w > sgpa_c → whitening 是 DomainNet +0.28 增益的主力
-- 若 sgpa_c > sgpa_w → centers 是主力
-- 若 sgpa_w ≈ sgpa_c ≈ 72.49 → 两者冗余
+### 中断原因
 
-## 跨 3 数据集对比预览 (待 DN 完成后填)
+14:30 手动 kill 9 runs 给 EXP-123 PACS Stage B 腾 lab-lry GPU 1 空间 (EXP-123 Art domain 诊断优先级更高). R=0-105 的 accuracy 曲线从 log 文件 parse 还原 (flgo 中途不写 record JSON, 只有 log 保留). **R=106-200 数据永久丢失**.
+
+### Per-seed AVG Best (R=0-105 snapshot, parsed from log)
+
+| 变体 | uw/uc | s=2 | s=15 | s=333 | 3-seed mean |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **sgpa_only** | 0/0 | 72.95 | 72.57 | 72.34 | **72.62** |
+| **sgpa_w** | 1/0 | 72.83 | 72.39 | 72.44 | **72.55** |
+| **sgpa_c** | 0/1 | 72.08 | 72.90 | 72.54 | **72.51** |
+| 对照 orth_uc1 (R=200, EXP-115) | 1/1 | — | — | — | 72.49 |
+| 对照 orth_only (R=200, EXP-117) | — | — | — | — | 72.23 |
+| 对照 FDSE 本地 | — | — | — | — | 72.21 |
+
+### 初步解读 (mid-run, 非 R=200 最终)
+
+**三变体 AVG Best 统计等价** (72.62 / 72.55 / 72.51, 差 0.11 远小于 seed std):
+- `sgpa_w` ≈ `sgpa_c` ≈ `sgpa_only` → whitening 和 centers **没有独立贡献**
+- 但 `sgpa_only` (72.62) > `orth_only` (72.23) by **+0.39** → **SGPA 双头架构本身可能有贡献**
+- R=105 时 `sgpa_only` 已超过 orth_uc1 R=200 (72.49) → 但 mid-run 有 bias (R=200 后曲线可能降或升)
+
+### 数据可信度警告
+
+- **mid-run 风险**: R=105→200 曲线仍可能变化. 特别若 whitening/centers 是"慢热"型 (后期发力), R=200 可能 w/c > only. 或 only 可能在后期 over-fit 下降
+- **配合 Office 交叉验证**: Office (R=200 完整) 显示 w/c **有害** (-0.4 ~ -0.46 vs only), DN mid-run 也显示 w/c 无贡献 → **双数据集证据一致**
+- **→ whitening/centers 不是真正的贡献源**, 这个结论即使 DN 未完成 R=200 也大概率站得住
+
+### Log 还原详情
+
+9 log 文件在 lab-lry `/home/lry/code/federated-learning/FDSE_CVPR25/task/domainnet_c6/log/2026-04-23-03-3*feddsa_sgpa*.log` (每 230KB, R=0-105), 含:
+- `mean_local_test_accuracy` per round (AVG)
+- `local_test_accuracy` per round (ALL weighted)
+- min/max/std per round
+- val accuracy + loss
+
+**不含**: per-client-dist (只有 aggregated stats), per-class accuracy.
+
+## 跨 3 数据集对比 (DN = R=105 mid-run, 其他 R=200 完整)
 
 | 数据集 | FedBN/对照 | sgpa_only | sgpa_w | sgpa_c | 哪个贡献 |
 |---|:---:|:---:|:---:|:---:|:---:|
 | PACS | - | (未跑) | (未跑) | (未跑) | — |
-| **Office** | FedBN 89.75 | **89.14** | 88.68 | 88.74 | **都有害** |
-| DomainNet | FDSE 72.21 | - | - | - | 待填 |
+| **Office** (R=200) | FedBN 89.75 | **89.14** | 88.68 | 88.74 | **都有害** (-0.4 ~ -0.46) |
+| **DomainNet** (R=105 🟠) | FDSE 72.21 | **72.62** | 72.55 | 72.51 | **w/c 都无贡献**; SGPA 架构本身 +0.39 vs orth_only 72.23 |
+
+### 总结叙事
+
+**"whitening + centers 不是真正的贡献源"**:
+- Office (R=200 完整): w/c **有害**
+- DomainNet (R=105 mid-run): w/c **无贡献** (0.04-0.11 差在 seed noise 内)
+- 唯一可能的贡献: **SGPA 双头架构本身** (vs orth_only +0.39 在 DN, 但 Office 所有变体都输 FedBN → 架构也不 generalize 到 Office)
+
+→ **orth_uc1 (EXP-115) 的 +0.28 gain 可能主要来自 SGPA 架构 (或 seed noise), 不是 whitening/centers**
+
+### 是否重跑 DN R=200?
+
+**不建议**. 理由:
+1. Office 已证 w/c 有害 → 即使 DN R=200 出 w/c > only, 也只在 DN 成立, 不 generalize
+2. R=105 已接近 plateau, R=105→200 变化通常 ≤0.3pp
+3. 重跑 6h+ 算力换 0.3pp 精度不值
+4. 当前核心问题是 PACS Art (EXP-123) 和 Office FedBN 突破, DN 已经相当稳
+
+**若后续需补齐**: 优先补 `sgpa_only` × 3 seeds × R=200 (最关键变体, 验证架构贡献是否站得住), w/c 可选
