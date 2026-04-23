@@ -1,0 +1,48 @@
+{
+  "probe_sem_domain": {
+    "linear": {
+      "train_acc": 1.0,
+      "test_acc": 1.0
+    },
+    "mlp": {
+      "train_acc": 0.9993050729673384,
+      "test_acc": 0.9988882712618121
+    }
+  },
+  "probe_sty_domain": {
+    "linear": {
+      "train_acc": 1.0,
+      "test_acc": 1.0
+    },
+    "mlp": {
+      "train_acc": 1.0,
+      "test_acc": 1.0
+    }
+  },
+  "probe_sem_class": {
+    "linear": {
+      "train_acc": 0.9640027797081306,
+      "test_acc": 0.9638688160088938
+    },
+    "mlp": {
+      "train_acc": 0.9653926337734537,
+      "test_acc": 0.962201222901612
+    }
+  },
+  "probe_sty_class": {
+    "linear": {
+      "train_acc": 0.9635858234885337,
+      "test_acc": 0.962757087270706
+    },
+    "mlp": {
+      "train_acc": 0.9608061153578874,
+      "test_acc": 0.953307392996109
+    }
+  },
+  "random_baseline_domain": 0.25,
+  "random_baseline_class": 0.14285714285714285,
+  "task": "PACS_c4",
+  "ckpt": "/root/fl_checkpoints/sgpa_PACS_c4_s2_R200_1776691840",
+  "n_train": 7195,
+  "n_test": 1799
+}

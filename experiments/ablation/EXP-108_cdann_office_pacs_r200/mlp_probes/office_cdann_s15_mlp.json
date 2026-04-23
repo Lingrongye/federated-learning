@@ -1,0 +1,48 @@
+{
+  "probe_sem_domain": {
+    "linear": {
+      "train_acc": 0.9956164383561644,
+      "test_acc": 0.9956236323851203
+    },
+    "mlp": {
+      "train_acc": 0.9945205479452055,
+      "test_acc": 0.9912472647702407
+    }
+  },
+  "probe_sty_domain": {
+    "linear": {
+      "train_acc": 1.0,
+      "test_acc": 1.0
+    },
+    "mlp": {
+      "train_acc": 1.0,
+      "test_acc": 1.0
+    }
+  },
+  "probe_sem_class": {
+    "linear": {
+      "train_acc": 0.9873972602739726,
+      "test_acc": 0.9606126914660832
+    },
+    "mlp": {
+      "train_acc": 0.9649315068493151,
+      "test_acc": 0.9649890590809628
+    }
+  },
+  "probe_sty_class": {
+    "linear": {
+      "train_acc": 0.9726027397260274,
+      "test_acc": 0.9562363238512035
+    },
+    "mlp": {
+      "train_acc": 0.9232876712328767,
+      "test_acc": 0.9080962800875274
+    }
+  },
+  "random_baseline_domain": 0.25,
+  "random_baseline_class": 0.1,
+  "task": "office_caltech10_c4",
+  "ckpt": "/root/fl_checkpoints/sgpa_office_caltech10_c4_s15_R200_1776668629",
+  "n_train": 1825,
+  "n_test": 457
+}

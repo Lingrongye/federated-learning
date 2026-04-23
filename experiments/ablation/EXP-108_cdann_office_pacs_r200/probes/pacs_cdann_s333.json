@@ -1,0 +1,20 @@
+{
+  "probe_sem_domain": {
+    "train_acc": 1.0,
+    "test_acc": 1.0
+  },
+  "probe_sty_domain": {
+    "train_acc": 1.0,
+    "test_acc": 1.0
+  },
+  "probe_sty_class": {
+    "train_acc": 0.9578874218207089,
+    "test_acc": 0.9633129516397999
+  },
+  "random_baseline_domain": 0.25,
+  "random_baseline_class": 0.14285714285714285,
+  "task": "PACS_c4",
+  "ckpt": "/root/fl_checkpoints/sgpa_PACS_c4_s333_R200_1776691555",
+  "n_train": 7195,
+  "n_test": 1799
+}

@@ -1,0 +1,139 @@
+=== office_cdann_s2 ===
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+2026-04-21 02:38:38,399 fflow.py init [line:848] INFO PROCESS ID:	257005
+2026-04-21 02:38:38,399 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-21 02:38:38,399 fflow.py init [line:852] INFO BENCHMARK:	benchmark.office_caltech10_classification
+2026-04-21 02:38:38,399 fflow.py init [line:853] INFO TASK:			./task/office_caltech10_c4
+2026-04-21 02:38:38,399 fflow.py init [line:854] INFO MODEL:		algorithm.feddsa_sgpa
+2026-04-21 02:38:38,399 fflow.py init [line:855] INFO ALGORITHM:	feddsa_sgpa
+2026-04-21 02:38:38,401 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'algorithm.feddsa_sgpa.Server'>, 4 <class 'algorithm.feddsa_sgpa.Client'>
+2026-04-21 02:38:38,799 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-21 02:38:38,958 fflow.py init [line:931] INFO Ready to start.
+[cap] task=office_caltech10_c4, ckpt=/root/fl_checkpoints/sgpa_office_caltech10_c4_s2_R200_1776668590
+[cap] total=2282 train=1825 test=457
+[cap] probe_sem_domain: linear=1.000 mlp_16=0.974 mlp_64=1.000 mlp_128=0.989 mlp_256=0.991
+[cap] probe_sty_domain: linear=1.000 mlp_16=1.000 mlp_64=1.000 mlp_128=1.000 mlp_256=1.000
+[cap] probe_sem_class: linear=0.961 mlp_16=0.958 mlp_64=0.963 mlp_128=0.961 mlp_256=0.969
+[cap] probe_sty_class: linear=0.950 mlp_16=0.457 mlp_64=0.906 mlp_128=0.873 mlp_256=0.908
+[cap] per-domain holdout d0: sty→class mlp=0.074 (n=1011)
+[cap] per-domain holdout d1: sty→class mlp=0.101 (n=863)
+[cap] per-domain holdout d2: sty→class mlp=0.085 (n=142)
+[cap] per-domain holdout d3: sty→class mlp=0.154 (n=266)
+[cap] saved to /root/autodl-tmp/federated-learning/experiments/ablation/EXP-108_cdann_office_pacs_r200/capacity_probes/office_cdann_s2.json
+=== office_cdann_s15 ===
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+2026-04-21 02:39:08,114 fflow.py init [line:848] INFO PROCESS ID:	257216
+2026-04-21 02:39:08,114 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-21 02:39:08,114 fflow.py init [line:852] INFO BENCHMARK:	benchmark.office_caltech10_classification
+2026-04-21 02:39:08,114 fflow.py init [line:853] INFO TASK:			./task/office_caltech10_c4
+2026-04-21 02:39:08,114 fflow.py init [line:854] INFO MODEL:		algorithm.feddsa_sgpa
+2026-04-21 02:39:08,114 fflow.py init [line:855] INFO ALGORITHM:	feddsa_sgpa
+2026-04-21 02:39:08,116 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'algorithm.feddsa_sgpa.Server'>, 4 <class 'algorithm.feddsa_sgpa.Client'>
+2026-04-21 02:39:08,546 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-21 02:39:08,714 fflow.py init [line:931] INFO Ready to start.
+[cap] task=office_caltech10_c4, ckpt=/root/fl_checkpoints/sgpa_office_caltech10_c4_s15_R200_1776668629
+[cap] total=2282 train=1825 test=457
+[cap] probe_sem_domain: linear=0.996 mlp_16=0.972 mlp_64=0.991 mlp_128=0.989 mlp_256=0.987
+[cap] probe_sty_domain: linear=1.000 mlp_16=1.000 mlp_64=1.000 mlp_128=1.000 mlp_256=1.000
+[cap] probe_sem_class: linear=0.961 mlp_16=0.952 mlp_64=0.965 mlp_128=0.943 mlp_256=0.950
+[cap] probe_sty_class: linear=0.956 mlp_16=0.873 mlp_64=0.908 mlp_128=0.906 mlp_256=0.926
+[cap] per-domain holdout d0: sty→class mlp=0.087 (n=1011)
+[cap] per-domain holdout d1: sty→class mlp=0.101 (n=863)
+[cap] per-domain holdout d2: sty→class mlp=0.148 (n=142)
+[cap] per-domain holdout d3: sty→class mlp=0.094 (n=266)
+[cap] saved to /root/autodl-tmp/federated-learning/experiments/ablation/EXP-108_cdann_office_pacs_r200/capacity_probes/office_cdann_s15.json
+=== office_cdann_s333 ===
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+2026-04-21 02:39:39,383 fflow.py init [line:848] INFO PROCESS ID:	257429
+2026-04-21 02:39:39,383 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-21 02:39:39,384 fflow.py init [line:852] INFO BENCHMARK:	benchmark.office_caltech10_classification
+2026-04-21 02:39:39,384 fflow.py init [line:853] INFO TASK:			./task/office_caltech10_c4
+2026-04-21 02:39:39,384 fflow.py init [line:854] INFO MODEL:		algorithm.feddsa_sgpa
+2026-04-21 02:39:39,384 fflow.py init [line:855] INFO ALGORITHM:	feddsa_sgpa
+2026-04-21 02:39:39,387 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'algorithm.feddsa_sgpa.Server'>, 4 <class 'algorithm.feddsa_sgpa.Client'>
+2026-04-21 02:39:39,816 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-21 02:39:39,977 fflow.py init [line:931] INFO Ready to start.
+[cap] task=office_caltech10_c4, ckpt=/root/fl_checkpoints/sgpa_office_caltech10_c4_s333_R200_1776668596
+[cap] total=2282 train=1825 test=457
+[cap] probe_sem_domain: linear=0.996 mlp_16=0.969 mlp_64=0.982 mlp_128=0.967 mlp_256=0.989
+[cap] probe_sty_domain: linear=1.000 mlp_16=1.000 mlp_64=1.000 mlp_128=1.000 mlp_256=1.000
+[cap] probe_sem_class: linear=0.974 mlp_16=0.974 mlp_64=0.976 mlp_128=0.967 mlp_256=0.974
+[cap] probe_sty_class: linear=0.965 mlp_16=0.116 mlp_64=0.875 mlp_128=0.882 mlp_256=0.875
+[cap] per-domain holdout d0: sty→class mlp=0.081 (n=1011)
+[cap] per-domain holdout d1: sty→class mlp=0.200 (n=863)
+[cap] per-domain holdout d2: sty→class mlp=0.120 (n=142)
+[cap] per-domain holdout d3: sty→class mlp=0.188 (n=266)
+[cap] saved to /root/autodl-tmp/federated-learning/experiments/ablation/EXP-108_cdann_office_pacs_r200/capacity_probes/office_cdann_s333.json
+=== pacs_cdann_s2 ===
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+2026-04-21 02:40:11,120 fflow.py init [line:848] INFO PROCESS ID:	257640
+2026-04-21 02:40:11,120 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-21 02:40:11,120 fflow.py init [line:852] INFO BENCHMARK:	task.PACS_c4
+2026-04-21 02:40:11,120 fflow.py init [line:853] INFO TASK:			./task/PACS_c4
+2026-04-21 02:40:11,120 fflow.py init [line:854] INFO MODEL:		algorithm.feddsa_sgpa
+2026-04-21 02:40:11,120 fflow.py init [line:855] INFO ALGORITHM:	feddsa_sgpa
+2026-04-21 02:40:11,122 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'algorithm.feddsa_sgpa.Server'>, 4 <class 'algorithm.feddsa_sgpa.Client'>
+2026-04-21 02:40:11,512 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-21 02:40:11,662 fflow.py init [line:931] INFO Ready to start.
+[cap] task=PACS_c4, ckpt=/root/fl_checkpoints/sgpa_PACS_c4_s2_R200_1776691840
+[cap] total=8994 train=7195 test=1799
+[cap] probe_sem_domain: linear=1.000 mlp_16=0.999 mlp_64=0.999 mlp_128=0.998 mlp_256=0.998
+[cap] probe_sty_domain: linear=1.000 mlp_16=1.000 mlp_64=1.000 mlp_128=1.000 mlp_256=1.000
+[cap] probe_sem_class: linear=0.964 mlp_16=0.965 mlp_64=0.962 mlp_128=0.963 mlp_256=0.964
+[cap] probe_sty_class: linear=0.963 mlp_16=0.959 mlp_64=0.953 mlp_128=0.962 mlp_256=0.962
+[cap] per-domain holdout d0: sty→class mlp=0.320 (n=1844)
+[cap] per-domain holdout d1: sty→class mlp=0.455 (n=2110)
+[cap] per-domain holdout d2: sty→class mlp=0.391 (n=1503)
+[cap] per-domain holdout d3: sty→class mlp=0.721 (n=3537)
+[cap] saved to /root/autodl-tmp/federated-learning/experiments/ablation/EXP-108_cdann_office_pacs_r200/capacity_probes/pacs_cdann_s2.json
+=== pacs_cdann_s15 ===
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+2026-04-21 02:41:47,010 fflow.py init [line:848] INFO PROCESS ID:	257889
+2026-04-21 02:41:47,010 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-21 02:41:47,010 fflow.py init [line:852] INFO BENCHMARK:	task.PACS_c4
+2026-04-21 02:41:47,010 fflow.py init [line:853] INFO TASK:			./task/PACS_c4
+2026-04-21 02:41:47,010 fflow.py init [line:854] INFO MODEL:		algorithm.feddsa_sgpa
+2026-04-21 02:41:47,010 fflow.py init [line:855] INFO ALGORITHM:	feddsa_sgpa
+2026-04-21 02:41:47,012 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'algorithm.feddsa_sgpa.Server'>, 4 <class 'algorithm.feddsa_sgpa.Client'>
+2026-04-21 02:41:47,413 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-21 02:41:47,568 fflow.py init [line:931] INFO Ready to start.
+[cap] task=PACS_c4, ckpt=/root/fl_checkpoints/sgpa_PACS_c4_s15_R200_1776691413
+[cap] total=8994 train=7195 test=1799
+[cap] probe_sem_domain: linear=1.000 mlp_16=0.997 mlp_64=0.997 mlp_128=1.000 mlp_256=0.999
+[cap] probe_sty_domain: linear=1.000 mlp_16=1.000 mlp_64=1.000 mlp_128=1.000 mlp_256=1.000
+[cap] probe_sem_class: linear=0.962 mlp_16=0.961 mlp_64=0.964 mlp_128=0.963 mlp_256=0.963
+[cap] probe_sty_class: linear=0.960 mlp_16=0.949 mlp_64=0.957 mlp_128=0.949 mlp_256=0.954
+[cap] per-domain holdout d0: sty→class mlp=0.144 (n=1844)
+[cap] per-domain holdout d1: sty→class mlp=0.196 (n=2110)
+[cap] per-domain holdout d2: sty→class mlp=0.168 (n=1503)
+[cap] per-domain holdout d3: sty→class mlp=0.188 (n=3537)
+[cap] saved to /root/autodl-tmp/federated-learning/experiments/ablation/EXP-108_cdann_office_pacs_r200/capacity_probes/pacs_cdann_s15.json
+=== pacs_cdann_s333 ===
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+2026-04-21 02:43:42,417 fflow.py init [line:848] INFO PROCESS ID:	258150
+2026-04-21 02:43:42,417 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-21 02:43:42,417 fflow.py init [line:852] INFO BENCHMARK:	task.PACS_c4
+2026-04-21 02:43:42,417 fflow.py init [line:853] INFO TASK:			./task/PACS_c4
+2026-04-21 02:43:42,417 fflow.py init [line:854] INFO MODEL:		algorithm.feddsa_sgpa
+2026-04-21 02:43:42,417 fflow.py init [line:855] INFO ALGORITHM:	feddsa_sgpa
+2026-04-21 02:43:42,419 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'algorithm.feddsa_sgpa.Server'>, 4 <class 'algorithm.feddsa_sgpa.Client'>
+2026-04-21 02:43:42,832 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-21 02:43:42,999 fflow.py init [line:931] INFO Ready to start.
+[cap] task=PACS_c4, ckpt=/root/fl_checkpoints/sgpa_PACS_c4_s333_R200_1776691555
+[cap] total=8994 train=7195 test=1799
+[cap] probe_sem_domain: linear=1.000 mlp_16=1.000 mlp_64=0.995 mlp_128=0.998 mlp_256=0.995
+[cap] probe_sty_domain: linear=1.000 mlp_16=1.000 mlp_64=1.000 mlp_128=1.000 mlp_256=1.000
+[cap] probe_sem_class: linear=0.968 mlp_16=0.969 mlp_64=0.968 mlp_128=0.966 mlp_256=0.968
+[cap] probe_sty_class: linear=0.963 mlp_16=0.911 mlp_64=0.964 mlp_128=0.962 mlp_256=0.965
+[cap] per-domain holdout d0: sty→class mlp=0.090 (n=1844)
+[cap] per-domain holdout d1: sty→class mlp=0.328 (n=2110)
+[cap] per-domain holdout d2: sty→class mlp=0.118 (n=1503)
+[cap] per-domain holdout d3: sty→class mlp=0.189 (n=3537)
+[cap] saved to /root/autodl-tmp/federated-learning/experiments/ablation/EXP-108_cdann_office_pacs_r200/capacity_probes/pacs_cdann_s333.json
+=== ALL DONE ===

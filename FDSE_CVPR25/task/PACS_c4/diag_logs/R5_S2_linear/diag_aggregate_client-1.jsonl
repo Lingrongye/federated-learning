@@ -1,0 +1,5 @@
+{"client_center_var": 0.10422205924987793, "n_valid_classes": 7, "param_drift": 0.3416324332356453, "_round": 1, "_client": -1, "_stage": "aggregate"}
+{"client_center_var": 0.07909353822469711, "n_valid_classes": 7, "param_drift": 0.3602279797196388, "_round": 2, "_client": -1, "_stage": "aggregate"}
+{"client_center_var": 0.031478457152843475, "n_valid_classes": 7, "param_drift": 0.3439008891582489, "_round": 3, "_client": -1, "_stage": "aggregate"}
+{"client_center_var": 0.018519055098295212, "n_valid_classes": 7, "param_drift": 0.3252779170870781, "_round": 4, "_client": -1, "_stage": "aggregate"}
+{"client_center_var": 0.015541226603090763, "n_valid_classes": 7, "param_drift": 0.3201445862650871, "_round": 5, "_client": -1, "_stage": "aggregate"}

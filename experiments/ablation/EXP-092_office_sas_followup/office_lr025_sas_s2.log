@@ -1,0 +1,265 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+2026-04-18 10:28:46,489 fflow.py init [line:848] INFO PROCESS ID:	122266
+2026-04-18 10:28:46,489 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-18 10:28:46,489 fflow.py init [line:852] INFO BENCHMARK:	benchmark.office_caltech10_classification
+2026-04-18 10:28:46,490 fflow.py init [line:853] INFO TASK:			task/office_caltech10_c4
+2026-04-18 10:28:46,490 fflow.py init [line:854] INFO MODEL:		algorithm.feddsa_scheduled
+2026-04-18 10:28:46,490 fflow.py init [line:855] INFO ALGORITHM:	feddsa_scheduled
+2026-04-18 10:28:46,492 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'algorithm.feddsa_scheduled.Server'>, 4 <class 'algorithm.feddsa_scheduled.Client'>
+2026-04-18 10:28:46,910 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-18 10:28:46,912 fflow.py init [line:931] INFO Ready to start.
+2026-04-18 10:28:46,912 fedbase.py run [line:300] INFO --------------Initial Evaluation--------------
+2026-04-18 10:28:48,596 __init__.py log_once [line:227] INFO local_val_accuracy            0.1153
+2026-04-18 10:28:48,597 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.0963
+2026-04-18 10:28:48,597 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0292
+2026-04-18 10:28:48,597 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.0667
+2026-04-18 10:28:48,597 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.1339
+2026-04-18 10:28:48,597 __init__.py log_once [line:227] INFO local_val_loss                2.3005
+2026-04-18 10:28:48,597 __init__.py log_once [line:227] INFO mean_local_val_loss           2.2986
+2026-04-18 10:28:48,597 __init__.py log_once [line:227] INFO std_local_val_loss            0.0041
+2026-04-18 10:28:48,597 __init__.py log_once [line:227] INFO min_local_val_loss            2.2915
+2026-04-18 10:28:48,598 __init__.py log_once [line:227] INFO max_local_val_loss            2.3015
+2026-04-18 10:28:48,598 fedbase.py run [line:303] INFO Eval Time Cost:               1.6858s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:58, 19.35s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.95s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:43<00:13, 13.56s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:50<00:00, 10.89s/it]                                                                          2026-04-18 10:29:39,270 fedbase.py run [line:311] INFO --------------Round 1--------------
+2026-04-18 10:29:40,886 __init__.py log_once [line:227] INFO local_val_accuracy            0.3024
+2026-04-18 10:29:40,886 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.2752
+2026-04-18 10:29:40,886 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0476
+2026-04-18 10:29:40,886 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.2000
+2026-04-18 10:29:40,886 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.3304
+2026-04-18 10:29:40,886 __init__.py log_once [line:227] INFO local_val_loss                2.2226
+2026-04-18 10:29:40,886 __init__.py log_once [line:227] INFO mean_local_val_loss           2.2552
+2026-04-18 10:29:40,886 __init__.py log_once [line:227] INFO std_local_val_loss            0.2024
+2026-04-18 10:29:40,886 __init__.py log_once [line:227] INFO min_local_val_loss            1.9985
+2026-04-18 10:29:40,886 __init__.py log_once [line:227] INFO max_local_val_loss            2.5536
+2026-04-18 10:29:40,886 fedbase.py run [line:316] INFO Eval Time Cost:               1.6165s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:57, 19.14s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.85s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:13, 13.28s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:50<00:00, 10.87s/it]                                                                          2026-04-18 10:30:31,186 fedbase.py run [line:311] INFO --------------Round 2--------------
+2026-04-18 10:30:32,897 __init__.py log_once [line:227] INFO local_val_accuracy            0.5224
+2026-04-18 10:30:32,897 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.5201
+2026-04-18 10:30:32,897 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1605
+2026-04-18 10:30:32,897 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.3304
+2026-04-18 10:30:32,897 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.7684
+2026-04-18 10:30:32,897 __init__.py log_once [line:227] INFO local_val_loss                1.9823
+2026-04-18 10:30:32,897 __init__.py log_once [line:227] INFO mean_local_val_loss           2.0042
+2026-04-18 10:30:32,897 __init__.py log_once [line:227] INFO std_local_val_loss            0.9014
+2026-04-18 10:30:32,897 __init__.py log_once [line:227] INFO min_local_val_loss            0.7541
+2026-04-18 10:30:32,897 __init__.py log_once [line:227] INFO max_local_val_loss            2.8621
+2026-04-18 10:30:32,898 fedbase.py run [line:316] INFO Eval Time Cost:               1.7109s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:57, 19.25s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:33<00:32, 16.12s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:43<00:13, 13.59s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:50<00:00, 10.99s/it]                                                                          2026-04-18 10:31:23,884 fedbase.py run [line:311] INFO --------------Round 3--------------
+2026-04-18 10:31:25,618 __init__.py log_once [line:227] INFO local_val_accuracy            0.7450
+2026-04-18 10:31:25,618 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.7334
+2026-04-18 10:31:25,618 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1137
+2026-04-18 10:31:25,618 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6000
+2026-04-18 10:31:25,618 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.8632
+2026-04-18 10:31:25,618 __init__.py log_once [line:227] INFO local_val_loss                0.7995
+2026-04-18 10:31:25,618 __init__.py log_once [line:227] INFO mean_local_val_loss           0.7613
+2026-04-18 10:31:25,618 __init__.py log_once [line:227] INFO std_local_val_loss            0.3176
+2026-04-18 10:31:25,618 __init__.py log_once [line:227] INFO min_local_val_loss            0.3721
+2026-04-18 10:31:25,618 __init__.py log_once [line:227] INFO max_local_val_loss            1.1116
+2026-04-18 10:31:25,618 fedbase.py run [line:316] INFO Eval Time Cost:               1.7345s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:58, 19.61s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:33<00:32, 16.33s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:44<00:13, 13.67s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:51<00:00, 11.05s/it]                                                                          2026-04-18 10:32:17,018 fedbase.py run [line:311] INFO --------------Round 4--------------
+2026-04-18 10:32:18,702 __init__.py log_once [line:227] INFO local_val_accuracy            0.6813
+2026-04-18 10:32:18,702 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.6646
+2026-04-18 10:32:18,702 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0776
+2026-04-18 10:32:18,702 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.5862
+2026-04-18 10:32:18,702 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.7895
+2026-04-18 10:32:18,702 __init__.py log_once [line:227] INFO local_val_loss                1.1206
+2026-04-18 10:32:18,702 __init__.py log_once [line:227] INFO mean_local_val_loss           1.1036
+2026-04-18 10:32:18,702 __init__.py log_once [line:227] INFO std_local_val_loss            0.2895
+2026-04-18 10:32:18,703 __init__.py log_once [line:227] INFO min_local_val_loss            0.7465
+2026-04-18 10:32:18,703 __init__.py log_once [line:227] INFO max_local_val_loss            1.4066
+2026-04-18 10:32:18,703 fedbase.py run [line:316] INFO Eval Time Cost:               1.6848s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:57, 19.25s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:33<00:32, 16.09s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:43<00:13, 13.56s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:51<00:00, 11.20s/it]                                                                          2026-04-18 10:33:10,203 fedbase.py run [line:311] INFO --------------Round 5--------------
+2026-04-18 10:33:11,889 __init__.py log_once [line:227] INFO local_val_accuracy            0.7934
+2026-04-18 10:33:11,889 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.8350
+2026-04-18 10:33:11,889 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1124
+2026-04-18 10:33:11,889 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6875
+2026-04-18 10:33:11,889 __init__.py log_once [line:227] INFO max_local_val_accuracy        1.0000
+2026-04-18 10:33:11,889 __init__.py log_once [line:227] INFO local_val_loss                0.7286
+2026-04-18 10:33:11,889 __init__.py log_once [line:227] INFO mean_local_val_loss           0.5185
+2026-04-18 10:33:11,889 __init__.py log_once [line:227] INFO std_local_val_loss            0.4018
+2026-04-18 10:33:11,889 __init__.py log_once [line:227] INFO min_local_val_loss            0.0846
+2026-04-18 10:33:11,889 __init__.py log_once [line:227] INFO max_local_val_loss            1.1711
+2026-04-18 10:33:11,889 fedbase.py run [line:316] INFO Eval Time Cost:               1.6855s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:18<00:56, 19.00s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.87s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:13, 13.08s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:49<00:00, 10.61s/it]                                                                          2026-04-18 10:34:01,380 fedbase.py run [line:311] INFO --------------Round 6--------------
+2026-04-18 10:34:03,027 __init__.py log_once [line:227] INFO local_val_accuracy            0.7493
+2026-04-18 10:34:03,027 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.7491
+2026-04-18 10:34:03,027 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1247
+2026-04-18 10:34:03,027 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.5862
+2026-04-18 10:34:03,027 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.8737
+2026-04-18 10:34:03,027 __init__.py log_once [line:227] INFO local_val_loss                1.0402
+2026-04-18 10:34:03,027 __init__.py log_once [line:227] INFO mean_local_val_loss           1.1562
+2026-04-18 10:34:03,027 __init__.py log_once [line:227] INFO std_local_val_loss            0.8251
+2026-04-18 10:34:03,027 __init__.py log_once [line:227] INFO min_local_val_loss            0.4462
+2026-04-18 10:34:03,027 __init__.py log_once [line:227] INFO max_local_val_loss            2.4762
+2026-04-18 10:34:03,027 fedbase.py run [line:316] INFO Eval Time Cost:               1.6469s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:57, 19.11s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.85s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:12, 12.97s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:49<00:00, 10.67s/it]                                                                          2026-04-18 10:34:52,635 fedbase.py run [line:311] INFO --------------Round 7--------------
+2026-04-18 10:34:54,386 __init__.py log_once [line:227] INFO local_val_accuracy            0.7613
+2026-04-18 10:34:54,386 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.7685
+2026-04-18 10:34:54,386 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1020
+2026-04-18 10:34:54,386 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6552
+2026-04-18 10:34:54,386 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.8737
+2026-04-18 10:34:54,386 __init__.py log_once [line:227] INFO local_val_loss                0.9081
+2026-04-18 10:34:54,386 __init__.py log_once [line:227] INFO mean_local_val_loss           0.9306
+2026-04-18 10:34:54,386 __init__.py log_once [line:227] INFO std_local_val_loss            0.4005
+2026-04-18 10:34:54,386 __init__.py log_once [line:227] INFO min_local_val_loss            0.4223
+2026-04-18 10:34:54,386 __init__.py log_once [line:227] INFO max_local_val_loss            1.4072
+2026-04-18 10:34:54,386 fedbase.py run [line:316] INFO Eval Time Cost:               1.7513s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:57, 19.13s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:33<00:32, 16.17s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:13, 13.15s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:49<00:00, 10.60s/it]                                                                          2026-04-18 10:35:44,076 fedbase.py run [line:311] INFO --------------Round 8--------------
+2026-04-18 10:35:45,821 __init__.py log_once [line:227] INFO local_val_accuracy            0.7775
+2026-04-18 10:35:45,821 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.8145
+2026-04-18 10:35:45,821 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1097
+2026-04-18 10:35:45,821 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6429
+2026-04-18 10:35:45,821 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.9310
+2026-04-18 10:35:45,821 __init__.py log_once [line:227] INFO local_val_loss                0.7937
+2026-04-18 10:35:45,821 __init__.py log_once [line:227] INFO mean_local_val_loss           0.6173
+2026-04-18 10:35:45,821 __init__.py log_once [line:227] INFO std_local_val_loss            0.3689
+2026-04-18 10:35:45,822 __init__.py log_once [line:227] INFO min_local_val_loss            0.2846
+2026-04-18 10:35:45,822 __init__.py log_once [line:227] INFO max_local_val_loss            1.2425
+2026-04-18 10:35:45,822 fedbase.py run [line:316] INFO Eval Time Cost:               1.7454s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:18<00:56, 18.75s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.82s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:13, 13.07s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:49<00:00, 10.58s/it]                                                                          2026-04-18 10:36:35,137 fedbase.py run [line:311] INFO --------------Round 9--------------
+2026-04-18 10:36:36,796 __init__.py log_once [line:227] INFO local_val_accuracy            0.7818
+2026-04-18 10:36:36,796 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.8336
+2026-04-18 10:36:36,796 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1181
+2026-04-18 10:36:36,796 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6339
+2026-04-18 10:36:36,797 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.9333
+2026-04-18 10:36:36,797 __init__.py log_once [line:227] INFO local_val_loss                0.8036
+2026-04-18 10:36:36,797 __init__.py log_once [line:227] INFO mean_local_val_loss           0.6382
+2026-04-18 10:36:36,797 __init__.py log_once [line:227] INFO std_local_val_loss            0.4100
+2026-04-18 10:36:36,797 __init__.py log_once [line:227] INFO min_local_val_loss            0.0762
+2026-04-18 10:36:36,797 __init__.py log_once [line:227] INFO max_local_val_loss            1.1828
+2026-04-18 10:36:36,797 fedbase.py run [line:316] INFO Eval Time Cost:               1.6599s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:18<00:56, 18.67s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.77s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:41<00:12, 12.86s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:48<00:00, 10.55s/it]                                                                          2026-04-18 10:37:25,833 fedbase.py run [line:311] INFO --------------Round 10--------------
+2026-04-18 10:37:27,521 __init__.py log_once [line:227] INFO local_val_accuracy            0.7736
+2026-04-18 10:37:27,521 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.8032
+2026-04-18 10:37:27,521 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1139
+2026-04-18 10:37:27,521 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6607
+2026-04-18 10:37:27,521 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.9333
+2026-04-18 10:37:27,521 __init__.py log_once [line:227] INFO local_val_loss                0.8078
+2026-04-18 10:37:27,521 __init__.py log_once [line:227] INFO mean_local_val_loss           0.7458
+2026-04-18 10:37:27,521 __init__.py log_once [line:227] INFO std_local_val_loss            0.2983
+2026-04-18 10:37:27,521 __init__.py log_once [line:227] INFO min_local_val_loss            0.4431
+2026-04-18 10:37:27,521 __init__.py log_once [line:227] INFO max_local_val_loss            1.1320
+2026-04-18 10:37:27,521 fedbase.py run [line:316] INFO Eval Time Cost:               1.6879s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:57, 19.09s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.87s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:13, 13.15s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:49<00:00, 10.75s/it]                                                                          2026-04-18 10:38:17,430 fedbase.py run [line:311] INFO --------------Round 11--------------
+2026-04-18 10:38:19,194 __init__.py log_once [line:227] INFO local_val_accuracy            0.7774
+2026-04-18 10:38:19,194 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.7974
+2026-04-18 10:38:19,194 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0896
+2026-04-18 10:38:19,194 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6696
+2026-04-18 10:38:19,194 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.8947
+2026-04-18 10:38:19,194 __init__.py log_once [line:227] INFO local_val_loss                0.8623
+2026-04-18 10:38:19,194 __init__.py log_once [line:227] INFO mean_local_val_loss           0.8707
+2026-04-18 10:38:19,194 __init__.py log_once [line:227] INFO std_local_val_loss            0.3037
+2026-04-18 10:38:19,194 __init__.py log_once [line:227] INFO min_local_val_loss            0.3940
+2026-04-18 10:38:19,194 __init__.py log_once [line:227] INFO max_local_val_loss            1.2265
+2026-04-18 10:38:19,194 fedbase.py run [line:316] INFO Eval Time Cost:               1.7639s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:18<00:56, 18.99s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.70s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:12, 13.00s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:49<00:00, 10.61s/it]                                                                          2026-04-18 10:39:08,522 fedbase.py run [line:311] INFO --------------Round 12--------------
+2026-04-18 10:39:10,299 __init__.py log_once [line:227] INFO local_val_accuracy            0.7456
+2026-04-18 10:39:10,299 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.7513
+2026-04-18 10:39:10,299 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.2164
+2026-04-18 10:39:10,299 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.4483
+2026-04-18 10:39:10,299 __init__.py log_once [line:227] INFO max_local_val_accuracy        1.0000
+2026-04-18 10:39:10,299 __init__.py log_once [line:227] INFO local_val_loss                0.9834
+2026-04-18 10:39:10,299 __init__.py log_once [line:227] INFO mean_local_val_loss           1.0090
+2026-04-18 10:39:10,299 __init__.py log_once [line:227] INFO std_local_val_loss            0.8684
+2026-04-18 10:39:10,299 __init__.py log_once [line:227] INFO min_local_val_loss            0.0432
+2026-04-18 10:39:10,299 __init__.py log_once [line:227] INFO max_local_val_loss            2.3248
+2026-04-18 10:39:10,299 fedbase.py run [line:316] INFO Eval Time Cost:               1.7771s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:18<00:56, 18.95s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.96s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:13, 13.04s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:49<00:00, 10.60s/it]                                                                          2026-04-18 10:39:59,760 fedbase.py run [line:311] INFO --------------Round 13--------------
+2026-04-18 10:40:01,491 __init__.py log_once [line:227] INFO local_val_accuracy            0.7294
+2026-04-18 10:40:01,491 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.7105
+2026-04-18 10:40:01,491 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.2798
+2026-04-18 10:40:01,491 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.2759
+2026-04-18 10:40:01,491 __init__.py log_once [line:227] INFO max_local_val_accuracy        1.0000
+2026-04-18 10:40:01,491 __init__.py log_once [line:227] INFO local_val_loss                1.5568
+2026-04-18 10:40:01,491 __init__.py log_once [line:227] INFO mean_local_val_loss           2.1568
+2026-04-18 10:40:01,491 __init__.py log_once [line:227] INFO std_local_val_loss            2.7483
+2026-04-18 10:40:01,491 __init__.py log_once [line:227] INFO min_local_val_loss            0.0037
+2026-04-18 10:40:01,491 __init__.py log_once [line:227] INFO max_local_val_loss            6.8449
+2026-04-18 10:40:01,491 fedbase.py run [line:316] INFO Eval Time Cost:               1.7310s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:18<00:55, 18.53s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:31<00:30, 15.38s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:41<00:12, 12.97s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:48<00:00, 10.58s/it]                                                                          2026-04-18 10:40:50,438 fedbase.py run [line:311] INFO --------------Round 14--------------
+2026-04-18 10:40:52,130 __init__.py log_once [line:227] INFO local_val_accuracy            0.8177
+2026-04-18 10:40:52,130 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.8869
+2026-04-18 10:40:52,130 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1212
+2026-04-18 10:40:52,130 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6875
+2026-04-18 10:40:52,130 __init__.py log_once [line:227] INFO max_local_val_accuracy        1.0000
+2026-04-18 10:40:52,130 __init__.py log_once [line:227] INFO local_val_loss                0.7609
+2026-04-18 10:40:52,130 __init__.py log_once [line:227] INFO mean_local_val_loss           0.4614
+2026-04-18 10:40:52,130 __init__.py log_once [line:227] INFO std_local_val_loss            0.5070
+2026-04-18 10:40:52,130 __init__.py log_once [line:227] INFO min_local_val_loss            0.0029
+2026-04-18 10:40:52,130 __init__.py log_once [line:227] INFO max_local_val_loss            1.2775
+2026-04-18 10:40:52,130 fedbase.py run [line:316] INFO Eval Time Cost:               1.6919s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:57, 19.01s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.82s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:43<00:13, 13.47s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:50<00:00, 10.86s/it]                                                                          2026-04-18 10:41:42,458 fedbase.py run [line:311] INFO --------------Round 15--------------
+2026-04-18 10:41:44,203 __init__.py log_once [line:227] INFO local_val_accuracy            0.7040
+2026-04-18 10:41:44,204 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.5624
+2026-04-18 10:41:44,204 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.2735
+2026-04-18 10:41:44,204 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.1724
+2026-04-18 10:41:44,204 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.9053
+2026-04-18 10:41:44,204 __init__.py log_once [line:227] INFO local_val_loss                2.6718
+2026-04-18 10:41:44,204 __init__.py log_once [line:227] INFO mean_local_val_loss           6.9185
+2026-04-18 10:41:44,204 __init__.py log_once [line:227] INFO std_local_val_loss            7.9041
+2026-04-18 10:41:44,204 __init__.py log_once [line:227] INFO min_local_val_loss            0.4860
+2026-04-18 10:41:44,204 __init__.py log_once [line:227] INFO max_local_val_loss            20.1571
+2026-04-18 10:41:44,204 fedbase.py run [line:316] INFO Eval Time Cost:               1.7461s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:57, 19.04s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.91s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:13, 13.07s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:49<00:00, 10.75s/it]                                                                          2026-04-18 10:42:34,053 fedbase.py run [line:311] INFO --------------Round 16--------------
+2026-04-18 10:42:35,764 __init__.py log_once [line:227] INFO local_val_accuracy            0.7812
+2026-04-18 10:42:35,764 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.7959
+2026-04-18 10:42:35,764 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0972
+2026-04-18 10:42:35,764 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6696
+2026-04-18 10:42:35,764 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.8966
+2026-04-18 10:42:35,764 __init__.py log_once [line:227] INFO local_val_loss                0.8811
+2026-04-18 10:42:35,764 __init__.py log_once [line:227] INFO mean_local_val_loss           0.7825
+2026-04-18 10:42:35,764 __init__.py log_once [line:227] INFO std_local_val_loss            0.3585
+2026-04-18 10:42:35,764 __init__.py log_once [line:227] INFO min_local_val_loss            0.4611
+2026-04-18 10:42:35,764 __init__.py log_once [line:227] INFO max_local_val_loss            1.3414
+2026-04-18 10:42:35,764 fedbase.py run [line:316] INFO Eval Time Cost:               1.7107s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:18<00:56, 18.78s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.90s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:13, 13.26s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:49<00:00, 10.78s/it]                                                                          2026-04-18 10:43:25,726 fedbase.py run [line:311] INFO --------------Round 17--------------
+2026-04-18 10:43:27,513 __init__.py log_once [line:227] INFO local_val_accuracy            0.8217
+2026-04-18 10:43:27,514 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.8900
+2026-04-18 10:43:27,514 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1257
+2026-04-18 10:43:27,514 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6786
+2026-04-18 10:43:27,514 __init__.py log_once [line:227] INFO max_local_val_accuracy        1.0000
+2026-04-18 10:43:27,514 __init__.py log_once [line:227] INFO local_val_loss                0.7626
+2026-04-18 10:43:27,514 __init__.py log_once [line:227] INFO mean_local_val_loss           0.4668
+2026-04-18 10:43:27,514 __init__.py log_once [line:227] INFO std_local_val_loss            0.5024
+2026-04-18 10:43:27,514 __init__.py log_once [line:227] INFO min_local_val_loss            0.0106
+2026-04-18 10:43:27,514 __init__.py log_once [line:227] INFO max_local_val_loss            1.2778
+2026-04-18 10:43:27,514 fedbase.py run [line:316] INFO Eval Time Cost:               1.7881s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:18<00:56, 18.86s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.84s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:41<00:12, 12.89s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:48<00:00, 10.52s/it]                                                                          2026-04-18 10:44:16,597 fedbase.py run [line:311] INFO --------------Round 18--------------
+2026-04-18 10:44:18,447 __init__.py log_once [line:227] INFO local_val_accuracy            0.8011
+2026-04-18 10:44:18,447 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.8147
+2026-04-18 10:44:18,447 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1106
+2026-04-18 10:44:18,447 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6786
+2026-04-18 10:44:18,447 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.9310
+2026-04-18 10:44:18,447 __init__.py log_once [line:227] INFO local_val_loss                0.9761
+2026-04-18 10:44:18,447 __init__.py log_once [line:227] INFO mean_local_val_loss           1.2264
+2026-04-18 10:44:18,447 __init__.py log_once [line:227] INFO std_local_val_loss            1.0029
+2026-04-18 10:44:18,447 __init__.py log_once [line:227] INFO min_local_val_loss            0.2693
+2026-04-18 10:44:18,448 __init__.py log_once [line:227] INFO max_local_val_loss            2.8286
+2026-04-18 10:44:18,448 fedbase.py run [line:316] INFO Eval Time Cost:               1.8506s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:19<00:57, 19.13s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:33<00:32, 16.25s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:44<00:13, 13.97s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:51<00:00, 11.21s/it]                                                                          2026-04-18 10:45:10,306 fedbase.py run [line:311] INFO --------------Round 19--------------
+2026-04-18 10:45:12,049 __init__.py log_once [line:227] INFO local_val_accuracy            0.8134
+2026-04-18 10:45:12,049 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.8566
+2026-04-18 10:45:12,049 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.1086
+2026-04-18 10:45:12,049 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6786
+2026-04-18 10:45:12,049 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.9655
+2026-04-18 10:45:12,049 __init__.py log_once [line:227] INFO local_val_loss                0.7928
+2026-04-18 10:45:12,049 __init__.py log_once [line:227] INFO mean_local_val_loss           0.5192
+2026-04-18 10:45:12,049 __init__.py log_once [line:227] INFO std_local_val_loss            0.5008
+2026-04-18 10:45:12,049 __init__.py log_once [line:227] INFO min_local_val_loss            0.0716
+2026-04-18 10:45:12,049 __init__.py log_once [line:227] INFO max_local_val_loss            1.3522
+2026-04-18 10:45:12,049 fedbase.py run [line:316] INFO Eval Time Cost:               1.7435s
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:18<00:56, 18.91s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:32<00:31, 15.86s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:42<00:13, 13.04s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:49<00:00, 10.61s/it]                                                                          2026-04-18 10:46:01,485 fedbase.py run [line:311] INFO --------------Round 20--------------
+2026-04-18 10:46:03,199 __init__.py log_once [line:227] INFO local_val_accuracy            0.8175
+2026-04-18 10:46:03,200 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.8605
+2026-04-18 10:46:03,200 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0956
+2026-04-18 10:46:03,200 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.6964
+2026-04-18 10:46:03,200 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.9333
+2026-04-18 10:46:03,200 __init__.py log_once [line:227] INFO local_val_loss                0.8217
+2026-04-18 10:46:03,200 __init__.py log_once [line:227] INFO mean_local_val_loss           0.5623
+2026-04-18 10:46:03,200 __init__.py log_once [line:227] INFO std_local_val_loss            0.4640
+2026-04-18 10:46:03,200 __init__.py log_once [line:227] INFO min_local_val_loss            0.1202
+2026-04-18 10:46:03,200 __init__.py log_once [line:227] INFO max_local_val_loss            1.3309
+2026-04-18 10:46:03,200 fedbase.py run [line:316] INFO Eval Time Cost:               1.7150s
+2026-04-18 10:46:03,200 fedbase.py run [line:324] INFO =================End==================
+2026-04-18 10:46:03,200 fedbase.py run [line:325] INFO Total Time Cost:              1036.2883s

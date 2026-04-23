@@ -1,0 +1,14 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+Traceback (most recent call last):
+  File "/root/autodl-tmp/federated-learning/FDSE_CVPR25/run_single.py", line 96, in <module>
+    flgo.init(os.path.join('task', task), algo, optimal_option, model=model, Logger=Logger, Simulator=Simulator).run()
+  File "/root/autodl-tmp/federated-learning/FDSE_CVPR25/algorithm/standalone.py", line 16, in run
+    self.gv.logger.log_once()
+  File "/root/autodl-tmp/federated-learning/FDSE_CVPR25/logger/__init__.py", line 199, in log_once
+    cvals = [c.test(c.model, 'val') if c.model is not None else c.test(self.server.model, 'val') for c in
+  File "/root/autodl-tmp/federated-learning/FDSE_CVPR25/logger/__init__.py", line 199, in <listcomp>
+    cvals = [c.test(c.model, 'val') if c.model is not None else c.test(self.server.model, 'val') for c in
+  File "/root/miniconda3/lib/python3.10/site-packages/flgo/utils/fmodule.py", line 923, in cal_on_personal_gpu
+    origin_device = model.get_device()
+AttributeError: 'NoneType' object has no attribute 'get_device'

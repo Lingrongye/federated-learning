@@ -1,0 +1,20 @@
+{
+  "probe_sem_domain": {
+    "train_acc": 0.5676712328767123,
+    "test_acc": 0.5142231947483589
+  },
+  "probe_sty_domain": {
+    "train_acc": 0.9342465753424658,
+    "test_acc": 0.9299781181619255
+  },
+  "probe_sty_class": {
+    "train_acc": 0.9649315068493151,
+    "test_acc": 0.9584245076586433
+  },
+  "random_baseline_domain": 0.25,
+  "random_baseline_class": 0.1,
+  "task": "office_caltech10_c4",
+  "ckpt": "/root/fl_checkpoints/sgpa_office_caltech10_c4_s2_R200_1776629530",
+  "n_train": 1825,
+  "n_test": 457
+}

@@ -1,0 +1,97 @@
+2026-04-22 22:32:46,124 fflow.py init [line:848] INFO PROCESS ID:	382943
+2026-04-22 22:32:46,124 fflow.py init [line:849] INFO Initializing devices: cuda:0 will be used for this running.
+2026-04-22 22:32:46,124 fflow.py init [line:852] INFO BENCHMARK:	benchmark.office_caltech10_classification
+2026-04-22 22:32:46,124 fflow.py init [line:853] INFO TASK:			task/office_caltech10_c4
+2026-04-22 22:32:46,124 fflow.py init [line:854] INFO MODEL:		benchmark.office_caltech10_classification.model.default_model
+2026-04-22 22:32:46,124 fflow.py init [line:855] INFO ALGORITHM:	centralized
+2026-04-22 22:32:46,127 fflow.py init [line:901] INFO SCENE:		horizontal FL with 1 <class 'algorithm.centralized.Server'>, 4 <class 'algorithm.centralized.Client'>
+2026-04-22 22:32:46,573 fflow.py init [line:918] INFO SIMULATOR:	<class 'flgo.simulator.default_simulator.Simulator'>
+2026-04-22 22:32:46,573 fflow.py init [line:931] INFO Ready to start.
+2026-04-22 22:32:46,591 centralized.py run [line:40] INFO --------------Initial Evaluation--------------
+2026-04-22 22:32:49,350 __init__.py log_once [line:227] INFO local_val_accuracy            0.0905
+2026-04-22 22:32:49,350 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.0875
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0265
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.0625
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.1250
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO local_val_loss                2.3031
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO mean_local_val_loss           2.3023
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO std_local_val_loss            0.0020
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO min_local_val_loss            2.2995
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO max_local_val_loss            2.3050
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO local_test_accuracy           0.0955
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO mean_local_test_accuracy      0.0792
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO std_local_test_accuracy       0.0335
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO min_local_test_accuracy       0.0345
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO max_local_test_accuracy       0.1263
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO local_test_loss               2.3024
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO mean_local_test_loss          2.3032
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO std_local_test_loss           0.0020
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO min_local_test_loss           2.2998
+2026-04-22 22:32:49,351 __init__.py log_once [line:227] INFO max_local_test_loss           2.3052
+2026-04-22 22:32:49,351 centralized.py run [line:43] INFO Eval Time Cost:               2.7605s
+2026-04-22 22:32:49,352 centralized.py run [line:71] INFO [centralized] training for 3 epochs on 2028 samples
+2026-04-22 22:33:01,117 __init__.py log_once [line:227] INFO local_val_accuracy            0.1184
+2026-04-22 22:33:01,117 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.0833
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0568
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.0000
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.1518
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO local_val_loss                71.7952
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO mean_local_val_loss           59.7438
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO std_local_val_loss            31.8675
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO min_local_val_loss            8.6000
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO max_local_val_loss            94.2915
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO local_test_accuracy           0.1314
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO mean_local_test_accuracy      0.1360
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO std_local_test_accuracy       0.0686
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO min_local_test_accuracy       0.0667
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO max_local_test_accuracy       0.2414
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO local_test_loss               79.2872
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO mean_local_test_loss          60.7583
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO std_local_test_loss           39.0508
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO min_local_test_loss           11.2199
+2026-04-22 22:33:01,118 __init__.py log_once [line:227] INFO max_local_test_loss           120.1681
+2026-04-22 22:33:01,118 centralized.py run [line:102] INFO Eval Time Cost:               2.3153s
+2026-04-22 22:33:12,044 __init__.py log_once [line:227] INFO local_val_accuracy            0.1379
+2026-04-22 22:33:12,044 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.1154
+2026-04-22 22:33:12,044 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0369
+2026-04-22 22:33:12,044 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.0625
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.1562
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO local_val_loss                2.2737
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO mean_local_val_loss           2.2892
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO std_local_val_loss            0.0833
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO min_local_val_loss            2.2116
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO max_local_val_loss            2.4097
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO local_test_accuracy           0.0960
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO mean_local_test_accuracy      0.1260
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO std_local_test_accuracy       0.0489
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO min_local_test_accuracy       0.0714
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO max_local_test_accuracy       0.2000
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO local_test_loss               2.3498
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO mean_local_test_loss          2.3247
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO std_local_test_loss           0.0408
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO min_local_test_loss           2.2823
+2026-04-22 22:33:12,045 __init__.py log_once [line:227] INFO max_local_test_loss           2.3853
+2026-04-22 22:33:12,045 centralized.py run [line:102] INFO Eval Time Cost:               2.2516s
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO local_val_accuracy            0.2088
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO mean_local_val_accuracy       0.1761
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO std_local_val_accuracy        0.0662
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO min_local_val_accuracy        0.0625
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO max_local_val_accuracy        0.2232
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO local_val_loss                2.2123
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO mean_local_val_loss           2.2242
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO std_local_val_loss            0.0683
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO min_local_val_loss            2.1590
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO max_local_val_loss            2.3221
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO local_test_accuracy           0.1279
+2026-04-22 22:33:23,096 __init__.py log_once [line:227] INFO mean_local_test_accuracy      0.1599
+2026-04-22 22:33:23,097 __init__.py log_once [line:227] INFO std_local_test_accuracy       0.0637
+2026-04-22 22:33:23,097 __init__.py log_once [line:227] INFO min_local_test_accuracy       0.0982
+2026-04-22 22:33:23,097 __init__.py log_once [line:227] INFO max_local_test_accuracy       0.2667
+2026-04-22 22:33:23,097 __init__.py log_once [line:227] INFO local_test_loss               2.2856
+2026-04-22 22:33:23,097 __init__.py log_once [line:227] INFO mean_local_test_loss          2.2713
+2026-04-22 22:33:23,097 __init__.py log_once [line:227] INFO std_local_test_loss           0.0708
+2026-04-22 22:33:23,097 __init__.py log_once [line:227] INFO min_local_test_loss           2.1657
+2026-04-22 22:33:23,097 __init__.py log_once [line:227] INFO max_local_test_loss           2.3429
+2026-04-22 22:33:23,097 centralized.py run [line:102] INFO Eval Time Cost:               2.1441s
+2026-04-22 22:33:23,097 centralized.py run [line:104] INFO =================End==================
+2026-04-22 22:33:23,097 centralized.py run [line:105] INFO Total Time Cost:              36.5065s

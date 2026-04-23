@@ -1,0 +1,187 @@
+=== Office CDANN s=2 ===
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+[probe] task=office_caltech10_c4, ckpt=/root/fl_checkpoints/sgpa_office_caltech10_c4_s2_R200_1776668590
+[probe] client 0 load warning: missing=0 unexpected=6
+[probe] client 0 encoder.features.conv1.weight sum = -2.5455
+[probe] client 1 load warning: missing=0 unexpected=6
+[probe] client 2 load warning: missing=0 unexpected=6
+[probe] client 3 load warning: missing=0 unexpected=6
+[probe] client 0: collecting features...
+[probe] client 1: collecting features...
+[probe] client 2: collecting features...
+[probe] client 3: collecting features...
+[probe] total: 2282, train: 1825, test: 457
+[probe] probe_sem_domain: lin train=1.0000 test=1.0000 | mlp train=0.9984 test=1.0000
+[probe] probe_sty_domain: lin train=1.0000 test=1.0000 | mlp train=1.0000 test=1.0000
+[probe] probe_sem_class: lin train=0.9803 test=0.9606 | mlp train=0.9622 test=0.9628
+[probe] probe_sty_class: lin train=0.9688 test=0.9497 | mlp train=0.8838 test=0.9059
+[probe] saved to ../experiments/ablation/EXP-108_cdann_office_pacs_r200/mlp_probes/office_cdann_s2_mlp.json
+
+=== Frozen Probe Verdict ===
+probe_sem_domain: lin=1.000  mlp=1.000
+probe_sty_domain: lin=1.000  mlp=1.000
+probe_sem_class: lin=0.961  mlp=0.963
+probe_sty_class: lin=0.950  mlp=0.906
+(random: domain=0.250, class=0.100)
+
+=== Codex Stage-1 判据 (probe_sty_class) ===
+linear=0.950  mlp=0.906  → MLP 仍高 → 主干非线性泄漏, CLUB 无望, 走诊断路
+=== Office CDANN s=15 ===
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+[probe] task=office_caltech10_c4, ckpt=/root/fl_checkpoints/sgpa_office_caltech10_c4_s15_R200_1776668629
+[probe] client 0 load warning: missing=0 unexpected=6
+[probe] client 0 encoder.features.conv1.weight sum = 5.1315
+[probe] client 1 load warning: missing=0 unexpected=6
+[probe] client 2 load warning: missing=0 unexpected=6
+[probe] client 3 load warning: missing=0 unexpected=6
+[probe] client 0: collecting features...
+[probe] client 1: collecting features...
+[probe] client 2: collecting features...
+[probe] client 3: collecting features...
+[probe] total: 2282, train: 1825, test: 457
+[probe] probe_sem_domain: lin train=0.9956 test=0.9956 | mlp train=0.9945 test=0.9912
+[probe] probe_sty_domain: lin train=1.0000 test=1.0000 | mlp train=1.0000 test=1.0000
+[probe] probe_sem_class: lin train=0.9874 test=0.9606 | mlp train=0.9649 test=0.9650
+[probe] probe_sty_class: lin train=0.9726 test=0.9562 | mlp train=0.9233 test=0.9081
+[probe] saved to ../experiments/ablation/EXP-108_cdann_office_pacs_r200/mlp_probes/office_cdann_s15_mlp.json
+
+=== Frozen Probe Verdict ===
+probe_sem_domain: lin=0.996  mlp=0.991
+probe_sty_domain: lin=1.000  mlp=1.000
+probe_sem_class: lin=0.961  mlp=0.965
+probe_sty_class: lin=0.956  mlp=0.908
+(random: domain=0.250, class=0.100)
+
+=== Codex Stage-1 判据 (probe_sty_class) ===
+linear=0.956  mlp=0.908  → MLP 仍高 → 主干非线性泄漏, CLUB 无望, 走诊断路
+=== Office CDANN s=333 ===
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+[probe] task=office_caltech10_c4, ckpt=/root/fl_checkpoints/sgpa_office_caltech10_c4_s333_R200_1776668596
+[probe] client 0 load warning: missing=0 unexpected=6
+[probe] client 0 encoder.features.conv1.weight sum = 8.3400
+[probe] client 1 load warning: missing=0 unexpected=6
+[probe] client 2 load warning: missing=0 unexpected=6
+[probe] client 3 load warning: missing=0 unexpected=6
+[probe] client 0: collecting features...
+[probe] client 1: collecting features...
+[probe] client 2: collecting features...
+[probe] client 3: collecting features...
+[probe] total: 2282, train: 1825, test: 457
+[probe] probe_sem_domain: lin train=0.9989 test=0.9956 | mlp train=0.9940 test=0.9825
+[probe] probe_sty_domain: lin train=1.0000 test=1.0000 | mlp train=1.0000 test=1.0000
+[probe] probe_sem_class: lin train=0.9879 test=0.9737 | mlp train=0.9660 test=0.9759
+[probe] probe_sty_class: lin train=0.9775 test=0.9650 | mlp train=0.8964 test=0.8753
+[probe] saved to ../experiments/ablation/EXP-108_cdann_office_pacs_r200/mlp_probes/office_cdann_s333_mlp.json
+
+=== Frozen Probe Verdict ===
+probe_sem_domain: lin=0.996  mlp=0.982
+probe_sty_domain: lin=1.000  mlp=1.000
+probe_sem_class: lin=0.974  mlp=0.976
+probe_sty_class: lin=0.965  mlp=0.875
+(random: domain=0.250, class=0.100)
+
+=== Codex Stage-1 判据 (probe_sty_class) ===
+linear=0.965  mlp=0.875  → MLP 仍高 → 主干非线性泄漏, CLUB 无望, 走诊断路
+=== PACS CDANN s=2 ===
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+[probe] task=PACS_c4, ckpt=/root/fl_checkpoints/sgpa_PACS_c4_s2_R200_1776691840
+[probe] client 0 load warning: missing=0 unexpected=6
+[probe] client 0 encoder.features.conv1.weight sum = 0.3806
+[probe] client 1 load warning: missing=0 unexpected=6
+[probe] client 2 load warning: missing=0 unexpected=6
+[probe] client 3 load warning: missing=0 unexpected=6
+[probe] client 0: collecting features...
+[probe] client 1: collecting features...
+[probe] client 2: collecting features...
+[probe] client 3: collecting features...
+[probe] total: 8994, train: 7195, test: 1799
+[probe] probe_sem_domain: lin train=1.0000 test=1.0000 | mlp train=0.9993 test=0.9989
+[probe] probe_sty_domain: lin train=1.0000 test=1.0000 | mlp train=1.0000 test=1.0000
+[probe] probe_sem_class: lin train=0.9640 test=0.9639 | mlp train=0.9654 test=0.9622
+[probe] probe_sty_class: lin train=0.9636 test=0.9628 | mlp train=0.9608 test=0.9533
+[probe] saved to ../experiments/ablation/EXP-108_cdann_office_pacs_r200/mlp_probes/pacs_cdann_s2_mlp.json
+
+=== Frozen Probe Verdict ===
+probe_sem_domain: lin=1.000  mlp=0.999
+probe_sty_domain: lin=1.000  mlp=1.000
+probe_sem_class: lin=0.964  mlp=0.962
+probe_sty_class: lin=0.963  mlp=0.953
+(random: domain=0.250, class=0.143)
+
+=== Codex Stage-1 判据 (probe_sty_class) ===
+linear=0.963  mlp=0.953  → MLP 仍高 → 主干非线性泄漏, CLUB 无望, 走诊断路
+=== PACS CDANN s=15 ===
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+[probe] task=PACS_c4, ckpt=/root/fl_checkpoints/sgpa_PACS_c4_s15_R200_1776691413
+[probe] client 0 load warning: missing=0 unexpected=6
+[probe] client 0 encoder.features.conv1.weight sum = -11.9753
+[probe] client 1 load warning: missing=0 unexpected=6
+[probe] client 2 load warning: missing=0 unexpected=6
+[probe] client 3 load warning: missing=0 unexpected=6
+[probe] client 0: collecting features...
+[probe] client 1: collecting features...
+[probe] client 2: collecting features...
+[probe] client 3: collecting features...
+[probe] total: 8994, train: 7195, test: 1799
+[probe] probe_sem_domain: lin train=1.0000 test=1.0000 | mlp train=0.9981 test=0.9972
+[probe] probe_sty_domain: lin train=1.0000 test=1.0000 | mlp train=1.0000 test=1.0000
+[probe] probe_sem_class: lin train=0.9589 test=0.9616 | mlp train=0.9577 test=0.9639
+[probe] probe_sty_class: lin train=0.9565 test=0.9600 | mlp train=0.9526 test=0.9572
+[probe] saved to ../experiments/ablation/EXP-108_cdann_office_pacs_r200/mlp_probes/pacs_cdann_s15_mlp.json
+
+=== Frozen Probe Verdict ===
+probe_sem_domain: lin=1.000  mlp=0.997
+probe_sty_domain: lin=1.000  mlp=1.000
+probe_sem_class: lin=0.962  mlp=0.964
+probe_sty_class: lin=0.960  mlp=0.957
+(random: domain=0.250, class=0.143)
+
+=== Codex Stage-1 判据 (probe_sty_class) ===
+linear=0.960  mlp=0.957  → MLP 仍高 → 主干非线性泄漏, CLUB 无望, 走诊断路
+=== PACS CDANN s=333 ===
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+/root/miniconda3/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+[probe] task=PACS_c4, ckpt=/root/fl_checkpoints/sgpa_PACS_c4_s333_R200_1776691555
+[probe] client 0 load warning: missing=0 unexpected=6
+[probe] client 0 encoder.features.conv1.weight sum = 1.2088
+[probe] client 1 load warning: missing=0 unexpected=6
+[probe] client 2 load warning: missing=0 unexpected=6
+[probe] client 3 load warning: missing=0 unexpected=6
+[probe] client 0: collecting features...
+[probe] client 1: collecting features...
+[probe] client 2: collecting features...
+[probe] client 3: collecting features...
+[probe] total: 8994, train: 7195, test: 1799
+[probe] probe_sem_domain: lin train=1.0000 test=1.0000 | mlp train=0.9982 test=0.9950
+[probe] probe_sty_domain: lin train=1.0000 test=1.0000 | mlp train=1.0000 test=1.0000
+[probe] probe_sem_class: lin train=0.9587 test=0.9683 | mlp train=0.9594 test=0.9678
+[probe] probe_sty_class: lin train=0.9579 test=0.9633 | mlp train=0.9580 test=0.9644
+[probe] saved to ../experiments/ablation/EXP-108_cdann_office_pacs_r200/mlp_probes/pacs_cdann_s333_mlp.json
+
+=== Frozen Probe Verdict ===
+probe_sem_domain: lin=1.000  mlp=0.995
+probe_sty_domain: lin=1.000  mlp=1.000
+probe_sem_class: lin=0.968  mlp=0.968
+probe_sty_class: lin=0.963  mlp=0.964
+(random: domain=0.250, class=0.143)
+
+=== Codex Stage-1 判据 (probe_sty_class) ===
+linear=0.963  mlp=0.964  → MLP 仍高 → 主干非线性泄漏, CLUB 无望, 走诊断路
+=== ALL DONE ===
