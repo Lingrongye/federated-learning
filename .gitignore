@@ -67,3 +67,52 @@ wandb/
 *.ckpt
 # Log files with | in name (Windows incompatible)
 FDSE_CVPR25/task/*/log/*|*
+
+# === 临时脚本 / 调试输出 (不入 git) ===
+_tmp_*
+tmp_*
+_novelty_*.txt
+refine-tmp/
+
+# 历史 conversation dumps
+2026-04-*-*-*.txt
+
+# Windows 二进制 / 崩溃文件
+*.exe
+*.stackdump
+
+# Office 文档 / 无关文件
+*.doc
+*.docx
+*.pptx
+docx_output.txt
+
+# 实验结果汇总 Excel (可由脚本重新生成)
+experiment_master_table*.xlsx
+experiment_results_*.xlsx
+per_domain_analysis.txt
+
+# 大数据压缩包 / 误分类可视化
+*.tar.gz
+misclass_pacs/
+misclass_viz/
+dn_subset/
+
+# Claude Code 本地 state
+.claude/scheduled_tasks.lock
+.claude/scripts/
+.claude/sessions/
+.claude/worktrees/
+.claude/settings.local.json
+.planning/
+
+# 外部工具仓库 (不应在 repo 里)
+clash-for-linux-install/
+clashctl/
+rr/
+
+# Obsidian 临时 / 缓存文件
+obsidian_exprtiment_results/未命名*.base
+obsidian_exprtiment_results/.obsidian/workspace.json
+obsidian_exprtiment_results/.obsidian/page-preview.json
+
