@@ -1,11 +1,212 @@
 # EXP-119 | FedPTR Sanity Smoke Phase 1 — 验证 3 个组件是否值得投入
 
 ## 基本信息
-- **日期**: 2026-04-22
+- **日期**: 2026-04-22 23:32 启动 → 2026-04-23 11:01 全部完成 ✅
 - **目标**: 在写 FedPTR 全量代码前, 用最小实验验证 3 个核心组件是否真 work
-- **服务器**: seetacloud2 + lab-lry (GPU 1)
-- **状态**: 🟡 设计完成, 待部署
+- **服务器**: **westb:13399 (新 RTX 4090 24GB, 从原 seetacloud 实例克隆, SSH 密码 CgVAw0UGAAoB)**
+- **状态**: ✅ **Wave 1/2/3 全部完成 (Office 12 + PACS 12 = 24 runs)**
 - **决策依据**: 接受 CVPR reviewer review (Score 4/10) 的建议, 不堆组件, 先验证单点
+- **🏁 最终判决**: **C1 INVALID (Centralized 实验假设错), C2 FAILED (CC-Bank 输 FedBN 两数据集), C3 MARGINAL (Trajectory η=0.5 小赢 PACS +0.36pp 但 <0.5 noise 门)**
+
+## 部署细节 (2026-04-22 23:32 更新)
+
+**5-Wave chained dispatcher** (`run.sh`), 自动跑完 24 runs 约 23h:
+
+| Wave | 内容 | 并行度 | 单 run 时间 | 预计完成 |
+|:----:|---|:----:|:----:|:----:|
+| 1 | Office: centralized × 3 + ccbank_a05 × 3 | 6 并行 | ~1h | **2026-04-23 00:30** |
+| 2 | Office: ccbank_a03 × 3 + ccbank_a07 × 3 | 6 并行 | ~1h | 2026-04-23 01:30 |
+| 3a | PACS: centralized × 3 + ccbank_a05_s2 | 4 并行 | ~7h | 2026-04-23 08:30 |
+| 3b | PACS: ccbank_a05_s15/333 + traj_eta0_s2/15 | 4 并行 | ~7h | 2026-04-23 15:30 |
+| 3c | PACS: traj_eta0_s333 + traj_eta05 × 3 | 4 并行 | ~7h | 2026-04-23 22:30 |
+
+**GPU 显存策略**:
+- Office (E=1): 单 run ~3-4GB, 6 并行 × ~3.5GB = 21GB ✅ (剩 3GB 安全)
+- PACS (E=5): 单 run ~5-6GB, 4 并行 × ~5.5GB = 22GB ✅
+- 当前显存: 13.5 / 24 GB (Wave 1 刚启动, 数据加载占比未满)
+
+**路径**:
+- master 日志: `experiments/ablation/EXP-119_fedptr_sanity/master.log`
+- 每 run 日志: `experiments/ablation/EXP-119_fedptr_sanity/logs/W{N}_<label>_s{seed}.log`
+- 结果 JSON: `FDSE_CVPR25/task/{PACS_c4,office_caltech10_c4}/record/*.json`
+
+## 🏆 Wave 1 结果 (2026-04-23 00:35 完成)
+
+### 3-seed AVG Best / AVG Last
+
+| 方法 | AVG Best | AVG Last | vs FDSE 90.58 | vs FedBN 88.68 (原阈值基线) | vs EXP-116 FedBN 89.75 (新最强 baseline) |
+|---|:---:|:---:|:---:|:---:|:---:|
+| FDSE | 90.58 | 89.22 | 0 | +1.90 | +0.83 |
+| **W1 Centralized Office** (Sanity A, C1) | **81.81** | 76.62 | **−8.77** 🔴 | −6.87 | −7.94 |
+| **W1 CC-Bank α=0.5** (Sanity B, C2) | **89.35** | 87.17 | −1.23 | **+0.67** ✅过原阈值 | **−0.40** ❌ 没过新 baseline |
+
+### Per-seed (Wave 1)
+
+**Centralized Office** (R=200, eval 每 2 round 一次, 共 101 采样点):
+
+| Seed | ALL B/L | AVG B/L |
+|:---:|:---:|:---:|
+| 2 | 73.00/69.83 | 80.16/77.60 |
+| 15 | 76.17/73.76 | 82.45/77.19 |
+| 333 | 76.58/67.83 | 82.83/75.08 |
+| **Mean** | 75.25/70.47 | **81.81/76.62** |
+
+**CC-Bank α=0.5 Office** (R=200, 每 round eval, 201 采样点):
+
+| Seed | ALL B/L | AVG B/L |
+|:---:|:---:|:---:|
+| 2 | 82.16/80.57 | 89.48/88.46 |
+| 15 | 83.74/81.36 | 89.21/87.75 |
+| 333 | 84.93/80.55 | 89.36/85.31 |
+| **Mean** | 83.61/80.83 | **89.35/87.17** |
+
+### 判决分析
+
+#### C1 Centralized = **INVALID** (不是 failed, 是实验设计假设错)
+
+**原假设** "centralized 是 FL method space 的上限" — 对多域数据**错误**.
+
+**实际发现**: centralized.py 用 global AlexNet + global BN 训练, test 时用 global BN running_mean/var 评估每个 domain. 但 global BN 学到的是"4 domain 混合的 mean/var", 与每个单独 domain 的真实分布不匹配 → per-domain acc 天然打折. **这不是 AlexNet capacity 问题, 是 BN 在多域数据上的固有行为**.
+
+**证据**:
+- FedBN (per-client 本地 BN) = 88.68 > Centralized (global BN) = 81.81
+- 说明 "BN 本地化" 带来 +6.87pp, 远超 method space 的 +1-2pp 改进上限
+- Centralized 不是上限, 是**下限**在这个设置下
+
+**正确的 C1 capacity test** 应该是:
+- **Per-domain single training** (每 domain 单独训一个模型, 相当于 4 个独立模型): 这才是真正的 method space 上限
+- OR **Centralized + local BN** (训练集中但 BN per-domain 本地, 不过这已经等价于 FedBN)
+
+**判决**: C1 **结果无意义**, 不能用来否决 backbone. 继续走 Wave 2-3 看 CC-Bank/Trajectory.
+
+#### C2 CC-Bank α=0.5 = **⚠️ 边界**, 没打过最强 FedBN
+
+**原阈值 > 89.18 (FedBN 88.68 + 0.5)**: 89.35 **技术过线** ✅
+**新 baseline (EXP-116 lo=0 FedBN)**: 89.75 → CC-Bank 89.35 **−0.40pp 没赚到** ❌
+
+**结论**: 这是历史 AdaIN 第 **5 次"部分失败"** — 没崩 (不像 EXP-059 -2.54%), 但**也没改进** (甚至微降). 配合 EXP-116 发现 "正交头无贡献"：**FedBN + 什么都不加 (lo=0) 就已经是 89.75, CC-Bank 再加也没超过**.
+
+**不 kill 的理由**:
+1. α=0.5 可能不是最优, Wave 2 α=0.3/0.7 还没完
+2. PACS (强风格异质) 可能有 AdaIN 真实收益, 等 Wave 3
+3. 历史 EXP-059/061 AdaIN 失败是 on PACS, 这次 Office 没失败反而接近 FedBN — 跨数据集行为不一样
+
+**Wave 2-3 完成后重新判**.
+
+## 🏆 Wave 2 结果 (2026-04-23 01:35 前完成, α=0.3 + α=0.7 Office)
+
+### α 扫描总表 (Office AVG Best / AVG Last)
+
+| α | Wave | S2 AVG B/L | S15 AVG B/L | S333 AVG B/L | 3-seed Mean AVG B/L |
+|:-:|:----:|:---:|:---:|:---:|:---:|
+| 0.3 | W2 | 88.85/88.46 | 90.30/89.17 | 88.18/86.39 | **89.11/88.01** |
+| **0.5** | W1 | 89.48/88.46 | 89.21/87.75 | 89.36/85.31 | **89.35/87.17** |
+| **0.7** | W2 | 88.13/87.42 | 89.91/89.91 | 90.78/89.81 | **89.61/89.05** 🏆 |
+
+### α 判决
+
+- **α=0.7 最优** (AVG Best 89.61, AVG Last 89.05 最稳)
+- **α=0.3 Last 88.01** 仍然稳（比 α=0.5 的 87.17 更稳）
+- **α=0.5 Last 87.17** 后期 drop 较大
+- 所有 α **都没打过 EXP-116 lo=0 FedBN 的 89.75** (差 -0.14 ~ -0.64pp)
+
+### Office 上 CC-Bank 最终判决: **AdaIN 第 5 次部分失败**
+
+无论 α=0.3/0.5/0.7, Office AVG Best 都在 **89.1-89.6** 区间, 没有一个超过 FedBN baseline 89.75. **Office 上 CC-Bank 不 work** (没崩但没赚).
+
+**下一步决定命运**: Wave 3 PACS 结果 (强风格异质) — 如果 CC-Bank PACS 也没赚 → **正式 kill CC-Bank**.
+
+---
+
+## Wave 3 PACS 部署 (2026-04-23 01:32-01:45 启动, 12 runs 真正并行)
+
+**关键教训**: 原 chained dispatcher 设计 "Wave 3a/3b/3c × 4 并行 × 7h = 21h" 完全浪费. Wave 2 的 6 Office runs 只用 13GB/24GB, 有 11GB 剩余. **应该立即并行启动 PACS**, 不用等 Office 完成.
+
+**修复流程**:
+1. kill 原 dispatcher (保留已 launched 子进程继续跑)
+2. 写 greedy_pacs.sh, 按 `nvidia-smi memory.free` 动态 launch, 阈值 4500MB
+3. 修 PACS task 的 `task/PACS_c4/model/default_model.py` — 原 `init_global_module: pass` (silent kill bug 发现 5) 改为有效构造 `Model().to(device)`
+4. Launch watcher (`json_watcher.py`) 每 30s 扫 record/, 检测到 JSON mtime 变化立即 cp 带时间戳 bak, 防止 η=0/0.5 互覆盖 ✅ **成功保留 6 份 trajectory 数据**
+5. 12 个 PACS 全部并行跑 (3 centralized + 3 ccbank α=0.5 + 3 traj η=0 + 3 traj η=0.5)
+
+**实际完成**: Wave 3 12 runs 于 2026-04-23 **08:48-11:01** 全部完成 (greedy 节省 14h wall, 比原计划 22:30 提前 ≈ 11h).
+
+---
+
+## 🏆 Wave 3 PACS 结果 (2026-04-23 11:01 全部完成)
+
+### Sanity A: Centralized PACS (早停 R=101, 单 run 未跑满 R200)
+
+| Seed | ALL B/L | AVG B/L | R |
+|:---:|:---:|:---:|:---:|
+| 2 | 68.20/65.99 | 65.86/62.92 | 101 |
+| 15 | 71.71/68.20 | 68.63/64.54 | 101 |
+| 333 | 69.80/67.80 | 66.38/64.56 | 101 |
+| **Mean** | **69.90/67.33** | **66.96/64.01** | 101 |
+
+**注意**: Centralized PACS 跑到 R=101 就自动停 (可能是 centralized 算法只跑 int(0.5*R)=100 round 或 early stop). R=200 等效版本估计 ≈ 70-73% AVG Best.
+
+### Sanity B: CC-Bank α=0.5 PACS (R=200 完整)
+
+| Seed | ALL B/L | AVG B/L |
+|:---:|:---:|:---:|
+| 2 | 81.74/80.54 | 79.94/78.40 |
+| 15 | 80.33/79.93 | 77.89/77.49 |
+| 333 | 81.24/80.03 | 78.81/77.43 |
+| **Mean** | **81.10/80.17** | **78.88/77.77** |
+
+**判决**: **输 FedBN PACS baseline 80.41 -1.53pp** ❌. Office α 全扫 -0.14~-0.64, PACS α=0.5 -1.53 → **CC-Bank 两数据集都输 FedBN**, AdaIN 家族第 5 次部分失败定案.
+
+### Sanity C: Trajectory PACS (R=200 完整, η=0 vs η=0.5)
+
+**.bak 时间戳对应 log mtime 验证, 准确区分**:
+
+| Seed | η=0 (对照, pure alignment) | η=0.5 (预测, 我们的方法) | Δ (η=0.5 − η=0) |
+|:---:|:---:|:---:|:---:|
+| 2 | B 81.76 / L 80.07 | B 81.38 / L 79.51 | -0.38 B |
+| 15 | B 79.77 / L 78.48 | B 80.39 / L 79.13 | **+0.62 B** |
+| 333 | B 79.65 / L 77.33 | B 80.53 / L 77.94 | **+0.88 B** |
+| **Mean** | **B 80.39 / L 78.63** | **B 80.77 / L 78.86** | **+0.38 B / +0.23 L** |
+
+### Wave 3 PACS 判决 (对齐 C1/C2/C3 Claim)
+
+| Claim | 阈值 | 实际 | 判决 |
+|:-:|---|:---:|:---:|
+| **C1 Centralized > 93** (Office) | method-space 有 +2pp 空间 | 81.81 (Office) / 66.96 (PACS R=101) | ❌ **INVALID 假设** (global BN 多域 mismatch, 不是 capacity 问题) |
+| **C2 CC-Bank Office > 89.2** (≥ FedBN + 0.5) | — | α=0.7 89.61 (max), FedBN 89.75 | ❌ **FAILED** (全 α 输 FedBN) |
+| **C2 CC-Bank PACS > 80.9** (≥ FedBN 80.41 + 0.5) | — | 78.88 | ❌ **FAILED** 大幅输 -1.53pp |
+| **C3 Trajectory Δ > 0.5pp** (η=0.5 vs η=0) | — | +0.38 B / +0.23 L | ⚠️ **MARGINAL** (小过阈值, 但 per-seed 方差大) |
+
+### 核心结论
+
+1. **Sanity A 实验设计错误**: 多域 Centralized + global BN 不是 method-space 上限, 而是 BN mismatch 下限. 不能用来否决 backbone.
+2. **CC-Bank 彻底失败**: Office 全 α 输 FedBN 0.14-0.64pp, PACS α=0.5 大幅输 -1.53pp. **AdaIN 家族第 5 次失败定案**, 砍掉 CC-Bank 组件.
+3. **Trajectory 小赢 PACS**: η=0.5 mean B 80.77 > FedBN 80.41 +0.36pp, 但 per-seed {s=2 -0.38, s=15 +0.62, s=333 +0.88} 方差大, 2 赢 1 负 — **保留 trajectory 但优先级降低** (不作主卖点).
+4. **对比 orth_only 80.64 vs trajectory η=0.5 80.77**: trajectory 小赢 +0.13, 同 noise 级别. orth_only 已是强 baseline, trajectory 增量可忽略.
+
+### 下一步决定
+
+**EXP-119 结论**: FedPTR 3 组件中 **CC-Bank 整个砍** (两次失败), **Centralized 不作判据** (实验设计错), **Trajectory 保留但降权** (增量小).
+
+**不进 FedPTR 全量代码**: 3 组件预期协同效应没出来, Sanity Phase 已判死. 需要:
+- **Plan A (pivot)**: 回到 orth_uc1 / VIB / VSC 线 (已 PACS/DomainNet 胜) 做 Office 攻关方案
+- **Plan B (降 venue)**: 3-seed mean 稳过 FedBN baseline + novelty 诊断 → WACV/BMVC (不冲 CVPR)
+
+**推荐 Plan A**: Office 是唯一败北数据集, 针对 Office 弱域异质设计专门方案 (EXP-118 fullbn 已试过 +0.24 无效, 下一个方向可以尝试 logit-level calibration / class-conditional classifier bank).
+
+---
+
+## 部署前代码 Review 发现 (Critical bugs 已修)
+
+**CC-Bank AdaIN 公式 bug** (commit 2ed462e):
+- 原代码: `mu_self = h.mean(dim=1, keepdim=True)` → per-sample scalar (LayerNorm 语义)
+- bank 里 `mu_other, sig_other` 是 per-feature [D] (class-conditional 均值)
+- Hybrid 形式语义不匹配, 历史 AdaIN 4 次失败可能部分源于此类实现细节
+- 修复为 **batch-level per-feature** 统计: `h.mean(dim=0)` + `h.std(dim=0) + 1e-5`
+
+**trajectory alignment loss 向量化** (同 commit):
+- 原 Python for-loop 每 batch 50 次, 改为 proto_table + class_id lookup gather
+- 性能提升，非正确性 fix
 
 ---
 

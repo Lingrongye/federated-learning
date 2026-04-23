@@ -1,10 +1,10 @@
 # EXP-117 | orth_only × DomainNet R200 3-seed — 跨数据集验证
 
 ## 基本信息
-- **日期**: 2026-04-22 启动
+- **日期**: 2026-04-22 启动 → 2026-04-23 01:11-01:19 全部完成 ✅
 - **算法**: `feddsa_scheduled` mode=0 (纯 orth_only, 对齐 EXP-080)
 - **服务器**: lab-lry GPU 1
-- **状态**: 🟡 运行中 (3 seeds 并行, 预计 10-20h 完成)
+- **状态**: ✅ **3 seeds R=201/200 全部完成**
 
 ## 这个实验做什么 (大白话)
 
@@ -55,49 +55,75 @@ seetacloud2 RAW_DATA 19GB 全量太大, lab-lry 磁盘不够 + 下载太慢. 解
 
 磁盘: lab-lry 28GB 剩余 (充足, 845MB 不占空间).
 
-## 🏆 结果 (待回填)
+## 🏆 结果 (2026-04-23 01:11-01:19 全部完成, R=201/200)
 
-### 3-seed AVG Best/Last
+### 3-seed 最终结果
 
-| 方法 | seeds | DomainNet AVG Best | vs FDSE 72.21 |
-|------|:----:|:----:|:----:|
-| **FDSE R200** (baseline) | {2,15,333} | **72.21** | 0 |
-| 老 FedDSA (EXP-065) | {2,15,333} | ~72.4 | ≈ 0 |
-| **EXP-115 orth_uc1** (seetacloud2 正在跑) | {2,15,333} | **R91 已 72.49 (+0.28)** 🟡 | ✅ 接近完成 |
-| **EXP-117 orth_only** (本实验) | {2,15,333} | 待填 | 待填 |
+| 方法 | seeds | DomainNet AVG Best/Last | vs FDSE 72.21/70.37 |
+|------|:----:|:---:|:---:|
+| **FDSE R200 本地复现** (baseline) | {2,15,333} | 72.21/70.37 | — |
+| 老 FedDSA (EXP-065, 历史) | {2,15,333} | ~72.4/~70.7 | ≈ +0.2 |
+| **EXP-115 orth_uc1** (R=201) | {2,15,333} | **72.49/70.68** | **+0.28** / +0.31 |
+| **EXP-117 orth_only** (R=201, 本实验) | {2,15,333} | **72.23/70.57** | **+0.02** / +0.20 (基本持平) |
 
-### Per-seed × per-domain × Best/Last 完整矩阵 (待回填)
+### Per-seed 最终结果
 
-Client order: [clipart, infograph, painting, quickdraw, real, sketch] (待核实)
-
-```
-(待回填, 格式同 EXP-113/115 NOTE.md)
-```
-
-## 📋 部署快照 (2026-04-22 启动)
-
-| Seed | PID | 状态 |
+| seed | ALL B/L | AVG B/L |
 |:---:|:---:|:---:|
-| 2 | 387302 | 🟡 R0 local client 1/6 (启动 03:28 elapsed) |
-| 15 | 388603 | 🟡 启动 (01:00 elapsed) |
-| 333 | 388700 | 🟡 启动 (00:50 elapsed) |
+| 2 | 74.55/73.23 | 72.13/70.67 |
+| 15 | 74.59/73.13 | 72.26/70.71 |
+| 333 | 74.86/73.02 | 72.31/70.34 |
+| **Mean** | **74.67/73.13** | **72.23/70.57** |
 
-**GPU**: 10GB / 24GB (41%), 和 6 个 lo=0 runs 共存
+### 🔑 关键判决: **orth 头在 DomainNet 贡献 ≈ 0**
 
-## 胜负判决
+| 对比 | AVG Best | AVG Last | 说明 |
+|---|:---:|:---:|---|
+| FDSE 本地 | 72.21 | 70.37 | baseline |
+| orth_only (EXP-117) | 72.23 | 70.57 | **+0.02 B / +0.20 L** (打平) |
+| orth_uc1 (EXP-115) | 72.49 | 70.68 | +0.28 B / +0.31 L |
+| Δ (uc1 − only) | **+0.26** | **+0.11** | **pooled whitening + Fixed ETF 带来的真实增益** |
 
-| Scenario | 判决 | 意义 |
-|----------|:---:|------|
-| orth_only DomainNet > 72.21 | ✅ 跨 3 数据集 2-3 个胜 FDSE | paper 主卖点稳 |
-| orth_only ≈ 72.21 ± 0.3 | 🟡 打平, 不显著胜 | paper 需讨论 |
-| orth_only < 72.21 - 0.3 | ❌ DomainNet 输 | regime-dependent (强-弱异质) |
+**解读**: EXP-115 orth_uc1 +0.28 增益中, orth 头本身**只贡献 0** (orth_only 几乎等于 FDSE), 增益主要来自 **pooled whitening + Fixed ETF classifier**. 这和 EXP-116 (PACS/Office lo=0 vs lo=1 差异 ≈ 0) 的结论**一致**: **正交头在 3 个数据集都对 Best 无实质贡献**.
+
+**Paper 叙事更正**: 不能再卖"正交头", 真正 accuracy 来源是:
+1. **pooled whitening** (特征白化)
+2. **Fixed ETF classifier** (分类器等角紧框架)
+3. **SGPA 架构** (双头 + 差异化聚合)
+
+## 📋 部署完成
+
+| Seed | 完成时间 | Round |
+|:---:|:---:|:---:|
+| 2 | 2026-04-23 01:11 | 201 |
+| 333 | 2026-04-23 01:14 | 201 |
+| 15 | 2026-04-23 01:19 | 201 |
+
+**GPU**: lab-lry GPU 1 (与 EXP-116 6 runs 共存, 总 ~10-20 GB 显存)
+
+## 胜负判决 (最终)
+
+| Scenario | 阈值 | 实际 AVG B | 判决 |
+|----------|:---:|:---:|:---:|
+| orth_only DomainNet > 72.21 (FDSE) | > 72.21 | **72.23** | ✅ **打平 / 小过 +0.02** |
+| orth_only DomainNet > 72.51 (显著 +0.3) | > 72.51 | 72.23 | ❌ **未达显著阈值** |
+
+**跨 3 数据集 orth_only vs FDSE 本地**:
+
+| 数据集 | orth_only AVG B | FDSE 本地 | Δ |
+|---|:---:|:---:|:---:|
+| PACS (EXP-080) | 80.41 | 79.91 | +0.50 ✅ |
+| Office (EXP-080) | 89.44 | 90.58 | -1.14 ❌ |
+| DomainNet (本) | **72.23** | 72.21 | **+0.02** 🟡 打平 |
+
+**叙事**: orth_only 跨 3 数据集行为**不一致**, 不能作主卖点. orth_uc1 (+ whitening + ETF) 才是真正的增益来源.
 
 ## 下一步
 
-1. 等 3 seeds 完成 (10-20h)
-2. 对比 EXP-115 orth_uc1 DomainNet 结果 → 揭示 SGPA 附加组件贡献
-3. 汇总 PACS + Office + DomainNet 跨数据集 orth_only vs orth_uc1 vs FDSE 主表
-4. 连 EXP-116 (lo=0 对照) 一起完成 → paper 消融章节成熟
+1. ✅ 数据收集完毕, 对比 EXP-115 orth_uc1 清晰揭示 whitening+ETF 才是增益源
+2. ✅ 连同 EXP-116 (lo=0 对照) 印证正交头对 Best 无贡献
+3. **Paper 叙事重写**: 砍掉"正交头"作为主卖点, 改为 "SGPA 双头架构 + pooled whitening + Fixed ETF" 三元贡献
+4. **Office 仍是弱点**, 需要单独攻关
 
 ## 📎 相关文件
 

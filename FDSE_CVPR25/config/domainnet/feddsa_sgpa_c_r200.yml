@@ -1,0 +1,29 @@
+# EXP-120 分解消融: SGPA + orth + centers (无 whitening)
+# 目的: 孤立 class centers 的贡献 (对照 SGPA only)
+algo_para:
+- 1.0     # lo (lambda_orth)
+- 0.1     # te (tau_etf, unused)
+- 128     # pd (proj_dim)
+- 10      # wr (warmup_rounds)
+- 1e-3    # es (eps_sigma)
+- 2       # mcw (min_clients_whiten)
+- 1       # dg (diag on)
+- 0       # ue (use_etf=0)
+- 0       # uw (use_whitening=0, 不做 whitening)
+- 1       # uc (use_centers=1, 收集 class centers)
+- 0       # se (save_ckpt)
+- 0       # lp (lambda_pull)
+- 0       # ca (CDANN off)
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
