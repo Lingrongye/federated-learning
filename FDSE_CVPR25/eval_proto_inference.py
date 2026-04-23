@@ -16,19 +16,10 @@ from collections import defaultdict
 import random
 
 def get_z_sem(model, x):
-    """从 feddsa_scheduled 模型提取 semantic features z_sem"""
-    # 模型结构: backbone -> pool -> (semantic_head, style_head) -> sem_classifier
-    # 我们要的是 semantic_head 的输出
+    """FedDSAModel: encoder(x) -> h, 然后 semantic_head(h) -> z_sem"""
     with torch.no_grad():
-        # 通用：用 encode() or get_semantic() 如果有
-        if hasattr(model, 'get_semantic'):
-            return model.get_semantic(x)
-        # fallback：forward 到 semantic_head 但不到 classifier
-        h = model.encode(x) if hasattr(model, 'encode') else None
-        if h is not None and hasattr(model, 'semantic_head'):
-            return model.semantic_head(h)
-        # 实在不行就跑到 classifier 前的倒数第二层
-        raise RuntimeError('Cannot extract z_sem from model')
+        h = model.encode(x)
+        return model.get_semantic(h)
 
 def main():
     ap = argparse.ArgumentParser()
@@ -80,17 +71,10 @@ def main():
     client_models = []
     for cid, domain in enumerate(DOMAINS):
         state = torch.load(os.path.join(ckpt, f'client_{cid}.pt'), map_location=device)
-        net = cfg.get_model().to(device) if hasattr(cfg, 'get_model') else None
-        if net is None:
-            # fallback: 看 benchmark 里的 init func
-            for name in ['init_global_module', 'get_model', 'model_fn']:
-                fn = getattr(cfg, name, None)
-                if fn is not None:
-                    net = fn().to(device); break
-        if net is None:
-            print(f'[ERROR] 找不到 model 构造函数')
-            return
-        net.load_state_dict(state, strict=False)
+        # 使用 feddsa 的 FedDSAModel（带 semantic_head/style_head）
+        from algorithm.feddsa_scheduled import FedDSAModel
+        net = FedDSAModel(num_classes=n_classes, proj_dim=128).to(device)
+        net.load_state_dict(state, strict=True)
         net.eval()
         client_models.append(net)
 
