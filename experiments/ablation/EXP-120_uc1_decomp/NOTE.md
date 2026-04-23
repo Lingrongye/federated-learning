@@ -1,10 +1,10 @@
 # EXP-120 | orth_uc1 分解消融 — SGPA 架构 / whitening / centers 三组件贡献拆分
 
 ## 基本信息
-- **日期**: 2026-04-23 启动
+- **日期**: 2026-04-23 03:35 启动 DN + 03:44 启动 Office
 - **算法**: `feddsa_sgpa` (不同 uw/uc flag 组合)
-- **服务器**: lab-lry GPU 1 (RTX 3090 24GB, EXP-117 后空闲)
-- **状态**: 🟡 待启动
+- **服务器**: lab-lry GPU 1 (RTX 3090 24GB)
+- **状态**: ✅ **Office 9 runs 完成 04:55** / 🟡 DN 9 runs 跑中 (预计 14:00-16:00 完成)
 
 ## 这个实验做什么 (大白话)
 
@@ -75,6 +75,55 @@ orth_uc1 - orth_only = **+0.26** (SGPA 架构 + whitening + centers 三者合计
 
 ## 📎 相关文件
 
-- Configs: `FDSE_CVPR25/config/domainnet/feddsa_sgpa_{only,w,c}_r200.yml`
+- Configs: `FDSE_CVPR25/config/domainnet/feddsa_sgpa_{only,w,c}_r200.yml` + `config/office/feddsa_sgpa_{only,w,c}_office_r200.yml`
 - 算法: `FDSE_CVPR25/algorithm/feddsa_sgpa.py` (uw/uc 在 init_algo_para 中控制)
-- 基线数据: EXP-115 (orth_uc1 72.49), EXP-117 (orth_only 72.23), FDSE 本地 72.21
+- 基线数据: EXP-115 (orth_uc1 72.49), EXP-117 (orth_only 72.23), FDSE 本地 72.21, EXP-113 Office orth_uc1 89.09, EXP-116 FedBN Office lo=0 89.75
+
+---
+
+## 🏆 Office 结果 (2026-04-23 04:55 完成, 3-seed R=201/200)
+
+### 3-seed mean
+
+| 变体 | uw/uc | ALL B/L | AVG B/L | vs FedBN 89.75 | vs sgpa_only |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **sgpa_only** | 0/0 | 84.79/83.05 | **89.14/86.87** | **-0.61** ❌ | — (基线) |
+| sgpa_w | 1/0 | 84.12/82.27 | **88.68/86.88** | -1.07 ❌ | **-0.46** ❌ |
+| sgpa_c | 0/1 | 83.86/82.00 | **88.74/86.48** | -1.01 ❌ | **-0.40** ❌ |
+| 对照 orth_uc1 (1/1, EXP-113) | 1/1 | — | 89.09/87.32 | -0.66 | -0.05 |
+| 对照 FedBN lo=0 (EXP-116) | — | — | **89.75**/86.89 | 0 (基线) | +0.61 |
+
+### Per-seed
+
+| 变体 | s=2 AVG B/L | s=15 AVG B/L | s=333 AVG B/L |
+|---|:---:|:---:|:---:|
+| sgpa_only | 89.31/88.75 | 86.54/84.76 | 91.56/87.12 |
+| sgpa_w | 88.83/86.91 | 85.50/82.74 | 91.71/91.00 |
+| sgpa_c | 88.94/86.15 | 86.21/83.83 | 91.08/89.47 |
+
+### 🔑 Office 结论 — 反直觉发现
+
+**在 Office 上, whitening 和 centers 都有害 (-0.4~-0.46 vs sgpa_only), 跟 DomainNet 上 +0.26 的行为完全相反**.
+
+对比:
+- **DomainNet (EXP-115 vs EXP-117)**: orth_uc1 72.49 > orth_only 72.23 → whitening+centers **+0.26pp 有效** ✅
+- **Office (本实验)**: sgpa_only 89.14 > sgpa_w 88.68 / sgpa_c 88.74 → whitening+centers **-0.40~-0.46 有害** ❌
+
+**这是 regime-dependent 叙事的第三个证据** — 强风格异质 (DomainNet/PACS) 这两个机制帮忙, 弱风格异质 (Office) 反而伤性能.
+
+**但所有 3 变体仍输 FedBN 89.75 (-0.61~-1.07pp)**, Office 攻关仍未破局. 下一方向: **排除 whitening/centers, 尝试 logit-level calibration / class-conditional classifier bank** (因为 Office 的问题不在 feature space 的对齐, 可能在 classifier 层的校准).
+
+## 🟡 DomainNet 状态 (回填中, 最终结果后更新)
+
+9 runs 在 lab-lry GPU 1 继续跑. ~14:00-16:00 完成后回填. 预期检验:
+- 若 sgpa_w > sgpa_c → whitening 是 DomainNet +0.28 增益的主力
+- 若 sgpa_c > sgpa_w → centers 是主力
+- 若 sgpa_w ≈ sgpa_c ≈ 72.49 → 两者冗余
+
+## 跨 3 数据集对比预览 (待 DN 完成后填)
+
+| 数据集 | FedBN/对照 | sgpa_only | sgpa_w | sgpa_c | 哪个贡献 |
+|---|:---:|:---:|:---:|:---:|:---:|
+| PACS | - | (未跑) | (未跑) | (未跑) | — |
+| **Office** | FedBN 89.75 | **89.14** | 88.68 | 88.74 | **都有害** |
+| DomainNet | FDSE 72.21 | - | - | - | 待填 |
