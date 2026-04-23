@@ -1,0 +1,463 @@
+You previously reviewed the Symmetric CDANN proposal (2026-04-21) and gave VERDICT: RETHINK (5.8/10) with these key concerns:
+1. Shared trunk contamination: class info globally available in encoder, GRL can only hide one linear readout
+2. Linear probe gameable: low linear probe doesn't prove disentanglement
+3. Class may hide in nonlinear manifold, BN leakage, domain-class entanglement
+4. Expected outcome (probe 95.8% → 25%) unrealistic
+
+The user iterated on this and now proposes a **strict upgrade** called "Purify-then-Share": a **3-stage pipeline** backed by a fresh literature survey of 38 papers (2018-2026). The main upgrades vs original Symmetric CDANN:
+
+## New upgrades addressing your original concerns
+
+1. **Stage 1 Purify** uses TRIPLE mechanism not just GRL:
+   - GRL adversarial (reduced to λ_a=0.3-0.5, not 1.0)
+   - **CLUB** (Cheng et al. ICML 2020) — Contrastive Log-ratio Upper Bound of MI. NONLINEAR, directly minimizes MI(z_sty; y) and MI(z_sem; d). This is the main force, addressing your "shared trunk contamination" concern with stronger-than-linear constraint.
+   - Optional HEX orthogonal projection (Wang ICLR 2019) — non-destructive geometric alternative
+
+2. **Stage 2 Alignment** uses DCFL theoretical decomposition (arXiv 2508.04005, 2025):
+   - L_align (λ_a=0.9) + L_uniformity (λ_u=0.1) — prevents InfoNCE blowup in FL small batches (theoretical O(M^{-1/2}) error proven)
+   - FedAli OT soft matching (arXiv 2411.10595) instead of FedProto MSE hard anchor
+   - FedPLVM α-sparsity (cos^0.25) backup
+
+3. **Stage 3 Feature-space AdaIN** on PURE z_sty (predicated on Stage 1 success):
+   - CCST (WACV 2023) recipe but in 128d feature space (CCST is image space)
+   - Critical ablation: FedSTAR (decouple no share) vs FISC/PARDON (share no decouple) vs ours
+
+4. **Evaluation uses MLP probe + CLUB MI + MIG** (not linear probe alone):
+   - MLP probe_sty_class ≤ 30% (K=7 random 14%) as gate
+   - CLUB MI as continuous metric
+   - MIG (Mutual Information Gap, standard disentanglement metric)
+   - **Identifiability theory (NeurIPS 2024)**: under (y, d) dual auxiliary supervision, nonlinear ICA strictly identifiable — theoretical backing
+
+## Full proposal
+Below is the full 3-stage pipeline with math, loss functions, ablation plan, pilot-first protocol.
+
+=== PROPOSAL (Purify-then-Share) ===
+# Purify → Align → Share: 3-Stage Pipeline Brainstorm
+
+**日期**: 2026-04-21
+**目的**: 在**真解耦** z_sem / z_sty 的前提下, 重启之前失败的风格共享 + InfoNCE prototype alignment, 看能否突破 PACS 81.69 上限.
+**状态**: 用户 brainstorm, 待文献综述 + Codex review 验证
+
+---
+
+## 1. 数学直觉 (pipeline 拆解)
+
+### 1.1 当前症状 (为什么需要 3-stage)
+
+双头解耦 `cos⊥ + HSIC` 只是**统计独立约束**, 无方向性:
+
+```
+encoder(x) → feat(1024d, 包含 class+domain+ 其他信息)
+           ├→ sem_head(128×1024 Linear) → z_sem
+           └→ sty_head(128×1024 Linear) → z_sty
+
+约束: z_sem 和 z_sty 方向正交 + 低 HSIC
+```
+
+数学上, **正交不等于分工**:
+- `span(z_sem) ⊥ span(z_sty)` 只是两子空间正交
+- **class 信号在整个 1024d feature 上, 在两个子空间里都有投影**
+- 所以 probe_sem_class ≈ probe_sty_class ≈ 96% (实测 Office)
+
+**核心缺失**: 没有约束说 **"class 信号**只**落在 span(z_sem), 不落在 span(z_sty)"**.
+
+### 1.2 Stage 1 — Purify (真解耦)
+
+**目标**: 让 z_sty 里 class 可预测度掉到 random level (~1/K), 且 z_sem 里 domain 可预测度掉到 1/N.
+
+#### 选项 A: 对抗式 (GRL-based)
+
+```math
+L_cls_sty_adv = -λ_a · CE(y, cls_head_on_sty(GRL(z_sty, λ_a)))  # 反向梯度
+L_dom_sem_adv = -λ_a · CE(d, dom_head_on_sem(GRL(z_sem, λ_a)))
+
+L_purify = L_orth + λ_h · L_hsic + L_cls_sty_adv + L_dom_sem_adv
+```
+
+**风险** (Codex 已指出):
+- shared-trunk contamination: L_task 逼 encoder 在 1024d trunk 里全局含 class, GRL 只 push 一个投影藏起
+- 可能 class 信号往 **nonlinear manifold** 迁, linear probe 查不到, 但 MLP probe 还能查出
+- BN leakage: FedBN 的 client-specific BN stats 让 domain 永远可分
+
+#### 选项 B: Mutual Information Bottleneck
+
+```math
+L_mi_sty_class = βI · I(z_sty; y)   # upper bound via MINE/CLUB
+L_mi_sem_domain = βI · I(z_sem; d)
+```
+
+CLUB (Upper bound on MI) 比 adversarial 更稳, 直接约束 MI.
+
+**风险**:
+- MINE/CLUB 在 small batch FL 里训不稳 (EXP-078 NaN 先例)
+- 需要额外 critic network, 增加参数
+- PACS 每 client ~300 样本, MI estimator 样本不足
+
+#### 选项 C: Reconstruction (AE 式)
+
+```math
+z_combined = concat(z_sem, z_sty)
+x_recon = decoder(z_combined)
+L_recon = ||x - x_recon||²
+
+# 同时保持两边不能单独重建:
+# z_sem alone 无法重建 domain-specific 外观
+# z_sty alone 无法重建 class-specific 几何
+```
+
+SCFlow (ICCV 2025) 的思想. 要可逆 + 双头信息互补.
+
+**风险**:
+- Decoder 训练重 (AlexNet encoder 对应 decoder 几十 M 参数)
+- Flow matching 太复杂, 简化版可能退化
+
+#### 选项 D (推荐): A + B 组合
+
+adversarial 作主力 + MI 约束作辅助 + **nonlinear probe** 作验证:
+
+```math
+L_purify = L_orth + λ_h · HSIC + 
+           λ_a · [adversarial class → z_sty, adversarial domain → z_sem] +
+           λ_m · [MI(z_sty; y) upper bound + MI(z_sem; d) upper bound]
+
+验证: MLP probe (2-layer) 在训完后测:
+- probe_sty_class (MLP) ≤ 30% → 真解耦
+- probe_sem_class (MLP) ≥ 80%
+- probe_sty_domain (MLP) ≥ 90%
+- probe_sem_domain (MLP) ≤ 40% (还是难, 因 FedBN)
+```
+
+### 1.3 Stage 2 — Prototype Alignment on 纯净 z_sem
+
+**目标**: 在 z_sem 已纯 (只含 class) 前提下, 用 InfoNCE 拉近同类跨 client 的 z_sem, 推远不同类.
+
+#### 公式
+
+```math
+# Global class prototype (server-maintained, EMA 更新):
+p_c ← α · p_c + (1-α) · mean_k(z_sem_c_client_k_mean)   # c: class, k: client
+
+# Client-side InfoNCE:
+L_infonce = -Σ_i log [ exp(cos(z_sem_i, p_{y_i}) / τ) / Σ_c' exp(cos(z_sem_i, p_{c'}) / τ) ]
+```
+
+**Drift Penalty**: 防止 client-local z_sem 被 InfoNCE 拉到和其他 client 全一样 (会失去 client-specific 辨识力, 且聚合后 BN 漂移会崩):
+
+```math
+L_drift = Σ_c ||z_sem_c_local_mean - p_c_EMA||²  # proximal 约束
+
+或: ||z_sem_k - z_sem_k_{t-1}|| < δ  # trust-region 式更新
+```
+
+EMA 的 α 应该偏大 (0.95+) 让 p_c 缓慢更新, 避免震荡. 这是 FedProto/FPL 的典型套路.
+
+#### 为什么这次可能 work (之前 EXP-076 bell 调度失败的原因)
+
+- EXP-076: InfoNCE 在没有真解耦的 z_sem 上训 → z_sem 里已有 domain 信号 → 跨 client 拉近 z_sem 把 domain 信号也对齐了 → 破坏 domain-specific 识别能力 → 精度掉
+- 现在 Stage 1 真解耦 → z_sem 理论上只有 class → 跨 client 对齐 class 表示**对的事**
+- Drift penalty 避免 InfoNCE 过度拉齐, 保持 client-local 细节
+
+### 1.4 Stage 3 — Style Share on 纯净 z_sty
+
+**目标**: 用各 client 共享的纯 z_sty 做数据增强, 扩 z_sem 的泛化能力.
+
+#### 公式 (feature-space AdaIN)
+
+```math
+# Server 收集并广播风格仓库:
+S_global = {(μ_k, σ_k) for k in clients}  # z_sty 每维的 mean/std
+
+# Client-side augmentation (per-batch):
+for sample (x, y):
+    z_sem = sem_head(encoder(x))
+    z_sty = sty_head(encoder(x))
+    
+    # 采样 external style:
+    (μ_ext, σ_ext) ~ S_global \ {local}
+    
+    # 注入到 z_sem (channel-wise AdaIN):
+    z_sem_norm = (z_sem - μ_local) / (σ_local + ε)
+    z_sem_aug = σ_ext * z_sem_norm + μ_ext  
+    
+    # 分类头:
+    logit_aug = sem_classifier(z_sem_aug)
+    logit = sem_classifier(z_sem)
+    
+    L_task = CE(y, logit) + λ_aug · CE(y, logit_aug)
+```
+
+**关键**: AdaIN 统计量来自 z_sty (纯风格), 注入到 z_sem (纯类). **这次不会污染 class**.
+
+之前 EXP-059/067 失败 = z_sty 不纯 → AdaIN 把 class 信号传到 z_sem 导致 z_sem 被污染.
+
+### 1.5 Total Loss (联合训练)
+
+```math
+L = L_task 
+  + λ_orth · L_orth + λ_hsic · HSIC
+  + λ_adv · (L_cls_sty_adv + L_dom_sem_adv)    # Stage 1
+  + λ_infonce · L_infonce(z_sem, p_c)           # Stage 2
+  + λ_drift · L_drift                           # Stage 2 约束
+  + λ_aug · L_task_aug                          # Stage 3 风格共享增强
+  + [optional MI terms]
+```
+
+超参 estimate (保守起点):
+- λ_orth = 1.0 (已有)
+- λ_hsic = 0.1 (已有)
+- λ_adv = 0.5 (比 CDANN 的 1.0 保守, 避免训崩)
+- λ_infonce = 1.0, τ = 0.1
+- λ_drift = 0.01 (很小, 只作软约束)
+- λ_aug = 0.3 (不要压过主 CE)
+
+---
+
+## 2. 设计 Rationale (为什么这次可能 work)
+
+### 2.1 Stage 依赖关系
+
+```
+Stage 3 (AdaIN)  depends on  Stage 1 (纯 z_sty)
+Stage 2 (InfoNCE) depends on  Stage 1 (纯 z_sem)
+Stage 1 (纯解耦)  is independent
+```
+
+**所以训练顺序**:
+- **Option P1** (分阶段): 先 R0-60 only Stage 1 purify → 再 R60-120 加 Stage 2 alignment → 再 R120-200 加 Stage 3 share
+- **Option P2** (联合但 schedule): 所有 loss 从 R0 开启, 但 λ 分阶段 ramp up
+  - R0-20: 只 L_task + L_orth + L_hsic
+  - R20-60: + λ_adv (purify)
+  - R60-120: + λ_infonce + λ_drift
+  - R120+: + λ_aug
+
+**推荐 P2** — 工程简单, 单个 training loop
+
+### 2.2 Claim 链 (每步可验证)
+
+| Stage | Claim | 验证指标 | 阈值 |
+|-------|-------|---------|------|
+| 1 | z_sty 无 class 泄漏 | **MLP** probe_sty_class | ≤ 30% (random K=7=14%) |
+| 1 | z_sem 无 domain 泄漏 | MLP probe_sem_domain | ≤ 40% (FedBN 限制, 接受) |
+| 2 | InfoNCE 拉齐 class | z_sem 同类跨 client cosine ≥ 0.8 | — |
+| 2 | 没 over-align | client 本地 val accuracy 不掉 | 不低于 Stage 1 末 |
+| 3 | AdaIN 不污染 | 训完后 probe_sem_class | ≥ Stage 1 末水平 |
+| Overall | 涨分 | PACS 3-seed AVG Best | **≥ 82.17 (超 FDSE)** |
+
+### 2.3 和我们之前失败实验的区别
+
+| 失败实验 | 失败模式 | 我们这次的防守 |
+|---------|---------|---------------|
+| EXP-059 (z_sem AdaIN + CE + InfoNCE) | z_sty 不纯, AdaIN 污染 z_sem | Stage 1 先 purify → z_sty 纯 |
+| EXP-078 (h-AdaIN InfoNCE NaN) | 深层注入 + InfoNCE 梯度冲突 | 只在 z_sem 层 AdaIN + drift penalty |
+| EXP-095 (SCPR) | style-weighted InfoNCE 本质还是在混合空间 | SCPR 式 weighting 可作 Stage 2 扩展 |
+| EXP-067 (Regime-gated 分发) | z_sty 不纯, gate 再精也没用 | 纯化后风格分发有意义 |
+
+---
+
+## 3. Risk Assessment (诚实)
+
+### 3.1 最大风险: Stage 1 可能根本达不到
+
+Codex R1 review 明确说:
+> "Both branches are cheap linear views of the same shared encoder state. Another GRL can reduce one easy readout, but it does not give you identifiability."
+
+**意思**: 双头 Linear 投影 + shared encoder, 无论怎么加约束可能都压不住 class 泄漏. 因为:
+- encoder trunk 已含 class (CE loss 逼的)
+- linear 投影从 trunk 出 → class 信号在投影里普遍存在
+- 要真解耦, 必须把 class 信号从 trunk 里挤压到特定子空间 — 这需要**重新训练整个 encoder**, 不只是头
+
+**缓解**: 
+- 把 sem_head/sty_head 从 Linear 升到 2-3 层 MLP (增加 nonlinear 分工能力)
+- encoder 的 L_task 梯度只经 sem_head, **sty_head 端截断 encoder 回流** (让 sty_head 自己学, 不影响 encoder)
+
+### 3.2 Stage 2 InfoNCE 的两难
+
+**FedProto / FPL / FedPLVM 这些工作的 InfoNCE 用 class 原型**, 但它们**都没做真解耦**, 所以它们的 z 本身就混合. 我们真解耦之后的 z_sem, InfoNCE 作用模式**不一样** (更干净但也更敏感).
+
+**可能**: 纯 z_sem 对 InfoNCE 过度敏感 → 训不稳 → 需要 drift penalty 调得很精细
+
+### 3.3 Stage 3 AdaIN 未必比 Plan A 好
+
+即使 z_sty 真纯, feature-space AdaIN 不一定比不做增强好. 因为:
+- AlexNet from scratch 小网络容易过拟合于训练 distribution
+- AdaIN 注入 external style = 制造假样本 → encoder 可能"不认识"这些假样本的类
+- 需要 λ_aug schedule 小心调
+
+---
+
+## 4. 实验 Protocol (pilot-first)
+
+### Pilot (先跑 2-3 件小事确认假设)
+
+**P1 (3h GPU): Stage 1 纯 purify 能不能做到?**
+- PACS R100 seed=2, 只加 Stage 1 purify (Option D)
+- 训完后跑 MLP probe (2 层, 64 hidden)
+- 指标: MLP probe_sty_class ≤ 30% (重要!), accuracy 不崩 (≥ 78%)
+- 若 MLP probe_sty_class > 50% → **Stage 1 失败, 整 pipeline 废**, 承认 Codex 的判断正确
+
+**P2 (3h GPU, 条件于 P1 成功): Stage 1+2 alignment 有没有增益?**
+- Stage 1 + InfoNCE + drift penalty
+- 指标: PACS R100 AVG Best ≥ 80 (不跌)
+
+**P3 (2h GPU, 条件于 P2 成功): Stage 1+2+3 完整 pipeline**
+- 加 AdaIN augmentation
+- 指标: PACS R100 AVG Best ≥ 82 (超过 Plan A 81.69)
+
+**P1 fail → 全停**
+**P1 pass, P2 fail → 承认 InfoNCE 在此架构下没用, 回 Plan A**
+**P1+P2 pass, P3 fail → 风格共享确认无益, 写 paper 主打 Stage 1+2**
+**全 pass → 3 seeds × R200 扩展 + Office + DomainNet**
+
+### Compute budget
+
+- Pilot (P1+P2+P3): ~8 GPU·h
+- Full C-main: R200 × 3 seeds × PACS + Office = ~15 GPU·h
+- MLP probes on each: ~2 GPU·h
+- **Total: 25-30 GPU·h**, 和上次 CDANN 成本相当
+
+---
+
+## 5. Novelty Angle (可能的 paper story)
+
+### 传统解耦 (2016-2024) 的盲点
+
+- DSN (2016), HEX (2019), Learning-Not-to-Learn (2019), D2IFLN (2023) 都用 linear probe 报解耦成功
+- 我们的实测数据显示: **Office baseline linear probe_sty_class=95.8% 但他们会 claim 解耦了**
+- **核心发现**: linear probe 在 cheap-projection 架构下是 gameable 的
+- 应对: 用 MLP probe + MI estimator 才是 honest 解耦验证
+
+### 我们的 paper 框架 (如果 P1-P3 都 pass)
+
+> **"Purify-then-Share: A 3-stage Federated Domain Generalization pipeline with MLP-probe-validated disentanglement."**
+> 
+> **Contribution 1 (Diagnostic)**: 通过 16 个 prior ablation 证明 shallow disentanglement + style sharing 的失败循环, 根因是 linear probe 测不到真正 leakage.
+>
+> **Contribution 2 (Method)**: 3-stage pipeline — (i) adversarial-MLP purification + (ii) drift-penalized prototype InfoNCE + (iii) feature-space AdaIN on pure style bank. 首次在 FL 场景验证**先解耦再共享**的必要性 (Moyer NeurIPS 2018 单机 negative result 的 FL extension + 正面结论).
+>
+> **Contribution 3 (Evaluation)**: MLP probe + nonlinear MI estimator 作为解耦质量的 pre-registered 标准, 替代广泛使用但欺骗的 linear probe.
+
+---
+
+## 6. 待 Verification
+
+1. **文献综述** (Agent 后台跑): 看上面 5 个主题有没有 prior work 做过完整 3-stage 或者有重叠
+2. **Codex review**: 这个 proposal (P2) 值不值得 pilot 8h GPU?
+3. **PACS baseline probe** (还在训, 1h 后完成): 如果 baseline probe_sty_class 也 90%+ → 确认 linear probe 失效 → MLP probe 是必要的
+4. **MLP probe 代码**: 需要扩展 run_frozen_probes.py
+
+---
+
+## Next Steps
+
+等 Agent 文献综述回来 + PACS baseline 完成后:
+1. Codex R1 审查本 proposal (快速版 review, 不做 full refine)
+2. 若 Codex 给绿灯 → 实现 MLP probe + Stage 1 minimal code → P1 pilot 3h
+3. 若 Codex 又 RETHINK → 诚实 pivot 到路 1 (diagnostic paper)
+
+---
+
+## 7. 文献综述升级 (2026-04-21, 基于 `LITERATURE_SURVEY_PURIFY_THEN_SHARE.md`, 38 papers)
+
+### 7.1 Stage 1 Purify 升级: GRL + **CLUB** + HEX 三件套
+
+**原**: 只 GRL. **问题**: Moyer NeurIPS 2018 证对抗 counter-productive; LNTL 证 stabilization 后可行.
+
+**新 Loss**:
+```
+L_purify = L_orth + λ_h · HSIC
+         + λ_a · (L_cls_sty_adv + L_dom_sem_adv)          # GRL (adversarial)
+         + λ_c · (CLUB(z_sty; y) + CLUB(z_sem; d))        # MI upper bound (主力, 非线性)
+         + λ_p · HEX_orthogonal_projection (optional)
+```
+
+- **CLUB** (ICML 2020): MI upper bound, 可最小化, 比 MINE 适合 purify
+- λ_a 保持 0.3-0.5 (不激进), CLUB 作主力
+- Moyer 警告对策: 不 iterative minimax, 联合训
+
+### 7.2 Stage 2 Alignment 升级: **DCFL 分解 + FedAli OT**
+
+**原**: InfoNCE + MSE. **升级**: DCFL (arXiv 2508.04005) 理论证明 InfoNCE 在 FL 小 batch O(M^{-1/2}) 不稳; 分解为 alignment + uniformity 独立调控.
+
+**新 Loss**:
+```
+L_align = λ_a · Σ -cos(z_sem, p_{y}) / τ                  # alignment
+L_unif  = λ_u · Σ log Σ_{c'≠y} exp(cos(z_sem, p_{c'}) / τ) # uniformity
+# DCFL 建议 λ_a = 0.9, λ_u = 0.1
+
+L_drift_OT = OT_assignment(z_sem_c_local, p_c_EMA)        # FedAli (arXiv 2411.10595)
+```
+
+- **FedAli OT** 软匹配 > FedProto MSE 硬锚点
+- 后备: FedPLVM α-sparsity (cos^0.25)
+
+### 7.3 Stage 3 Share 升级: CCST recipe + 核心消融
+
+**Feature-space AdaIN** 在 128d z_sem 空间 (CCST 是图像空间). 首次.
+
+**必跑消融** (paper central matrix):
+
+| 方法 | 解耦 | 共享 | 数据 |
+|------|-----|------|------|
+| FedSTAR | ✅ | ❌ | 对照 (fenghgevel local) |
+| FISC/PARDON | ❌ | ✅ | 对照 (污染基线) |
+| **我们** | **✅** | **✅** | **novel 组合** |
+
+### 7.4 Evaluation 升级: **MLP probe + CLUB MI + MIG**
+
+原 linear probe 在 cheap-projection 下 gameable (Office 95.8%).
+
+| Probe | 阈值 (PACS K=7) |
+|-------|----------------|
+| MLP probe_sty_class (2-layer 64h) | **≤ 30%** (生死线) |
+| CLUB(z_sty; y) | ↓ monotonically |
+| MIG (Mutual Information Gap) | ≥ 0.5 (文献标杆) |
+| probe_sem_class (MLP) | ≥ 85% (不伤主任务) |
+
+**Identifiability Theory** (NeurIPS 2024): (y, d) auxiliary 双监督 → nonlinear ICA 严格可识别. **我们的设置符合条件, paper 可 cite 理论依据**.
+
+### 7.5 Novelty Claim (updated)
+
+**3 要素组合 novel**:
+1. Purify with **CLUB + GRL in FL**: FedSeProto MI 单向丢 domain; LNTL 集中式. 组合 FL + **保留** domain 首次.
+2. Alignment **DCFL decomp + FedAli OT**: 三者组合 first time
+3. **Feature-space AdaIN on pure z_sty**: 无直接 prior
+
+**Paper title draft**: "Purify-then-Share: MLP-Probe-Validated Decoupling for Cross-Client Style Augmentation in Federated Domain Generalization"
+
+### 7.6 对 Codex RETHINK 警告的系统回应
+
+| Codex 警告 | 本 proposal 回应 |
+|-----------|-----------------|
+| shared trunk contamination | CLUB MI 非线性约束 (比 linear GRL 强) |
+| linear probe gameable | MLP probe + MIG + CLUB 三重验证 |
+| class hide nonlinear | Identifiability 理论 (NeurIPS 2024) 支撑双监督可识别 |
+
+**本 proposal = Symmetric CDANN 的严谨 upgrade**, 不是 patch.
+
+=== END ===
+
+## Your task
+
+Re-review with fresh eyes. Compare to your previous RETHINK on Symmetric CDANN. Has the user addressed your concerns adequately?
+
+Specifically judge:
+
+1. **Is CLUB (MI upper bound) a real improvement over GRL for purification, given your "shared trunk contamination" concern?** Does minimizing MI(z_sty; y) with a nonlinear critic actually force class info out of z_sty, or does it suffer the same limitation as GRL?
+
+2. **Does the identifiability theory citation (NeurIPS 2024 nonlinear ICA with (y, d) dual auxiliary) actually support the claim that this setup can strictly disentangle class vs domain?** Or is this theoretical overreach?
+
+3. **Is DCFL decomposition (λ_a=0.9, λ_u=0.1) likely to make InfoNCE stable in PACS 4-client small batch (≈50 per client) setting?**
+
+4. **Is the 3-stage dependency chain realistic?** Stage 2 depends on Stage 1 truly purifying z_sem. Stage 3 depends on Stage 1 truly purifying z_sty. If Stage 1 only partially succeeds (MLP probe 45% not 25%), do Stages 2/3 still add value?
+
+5. **Budget/risk trade-off**: 25-30 GPU·h for pilot P1/P2/P3. Given Plan A PACS 81.69 > CDANN 80.08, is this pipeline's headline empirical target (PACS AVG Best ≥ 82.17, super FDSE) realistic or still optimistic?
+
+6. **Would the central ablation (FedSTAR vs FISC vs ours) provide a clean story even if absolute accuracy doesn't win?** Is this sufficient for paper or still "fixing patches"?
+
+Score the same 7 dimensions (Problem Fidelity 15%, Method Specificity 25%, Contribution Quality 25%, Frontier Leverage 15%, Feasibility 10%, Validation Focus 5%, Venue Readiness 5%).
+
+VERDICT options: READY / REVISE / RETHINK / ABANDON.
+
+Be brutally honest — the user has limited GPU budget, wants an honest assessment whether this patched 3-stage version has substantively more promise than the RETHINK'ed Symmetric CDANN, or if both paths are fundamentally limited by shared-trunk + probe evaluation issues.
+
+If you still verdict RETHINK or ABANDON, recommend a specific alternative: (a) diagnostic paper on shallow-decoupling failures, (b) completely different angle, or (c) stop the project.

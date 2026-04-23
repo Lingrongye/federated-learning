@@ -1,0 +1,271 @@
+diff --git a/FDSE_CVPR25/algorithm/feddsa_sgpa.py b/FDSE_CVPR25/algorithm/feddsa_sgpa.py
+index 636aed8..8640a48 100644
+--- a/FDSE_CVPR25/algorithm/feddsa_sgpa.py
++++ b/FDSE_CVPR25/algorithm/feddsa_sgpa.py
+@@ -33,6 +33,50 @@ import torch.nn.functional as F
+ import flgo.algorithm.fedbase
+ import flgo.utils.fmodule as fuf
+ 
++
++# ============================================================
++# Gradient Reversal Layer (for CDANN asymmetric supervision)
++# ============================================================
++
++
++class GradientReverseLayer(torch.autograd.Function):
++    """GRL: forward 恒等, backward 乘 -lam.
++
++    Used by FedDSA-CDANN: z_sem → dom_head 路径插 GRL, encoder 端梯度反向;
++    z_sty → dom_head 无 GRL, 正向梯度.
++    """
++
++    @staticmethod
++    def forward(ctx, x, lam):
++        ctx.lam = float(lam)
++        return x.view_as(x)
++
++    @staticmethod
++    def backward(ctx, grad_output):
++        return -ctx.lam * grad_output, None
++
++
++def grl(x: torch.Tensor, lam: float) -> torch.Tensor:
++    """Syntactic sugar for GradientReverseLayer.apply(x, lam)."""
++    return GradientReverseLayer.apply(x, lam)
++
++
++def compute_lambda_adv(current_round: int,
++                       warmup_start: int = 20,
++                       warmup_end: int = 40) -> float:
++    """3-stage lambda_adv schedule (standard DANN practice, R4 settled).
++
++    R=0..warmup_start : 0 (baseline warm-up, equivalent to Plan A + whitening)
++    R=warmup_start..warmup_end : linear 0 → 1
++    R >= warmup_end : 1.0 (full CDANN)
++    """
++    if current_round < warmup_start:
++        return 0.0
++    if current_round < warmup_end:
++        return float(current_round - warmup_start) / max(warmup_end - warmup_start, 1)
++    return 1.0
++
++
+ # DiagnosticLogger (21 指标, 零训练开销,可通过 algo_para `diag=0` 关闭)
+ try:
+     from diagnostics import SGPADiagnosticLogger as DL
+@@ -131,12 +175,15 @@ class FedDSASGPAModel(fuf.FModule):
+     """
+ 
+     def __init__(self, num_classes=7, feat_dim=1024, proj_dim=128,
+-                 tau_etf=0.1, etf_seed=0, use_etf=True):
++                 tau_etf=0.1, etf_seed=0, use_etf=True,
++                 ca: int = 0, num_clients: int = 4):
+         super().__init__()
+         self.num_classes = num_classes
+         self.proj_dim = proj_dim
+         self.tau_etf = tau_etf
+         self.use_etf = use_etf
++        self.ca = int(ca)
++        self.num_clients = int(num_clients)
+ 
+         self.encoder = AlexNetEncoder()
+         self.semantic_head = nn.Sequential(
+@@ -157,6 +204,20 @@ class FedDSASGPAModel(fuf.FModule):
+             # (虽然 alignment 对 Linear 没意义, 但至少不报错. 诊断会自然显示 align ≈ 0)
+             self.register_buffer('M', build_etf_matrix(proj_dim, num_classes, seed=etf_seed))
+ 
++        # CDANN: shared non-adversarial dom_head (ca=1 启用).
++        # 两路 branch 都 minimize standard CE (non-adversarial head objective);
++        # Asymmetry 来自 encoder 端的 GRL (z_sem 路径反向梯度, z_sty 路径正向梯度).
++        # 参与 FedAvg 聚合 (不在 private_keys 白名单).
++        if self.ca == 1:
++            self.dom_head = nn.Sequential(
++                nn.Linear(proj_dim, 64),
++                nn.ReLU(inplace=True),
++                nn.Dropout(0.1),
++                nn.Linear(64, self.num_clients),
++            )
++        else:
++            self.dom_head = None
++
+     def encode(self, x):
+         return self.encoder(x)
+ 
+@@ -189,7 +250,7 @@ class Server(flgo.algorithm.fedbase.BasicServer):
+         # key 名全部短 alias, 避免 flgo record 文件名溢出 ext4 NAME_MAX 255 字节:
+         # lo=lambda_orth, te=tau_etf, pd=proj_dim, wr=warmup_rounds, es=eps_sigma,
+         # mcw=min_clients_whiten, dg=diag, ue=use_etf, uw=use_whitening,
+-        # uc=use_centers, se=save_endpoint, lp=lambda_etf_pull
++        # uc=use_centers, se=save_endpoint, lp=lambda_etf_pull, ca=cdann_active
+         self.init_algo_para({
+             'lo': 1.0,        # lambda_orth
+             'te': 0.1,        # tau_etf: Fixed ETF temperature
+@@ -202,8 +263,9 @@ class Server(flgo.algorithm.fedbase.BasicServer):
+             'uw': 1,          # use_whitening: 1=广播 pooled whitening, 0=不广播
+             'uc': 1,          # use_centers: 1=收集 class_centers, 0=不收集
+             'se': 0,          # save_endpoint: 1=训练末保存 checkpoint
+-            'lp': 0.0,        # lambda_etf_pull: 软性 ETF pull regularization (仅 use_etf=0 生效).
+-                              # 推荐范围 {0.001, 0.003, 0.01, 0.03, 0.1}. use_etf=1 时 silently no-op.
++            'lp': 0.0,        # lambda_etf_pull: 软性 ETF pull (仅 use_etf=0 生效), 推荐 {0.001-0.1}
++            'ca': 0,          # cdann_active: 1=启用 CDANN (dom_head+GRL), 需要 use_etf=0 配合.
++                              # 见 refine-logs/2026-04-20_FedDSA-CDANN/FINAL_PROPOSAL.md
+         })
+         self.sample_option = 'full'
+ 
+@@ -224,8 +286,13 @@ class Server(flgo.algorithm.fedbase.BasicServer):
+         if self.dg == 1 and DL is not None:
+             task_name = os.path.basename(self.option.get('task', 'unknown'))
+             seed_str = self.option.get('seed', 'x')
+-            # variant: 用 server.ue (from init_algo_para) 区分 etf/linear, 避免 jsonl 污染
+-            variant = 'etf' if getattr(self, 'ue', 1) == 1 else 'linear'
++            # variant: 用 server.ue + ca 区分 etf/linear/cdann, 避免 jsonl 污染
++            if getattr(self, 'ue', 1) == 1:
++                variant = 'etf'
++            elif int(getattr(self, 'ca', 0)) == 1:
++                variant = 'cdann'
++            else:
++                variant = 'linear'
+             diag_root = os.path.join(
+                 'task', task_name, 'diag_logs',
+                 f'R{self.num_rounds}_S{seed_str}_{variant}',
+@@ -245,6 +312,8 @@ class Server(flgo.algorithm.fedbase.BasicServer):
+             c.diag_log_dir = diag_root
+             c.use_centers = self.uc  # 传给 Client 控制 class_centers 收集
+             c.lambda_etf_pull = float(self.lp)
++            c.ca = int(self.ca)  # CDANN on/off
++            c.num_clients_total = len(self.clients)  # dom_head 输出维度
+ 
+     def _init_agg_keys(self):
+         """FedBN + style_head 本地; M buffer 参与聚合但因 seeded 一致所以不影响."""
+@@ -606,9 +675,41 @@ class Client(flgo.algorithm.fedbase.BasicClient):
+                     pull_n_valid = len(pulls)
+                     pull_raw_value = loss_etf_pull.item()
+ 
++            # Loss 4: CDANN (ca=1 启用). dom_head non-adversarial + encoder-gradient asymmetry.
++            #   L_dom_sem = CE(d, dom_head(GRL(z_sem, lambda_adv)))   # encoder 反向梯度
++            #   L_dom_sty = CE(d, dom_head(z_sty))                     # encoder 正向梯度
++            # dom_head 自身 2 路都 minimize standard CE (non-adversarial).
++            # 见 refine-logs/2026-04-20_FedDSA-CDANN/FINAL_PROPOSAL.md
++            loss_dom_sem = torch.tensor(0.0, device=x.device)
++            loss_dom_sty = torch.tensor(0.0, device=x.device)
++            lambda_adv_val = 0.0
++            dom_sem_acc = 0.0
++            dom_sty_acc = 0.0
++            ca_flag = int(getattr(self, 'ca', 0))
++            if ca_flag == 1 and model.dom_head is not None:
++                lambda_adv_val = compute_lambda_adv(
++                    self.current_round, warmup_start=20, warmup_end=40)
++                B = z_sem.size(0)
++                # Domain label = client id (每 client 内 batch 所有样本 domain 相同)
++                d_label = torch.full(
++                    (B,), int(getattr(self, 'id', 0) or 0),
++                    dtype=torch.long, device=x.device)
++                # z_sem 路径: GRL 反向 encoder 梯度
++                dom_logits_sem = model.dom_head(grl(z_sem, lambda_adv_val))
++                # z_sty 路径: 正向 (无 GRL)
++                dom_logits_sty = model.dom_head(z_sty)
++                loss_dom_sem = F.cross_entropy(dom_logits_sem, d_label)
++                loss_dom_sty = F.cross_entropy(dom_logits_sty, d_label)
++                # Diagnostic: training-time dom_head accuracy (for monitoring, NOT a claim metric)
++                with torch.no_grad():
++                    dom_sem_acc = (dom_logits_sem.argmax(dim=-1) == d_label).float().mean().item()
++                    dom_sty_acc = (dom_logits_sty.argmax(dim=-1) == d_label).float().mean().item()
++
+             loss = (loss_task
+                     + self.lambda_orth * loss_orth
+-                    + lambda_pull * loss_etf_pull)
++                    + lambda_pull * loss_etf_pull
++                    + loss_dom_sem
++                    + loss_dom_sty)
+             loss.backward()
+             optimizer.step()
+ 
+@@ -617,6 +718,14 @@ class Client(flgo.algorithm.fedbase.BasicClient):
+                 self._last_pull_loss = pull_raw_value
+                 self._last_pull_n_valid = pull_n_valid
+ 
++            # Record CDANN stats for diagnostics (last batch only)
++            if step == num_steps - 1 and ca_flag == 1:
++                self._last_loss_dom_sem = float(loss_dom_sem.item())
++                self._last_loss_dom_sty = float(loss_dom_sty.item())
++                self._last_lambda_adv = lambda_adv_val
++                self._last_dom_sem_acc = dom_sem_acc
++                self._last_dom_sty_acc = dom_sty_acc
++
+             # Style stats accumulation (last epoch only, 保证稳定)
+             if step >= last_epoch_start:
+                 with torch.no_grad():
+@@ -697,6 +806,13 @@ class Client(flgo.algorithm.fedbase.BasicClient):
+             if pull_loss is not None:
+                 metrics['loss_etf_pull'] = pull_loss
+                 metrics['pull_n_valid_classes'] = getattr(self, '_last_pull_n_valid', 0)
++            # 新增: CDANN stats (if ca=1)
++            if int(getattr(self, 'ca', 0)) == 1:
++                metrics['loss_dom_sem'] = getattr(self, '_last_loss_dom_sem', 0.0)
++                metrics['loss_dom_sty'] = getattr(self, '_last_loss_dom_sty', 0.0)
++                metrics['lambda_adv'] = getattr(self, '_last_lambda_adv', 0.0)
++                metrics['dom_sem_acc_train'] = getattr(self, '_last_dom_sem_acc', 0.0)
++                metrics['dom_sty_acc_train'] = getattr(self, '_last_dom_sty_acc', 0.0)
+             self._dl_train.record(
+                 round_id=self.current_round, metrics_dict=metrics)
+ 
+@@ -893,6 +1009,13 @@ _TASK_NUM_CLASSES = {
+     'domainnet': 10,
+ }
+ 
++# Task prefix → num_clients dispatch (for CDANN dom_head output dim)
++_TASK_NUM_CLIENTS = {
++    'PACS': 4,
++    'office': 4,
++    'domainnet': 6,
++}
++
+ 
+ def _resolve_num_classes(task_name: str) -> int:
+     for prefix, K in _TASK_NUM_CLASSES.items():
+@@ -901,28 +1024,35 @@ def _resolve_num_classes(task_name: str) -> int:
+     return 7  # fallback
+ 
+ 
++def _resolve_num_clients(task_name: str) -> int:
++    for prefix, N in _TASK_NUM_CLIENTS.items():
++        if prefix.lower() in task_name.lower():
++            return N
++    return 4  # fallback
++
++
+ def init_global_module(object):
+     """只 server 创建 global model, client init 时 deepcopy.
+ 
+-    从 option['algo_para'] 里读 use_etf (第 8 个参数, 按 init_algo_para 顺序),
+-    若未传则默认 use_etf=1 (ETF).
++    从 option['algo_para'] 读 use_etf (index 7) + ca (index 12, CDANN on/off).
+     """
+     if 'Server' not in object.__class__.__name__:
+         return
+     task = os.path.basename(object.option['task'])
+     num_classes = _resolve_num_classes(task)
++    num_clients = _resolve_num_clients(task)
+ 
+-    # 读 use_etf from algo_para (index 7, zero-based)
+-    # init_algo_para 顺序: lo, tau_etf, pd, warmup_r, eps_sigma, min_clients_whiten,
+-    #                     diag, use_etf, use_whitening, use_centers
++    # init_algo_para 顺序: lo, te, pd, wr, es, mcw, dg, ue, uw, uc, se, lp, ca (13 个)
+     use_etf = True  # default
++    ca = 0  # default CDANN off
+     algo_para = object.option.get('algo_para', None)
+-    if algo_para is not None and len(algo_para) >= 8:
+-        use_etf = bool(int(algo_para[7]))
+-    # use_whitening / use_centers 不影响 model 结构, 但由 Server.initialize 通过
+-    # self.use_whitening / self.use_centers 控制 (见上方 init_algo_para)
++    if algo_para is not None:
++        if len(algo_para) >= 8:
++            use_etf = bool(int(algo_para[7]))
++        if len(algo_para) >= 13:
++            ca = int(algo_para[12])
+ 
+     object.model = FedDSASGPAModel(
+         num_classes=num_classes, feat_dim=1024, proj_dim=128,
+-        use_etf=use_etf,
++        use_etf=use_etf, ca=ca, num_clients=num_clients,
+     ).to(object.device)
