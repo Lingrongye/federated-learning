@@ -392,7 +392,9 @@ class PerRunDiagLogger(PerRunLogger):
         for c in self.clients:
             model = c.model if getattr(c, 'model', None) is not None else self.server.model
             test_data = getattr(c, 'test_data', None)
-            if test_data is None or len(test_data) == 0:
+            # Skip when no model (e.g. FedBN round 0 before any unpack) or
+            # no test data — record NaN placeholders.
+            if model is None or test_data is None or len(test_data) == 0:
                 nan_list = [float('nan')] * num_classes
                 pc_acc_dist.append(nan_list)
                 pc_conf_dist.append(nan_list)
@@ -407,7 +409,7 @@ class PerRunDiagLogger(PerRunLogger):
             try:
                 device = next(model.parameters()).device
             except StopIteration:
-                device = self.server.device
+                device = getattr(self.server, 'device', 'cpu')
             bs = min(getattr(c, 'test_batch_size', 64), len(test_data))
             num_workers = self.option.get('num_workers', 0)
             # Collate fn: taken from client's calculator if present
