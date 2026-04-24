@@ -28,7 +28,7 @@ algo_para:
 # S0 gate 加载 orth_only Office ckpt (lab-lry 上 EXP-083 的 ckpt)
 # 实际部署时填具体路径, 例如: ~/fl_checkpoints/feddsa_s2_R200_best196_1776473922
 # 如果留空则从 random init 训, 用于 sanity check
-init_ckpt: ~/fl_checkpoints/feddsa_s2_R200_best196_1776473922
+init_ckpt: ~/fl_checkpoints/feddsa_s2_R200_best122_1776452601
 learning_rate: 0.05
 batch_size: 50
 weight_decay: 1e-3

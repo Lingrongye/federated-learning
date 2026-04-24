@@ -27,7 +27,7 @@ algo_para:
 - 1      # [21] fz  = 1 ★ S0 GATE 冻 encoder
 # S0 gate 加载 orth_only PACS ckpt (lab-lry: 选 best round 的 ckpt)
 # TODO: 部署前在 lab-lry 上确认 PACS orth_only seed=2 R200 ckpt 实际路径
-init_ckpt: ~/fl_checkpoints/feddsa_s2_R200_best108_1776428164
+init_ckpt: ~/fl_checkpoints/feddsa_s2_R200_best196_1776473922
 learning_rate: 0.1
 batch_size: 50
 weight_decay: 1e-3
