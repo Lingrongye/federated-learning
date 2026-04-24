@@ -1,0 +1,38 @@
+# EXP-126 PACS 对照 B: Head-only fine-tune baseline (frozen encoder)
+algo_para:
+- 1.0    # [0]  lo
+- 0.0    # [1]  lh
+- 1.0    # [2]  ls legacy
+- 0.2    # [3]  tau legacy
+- 5      # [4]  sdn
+- 128    # [5]  pd
+- 0      # [6]  sm
+- 60     # [7]  bp
+- 30     # [8]  bw
+- 80     # [9]  cr
+- 0      # [10] gli
+- 1.0    # [11] lm
+# ---- BiProto OFF ----
+- 0.0    # [12] lp  OFF
+- 0.0    # [13] le  OFF
+- 0.1    # [14] tp
+- 0.0    # [15] mc  OFF
+- 5      # [16] ws
+- 10     # [17] we
+- 25     # [18] rd
+- 0.9    # [19] emd
+- 1      # [20] se
+- 1      # [21] fz  = 1
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 30
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

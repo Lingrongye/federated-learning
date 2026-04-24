@@ -1,0 +1,698 @@
+OpenAI Codex v0.123.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-24_feddsa-biproto-asym_v1
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dc056-e5fa-7fd2-8721-994c42c8b3ca
+--------
+user
+You are a senior ML reviewer for a top venue (NeurIPS/ICML/ICLR).
+This is an early-stage, method-first research proposal in federated cross-domain learning.
+
+Your job is NOT to reward extra modules, contribution sprawl, or a giant benchmark checklist.
+Your job IS to stress-test whether the proposed method:
+(1) still solves the original anchored problem,
+(2) is concrete enough to implement,
+(3) presents a focused, elegant contribution,
+(4) uses foundation-model-era techniques appropriately when they are the natural fit.
+
+Review principles:
+- Prefer the smallest adequate mechanism over a larger system.
+- Penalize parallel contributions that make the paper feel unfocused.
+- If a modern LLM / VLM / Diffusion / RL route would clearly produce a better paper, say so concretely.
+- If the proposal is already modern enough, do NOT force trendy components.
+- Do not ask for extra experiments unless they are needed to prove the core claims.
+
+Read the Problem Anchor first. If your suggested fix would change the problem being solved,
+call that out explicitly as drift instead of treating it as a normal revision request.
+
+Important domain context to keep in mind while reviewing:
+- This work operates in federated learning (FL) with cross-domain feature shift.
+- Target datasets are PACS (7 class, 4 domain/client) and Office-Caltech10 (10 class, 4 domain/client).
+- Backbone is AlexNet from scratch (no pretraining), FedBN-style (BN stats local).
+- Reviewer should treat the author's "must strictly beat local FDSE reproduction" as a hard constraint.
+- The author has run 120+ experiments (EXP-001 to EXP-120). Claims about "X already tried and falsified" should be believed unless obvious contradiction.
+- Key negative results that constrain the design space:
+  * HSIC loss hurts (EXP-017 falsified).
+  * Multi-prototype InfoNCE without safety valves collapses (EXP-076/077/078).
+  * Domain-aware InfoNCE (SCPR) falsified on PACS (EXP-095).
+  * CDANN GRL adversarial falsified: probe 0.96 but 0 accuracy gain (EXP-108).
+  * Regime-dependence is confirmed thrice (PACS vs Office respond oppositely to same mechanism).
+
+=== PROPOSAL ===
+
+# Research Proposal: FedDSA-BiProto — 非对称双编码器与联邦双原型互斥解耦
+
+**Date**: 2026-04-24
+**Stage**: Round-0 Initial Proposal
+**Target**: 在 FDSE_CVPR25 框架下, 3-seed mean AVG Best 严格胜过 FDSE 本地复现 baseline (PACS ≥ 80.91, Office-Caltech10 ≥ 91.08), 同时交付 t-SNE / probe ladder / feature metrics 三套可视化 evidence.
+
+## Problem Anchor (不可变, 每轮必须逐字复刻)
+
+- **Bottom-line problem**: 在 cross-domain 联邦学习 (PACS / Office-Caltech10) 下, 用 AlexNet from scratch, 3-seed {2, 15, 333} × R200 mean AVG Best **必须同时严格超过 FDSE 本地复现 baseline** (PACS > 79.91 / Office > 90.58). 当前 orth_only 战况: PACS 80.64 ✅ (+0.73), Office 89.09 ❌ (−1.49).
+- **Must-solve bottleneck**: Office-Caltech10 必须补回 −1.49 pp 且至少再涨 +0.5 pp, 同时 PACS 不得退 (≥ 80.91). **核心技术悬念**: Office gap 的真实原因是 "shared trunk 被 CE 污染, class 弥散到 z_sty" 还是 "trunk capacity 已饱和 / 聚合不对齐 / Caltech outlier"? EXP-110 / EXP-113 / EXP-120 的证据链倾向后者, 但 trunk-freeze diagnostic **从未做过**, 必须先做诊断再决定架构级投入.
+- **Non-goals**: 不换数据集; 不做诊断论文; 不堆模块凑 novelty; 不预训练; 不换骨干.
+- **Constraints**: AutoDL 4090 / lab 3090; 预算 ≤ 50 GPU-h; AlexNet + FedBN; PACS E=5 / Office E=1; 1 周内 refine + pilot.
+- **Success condition**: 3-seed {2,15,333} × R200 mean AVG Best: PACS ≥ 80.91 且 Office ≥ 91.08; AVG Last 不退; t-SNE + probe ladder + prototype quality 三套可视化 evidence 齐备.
+
+## Technical Gap
+
+当前四派方法的失败点:
+1. "擦除派" (FDSE/FedDP/FedSeProto): domain 当噪声擦除, 不对 domain 建模
+2. "私有派" (FedSTAR/FedBN): 风格本地, domain 被降级为 nuisance
+3. "共享不解耦派" (FISC/StyleDDG/FedCCRL): 混合空间 AdaIN 导致负迁移
+4. "feature-level 对抗派" (CDANN): EXP-108 证伪, probe 0.96 无 accuracy 增益
+
+缺失的机制: 目前所有 FL cross-domain 解耦工作对 "domain 信息" 的处置只有三种: 擦除 / 私有 / 本地对抗. 从未有工作**把 domain 升级为一阶 federated 对象** —— 即像 class prototype 一样在 server 端维护跨 client 的 domain prototype bank, 并在 prototype 级 (而非 feature 级) 强制与 class prototype 几何互斥.
+
+同时, 目前 FL 里**独立 style encoder 几乎都是对称双 trunk** (2× AlexNet), 忽视了 "style ≈ (μ, σ) 统计"的强先验. 一个**轻量非对称统计 encoder** 可以在 <2% 参数膨胀下提供 proper inductive bias.
+
+## Method Thesis
+
+**One-sentence thesis**: 把 domain 从"要擦除的噪声"升级为"联邦共享的一阶原型 (Pd)", 与 class prototype (Pc) 通过 proto-level 几何互斥并列存在; 用非对称统计 encoder 给 Pd 提供 inductive bias; 整套机制在 loss 数目和参数量上保持极简.
+
+**Why smallest adequate**: 相较 CDANN 需 GRL+dom_head+对抗 (已证伪), BiProto 只在 orth_only 基础上加 1 个轻量 encoder (~1M) + 2 条 proto-level InfoNCE + 1 条 proto-cos 排斥. 所有 loss 都在 proto 空间 (低维 K×d, K≤10), 梯度冲突半径极小, 避开 EXP-017/095/108 的全部已知坑.
+
+## Contribution Focus
+
+- **Dominant (C1)**: Federated Domain Prototype (Pd) as a first-class shared object, orthogonal-to-class at the prototype level via cosine exclusion. 首次在 FL cross-domain 将 domain 作为与 class 对称的一阶联邦对象建模. 机制: Pd 由非对称统计 encoder 生成, 跨 client 直接 concat (无聚合歧义, 因为每 client 一个 domain). 监督: Pd 通过 sty-proto InfoNCE 驱动 encoder_sty 学习 same-domain attraction / cross-domain repulsion, 同时 Pd ⊥ Pc 的 proto-level cosine 损失在低维空间强制互斥.
+- **Supporting (C2)**: Asymmetric statistic encoder — 风格 encoder 只做 (μ,σ) 统计提取 + 轻量 MLP (~1M, <2% of 60M AlexNet). 物理上无法编码 class-level 判别信息 (丢弃空间结构), 从架构切断 "sty 承载 class" 泄漏, 无需对抗 loss.
+- **Explicit non-contributions**: 不 claim MI-optimal / 不 claim 通信效率 / 不做收敛证明 / 不跨 backbone / 不做 DP privacy.
+
+## Proposed Method
+
+### Complexity Budget
+- encoder_sem (AlexNet 60M, 继承 orth_only, 不改): 被 L_CE + L_orth + L_sem_proto 训
+- semantic_head + sem_classifier (继承 orth_only)
+- BN running stats (FedBN, 本地)
+- style bank (μ,σ) AdaIN (继承 FedDSA 原方案)
+- encoder_sty (统计 encoder, 新增 ~1M MLP, +1.7% params)
+- style_head (删除, 因为 encoder_sty 是专用路径)
+- class prototype bank Pc [K, 128] (新增, EMA 聚合)
+- domain prototype bank Pd [num_clients, 128] (新增, per-round concat)
+- L_orth (继承), L_sem_proto (新增), L_sty_proto (新增), L_proto_excl (新增)
+
+### Core Mechanism: Pd
+- 每 round 每 client k 上传 z_sty 均值 p_k^sty ∈ ℝ^128
+- Server concat: Pd = stack([p_1, ..., p_K]) (无聚合冲突, num_clients × 1 domain/client)
+- 下发给所有 client
+- L_sty_proto = InfoNCE(z_sty, Pd, domain_label) + 0.5 · MSE(z_sty, stopgrad(Pd[d_i])), 带 α-sparsity cos^0.25
+
+### Supporting: Asymmetric Statistic Encoder
+- Input: conv1-3 的 (μ, σ) per-channel stats 拼接
+- Architecture: 2-layer MLP + LayerNorm, 输出 z_sty [128]
+- Shared forward with encoder_sem but taps.detach() so L_sty_proto 不反传到 encoder_sem
+- 物理上无空间结构 → 无法编码 class 判别信息
+
+### Loss 组合 + 安全阀 Schedule
+L_total = L_CE + L_CE_aug + λ₁·L_orth + λ₂·L_sem_proto + λ₃·L_sty_proto + λ₄·L_proto_excl
+
+| Round | λ_orth | λ_sem_proto | λ_sty_proto | λ_proto_excl | MSE coef |
+|:-:|:-:|:-:|:-:|:-:|:-:|
+| 0-49 | 1.0 | 0 | 0 | 0 | 0 |
+| 50-80 | 1.0 | 0→0.5 | 0→0.5 | 0→0.3 | 0.5 |
+| 80-150 | 1.0 | 0.5 | 0.5 | 0.3 | 0.5 |
+| 150-200 | 1.0 | 0.5→0 | 0.5→0 | 0.3 | 0.5 |
+
+Bell schedule + MSE anchor + α-sparsity 全部是 EXP-076/077 验证过的安全阀.
+
+### FL 聚合
+- encoder_sem / semantic_head / classifier / encoder_sty: FedAvg
+- BN running stats: local (FedBN)
+- Pc: EMA (FedProto-style, 0.9 · Pc + 0.1 · client_mean)
+- Pd: per-round concat (每 client 一个 domain, 无歧义)
+- style bank (μ,σ) AdaIN: 继承 FedDSA 原方案
+- 通信膨胀 ≤ 4% vs baseline
+
+### Failure Modes
+- Office 瓶颈不在架构 → Diag A gate 触发 kill
+- z_sty 坍缩 → L_sty_proto 权重增加 or L_sty_norm_reg
+- InfoNCE 后期崩盘 → Bell ramp-down 已内置
+- Pd 被某 client dominant → 监测 pairwise cosine > 0.9 → 增大 L_sty_proto
+
+## Novelty Matrix
+
+| 方法 | 解耦? | Prototype? | Domain as shared federated object? | exclusion level | 参数 |
+|---|:-:|:-:|:-:|:-:|:-:|
+| FedProto | ❌ | ✅ class | ❌ | — | 1× |
+| FPL | ❌ | ✅ class multi | ❌ | — | 1× |
+| FedPLVM | ❌ | ✅ 2-level | ❌ | — | 1× |
+| I2PFL | ❌ | ✅ intra/inter | ❌ (domain=class variance) | — | 1× |
+| FedSTAR | ✅ FiLM | ✅ content only | ❌ (style 本地) | feature | 1.1× |
+| FDSE | ✅ 层分解 | ❌ | ❌ (擦除) | feature | 0.65× |
+| FedDP / FedSeProto | ✅ MI min | ❌ | ❌ (擦除) | feature | ~1× |
+| FedFSL-CFRD | ✅ 重构 | ❌ | ❌ (共性/个性) | feature | 1.2× |
+| FedPall | ❌ | ✅ class | ❌ | feature (GAN) | 1.1× |
+| FISC/PARDON | ❌ | ❌ | ⚠️ 共享不解耦 | — | 1× |
+| CDANN | ✅ GRL | ❌ | ❌ | feature | ~1× |
+| **FedDSA-BiProto** | ✅ 非对称统计 | ✅ **class + domain 双 bank** | ✅ **首次** (Pd concat) | **proto** | **~1.02×** |
+
+Claim: 第一个在联邦 cross-domain 学习中将 domain 作为与 class 对等的一阶联邦共享原型 (Pd) 建模的工作.
+
+## Claim-Driven Validation Sketch
+
+### Claim 0 (PRE-REQUISITE): Diagnostic Gate
+- Hypothesis: Office -1.49 是 shared trunk 被 CE 污染导致的 feature capacity 瓶颈
+- Minimal experiment: trunk-freeze orth_only Office R200 seed=2 checkpoint, 只重训 head 30 round
+- Decision: 涨 ≥1.5pp → 继续; 涨 0.5-1.5pp → 降档继续; 涨 <0.5pp → **kill BiProto, 改投资聚合/outlier 侧**
+- Cost: 2 GPU-h
+
+### Claim 1 (DOMINANT): Accuracy Win
+- BiProto full × 3-seed × R200 × {PACS, Office} vs FDSE baseline + orth_only + 3 ablations
+- Metric: 3-seed mean AVG Best
+- Expected: PACS ≥ 81.0, Office ≥ 91.1
+- Ablations: −非对称 encoder / −Pd / −L_proto_excl / τ sweep / warmup sweep
+- Kill criteria: R50 崩盘 or R150 drop > 3pp
+- Cost: ~100 GPU-h (6 并行 greedy scheduler)
+
+### Claim 2 (SUPPORTING): Visual Evidence Chain
+**Vis-1 t-SNE** 双面板 (z_sem by class / z_sty by domain) × 4 methods (orth_only / FDSE / CDANN / BiProto), silhouette score quantification
+**Vis-2 Probe ladder**: linear/MLP-64/MLP-256 × 4 directions (z_sem/sty × class/domain)
+- Target: z_sem→class 高, z_sem→domain 低, z_sty→domain 高, z_sty→class 低 (尤其 MLP-256 < 0.50 vs orth_only 0.81)
+**Vis-3 Prototype quality**: Pc/Pd 分离度 + Pc⊥Pd cosine matrix trajectory
+**Vis-4 Feature health**: norm / rank / pairwise similarity
+**Vis-5 Orth quality**: cos(z_sem, z_sty) + HSIC
+
+## Experiment Handoff
+- Must-prove: C0 (gate) → C1 (accuracy) → C2 (visual)
+- Must-run ablations: −Pd (核心), −asymmetric encoder, −proto_excl, τ sweep
+- Critical datasets: PACS + Office-Caltech10, AVG Best + AVG Last + per-domain
+- Highest-risk: Diag A 假设, Pd concat 假设 (每 client 一 domain)
+
+## Compute Estimate
+
+| Stage | GPU-h | Wall |
+|---|:-:|:-:|
+| Diag A | 2 | 2h |
+| Implementation | 0 | 0.5d |
+| Smoke | 4 | 4h |
+| Main pilot | 30 | 1d |
+| Ablations | 50 | 2d |
+| Visualization | 2 | 0.5d |
+| **Total** | **≤90** | **~4-5d** |
+
+## Intentionally Excluded
+DomainNet, ResNet-18, DP, learnable τ/α, FINCH multi-cluster, GRL, HSIC, Kendall weighting — 都是 EXP-* 已证伪或与 anchor 冲突.
+
+=== END PROPOSAL ===
+
+Now score these 7 dimensions from 1-10:
+
+1. **Problem Fidelity**: Does the method still attack the original bottleneck (Office -1.49 vs FDSE, PACS ≥ FDSE), or has it drifted into solving something easier?
+
+2. **Method Specificity**: Are interfaces, representations, losses, training stages, and inference path concrete enough that an engineer could start implementing? Pay attention to: Pd update mechanics, statistic encoder input/output shapes, detach path, FedAvg partition, Pc EMA schedule.
+
+3. **Contribution Quality**: Is there one dominant mechanism-level contribution (Federated Domain Prototype + proto-level exclusion) with real novelty, good parsimony, and no obvious contribution sprawl? Assess whether the "asymmetric statistic encoder" is necessary supporting or unnecessary second contribution.
+
+4. **Frontier Leverage**: The proposal intentionally avoids LLM/VLM/Diffusion because data scale is small. Judge whether this is appropriate conservatism or a missed opportunity (e.g., could VLM provide style descriptors? Could a Diffusion prior regularize style bank?).
+
+5. **Feasibility**: Can this method be trained and integrated with the stated resources (≤90 GPU-h, AlexNet, 4090+3090)? Are the safety valves (Bell + MSE + α-sparsity) sufficient given the falsification history (EXP-076/077/078)?
+
+6. **Validation Focus**: Are the experiments minimal but sufficient? Does the C0 Diag A gate make sense as a prerequisite? Is the visual evidence chain (5 Vis blocks) too heavy, too light, or right-sized? Are ablations hitting the right decision boundaries?
+
+7. **Venue Readiness**: If executed well, would this contribution feel sharp and timely at NeurIPS/ICML/ICLR?
+
+**OVERALL SCORE** (1-10): weighted Problem Fidelity 15%, Method Specificity 25%, Contribution Quality 25%, Frontier Leverage 15%, Feasibility 10%, Validation Focus 5%, Venue Readiness 5%.
+
+For each dimension scoring < 7, provide:
+- The specific weakness
+- A concrete fix at the method level (interface / loss / training recipe / integration point / deletion of unnecessary parts)
+- Priority: CRITICAL / IMPORTANT / MINOR
+
+Then add:
+- **Simplification Opportunities**: 1-3 concrete ways to delete, merge, or reuse components while preserving the main claim. Write "NONE" if already tight.
+- **Modernization Opportunities**: 1-3 concrete ways to replace old-school pieces with more natural foundation-model-era primitives if genuinely better. Write "NONE" if already modern enough.
+- **Drift Warning**: "NONE" if the proposal still solves the anchored problem; otherwise explain the drift clearly.
+- **Verdict**: READY / REVISE / RETHINK
+
+Verdict rule:
+- READY: overall score >= 9, no meaningful drift, one focused dominant contribution, and no obvious complexity bloat remains
+- REVISE: the direction is promising but not yet at READY bar
+- RETHINK: the core mechanism or framing is still fundamentally off
+
+Finally, please write your response in English (Markdown format).
+
+**Preparing for review**
+
+I need to approach this as a senior ML reviewer because the user asked for a review and scoring proposal. It doesn't seem like any code changes are needed right now, and the user has pasted the proposal fully. The developer mentioned I should provide a commentary update before doing substantial work. Since this is a review of a research proposal, I might want to use the code-review-excellence skill. I should start by updating my commentary to explain my review approach and scoring dimensions.
+**Deciding on review methods**
+
+I’m considering whether to use the skill for this review, even if it's more code-review-specific. I probably should use it to align my response structure. We don’t need live data or external browsing since the user isn’t asking for current facts, just venue readiness. I might need to update my plan, but that depends on whether it’s helpful. I can answer without tools, yet the skill instructions suggest I should apply the named skill, so I’ll read the skill file and use commentary.
+codex
+Reviewing the proposal against the anchor first, then I’ll score the seven dimensions and call out only the weaknesses that matter for implementability, focus, and venue sharpness.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content -Path 'C:\\Users\\31279\\.agents\\skills\\code-review-excellence\\SKILL.md' -TotalCount 220" in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-24_feddsa-biproto-asym_v1
+ succeeded in 2398ms:
+---
+name: code-review-excellence
+description: Master effective code review practices to provide constructive feedback, catch bugs early, and foster knowledge sharing while maintaining team morale. Use when reviewing pull requests, establishing review standards, or mentoring developers.
+---
+
+# Code Review Excellence
+
+Transform code reviews from gatekeeping to knowledge sharing through constructive feedback, systematic analysis, and collaborative improvement.
+
+## When to Use This Skill
+
+- Reviewing pull requests and code changes
+- Establishing code review standards for teams
+- Mentoring junior developers through reviews
+- Conducting architecture reviews
+- Creating review checklists and guidelines
+- Improving team collaboration
+- Reducing code review cycle time
+- Maintaining code quality standards
+
+## Core Principles
+
+### 1. The Review Mindset
+
+**Goals of Code Review:**
+
+- Catch bugs and edge cases
+- Ensure code maintainability
+- Share knowledge across team
+- Enforce coding standards
+- Improve design and architecture
+- Build team culture
+
+**Not the Goals:**
+
+- Show off knowledge
+- Nitpick formatting (use linters)
+- Block progress unnecessarily
+- Rewrite to your preference
+
+### 2. Effective Feedback
+
+**Good Feedback is:**
+
+- Specific and actionable
+- Educational, not judgmental
+- Focused on the code, not the person
+- Balanced (praise good work too)
+- Prioritized (critical vs nice-to-have)
+
+```markdown
+? Bad: "This is wrong."
+? Good: "This could cause a race condition when multiple users
+access simultaneously. Consider using a mutex here."
+
+? Bad: "Why didn't you use X pattern?"
+? Good: "Have you considered the Repository pattern? It would
+make this easier to test. Here's an example: [link]"
+
+? Bad: "Rename this variable."
+? Good: "[nit] Consider `userCount` instead of `uc` for
+clarity. Not blocking if you prefer to keep it."
+```
+
+### 3. Review Scope
+
+**What to Review:**
+
+- Logic correctness and edge cases
+- Security vulnerabilities
+- Performance implications
+- Test coverage and quality
+- Error handling
+- Documentation and comments
+- API design and naming
+- Architectural fit
+
+**What Not to Review Manually:**
+
+- Code formatting (use Prettier, Black, etc.)
+- Import organization
+- Linting violations
+- Simple typos
+
+## Review Process
+
+### Phase 1: Context Gathering (2-3 minutes)
+
+```markdown
+Before diving into code, understand:
+
+1. Read PR description and linked issue
+2. Check PR size (>400 lines? Ask to split)
+3. Review CI/CD status (tests passing?)
+4. Understand the business requirement
+5. Note any relevant architectural decisions
+```
+
+### Phase 2: High-Level Review (5-10 minutes)
+
+```markdown
+1. **Architecture & Design**
+   - Does the solution fit the problem?
+   - Are there simpler approaches?
+   - Is it consistent with existing patterns?
+   - Will it scale?
+
+2. **File Organization**
+   - Are new files in the right places?
+   - Is code grouped logically?
+   - Are there duplicate files?
+
+3. **Testing Strategy**
+   - Are there tests?
+   - Do tests cover edge cases?
+   - Are tests readable?
+```
+
+### Phase 3: Line-by-Line Review (10-20 minutes)
+
+```markdown
+For each file:
+
+1. **Logic & Correctness**
+   - Edge cases handled?
+   - Off-by-one errors?
+   - Null/undefined checks?
+   - Race conditions?
+
+2. **Security**
+   - Input validation?
+   - SQL injection risks?
+   - XSS vulnerabilities?
+   - Sensitive data exposure?
+
+3. **Performance**
+   - N+1 queries?
+   - Unnecessary loops?
+   - Memory leaks?
+   - Blocking operations?
+
+4. **Maintainability**
+   - Clear variable names?
+   - Functions doing one thing?
+   - Complex code commented?
+   - Magic numbers extracted?
+```
+
+### Phase 4: Summary & Decision (2-3 minutes)
+
+```markdown
+1. Summarize key concerns
+2. Highlight what you liked
+3. Make clear decision:
+   - ? Approve
+   - ?? Comment (minor suggestions)
+   - ?? Request Changes (must address)
+4. Offer to pair if complex
+```
+
+## Review Techniques
+
+### Technique 1: The Checklist Method
+
+```markdown
+## Security Checklist
+
+- [ ] User input validated and sanitized
+- [ ] SQL queries use parameterization
+- [ ] Authentication/authorization checked
+- [ ] Secrets not hardcoded
+- [ ] Error messages don't leak info
+
+## Performance Checklist
+
+- [ ] No N+1 queries
+- [ ] Database queries indexed
+- [ ] Large lists paginated
+- [ ] Expensive operations cached
+- [ ] No blocking I/O in hot paths
+
+## Testing Checklist
+
+- [ ] Happy path tested
+- [ ] Edge cases covered
+- [ ] Error cases tested
+- [ ] Test names are descriptive
+- [ ] Tests are deterministic
+```
+
+### Technique 2: The Question Approach
+
+Instead of stating problems, ask questions to encourage thinking:
+
+```markdown
+? "This will fail if the list is empty."
+? "What happens if `items` is an empty array?"
+
+? "You need error handling here."
+? "How should this behave if the API call fails?"
+
+? "This is inefficient."
+? "I see this loops through all users. Have we considered
+the performance impact with 100k users?"
+```
+
+### Technique 3: Suggest, Don't Command
+
+````markdown
+## Use Collaborative Language
+
+? "You must change this to use async/await"
+? "Suggestion: async/await might make this more readable:
+`typescript
+    async function fetchUser(id: string) {
+        const user = await db.query('SELECT * FROM users WHERE id = ?', id);
+        return user;
+    }
+    `
+What do you think?"
+[31;1mInvalidOperation: [31;1mCannot set property. Property setting is supported only on core types in this language mode.[0m
+
+**Reviewing a proposal**
+
+I see the user wants me to review and score their proposal. Since they provided all the content, I won’t need to browse the internet. It’s a bit different from a typical code review, but I should still apply a structured approach. I’ll focus on findings, emphasizing severity and possibly providing scores and feedback for areas needing improvement. I should also compute an overall score, which I guess will be around 7.5, while evaluating the proposal carefully.
+**Evaluating ML Proposal**
+
+As a reviewer for a top ML venue, I need to stress-test the method against the anchor and evaluate seven dimensions. I might need to mention drift if the suggested fixes change the problem scope, and I must avoid adding extra experiments unless they directly relate to core claims. The proposal, FedDSA-BiProto, introduces tools to address bottlenecks, but I need to determine if it effectively targets aggregation issues rather than just domain leakage. There's a risk of drift, so careful evaluation is essential.
+**Assessing Proposal Fidelity**
+
+The proposal involves a C0 gate that prevents full drift, but I’m estimating the problem fidelity to be around 7 or 8. It aims to outperform the baseline on the same datasets without reducing the problem's complexity. However, it seems to focus more on the novelty of the domain prototype instead of addressing the Office gap’s root cause. I’m thinking a score between 7 and 8 makes sense, possibly settling on 7 due to the risks associated with its mechanism. The specificity of the method includes numerous details on losses and schedules.
+**Evaluating contribution quality**
+
+I think I need to score this a 6 because it's missing some critical details. While it provides a solid foundation to start, it's not fully developed enough for faithful implementation without making choices that could impact the outcome. The dominant mechanism involves both domain prototypes and exclusion, and I wonder if introducing a class prototype bank as a new element complicates the contribution. There's even a risk of bloat with various components added.
+**Assessing contribution complexity**
+
+I'm noticing that class prototypes aren't the central novelty and add some complexity to the study. The asymmetric statistic encoder seems supportive, offering good inductive bias, but it might appear as a second contribution if highlighted too much. For scoring, maybe a 7 or a 6? I lean toward a 7, given there's a dominant mechanism, but there’s a risk of contribution sprawl. If I simplify things, particularly with the asymmetric encoder, I can see a score around 7.2 or so.
+**Deciding on the score**
+
+I'm considering giving a score of 6 because there are too many components, like the class prototype bank, asymmetric encoder, and proto-exclusion schedules, which complicates the proposal relative to its main claims. However, these all play a role in the mechanism. The proposal intentionally avoids fine-tuning due to small data. This makes sense as it sticks to constraints. Still, I think a score of 8 is more fitting overall, as these constraints shape the techniques used.
+**Evaluating feasibility and budget constraints**
+
+I’m noticing the budget conflict regarding GPU hours! The anchor suggests a budget of 50 GPU-h for the project, but the proposal estimates it to be 90 GPU-h, which is a direct problem for feasibility. Also, there’s a mix-up with the GPUs; it looks like I might have assumed six are available, but it’s only two. To adjust, I may need to scale back significantly, streamlined to one pilot, and reduce risks. A score around 5 or 6 seems likely due to these limitations.
+**Analyzing visual evidence chain and proposal**
+
+I’m finding that the visual evidence chain with five blocks is too heavy for an early-stage proposal. The anchor wants specific metrics and features, but that makes it feel overdone. I'll need to cut down to three required visuals and include essential ablations like warm-up and τ sweeps. For a score, I'm leaning towards a 6 because the main experiments seem bloated. I need to mention folding some visuals into probes. Venue readiness is a concern; it might fit better in a workshop rather than a top venue.
+**Evaluating dataset constraints and novelty**
+
+I’m noticing a challenge with the datasets and backbone being small and lacking pretraining, which can make the approach feel dated. The problem is that while the method might still be accepted by top venues if the conceptual novelty is strong, the evidence package could fall short. I’m leaning towards a score of 5 or 6, which might even be below 7. I think I need to focus on fixing the method rather than adding extra experiments unless they’re absolutely core to the proposal.
+**Evaluating strategies for trunk modifications**
+
+I’m thinking through a couple of options to propose a better strategy for C0. I could freeze the trunk from orth_only at R200 and introduce lightweight style branch losses, keeping the trunk unchanged for 20-30 rounds. If Office still shows improvement, this method might work without altering the trunk. Alternatively, I could directly measure leakage from domain/class in the trunk versus style by training probes on certain stats over rounds, but they seem to want minimal intervention.
+**Evaluating representation methods**
+
+The branch serves as a regularizer on representation geometry rather than a direct anti-contamination mechanism. While that's fine if framed just right, the current narrative might be overstating its importance. I need to mention this. The novelty claim is that it's the "first to treat the domain as a shared federated object," which could be defensible compared to cited methods. However, top venues may want a broader literature survey. I'll hold off on browsing unless absolutely necessary since the user's question doesn’t require it.
+**Simplifying model contributions**
+
+I see a way to simplify the process while maintaining quality. Currently, I have a method that's a bit specific, but it could be generalized by conceptualizing the contribution as `Pd in R^{D×128}`, where D represents domains. This would be cleaner and align with PACS/Office setup. It also gets rid of the weirdness around concatenation. I wonder if there's a way to leverage pretrained VLM for domain text embeddings, but that might not fit since there’s no pretraining.
+**Evaluating modernization opportunities**
+
+It seems like there’s currently no option under the existing anchor. However, if the anchor were relaxed later, I could suggest using frozen VLM-style tokens as domain anchors instead of diffusion methods. But since the current anchor restricts pretraining, that's not part of the main review. I might want to add a couple of optional suggestions if they truly provide improvements. The user wants clarity on whether the LLM/VLM/diffusion route is better, and I’d say none are viable under the current anchor.
+**Assessing problem fidelity**
+
+I’m thinking the importance of detachment and how evidence points elsewhere. Would a score of 6 be more accurate? The user’s anchor mentions that the trunk-freeze diagnostic needs to happen before any architecture-level investment, and the proposal addresses this, staying on the same baseline. So perhaps the Problem Fidelity should be an 8. However, the method might not align perfectly with the evidence-supported bottleneck. Still, it does address the original issue, so it retains its relevance.
+**Evaluating venue readiness**
+
+I need to focus on the issue at hand: the current story seems too much like "another disentanglement system." The dominant claim gets diluted due to auxiliary components, like the sem proto and schedule machinery. I think the key is to tighten the focus on one clear claim: that using a domain prototype as a shared federated object improves cross-domain FL. I should also clarify essential elements and potentially downscore to a 6.5 or 7 for overall clarity.
+**Exploring simplification opportunities**
+
+I think I need to consider enhancing frontier leverage but with an appropriate conservatism. The VLM/diffusion route might violate anchors and not bring much improvement. I should also mention that there are no notable modernization opportunities. Regarding simplification, I see a couple of options. First, I could delete `L_sem_proto` from the initial paper and use existing class centroids. Second, I want to suggest making `Pd` a domain-indexed bank instead of a per-client concat for a cleaner, more efficient implementation.
+**Structuring findings**
+
+I’m considering a structured approach for presenting findings in a concise format. It might include a table for scores, sections for main findings, and opportunities for simplification and modernization. 
+
+For the below-7 fixes, I think a numbered list with individual weakness, fix, and priority could work without nesting bullets. I could also use paragraphs for each dimension.
+
+Overall, I'd like to calculate an average score and mention it clearly, ensuring everything is straightforward and easy to read!
+**Deciding on scoring**
+
+The user’s question about a score from 1 to 10 makes me think decimals could be acceptable. I might consider rounding to 7.0, but the weighted formula actually suggests using decimals. I’m leaning towards presenting the score as 6.8/10. It feels important to ensure that this scoring reflects fairness and accuracy. I want to make sure I'm being precise and transparent about the methodology used for the evaluation!
+**Assessing feasibility and validation**
+
+I'm considering how adding FM components might violate the anchor or make the paper too complex while weakening the causal narrative. The method might be trainable, but it’s not feasible with the current GPU budget and could overwhelm the pilot study. I have the right instincts about gate and core ablations; however, the existing test doesn’t effectively validate the hypothesis, and the visual plan seems overly complex. Simplifying could make it a strong submission, but I need to tread carefully with claims about novelty.
+**Evaluating simplification and scoring**
+
+I'm thinking about the "Frontier leverage" score and considering if it should be a 9, but overall a 6.9 feels more accurate. An 8 might suffice, though. I need to mention "modernization opportunities," but maybe there's one route: relaxing the anchor could allow a frozen VLM to swap AlexNet stats with style tokens. However, if under the anchor, the FM route won't clearly produce a better paper, so I should include that in my score rationale. I also want to note three simplification opportunities to enhance the paper.
+**Clarifying method specifications**
+
+I need to clarify that `taps.detach()` doesn’t repair the shared trunk directly, so I should frame it as a prototype-space regularizer instead of a trunk decontamination mechanism. There's also some engineering ambiguity with aspects like `Pd`, `Pc`, normalization, and gradient flow that aren't tightly specified yet. The compute and validation plan seems too extensive for the anchor and budget provided, which is important. I should also formulate specific fixes for the method.
+**Revising conceptual frameworks**
+
+I think I need to mention that the C0 gate should be both a prerequisite and a hard kill, which is good design. I wonder if we should rethink the overall approach, especially if the actual issue is capacity or if the method fails to address it. However, since there's a kill gate and the prototype idea is interesting, I would recommend revising instead of rethinking. We need sharper causal gating and a simpler mechanism. Also, I’m considering if the Problem Fidelity and Contribution Quality scores need adjustment.
+**Assessing contribution sprawl**
+
+I think the method includes components like the `Pc` bank, `L_sem_proto`, asym encoder, Bell schedule, and MSE anchor, which feels like it’s bordering on contribution sprawl. Considering the review principle that favors the smallest adequate mechanism while penalizing parallel contributions, it seems the proposal might lose points in this area. Maybe a score of 6 would be better aligned with these considerations, acknowledging the complexity without being overly generous.
+**Revising contributions**
+
+I’m calculating contributions, trying to get the numbers right. It seems like I need revisions, especially with a quality target below 7. I think I should delete `L_sem_proto` and keep the asym encoder as a supporting tool, focusing on one clear claim only.
+
+It looks like the asymmetric stat encoder is acceptable as a supporting inductive bias, but the second contribution from `L_sem_proto/Pc` isn’t necessary if presented as a novelty. So, contribution quality might sit at 6, needing fixes to better align with the user's emphasis on elegance.
+**Evaluating contribution quality**
+
+I see that I can derive `Pc` from existing semantic embeddings without it needing its own contribution or training loss. Introducing `L_sem_proto` and the fed-proto-style EMA class bank feels excessive, as it's adding a secondary idea that isn’t essential for the main claim. So, I'm scoring the contribution around a 6. There are opportunities for simplification, leading to an overall score of about 6.5, which might seem tough but is fair for an early-stage assessment. I’ll clarify the score rationales and consider how removing `sem proto` could impact feasibility.
+**Assessing method characteristics**
+
+I’m evaluating several aspects: 
+
+For Method Specificity, I’m scoring it a 6. There’s a solid framework, but it's lacking clear operational definitions and gradient interfaces. Contribution Quality also gets a 6 since there’s a real dominant idea, but the current method is overcomplicated. The asym encoder is okay as support, but combining `Pc + L_sem_proto` feels like unnecessary expansion.
+
+Finally, Frontier Leverage scores an 8. A conservative choice seems fitting here, and the FM route doesn’t really fit naturally.
+**Evaluating contribution importance**
+
+Focusing on the contribution at a top venue is important, or maybe even critical, because if it's not clear, the paper could feel unfocused. However, there are already several critical elements. I think it's important to highlight method-level changes, and contribution quality needs to be considered too. While the venue's readiness seems minor or important, I should emphasize validation focus as it aligns with the user's priorities. I'll mention opportunities for simplification and avoid violating core principles, noting there are no additions that complicate understanding.
+**Clarifying proposal details**
+
+I think I can just note `NONE` under the current anchor, possibly adding a short sentence for clarity. I should include “Drift Warning: NONE” because the proposal keeps focusing on the anchored problem. The only drift trigger I see is continuing BiProto after a negative C0 gate. So, it seems like everything aligns well, which is good! I’ll make sure my wording is clear and concise to avoid confusion.
+**Deciding on method adjustments**
+
+I’m thinking about removing `L_sem_proto` from the core method unless it’s really needed. I’ll compute `Pc` using running centroids from `z_sem`, specifically for exclusion purposes. The paper should focus on claiming one mechanism, which is the federated domain prototype, along with proto-level class-domain exclusion. Let’s keep things streamlined and ensure the methodology serves its purpose efficiently. Clarity will be key in presenting these ideas effectively!
+**Finalizing response development**
+
+I'm considering that the standard AlexNet counts are used, so I want to avoid overassumptions. I need to highlight the "Pd concat per-round" as benchmark-specific since it's related to a single client or domain. There's a challenge since the sandbox is read-only, and since the user asked for a review, I won't need to use tools again. I'll ensure my final answer doesn't overly quote from any sources. Now, let’s craft a polished response!
+codex
+**Main Findings**
+- The proposal is still anchored to the real problem. It keeps the same datasets, backbone, constraints, and hard success criterion, and it includes a kill gate before committing to a bigger architecture.
+- The strongest issue is not drift; it is mismatch between the claimed causal story and the actual intervention. With `taps.detach()`, `L_sty_proto` does not repair the shared trunk directly, so the method is more honestly a prototype-space regularizer than a trunk decontamination mechanism.
+- The dominant idea is good: make domain a federated prototype object and enforce class-domain exclusion in prototype space. The proposal becomes much sharper if everything else is subordinated to that.
+- The current plan is too large for the stated budget and still under-specified at the interfaces that would decide whether implementation is stable.
+
+**Scores**
+
+| Dimension | Score | Rationale |
+|---|---:|---|
+| Problem Fidelity | 8 | Still attacks the anchored Office/PACS bottleneck and does not switch to an easier problem. |
+| Method Specificity | 6 | Concrete skeleton exists, but key interfaces and gradient/update rules are still ambiguous. |
+| Contribution Quality | 6 | There is one real central mechanism, but `Pc + L_sem_proto` makes the contribution feel broader than necessary. |
+| Frontier Leverage | 8 | Avoiding VLM/Diffusion/LLM components is appropriate under the no-pretraining, small-scale anchor. |
+| Feasibility | 5 | Current compute plan violates the stated budget and introduces too many knobs at once. |
+| Validation Focus | 6 | Good instincts on gating and ablations, but C0 is not a clean causal test and the visual package is oversized. |
+| Venue Readiness | 6 | Promising direction, but not yet sharp enough for NeurIPS/ICML/ICLR main-track standards. |
+
+**OVERALL SCORE: 6.5 / 10**
+
+**Dimensions Below 7**
+
+**Method Specificity — 6/10**  
+Weakness: `Pd`/`Pc` update rules, normalization, missing-class handling, partial-participation behavior, gradient flow, and inference usage are not specified tightly enough. The `detach` choice also weakens the stated “clean the trunk” interpretation.  
+Fix: Define `Pd ∈ R^{D×128}` and `Pc ∈ R^{C×128}` explicitly, with update equations, L2-normalization, and no-op rules for missing classes/domains. State exact statistic encoder input shape, whether stats are pre/post-activation, and provide a one-line gradient-flow table showing which loss touches which module.  
+Priority: CRITICAL
+
+**Contribution Quality — 6/10**  
+Weakness: The real novelty is `Pd + proto-level exclusion`, but `Pc + L_sem_proto` risks turning the paper into a broader dual-prototype system. The asymmetric encoder is fine as support, but should not become a co-equal contribution.  
+Fix: Keep the asymmetric statistic encoder as enabling infrastructure only. Remove `L_sem_proto` from the core method unless it is clearly indispensable; use `Pc` as running class centroids from `z_sem` for exclusion, not as a second headline mechanism.  
+Priority: IMPORTANT
+
+**Feasibility — 5/10**  
+Weakness: The proposal says `≤90–100 GPU-h` while the anchor says `≤50 GPU-h`. It also introduces `Pc`, `Pd`, two proto losses, exclusion, Bell schedule, MSE anchor, and `α`-sparsity at once in a setting with known InfoNCE instability.  
+Fix: Stage-gate aggressively. First pilot should be Office only, seed 2, starting from `orth_only`, with only `Pd + asymmetric encoder + proto_excl`. Do not add `L_sem_proto` in round 0. Promote to 3 seeds and PACS only after a positive Office pilot.  
+Priority: CRITICAL
+
+**Validation Focus — 6/10**  
+Weakness: C0 is right in spirit but weak as a causal diagnostic: head-only retraining does not cleanly test “CE polluted trunk vs aggregation/outlier.” The visual plan has expanded beyond the required evidence package.  
+Fix: Replace C0 with a matched intervention test: start from `orth_only`, freeze `encoder_sem`, add only `encoder_sty + Pd + proto_excl`, and run 20–30 Office rounds. If that branch cannot move Office, kill it. Collapse visuals to exactly three suites: `t-SNE`, `probe ladder`, and merged `prototype/feature metrics`.  
+Priority: IMPORTANT
+
+**Venue Readiness — 6/10**  
+Weakness: On PACS/Office + AlexNet, the only way this lands as a top-venue paper is with extreme sharpness. Right now it still reads like a moderately complex disentanglement variant rather than one crisp mechanism.  
+Fix: Center the paper on one sentence: “domain should be a shared federated prototype object.” Make `Pd` domain-indexed rather than client-concat-specific, and demote all other components to support for that claim.  
+Priority: IMPORTANT
+
+**Simplification Opportunities**
+1. Delete `L_sem_proto` from the first paper and keep `Pc` only as EMA class centroids used inside `L_proto_excl`.
+2. Replace “per-client concat `Pd`” with a domain-indexed bank. On PACS/Office this is the same implementation in practice, but it is cleaner and less benchmark-specific.
+3. Do not ship Bell + MSE + `α`-sparsity by default. Start with Bell + one anchor term; add the third stabilizer only if pilot collapse actually appears.
+
+**Modernization Opportunities**
+NONE under the current anchor. A frozen VLM or diffusion prior would mostly violate the no-pretraining regime and widen the paper without improving the core claim.
+
+**Drift Warning**
+NONE at the proposal level. The only drift risk is procedural: if C0 is negative and BiProto is pursued anyway, the work becomes a cleaner disentanglement story rather than a solution to the anchored Office bottleneck.
+
+**Verdict**
+REVISE
+
+The direction is promising, and the `Pd` idea is the right level of mechanism novelty. But the proposal is not yet tight enough: it needs a cleaner causal gate, fewer moving parts, stricter interface specification, and a method story centered on one contribution rather than a dual-prototype system.
+tokens used
+28,055
+**Main Findings**
+- The proposal is still anchored to the real problem. It keeps the same datasets, backbone, constraints, and hard success criterion, and it includes a kill gate before committing to a bigger architecture.
+- The strongest issue is not drift; it is mismatch between the claimed causal story and the actual intervention. With `taps.detach()`, `L_sty_proto` does not repair the shared trunk directly, so the method is more honestly a prototype-space regularizer than a trunk decontamination mechanism.
+- The dominant idea is good: make domain a federated prototype object and enforce class-domain exclusion in prototype space. The proposal becomes much sharper if everything else is subordinated to that.
+- The current plan is too large for the stated budget and still under-specified at the interfaces that would decide whether implementation is stable.
+
+**Scores**
+
+| Dimension | Score | Rationale |
+|---|---:|---|
+| Problem Fidelity | 8 | Still attacks the anchored Office/PACS bottleneck and does not switch to an easier problem. |
+| Method Specificity | 6 | Concrete skeleton exists, but key interfaces and gradient/update rules are still ambiguous. |
+| Contribution Quality | 6 | There is one real central mechanism, but `Pc + L_sem_proto` makes the contribution feel broader than necessary. |
+| Frontier Leverage | 8 | Avoiding VLM/Diffusion/LLM components is appropriate under the no-pretraining, small-scale anchor. |
+| Feasibility | 5 | Current compute plan violates the stated budget and introduces too many knobs at once. |
+| Validation Focus | 6 | Good instincts on gating and ablations, but C0 is not a clean causal test and the visual package is oversized. |
+| Venue Readiness | 6 | Promising direction, but not yet sharp enough for NeurIPS/ICML/ICLR main-track standards. |
+
+**OVERALL SCORE: 6.5 / 10**
+
+**Dimensions Below 7**
+
+**Method Specificity — 6/10**  
+Weakness: `Pd`/`Pc` update rules, normalization, missing-class handling, partial-participation behavior, gradient flow, and inference usage are not specified tightly enough. The `detach` choice also weakens the stated “clean the trunk” interpretation.  
+Fix: Define `Pd ∈ R^{D×128}` and `Pc ∈ R^{C×128}` explicitly, with update equations, L2-normalization, and no-op rules for missing classes/domains. State exact statistic encoder input shape, whether stats are pre/post-activation, and provide a one-line gradient-flow table showing which loss touches which module.  
+Priority: CRITICAL
+
+**Contribution Quality — 6/10**  
+Weakness: The real novelty is `Pd + proto-level exclusion`, but `Pc + L_sem_proto` risks turning the paper into a broader dual-prototype system. The asymmetric encoder is fine as support, but should not become a co-equal contribution.  
+Fix: Keep the asymmetric statistic encoder as enabling infrastructure only. Remove `L_sem_proto` from the core method unless it is clearly indispensable; use `Pc` as running class centroids from `z_sem` for exclusion, not as a second headline mechanism.  
+Priority: IMPORTANT
+
+**Feasibility — 5/10**  
+Weakness: The proposal says `≤90–100 GPU-h` while the anchor says `≤50 GPU-h`. It also introduces `Pc`, `Pd`, two proto losses, exclusion, Bell schedule, MSE anchor, and `α`-sparsity at once in a setting with known InfoNCE instability.  
+Fix: Stage-gate aggressively. First pilot should be Office only, seed 2, starting from `orth_only`, with only `Pd + asymmetric encoder + proto_excl`. Do not add `L_sem_proto` in round 0. Promote to 3 seeds and PACS only after a positive Office pilot.  
+Priority: CRITICAL
+
+**Validation Focus — 6/10**  
+Weakness: C0 is right in spirit but weak as a causal diagnostic: head-only retraining does not cleanly test “CE polluted trunk vs aggregation/outlier.” The visual plan has expanded beyond the required evidence package.  
+Fix: Replace C0 with a matched intervention test: start from `orth_only`, freeze `encoder_sem`, add only `encoder_sty + Pd + proto_excl`, and run 20–30 Office rounds. If that branch cannot move Office, kill it. Collapse visuals to exactly three suites: `t-SNE`, `probe ladder`, and merged `prototype/feature metrics`.  
+Priority: IMPORTANT
+
+**Venue Readiness — 6/10**  
+Weakness: On PACS/Office + AlexNet, the only way this lands as a top-venue paper is with extreme sharpness. Right now it still reads like a moderately complex disentanglement variant rather than one crisp mechanism.  
+Fix: Center the paper on one sentence: “domain should be a shared federated prototype object.” Make `Pd` domain-indexed rather than client-concat-specific, and demote all other components to support for that claim.  
+Priority: IMPORTANT
+
+**Simplification Opportunities**
+1. Delete `L_sem_proto` from the first paper and keep `Pc` only as EMA class centroids used inside `L_proto_excl`.
+2. Replace “per-client concat `Pd`” with a domain-indexed bank. On PACS/Office this is the same implementation in practice, but it is cleaner and less benchmark-specific.
+3. Do not ship Bell + MSE + `α`-sparsity by default. Start with Bell + one anchor term; add the third stabilizer only if pilot collapse actually appears.
+
+**Modernization Opportunities**
+NONE under the current anchor. A frozen VLM or diffusion prior would mostly violate the no-pretraining regime and widen the paper without improving the core claim.
+
+**Drift Warning**
+NONE at the proposal level. The only drift risk is procedural: if C0 is negative and BiProto is pursued anyway, the work becomes a cleaner disentanglement story rather than a solution to the anchored Office bottleneck.
+
+**Verdict**
+REVISE
+
+The direction is promising, and the `Pd` idea is the right level of mechanism novelty. But the proposal is not yet tight enough: it needs a cleaner causal gate, fewer moving parts, stricter interface specification, and a method story centered on one contribution rather than a dual-prototype system.

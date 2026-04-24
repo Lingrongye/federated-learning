@@ -1,0 +1,198 @@
+[Round 3 re-evaluation]
+
+I addressed the 3 CRITICAL + 2 IMPORTANT items from your Round 2 review (7.8/10 REVISE).
+
+Key changes in v3:
+1. **C0 gate fixed.** Now freezes encoder_sem ONLY; semantic_head and sem_classifier remain trainable. This means L_proto_excl gradient flows through semantic_head and can actually move Office accuracy. Baseline becomes matched head-only fine-tune (same checkpoint, same freeze scope, but without encoder_sty/Pd/L_proto_excl).
+
+2. **L_proto_excl uses hybrid axis via straight-through.** Forward value = federated Pd[d] (shared across clients), gradient flows through batch_domain_centroid via detach-reparametrization:
+   ```
+   domain_axis[d] = Pd[d].detach() + batch_centroid_d - batch_centroid_d.detach()
+   ```
+   Forward semantics match the headline (federated Pd), gradient has real training signal reaching encoder_sty. This closes the headline/implementation mismatch you flagged.
+
+3. **Pc completely demoted to monitor-only.** Removed from novelty table, removed from "dual bank" language. Now used only (a) in Vis-C for Pc-Pd cosine trajectory plots, and (b) as sparse-batch fallback for missing classes. The headline now reads: "federated domain prototypes excluded against online class centroids."
+
+4. **Sparse-batch rules specified.** Class axis for L_proto_excl:
+   - present_classes = {c : count_in_batch(c) >= 2}
+   - class c in present_classes: use batch-local centroid (has gradient)
+   - class c absent: fallback to Pc[c].detach() (no grad, EMA reference only)
+   This prevents singleton-class centroids from injecting variance.
+
+5. **Scope tightened.** Explicit statement that under PACS/Office D=K=4 (one client = one domain), Pd degenerates to per-client bank; domain-indexed formulation is a generalization to multi-client-per-domain setups, left to future work. Not oversold.
+
+6. **τ sweep moved out of core ablation**, only runs in S4 fallback if full method passes Office.
+
+Other aspects (Problem Anchor, backbone, budget structure, Bell+MSE safety valves, 3 Vis suites) unchanged from v2.
+
+=== REVISED PROPOSAL (v3) ===
+
+# FedDSA-BiProto v3: Federated Domain Prototype as a First-Class Shared Object
+
+## Problem Anchor (unchanged, verbatim from round-0)
+
+Bottom-line: Under AlexNet from scratch FL cross-domain (PACS / Office-Caltech10), 3-seed {2,15,333}×R200 mean AVG Best must strictly beat FDSE local reproduction (PACS > 79.91, Office > 90.58). Current orth_only: PACS 80.64 ✅ (+0.73), Office 89.09 ❌ (−1.49).
+
+Must-solve: Office −1.49 plus ≥+0.5; PACS ≥ 80.91. Non-goals: no dataset swap, no diagnostic paper, no module pile-up, no pretraining, no backbone swap. Constraints: ≤50 GPU-h pilot hard / ≤120 total; AlexNet + FedBN; PACS E=5 / Office E=1. Success: 3 visual evidence suites + accuracy targets.
+
+## Thesis (v3, single sentence)
+
+**Domain should be modeled as a first-class federated prototype object Pd, excluded in low-dimensional prototype space against online class centroids derived from the semantic encoder — yielding cross-domain semantic consistency without feature-level adversarial training.**
+
+## Contribution Focus (v3)
+
+- **Dominant (C1, ONLY headline)**: Federated Domain Prototype Pd ∈ ℝ^{D×d_z} with prototype-space exclusion against online class centroids via hybrid straight-through axis. First to model domain as a first-class federated object (Pd aggregated server-side across participating clients, used as the forward anchor of exclusion; gradient flows via batch centroid to encoder_sty).
+- **Enabling infrastructure (not contribution)**: Asymmetric statistic encoder_sty (~1M MLP on (μ,σ) taps). Structurally biased against encoding class information.
+- **Monitor only (not contribution)**: Pc = EMA class centroid, used for Vis-C plot and sparse-batch fallback.
+- **Non-contributions**: not MI-optimal, not communication efficient, no convergence, no cross-backbone, no DP, not trunk decontamination, not dual bank.
+
+## Method (v3)
+
+### Interface Specification
+
+Statistic encoder: Input (μ, σ) from conv1-3 BN-post pre-ReLU taps (detached). Architecture: Linear(in, 512) → LayerNorm → ReLU → Linear(512, 128). Output z_sty L2-normalized.
+
+z_sem source: semantic_head output (L2-normalized 128d), same representation fed to sem_classifier.
+
+Pd EMA update (server, domain-indexed, handles partial participation):
+```
+for d in range(D):
+    participating = {k : client_k participated AND domain(k) == d}
+    if participating:
+        agg_d = weighted_mean(client_means of participating)
+        Pd[d] = F.normalize(0.9 * Pd[d] + 0.1 * F.normalize(agg_d))
+    # else: no-op
+```
+
+Pc EMA update: identical structure, class-indexed. Used for monitoring + fallback, never as a loss target.
+
+L_proto_excl computation (client-side per batch):
+```
+present_classes = {c : count_in_batch(c) >= 2}
+present_domains = {d : count_in_batch(d) >= 2}  # usually 1 (single-client = single domain)
+
+# Class axis for all C classes
+for c in all_classes:
+    if c in present_classes:
+        class_axis[c] = F.normalize(mean z_sem_i where y_i==c)  # has grad
+    else:
+        class_axis[c] = Pc[c].detach()  # EMA fallback, no grad
+
+# Domain axis via hybrid straight-through
+for d in present_domains:
+    bc_d = F.normalize(mean z_sty_i where domain_i==d)  # has grad
+    domain_axis[d] = Pd[d].detach() + bc_d - bc_d.detach()
+    # Forward == Pd[d], gradient flows through bc_d to encoder_sty
+
+# Exclusion
+L_proto_excl = mean_{c, d} cos²(class_axis[c], domain_axis[d])
+```
+
+### Gradient-flow table (v3)
+
+| Module | L_CE | L_CE_aug | L_orth | L_sty_proto | L_proto_excl |
+|---|:-:|:-:|:-:|:-:|:-:|
+| encoder_sem | ✅ | ✅ | ✅ | ❌ (taps detach) | ✅ (via batch class centroid) |
+| semantic_head | ✅ | ✅ | ✅ | ❌ | ✅ |
+| sem_classifier | ✅ | ✅ | ❌ | ❌ | ❌ |
+| encoder_sty | ❌ | ❌ | ✅ | ✅ | ✅ (via ST through batch domain centroid) |
+| Pc, Pd | ❌ | ❌ | ❌ | ❌ (MSE stopgrad) | ❌ (EMA only, forward anchor via ST) |
+
+### Loss and Schedule (unchanged from v2)
+
+L = L_CE + L_CE_aug + λ₁·L_orth + λ₂·L_sty_proto + λ₃·L_proto_excl
+
+| Round | λ_orth | λ_sty_proto | λ_proto_excl | MSE coef |
+|:-:|:-:|:-:|:-:|:-:|
+| 0-49 | 1.0 | 0 | 0 | 0 |
+| 50-80 | 1.0 | 0→0.5 | 0→0.3 | 0.5 |
+| 80-150 | 1.0 | 0.5 | 0.3 | 0.5 |
+| 150-200 | 1.0 | 0.5→0 | 0.3 | 0.5 |
+
+Bell + MSE anchor. α-sparsity disabled by default, added only if pilot collapse.
+
+### FL Aggregation
+FedAvg all trainable modules (sem + sty sides). BN local. Pc/Pd server EMA. Comm overhead ≤ +2%.
+
+### Failure Modes
+- C0 fails → kill
+- z_sty collapse → add L_sty_norm_reg
+- InfoNCE late collapse → Bell ramp-down built-in; add α-sparsity if still collapses
+- Sparse class batches → present_classes ratio < 0.3 triggers reduced batch_size or full Pc fallback mode
+- Pd low separation → increase λ_sty_proto
+- L_proto_excl vs L_CE conflict → λ_proto_excl 0.3 → 0.1
+
+## Claim-Driven Validation (v3)
+
+### Claim 0 (FIXED GATE): C0 Matched Intervention
+- Load EXP-105 orth_only Office R200 seed=2 checkpoint
+- **Freeze encoder_sem ONLY** (fix from R2)
+- **semantic_head + sem_classifier TRAINABLE** (fix from R2)
+- Add encoder_sty + Pd + L_sty_proto + L_proto_excl, train Office R20-R30
+- Baseline: same checkpoint, same freeze (encoder_sem only), head-only fine-tune (no sty branch, no Pd, no L_proto_excl)
+- Decision:
+  - Δ ≥ +1.0pp (BiProto-lite vs head-only) → strong → S1
+  - Δ +0.3~+1.0pp → weak → proceed but temper
+  - Δ < +0.3pp → kill BiProto
+- Cost: 2 GPU-h
+
+### Claim 1 (DOMINANT): Stage-gated Accuracy
+- S1 Office seed=2 R200 smoke (4 GPU-h) → AVG Best ≥ 90.0
+- S2 Office 3-seed R200 (20 GPU-h) → 3-seed mean ≥ 91.08
+- S3 PACS 3-seed R200 (30 GPU-h) → 3-seed mean ≥ 80.91
+- S4 ablations (40 GPU-h):
+  - BiProto − Pd (use only batch-local centroid as domain axis) — test federated Pd value
+  - BiProto − encoder_sty (revert to symmetric style_head) — test asymmetric encoder value
+  - BiProto − L_proto_excl (only L_sty_proto) — test exclusion necessity
+- τ sweep not in core ablation (moved to fallback)
+- Kill: R50 collapse or R150 drop > 3pp
+
+### Claim 2 (SUPPORTING): 3-Suite Visual Evidence
+- Vis-A: t-SNE dual panel (z_sem by class / z_sty by domain) × 4 methods × silhouette quantification
+- Vis-B: Probe ladder (linear / MLP-64 / MLP-256 × 4 directions) table
+- Vis-C: Prototype + feature health (Pd separation trajectory + Pd⊥Pc cosine heatmap + z_sem/z_sty norm + effective rank + orth quality)
+
+## Compute Plan (unchanged from v2)
+
+| Stage | GPU-h |
+|---|:-:|
+| S0 fixed C0 | 2 |
+| S1 smoke | 4 |
+| S2 Office 3-seed | 20 |
+| S3 PACS 3-seed | 30 |
+| S4 ablations | 40 |
+| Vis | 2 |
+| **Total** | ≤ 98 |
+| **Pilot (S0+S1+S2)** | **≤ 26** under 50 GPU-h anchor |
+
+## Novelty Differentiation (v3, Pc removed)
+
+|  | Disent? | Federated Domain Prototype Pd? | Excl. level | Params |
+|---|:-:|:-:|:-:|:-:|
+| FedProto/FPL/FedPLVM/MP-FedCL/I2PFL | — | ❌ (class only) | — | 1× |
+| FedSTAR | FiLM | ❌ (style local not federated) | feature | 1.1× |
+| FDSE/FedDP/FedSeProto | erasure | ❌ (erase) | feature | ~1× |
+| FedFSL-CFRD | recon | ❌ | feature | 1.2× |
+| FedPall | ❌ | ❌ (class only) | feature adv | 1.1× |
+| FISC/PARDON | — | ❌ | — | 1× |
+| CDANN | GRL | ❌ | feature | ~1× |
+| **FedDSA-BiProto (v3)** | stat-encoder | ✅ **FIRST** | **proto (low-dim)** | **~1.02×** |
+
+Canonical claim: *"First federated prototype object representing domain as a first-class shared entity, via hybrid straight-through exclusion against online class centroids. Under PACS/Office setups with D=K=4, Pd degenerates to per-client bank; domain-indexed formulation is left as future work."*
+
+## Intentionally Excluded
+
+DomainNet, ResNet-18, DP, learnable τ/α, FINCH, GRL, HSIC, Kendall, L_sem_proto, Pc-as-contribution, dual-bank claim, trunk-decontamination claim.
+
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score the same 7 dimensions and overall
+- State whether the Problem Anchor is preserved
+- State whether the dominant contribution is now sharp enough
+- State whether the headline/implementation alignment is resolved (hybrid axis)
+- State whether the C0 gate is now valid (freeze encoder_sem only, head trainable)
+- Focus remaining critiques on any residual mechanism/claim/interface issues
+- Use same verdict rule: READY if >= 9 and no blocking issue
+
+Output 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items. English Markdown.

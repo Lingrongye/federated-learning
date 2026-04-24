@@ -1,0 +1,414 @@
+OpenAI Codex v0.123.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-24_feddsa-biproto-asym_v1
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dc056-e5fa-7fd2-8721-994c42c8b3ca
+--------
+user
+[Round 4 re-evaluation]
+
+I addressed all 5 Action Items from your Round 3 review (8.25/10 REVISE).
+
+Key changes in v4:
+
+**AI-1 (ST axis normalization)**: Specified exact form:
+```python
+bc_d = F.normalize(mean(z_sty[domain==d]), dim=-1)     # L2-norm, has grad
+raw = Pd[d].detach() + bc_d - bc_d.detach()             # forward = Pd[d], grad via bc_d
+domain_axis[d] = F.normalize(raw, dim=-1)                # final renormalize
+```
+Both Pd[d] and bc_d are already L2-normalized (per EMA update and centroid definition). The final F.normalize handles floating-point drift + gradient injection noise, ensuring cosine math is consistent. Gradient flows through F.normalize's Jacobian in tangent space on unit sphere, well-defined.
+
+**AI-2 (L_proto_excl averaging set)**: Pilot uses present_classes only, no absent-class fallback:
+- On Office (batch=50, K=10): P(class absent) ≈ (9/10)^50 ≈ 0.5%, rarely triggers.
+- On PACS (batch=50, K=7): P(class absent) ≈ (6/7)^50 ≈ 0.04%, almost never.
+- Absent-class Pc fallback moved to appendix as "robustness variant" for future sparse-data settings. Pc retained purely as Vis-C monitoring buffer, no loss involvement.
+- If all classes absent (impossible on Office/PACS with batch=50), L_proto_excl = 0 no-op.
+
+**AI-3 (Claim language + Limitations)**: Thesis and novelty table now explicitly scoped:
+- "To our knowledge, we are the first to maintain a federated domain prototype object Pd — a server-side EMA centroid across participating clients — and use it as the forward anchor of low-dimensional prototype-space class-domain exclusion via a straight-through hybrid gradient axis, empirically validated on D=K=4 benchmarks (PACS, Office-Caltech10) with full-scope generalization left as future work."
+- New Limitations section acknowledges: (a) D=K=4 implementation equivalence with per-client bank, disambiguation via −Pd ablation; (b) hybrid ST axis introduces mild estimator bias vanishing post-EMA convergence, monitored via Vis-C.
+
+**AI-4 (−Pd MANDATORY)**: Ablation table reordered. −Pd now MANDATORY regardless of budget (replaces domain_axis with F.normalize(bc_d) alone, removing federated EMA + ST). This is the key empirical test of "federated Pd vs local domain axis with server buffer" on D=K=4. If −Pd within 0.5pp of full BiProto, claim must weaken.
+
+**AI-5 (C0 role wording)**: C0 explicitly labeled as pruning test:
+- "Positive C0 is necessary but not sufficient for S1-S3 full R200 success: it shows the add-on can move Office at all, but does not prove that the mechanism continues to dominate under full end-to-end training or at R200 convergence. A negative C0 is sufficient to kill BiProto (no add-on value = no amount of full training can rescue the headline)."
+
+All other sections (Problem Anchor, method architecture, loss schedule, gradient-flow table, FL aggregation, 3-suite visual evidence, compute plan) unchanged from v3.
+
+=== REVISED PROPOSAL (v4) ===
+
+# FedDSA-BiProto v4: Federated Domain Prototype via Straight-Through Hybrid Exclusion
+
+## Problem Anchor (unchanged from round-0, verbatim)
+
+- Bottom-line: Under AlexNet from scratch FL cross-domain (PACS / Office-Caltech10), 3-seed {2,15,333}×R200 mean AVG Best must strictly beat FDSE local reproduction (PACS > 79.91, Office > 90.58). Current orth_only: PACS 80.64 ✅ (+0.73), Office 89.09 ❌ (−1.49).
+- Must-solve: Office −1.49pp recovery + ≥+0.5pp further; PACS ≥ 80.91.
+- Non-goals: no dataset swap / no diagnostic paper / no module pile-up / no pretraining / no backbone swap.
+- Constraints: ≤50 GPU-h pilot hard; ≤120 total; AlexNet + FedBN; PACS E=5 / Office E=1.
+- Success: 3-seed mean AVG Best targets + 3 visual evidence suites.
+
+## Thesis (v4)
+
+**To our knowledge, we are the first to maintain a federated domain prototype object Pd — a server-side EMA centroid across participating clients — and use it as the forward anchor of low-dimensional prototype-space class-domain exclusion via a straight-through hybrid gradient axis, empirically validated on D=K=4 benchmarks (PACS, Office-Caltech10) with full-scope generalization left as future work.**
+
+## Contribution Focus (v4)
+
+- **Dominant (C1, only headline)**: Federated Domain Prototype Pd ∈ ℝ^{D×d_z}, used as forward anchor of class-domain exclusion in prototype space via straight-through hybrid axis that routes gradient through batch-local centroids. Empirically validated on D=K=4.
+- **Enabling infra (not contribution)**: Asymmetric statistic encoder_sty (~1M MLP) for proper Pd input.
+- **Monitor only (not contribution)**: Pc = EMA class centroid, used for Vis-C plots only.
+- **Non-contributions**: not MI-optimal, not communication efficient, no convergence proof, no cross-backbone, no DP, not trunk decontamination, not dual bank.
+
+## Method
+
+### Interface Specification (v4, with ST normalization specified)
+
+**Statistic encoder_sty**:
+- Input: (μ, σ) from conv1-3 BN-post pre-ReLU taps, detached
+- Architecture: Linear(in, 512) → LayerNorm → ReLU → Linear(512, 128)
+- Output: z_sty ∈ ℝ^128, F.normalize L2
+
+**Pd EMA update (server, domain-indexed)**:
+```python
+for d in range(D):
+    participating = {k : client_k participated AND domain(k) == d}
+    if participating:
+        agg_d = weighted_mean(client_means of participating)
+        Pd[d] = F.normalize(0.9 * Pd[d] + 0.1 * F.normalize(agg_d), dim=-1)
+    # else: no-op
+```
+
+**Pc EMA update** (identical but class-indexed, monitor-only, no loss involvement)
+
+**L_proto_excl computation (v4, present-classes only, final ST form)**:
+```python
+present_classes = {c : count_in_batch(c) >= 2}
+present_domains = {d : count_in_batch(d) >= 2}
+
+if not present_classes or not present_domains:
+    L_proto_excl = 0.0  # no-op (almost never on Office/PACS batch=50)
+else:
+    class_axis = {c: F.normalize(mean(z_sem[y==c]), dim=-1) for c in present_classes}
+
+    domain_axis = {}
+    for d in present_domains:
+        bc_d = F.normalize(mean(z_sty[domain==d]), dim=-1)      # has grad
+        raw = Pd[d].detach() + bc_d - bc_d.detach()              # forward = Pd[d]
+        domain_axis[d] = F.normalize(raw, dim=-1)                # final renormalize
+
+    total = 0.0; count = 0
+    for c in present_classes:
+        for d in present_domains:
+            total += F.cosine_similarity(class_axis[c].unsqueeze(0), domain_axis[d].unsqueeze(0)).pow(2).squeeze()
+            count += 1
+    L_proto_excl = total / count
+```
+
+### Gradient-flow table (v4, unchanged from v3)
+
+| Module | L_CE | L_CE_aug | L_orth | L_sty_proto | L_proto_excl |
+|---|:-:|:-:|:-:|:-:|:-:|
+| encoder_sem | ✅ | ✅ | ✅ | ❌ (taps detach) | ✅ (via batch class centroid) |
+| semantic_head | ✅ | ✅ | ✅ | ❌ | ✅ |
+| sem_classifier | ✅ | ✅ | ❌ | ❌ | ❌ |
+| encoder_sty | ❌ | ❌ | ✅ | ✅ | ✅ (via ST through batch domain centroid) |
+| Pc, Pd | ❌ | ❌ | ❌ | ❌ (stopgrad in MSE) | ❌ (EMA only, ST anchor) |
+
+### Loss & Schedule (unchanged from v2/v3)
+
+L = L_CE + L_CE_aug + λ₁·L_orth + λ₂·L_sty_proto + λ₃·L_proto_excl
+
+| Round | λ_orth | λ_sty_proto | λ_proto_excl | MSE coef |
+|:-:|:-:|:-:|:-:|:-:|
+| 0-49 | 1.0 | 0 | 0 | 0 |
+| 50-80 | 1.0 | 0→0.5 | 0→0.3 | 0.5 |
+| 80-150 | 1.0 | 0.5 | 0.3 | 0.5 |
+| 150-200 | 1.0 | 0.5→0 | 0.3 | 0.5 |
+
+Bell + MSE; α-sparsity disabled by default.
+
+### FL Aggregation (unchanged)
+
+FedAvg (sem + sty sides). BN local. Pc/Pd server EMA. Comm ≤ +2%.
+
+## Claim-Driven Validation (v4)
+
+### Claim 0 (pruning test, role-tightened)
+
+**Setup**: Load EXP-105 orth_only Office R200 seed=2 checkpoint. **Freeze encoder_sem only**. semantic_head + sem_classifier trainable. Add encoder_sty + Pd + L_sty_proto + L_proto_excl, train Office R20-R30.
+
+**Baseline**: Same checkpoint, same freeze scope, head-only fine-tune without the add-on.
+
+**Role**: *C0 is a fast intervention pruning test, not a causal proof. Positive is necessary but not sufficient for S1-S3 R200 success. Negative is sufficient to kill BiProto.*
+
+**Decision**:
+- Δ ≥ +1.0pp → strong pruning signal → S1
+- Δ +0.3~+1.0pp → weak signal, proceed with tempered expectations
+- Δ < +0.3pp → **kill**
+
+**Cost**: 2 GPU-h
+
+### Claim 1 (stage-gated accuracy)
+- S1 Office seed=2 R200 smoke (4 GPU-h) → AVG Best ≥ 90.0
+- S2 Office 3-seed R200 (20 GPU-h) → 3-seed mean ≥ 91.08
+- S3 PACS 3-seed R200 (30 GPU-h) → 3-seed mean ≥ 80.91
+- S4 ablations (up to 40 GPU-h):
+  - **−Pd** (MANDATORY): domain_axis = F.normalize(bc_d) only, no Pd, no ST. Test federated Pd value.
+  - −L_proto_excl (RECOMMENDED)
+  - −encoder_sty (RECOMMENDED)
+  - τ sweep, MSE coef sweep (OPTIONAL, only if core passes)
+
+### Claim 2 (3-suite visual, unchanged)
+- Vis-A t-SNE dual panel × 4 methods × silhouette
+- Vis-B probe ladder 4×3
+- Vis-C prototype + feature health (Pd separation + Pd⊥Pc cosine heatmap + norm/rank + orth quality + Pd⊥bc cosine monitoring for ST bias verification)
+
+## Limitations (v4, new section)
+
+(a) Empirical validation scoped to D=K=4 (PACS, Office-Caltech10). Under this, domain-indexed Pd is implementation-equivalent to per-client prototype bank; conceptual distinction "federated domain object" vs "per-client centroid + server aggregation" cannot be fully empirically disambiguated. −Pd ablation partially addresses by comparing Pd-anchored hybrid ST vs batch-local-only centroid, but full validation requires D≠K benchmarks (e.g., DomainNet multi-client-per-domain), left as future work.
+
+(b) Hybrid straight-through axis introduces mild estimator bias: forward cosine against federated Pd[d], gradient from batch-local domain centroid. Bias vanishes as Pd and bc_d converge (EMA stabilizes), empirically verifiable via Vis-C Pd⊥bc_d cosine trajectory (expected near 1.0 post-R100).
+
+## Compute (unchanged)
+
+| Stage | GPU-h |
+|---|:-:|
+| S0 | 2 |
+| S1 smoke | 4 |
+| S2 Office 3-seed | 20 |
+| S3 PACS 3-seed | 30 |
+| S4 ablations (−Pd mandatory + others) | 40 |
+| Vis | 2 |
+| **Total** | ≤ 98 |
+| **Pilot (S0+S1+S2)** | **≤ 26** fits 50 GPU-h anchor |
+
+## Novelty Differentiation (v4, unchanged from v3)
+
+(Same table as v3, Pc removed, Pd as first-class novelty, exclusion level proto low-dim, params ~1.02×)
+
+## Intentionally Excluded
+
+DomainNet (scope), ResNet-18, DP, learnable τ/α, FINCH, GRL, HSIC, Kendall, L_sem_proto, Pc-as-contribution, dual-bank claim, trunk-decontamination claim, absent-class Pc-fallback (moved to appendix).
+
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score same 7 dimensions + overall
+- State whether Problem Anchor preserved
+- State whether ST normalization specification is now adequate
+- State whether C0 role wording is now accurate
+- State whether −Pd mandatory placement is the right call
+- State whether "to our knowledge" + Limitations sufficiently defuse D=K=4 concern
+- Verdict (READY threshold ≥ 9.0)
+
+Output 7 scores + overall + verdict + drift warning + simplification opportunities + modernization opportunities + remaining action items. English Markdown.
+
+codex
+Using the `code-review-excellence` review mindset again because this is still a mechanism-focused proposal review. I’m checking the v4 fixes against the exact blocking points from Round 3, then rescoring for anchor fidelity, mechanism clarity, and venue sharpness.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content -Path 'C:\\Users\\31279\\.agents\\skills\\code-review-excellence\\SKILL.md' -TotalCount 80" in D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-24_feddsa-biproto-asym_v1
+ succeeded in 1240ms:
+---
+name: code-review-excellence
+description: Master effective code review practices to provide constructive feedback, catch bugs early, and foster knowledge sharing while maintaining team morale. Use when reviewing pull requests, establishing review standards, or mentoring developers.
+---
+
+# Code Review Excellence
+
+Transform code reviews from gatekeeping to knowledge sharing through constructive feedback, systematic analysis, and collaborative improvement.
+
+## When to Use This Skill
+
+- Reviewing pull requests and code changes
+- Establishing code review standards for teams
+- Mentoring junior developers through reviews
+- Conducting architecture reviews
+- Creating review checklists and guidelines
+- Improving team collaboration
+- Reducing code review cycle time
+- Maintaining code quality standards
+
+## Core Principles
+
+### 1. The Review Mindset
+
+**Goals of Code Review:**
+
+- Catch bugs and edge cases
+- Ensure code maintainability
+- Share knowledge across team
+- Enforce coding standards
+- Improve design and architecture
+- Build team culture
+
+**Not the Goals:**
+
+- Show off knowledge
+- Nitpick formatting (use linters)
+- Block progress unnecessarily
+- Rewrite to your preference
+
+### 2. Effective Feedback
+
+**Good Feedback is:**
+
+- Specific and actionable
+- Educational, not judgmental
+- Focused on the code, not the person
+- Balanced (praise good work too)
+- Prioritized (critical vs nice-to-have)
+
+```markdown
+❌ Bad: "This is wrong."
+✅ Good: "This could cause a race condition when multiple users
+access simultaneously. Consider using a mutex here."
+
+❌ Bad: "Why didn't you use X pattern?"
+✅ Good: "Have you considered the Repository pattern? It would
+make this easier to test. Here's an example: [link]"
+
+❌ Bad: "Rename this variable."
+✅ Good: "[nit] Consider `userCount` instead of `uc` for
+clarity. Not blocking if you prefer to keep it."
+```
+
+### 3. Review Scope
+
+**What to Review:**
+
+- Logic correctness and edge cases
+- Security vulnerabilities
+- Performance implications
+- Test coverage and quality
+- Error handling
+- Documentation and comments
+- API design and naming
+- Architectural fit
+
+**What Not to Review Manually:**
+
+- Code formatting (use Prettier, Black, etc.)
+
+**Reviewing user request**
+
+I need to answer the user's request for a re-evaluation with scores. Since they’re not asking for the latest info, I might have to follow their requested format instead of using the web or local files. I should mention that, yes, the problem anchor is preserved, and overall, I might be aiming for a score around 8.8. I need to analyze the proposal thoroughly and consider all dimensions. Let's ensure we evaluate everything carefully!
+**Evaluating venue readiness**
+
+I think venue readiness might be around 7.5 due to limitations in novelty. I have weighted scores of PF 15, MS 25, CQ 25, FL 15, F 10, VF 5, VR 5. I might need to aim for around 8.6, but it seems I'm not ready for the main track yet. If I compute scores like PF 9, MS 9, CQ 8, and so on, I'd get around 8.45. I’ll need to mention that the normalization specs are adequate, but some concerns persist, especially regarding clarity on domains. Let’s highlight remaining action items!
+**Clarifying batch variance**
+
+Alright, I’m thinking about the scenario where there's one client per domain, and I'm getting local batches from that single client. In this case, `bc_d` would just be the mean over the entire batch. But I wonder if that might lead to a high variance. It seems important to look into how variance affects the overall results. I want to make sure I understand the implications this has on the data.
+**Deciding on scores**
+
+I'm thinking about the scores: for the first score, maybe a 9 but possibly down to 9.5 since the anchor is preserved. The second score might be around 9.0, as it's specific and implementable now, although I could note some minor details. For the third score, I'm considering an 8.5 due to one dominant contribution. The fourth score could be a solid 9.0, and for feasibility, I’m looking at 8.5 as it seems realistic. Validation focus is around 8.5 too.
+**Evaluating scoring rationale**
+
+I'm considering using one decimal per dimension, like 9.0, 9.0, 8.5, 9.0, 8.5, 8.5, and 8.0, which gives an overall score of 8.63. But the user asked for 7 scores—okay, let's keep that in mind. I need to address specific questions from the user. For instance, the problem anchor seems preserved, and the normalization spec appears adequate, along with accurate wording for roles and placements. However, I might need to incorporate a drift warning and explore simplification opportunities.
+codex
+**Summary**
+
+- **Problem Anchor:** **Preserved.** v4 still solves the original anchored problem under the original dataset/backbone/training constraints.
+- **ST normalization specification:** **Adequate now.** The final `F.normalize(raw)` makes the hybrid axis technically well-posed and keeps cosine geometry consistent.
+- **C0 role wording:** **Accurate now.** It is correctly framed as a pruning test, not a causal proof.
+- **`-Pd` mandatory placement:** **Yes, this is the right call.** On `D=K=4`, this is the key ablation that determines whether the paper is actually about a federated domain object.
+- **`to our knowledge` + Limitations for `D=K=4`:** **Sufficient for honest positioning, not sufficient to erase the venue risk.** It defuses overclaiming; it does not remove the narrow empirical scope.
+
+## Scores
+
+| Dimension | Score | Comment |
+|---|---:|---|
+| 1. Problem Fidelity | **9.0/10** | Still directly targets the Office gap without drifting into an easier problem. |
+| 2. Method Specificity | **9.0/10** | Interfaces, gradient path, EMA update, and exclusion computation are now concrete enough to implement cleanly. |
+| 3. Contribution Quality | **8.5/10** | One dominant mechanism now clearly leads; the paper is much tighter. |
+| 4. Frontier Leverage | **9.0/10** | Appropriate restraint. No missing FM-era component here. |
+| 5. Feasibility | **8.5/10** | Pilot plan is realistic and the mechanism is no longer overbuilt; remaining risk is empirical, not systems complexity. |
+| 6. Validation Focus | **9.0/10** | Stage-gated plan and ablation ordering are now disciplined and decision-relevant. |
+| 7. Venue Readiness | **8.0/10** | The story is now sharp, but top-venue readiness still depends on proving `Pd` matters under the benchmark-constrained `D=K=4` regime. |
+
+**Overall Score: 8.75 / 10**
+
+## Verdict
+
+**REVISE**
+
+This is the first version that feels close to a clean paper. The remaining gap is no longer “method confusion”; it is “can the evidence on PACS/Office actually support the federated novelty strongly enough?”
+
+## Drift Warning
+
+**NONE**
+
+## Simplification Opportunities
+
+1. Keep `-encoder_sty` as a secondary ablation if budget gets tight. The headline claim lives or dies on `-Pd` and `-L_proto_excl`, not on the infrastructure ablation.
+2. State explicitly that on PACS/Office local training, `present_domains` is effectively one domain per client batch. That removes one layer of conceptual overhead for readers.
+3. If the pilot is stable, do not introduce any extra stabilizers beyond `Bell + MSE`. The method is finally tight enough; keep it that way.
+
+## Modernization Opportunities
+
+**NONE**
+
+## Remaining Action Items
+
+1. **Specify `Pd` initialization and warm-start behavior exactly.** Say whether `Pd` is initialized from the first available client centroids during warmup or from zeros/random normalized vectors. This matters for reproducibility.
+2. **Pre-register the claim downgrade tied to `-Pd`.** You already say the claim must weaken if `-Pd` is within `0.5pp`; write the exact downgraded wording now so it cannot drift post hoc.
+3. **Define the `-encoder_sty` ablation precisely.** If you keep it, make sure it changes only the input/encoder inductive bias, not multiple factors at once.
+4. **Be explicit that the ST estimator is a biased but intentional training surrogate.** The limitations section is good; one sentence in the method should say this directly so reviewers do not think it is being hidden.
+
+v4 resolves the main mechanism and interface objections. The proposal is now coherent, implementable, and appropriately scoped. The remaining reason it is not `READY` is not a design flaw; it is that the venue case still depends on a narrow but crucial empirical question: whether `Pd` shows real value beyond a local domain-axis surrogate on `D=K=4` benchmarks.
+tokens used
+59,831
+**Summary**
+
+- **Problem Anchor:** **Preserved.** v4 still solves the original anchored problem under the original dataset/backbone/training constraints.
+- **ST normalization specification:** **Adequate now.** The final `F.normalize(raw)` makes the hybrid axis technically well-posed and keeps cosine geometry consistent.
+- **C0 role wording:** **Accurate now.** It is correctly framed as a pruning test, not a causal proof.
+- **`-Pd` mandatory placement:** **Yes, this is the right call.** On `D=K=4`, this is the key ablation that determines whether the paper is actually about a federated domain object.
+- **`to our knowledge` + Limitations for `D=K=4`:** **Sufficient for honest positioning, not sufficient to erase the venue risk.** It defuses overclaiming; it does not remove the narrow empirical scope.
+
+## Scores
+
+| Dimension | Score | Comment |
+|---|---:|---|
+| 1. Problem Fidelity | **9.0/10** | Still directly targets the Office gap without drifting into an easier problem. |
+| 2. Method Specificity | **9.0/10** | Interfaces, gradient path, EMA update, and exclusion computation are now concrete enough to implement cleanly. |
+| 3. Contribution Quality | **8.5/10** | One dominant mechanism now clearly leads; the paper is much tighter. |
+| 4. Frontier Leverage | **9.0/10** | Appropriate restraint. No missing FM-era component here. |
+| 5. Feasibility | **8.5/10** | Pilot plan is realistic and the mechanism is no longer overbuilt; remaining risk is empirical, not systems complexity. |
+| 6. Validation Focus | **9.0/10** | Stage-gated plan and ablation ordering are now disciplined and decision-relevant. |
+| 7. Venue Readiness | **8.0/10** | The story is now sharp, but top-venue readiness still depends on proving `Pd` matters under the benchmark-constrained `D=K=4` regime. |
+
+**Overall Score: 8.75 / 10**
+
+## Verdict
+
+**REVISE**
+
+This is the first version that feels close to a clean paper. The remaining gap is no longer “method confusion”; it is “can the evidence on PACS/Office actually support the federated novelty strongly enough?”
+
+## Drift Warning
+
+**NONE**
+
+## Simplification Opportunities
+
+1. Keep `-encoder_sty` as a secondary ablation if budget gets tight. The headline claim lives or dies on `-Pd` and `-L_proto_excl`, not on the infrastructure ablation.
+2. State explicitly that on PACS/Office local training, `present_domains` is effectively one domain per client batch. That removes one layer of conceptual overhead for readers.
+3. If the pilot is stable, do not introduce any extra stabilizers beyond `Bell + MSE`. The method is finally tight enough; keep it that way.
+
+## Modernization Opportunities
+
+**NONE**
+
+## Remaining Action Items
+
+1. **Specify `Pd` initialization and warm-start behavior exactly.** Say whether `Pd` is initialized from the first available client centroids during warmup or from zeros/random normalized vectors. This matters for reproducibility.
+2. **Pre-register the claim downgrade tied to `-Pd`.** You already say the claim must weaken if `-Pd` is within `0.5pp`; write the exact downgraded wording now so it cannot drift post hoc.
+3. **Define the `-encoder_sty` ablation precisely.** If you keep it, make sure it changes only the input/encoder inductive bias, not multiple factors at once.
+4. **Be explicit that the ST estimator is a biased but intentional training surrogate.** The limitations section is good; one sentence in the method should say this directly so reviewers do not think it is being hidden.
+
+v4 resolves the main mechanism and interface objections. The proposal is now coherent, implementable, and appropriately scoped. The remaining reason it is not `READY` is not a design flaw; it is that the venue case still depends on a narrow but crucial empirical question: whether `Pd` shows real value beyond a local domain-axis surrogate on `D=K=4` benchmarks.

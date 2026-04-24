@@ -1,0 +1,40 @@
+# FedDSA-BiProto S0 Matched-Intervention Gate (Office)
+# 加载 orth_only Office ckpt, freeze encoder_sem only, 加 BiProto 支路训 R30
+# 用于判 BiProto 是否值得启动 (Δ ≥ +0.3 才进 S1)
+algo_para:
+- 1.0    # [0]  lo  = lambda_orth (always on)
+- 0.0    # [1]  lh  = lambda_hsic (off, EXP-017 已证伪)
+- 1.0    # [2]  ls  = lambda_sem legacy (不用)
+- 0.2    # [3]  tau legacy
+- 5      # [4]  sdn = style_dispatch_num (legacy)
+- 128    # [5]  pd  = proj_dim
+- 0      # [6]  sm  = schedule_mode (0=orth_only base, BiProto 自己有 schedule)
+- 60     # [7]  bp  legacy
+- 30     # [8]  bw  legacy
+- 80     # [9]  cr  legacy
+- 0      # [10] gli = grad_log_interval (off, S0 短跑不需要)
+- 1.0    # [11] lm  legacy
+# ---- BiProto-specific (10 items) ----
+- 0.5    # [12] lp  = lambda_sty_proto peak
+- 0.3    # [13] le  = lambda_proto_excl peak
+- 0.1    # [14] tp  = tau_proto (InfoNCE temperature)
+- 0.5    # [15] mc  = mse_coef
+- 5      # [16] ws  = warmup_start (R30 short run, 5 rounds warmup)
+- 10     # [17] we  = warmup_end
+- 25     # [18] rd  = ramp_down (R30 中 R25 后 ramp down)
+- 0.9    # [19] emd = ema_decay
+- 1      # [20] se  = save_endpoint (1 = save best ckpt)
+- 1      # [21] fz  = freeze_encoder_sem ★ S0 GATE 关键 flag
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 30
+num_epochs: 1
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

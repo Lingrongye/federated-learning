@@ -1,0 +1,365 @@
+OpenAI Codex v0.123.0 (research preview)
+--------
+workdir: D:\桌面文件\联邦学习\obsidian_exprtiment_results\refine_logs\2026-04-24_feddsa-biproto-asym_v1
+model: gpt-5.4
+provider: fox
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, C:\Users\31279\.codex\memories]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dc056-e5fa-7fd2-8721-994c42c8b3ca
+--------
+user
+[Round 2 re-evaluation]
+
+I revised the proposal based on your Round 1 feedback (score 6.5, REVISE).
+First, check whether the original Problem Anchor is still preserved.
+Second, judge whether the method is now more concrete, more focused, and more current.
+
+Key changes in v2:
+1. **Deleted L_sem_proto entirely.** Pc is now a derived EMA class centroid (no backward) used only as the "class axis" input for L_proto_excl. Loss count 6 → 5.
+2. **Demoted asymmetric statistic encoder to enabling infrastructure.** Single dominant contribution is now "Federated Domain Prototype Pd as a first-class shared object with prototype-level class-domain exclusion". One sentence thesis: "domain should be modeled as a first-class federated prototype object Pd, dual to class prototype Pc, with their mutual exclusion enforced in prototype space."
+3. **Pd redefined as domain-indexed bank Pd ∈ ℝ^{D×d_z}** (was "per-client concat"). In PACS/Office the implementation is equivalent, but semantics generalize.
+4. **Narrative reframe: "trunk decontamination" → "proto-space geometric exclusion".** Honestly acknowledges that `taps.detach()` means L_sty_proto does NOT repair the trunk; the mechanism is that on-the-fly class centroid (from z_sem) and domain centroid (from z_sty) are geometrically pushed apart in proto space, which INDIRECTLY forces encoder_sem's learned class representation to be orthogonal to domain axis.
+5. **L_proto_excl computed on batch-local on-the-fly centroids** (not EMA Pc/Pd), so it has real gradient to both encoder_sem and encoder_sty. EMA Pc/Pd kept as long-term stable reference for monitoring only.
+6. **C0 gate replaced with matched intervention test**: frozen encoder_sem + add encoder_sty + Pd + L_proto_excl, Office R20-30 from orth_only checkpoint. Kill if < +0.3 pp over head-only retrain baseline. This directly tests whether the proposed add-on can move Office at all.
+7. **Safety valve simplified**: Bell schedule + MSE anchor only. α-sparsity default off, added only if pilot collapse appears.
+8. **Visual suite compressed 5→3**: (A) t-SNE dual panel, (B) probe ladder 4×3, (C) merged prototype + feature health + orth-quality matrix.
+9. **Budget stage-gated**: S0+S1+S2 (Office gate+smoke+3seed) ≤ 26 GPU-h fits under the 50 GPU-h anchor; full program incl. ablation ≤ 98 GPU-h, only pursued if Office passes.
+10. **Interface Specification section added**: precise Pd/Pc EMA update equations, statistic encoder I/O shapes, L2-normalization, partial-participation no-op rules, full gradient-flow table.
+
+=== REVISED PROPOSAL (v2) ===
+
+# FedDSA-BiProto: Federated Domain Prototype as a First-Class Shared Object for Cross-Domain Learning
+
+## Problem Anchor (unchanged from round-0)
+
+- Bottom-line: Under AlexNet from scratch FL cross-domain (PACS / Office-Caltech10), 3-seed {2,15,333}×R200 mean AVG Best must strictly beat FDSE local reproduction (PACS > 79.91, Office > 90.58). Current orth_only: PACS 80.64 ✅ (+0.73), Office 89.09 ❌ (−1.49).
+- Must-solve: Office must recover −1.49pp plus ≥+0.5pp further; PACS must not regress (≥80.91).
+- Non-goals: no dataset swap, no diagnostic paper, no module pile-up, no pretraining, no backbone swap.
+- Constraints: 4090/3090 GPUs, ≤50 GPU-h pilot hard, ≤120 total incl ablation; AlexNet + FedBN; PACS E=5 / Office E=1; 1 week.
+- Success: 3-seed mean AVG Best PACS ≥ 80.91 AND Office ≥ 91.08; no Last regression; 3 visual evidence suites delivered.
+
+## Thesis (single sentence)
+
+**Domain should be modeled as a first-class federated prototype object Pd, dual to class prototype Pc, with their mutual exclusion enforced in low-dimensional prototype space — this replaces feature-level adversarial/MI-minimization routes (CDANN/FedDP/FedSeProto), which are falsified in our setup.**
+
+## Contribution Focus
+
+- **Dominant (C1, ONLY headline)**: Federated Domain Prototype Pd ∈ ℝ^{D×d_z} with prototype-level class-domain cosine exclusion. First to model domain as a first-class federated shared object dual to class. Mechanism: on-the-fly batch-local class/domain centroids pushed orthogonal in proto space; EMA Pc/Pd as stable cross-round references.
+- **Enabling infrastructure (NOT a co-equal contribution)**: Asymmetric statistic encoder (~1M MLP on (μ,σ) stats). Provides proper input representation to Pd; structurally cannot encode class discriminative signal.
+- **Explicit non-contributions**: not claiming MI-optimal, not claiming communication efficiency, no convergence proof, no cross-backbone, no DP, **not claiming trunk decontamination**.
+
+## Method
+
+### Complexity Budget
+- encoder_sem (60M, inherit orth_only, unchanged): trained by L_CE + L_CE_aug + L_orth + L_proto_excl (via batch class centroid)
+- semantic_head, sem_classifier (inherit)
+- BN running stats local (FedBN)
+- style bank (μ,σ) AdaIN inherit
+- **encoder_sty (new, ~1M)**: 2-layer MLP + LayerNorm on concat of (μ,σ) from conv1-3 pre-activation taps. Taps `.detach()` so L_sty_proto does NOT backprop to encoder_sem.
+- **Pc (new, derived)**: EMA class centroid from z_sem, no-backward buffer
+- **Pd (new, core)**: EMA domain centroid from z_sty, no-backward buffer
+- **L_sty_proto (new)**: InfoNCE(z_sty, Pd, domain) + 0.5·MSE(z_sty, stopgrad(Pd[d])). Trains encoder_sty for domain discrimination.
+- **L_proto_excl (new)**: cos²(batch_class_centroid(z_sem), batch_domain_centroid(z_sty)) over all (class, domain) pairs. Has real gradient to both encoders; EMA Pc/Pd only for monitoring.
+- Deleted: L_sem_proto, α-sparsity default off.
+
+### Interface Specification
+
+Statistic encoder input: concat of per-channel (μ, σ) from conv1-3 BN-post pre-ReLU, detach before input. Output: z_sty ∈ ℝ^128, L2 normalized.
+
+Pc update (server-side, after each round):
+```
+For each class c:
+  If any participating client has class c:
+    aggregated_c = weighted_mean over participating clients of client_class_c_mean
+    Pc[c] ← m · Pc[c] + (1-m) · F.normalize(aggregated_c)
+  Else:
+    Pc[c] ← Pc[c]  (no-op)
+Broadcast Pc.
+```
+
+Pd update: identical structure, indexed by domain (d) instead of class.
+
+Gradient-flow table:
+| Module | L_CE | L_CE_aug | L_orth | L_sty_proto | L_proto_excl |
+|---|:-:|:-:|:-:|:-:|:-:|
+| encoder_sem | ✅ | ✅ | ✅ | ❌ | ✅ (via batch class centroid) |
+| semantic_head | ✅ | ✅ | ✅ | ❌ | ✅ |
+| sem_classifier | ✅ | ✅ | ❌ | ❌ | ❌ |
+| encoder_sty | ❌ | ❌ | ✅ | ✅ | ✅ (via batch domain centroid) |
+| Pc, Pd | ❌ | ❌ | ❌ | ❌ (MSE uses stopgrad) | ❌ (EMA only) |
+
+### Loss and Schedule
+
+L_total = L_CE + L_CE_aug + λ₁·L_orth + λ₂·L_sty_proto + λ₃·L_proto_excl
+
+| Round | λ_orth | λ_sty_proto | λ_proto_excl | MSE coef |
+|:-:|:-:|:-:|:-:|:-:|
+| 0-49 | 1.0 | 0 | 0 | 0 (warmup, EMA buffers pre-heat) |
+| 50-80 | 1.0 | 0→0.5 | 0→0.3 | 0.5 (ramp-up) |
+| 80-150 | 1.0 | 0.5 | 0.3 | 0.5 (peak) |
+| 150-200 | 1.0 | 0.5→0 | 0.3 | 0.5 (L_sty_proto ramp-down, exclusion on throughout) |
+
+Safety valves: Bell schedule (EXP-076 validated) + MSE anchor (EXP-077 FPL-style). α-sparsity disabled by default, added only if pilot smoke collapse.
+
+### FL Aggregation
+encoder_sem / heads / classifier / encoder_sty: FedAvg. BN local (FedBN). Pc/Pd: EMA server-side. Total comm overhead ≤ +2%.
+
+### Failure Modes
+- C0 gate fails → kill BiProto
+- z_sty collapse (norm→0) → increase λ_sty_proto or add L_sty_norm_reg
+- InfoNCE late collapse → Bell ramp-down built-in; add α-sparsity if still collapses
+- Pd low separation → increase λ_sty_proto
+- L_proto_excl vs L_CE conflict → λ_proto_excl 0.3 → 0.1
+
+## Claim-Driven Validation
+
+### Claim 0 (PRE-REQUISITE): Matched Intervention Gate
+- Load EXP-105 orth_only Office R200 seed=2 checkpoint
+- Freeze encoder_sem + semantic_head + sem_classifier
+- Add encoder_sty + Pd + L_proto_excl only, train Office R20-R30
+- Baseline: head-only fine-tune same checkpoint
+- Decision: ≥+1.0pp → strong signal go S1; +0.3~+1.0 → weak signal proceed but temper expectations; <+0.3 → kill BiProto
+- Cost: 2 GPU-h
+
+### Claim 1 (DOMINANT): Accuracy Win
+Stage-gated:
+- S1 Office seed=2 R200 smoke (4 GPU-h) — must AVG Best ≥ 90.0 to promote
+- S2 Office 3-seed R200 (20 GPU-h) — must 3-seed mean ≥ 91.08 to promote
+- S3 PACS 3-seed R200 (30 GPU-h) — must 3-seed mean ≥ 80.91 to stay
+- S4 ablations (40 GPU-h): −Pd, −encoder_sty, −L_proto_excl, τ sweep
+
+### Claim 2 (SUPPORTING): Visual Evidence (3 suites)
+- Vis-A: t-SNE dual panel (z_sem by class / z_sty by domain) × 4 methods × silhouette
+- Vis-B: Probe ladder (linear/MLP-64/MLP-256 × 4 directions) table
+- Vis-C: Prototype + feature health merged matrix (Pc/Pd separation trajectory + norm/rank + orth quality)
+
+### Compute Plan (stage-gated)
+| Stage | GPU-h | To-first-kill | To-decision |
+|---|:-:|:-:|:-:|
+| S0 | 2 | ≤6 (incl impl) | |
+| Impl | 0 | | |
+| S1 smoke | 4 | | ≤26 |
+| S2 Office 3-seed | 20 | | |
+| S3 PACS 3-seed | 30 | | |
+| S4 ablations | 40 | | |
+| Vis | 2 | | |
+| **Total** | ≤ 98 | | |
+
+Pilot budget (S0+S1+S2) = 26 GPU-h fits under the 50 GPU-h anchor hard constraint.
+
+## Novelty Differentiation
+
+|  | Disent | Prototype | Domain-as-1st-class-shared | Exclusion level |
+|---|:-:|:-:|:-:|:-:|
+| FedProto/FPL/FedPLVM/I2PFL/MP-FedCL | ❌ | class | ❌ | — |
+| FedSTAR | FiLM | content | ❌ (style local) | feature |
+| FDSE/FedDP/FedSeProto | erasure | ❌ | ❌ (erase) | feature |
+| FedFSL-CFRD | recon | ❌ | ❌ | feature |
+| FedPall | ❌ | class | ❌ | feature (adv) |
+| CDANN | GRL | ❌ | ❌ | feature |
+| **BiProto v2** | stat-encoder | **class + domain** | ✅ **FIRST** | **proto (low-dim)** |
+
+## Intentionally Excluded
+DomainNet, ResNet-18, DP, learnable τ/α, FINCH, GRL, HSIC, Kendall, L_sem_proto.
+
+=== END REVISED PROPOSAL ===
+
+Please:
+- Re-score the same 7 dimensions and overall
+- State whether the Problem Anchor is preserved or drifted
+- State whether the dominant contribution is now sharper or still too broad
+- State whether the method is simpler or still overbuilt
+- State whether the frontier leverage is now appropriate or still old-school / forced
+- Focus new critiques on missing mechanism, weak training signal, weak integration point, pseudo-novelty, or unnecessary complexity
+- Use the same verdict rule: READY only if overall score >= 9 and no blocking issue remains
+
+Output format: 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items. Write in English, Markdown format.
+
+codex
+Using the `code-review-excellence` review mindset here because this is a mechanism-level proposal review. I’m checking anchor preservation first, then rescoring the seven dimensions against the revised interfaces, training signal, and scope discipline.
+**Refining judgment on models**
+
+I need to mention if my assessment is still too broad; it seems sharper now. It looks like I'm assigning a leverage score of 9, focusing on avoiding foundational models that may be a bit outdated, such as AlexNet from scratch. The user is looking for a current judgment though, which I realize requires me to consider the method that uses a low-dimensional prototype space as appropriate. I'm thinking probably around an 8.5, while maybe mentioning "appropriate conservatism."
+**Evaluating model performance**
+
+I'm noticing a potential mismatch with the C0 gate due to the baseline head-only fine-tune using the same checkpoint, while the added method has a new encoder and loss. I think it's important to highlight minimal essential ablation, like −Pd and −L_proto_excl, but maybe include −encoder_sty too. The τ sweep could potentially be moved to fallback. Performance scores could adjust slightly, ranging around 7.8 to 8.1, so I'll compute weighted scores for clarity.
+**Reviewing alignment readiness**
+
+I need to consider that we aren’t fully ready due to some blocking issues. I could select scores of 8/8/8/9/7/8/7, averaging to about 7.95 overall. Let’s break down each component to see how they contribute. There might be a missing mechanism here, particularly regarding L_proto_excl, which is based on batch-local class centroids. I’ll need to further analyze this to ensure everything aligns correctly.
+**Evaluating method improvements**
+
+I’m thinking about potential fixes for some method-level issues. Using batch centroids when the count is 2 or 4 might stabilize things, while skipping class terms or blending with EMA could work too. I need to be careful with phrasing around contribution framing — I should clarify that P_c is not a federated training object. Also, if the semantic path and classifier are frozen, adding style branches and prototypes won’t change predictions, which seems like a serious problem!
+**Inspecting model training**
+
+Let’s take a closer look at the model's structure. If the encoder_sem, semantic_head, and sem_classifier are frozen during training, and only encoder_sty, Pd, and L_proto_excl are active, I need to consider how this impacts the inference path. It seems like the sem_classifier would still operate on z_sem, which might lead to limited adaptability since the frozen components won’t change. I wonder how effective this configuration will be in affecting overall predictions.
+**Evaluating method limitations**
+
+I'm considering whether this method can still enhance the semantic path using AdaIN, but it isn’t explicitly stated. It seems like the orth_only checkpoint may already include a style bank. If that’s the case, using AdaIN for data augmentation wouldn’t change accuracy, a critical weakness I've noticed. This affects validation focus and feasibility due to flawed gating logic. Also, freezing certain components in the gate prevents any possibility of accuracy gains. I need to rescoring here carefully.
+**Identifying integration weaknesses**
+
+It looks like this method only tests if encoder_sty can learn domain representations, but it doesn’t actually assess accuracy. That’s a weak point in the integration. I should mention that the method has improved, but the gate setup is flawed. The user specifically asked for focus on the missing mechanisms. There's also a potential concern that in the full method, the sem_classifier isn’t receiving any gradient from excluded semantic features, which might rotate to meet the criteria.
+**Reassessing scores**
+
+I'm re-evaluating the scores for various categories. For Problem Fidelity, I think a 9 fits well. For Method Specificity, maybe a 7 makes sense since most interfaces are specified, but central loss integration is still a bit off. Contribution Quality might also be a 7; it’s sharper, yet some novelty is weakened due to `Pd` not being excluded. Frontier Leverage feels strong at 9. Feasibility seems around 6 for possible issues with C0. Validation Focus and Venue Readiness could also sit around 6, as they require better alignment and evidence.
+**Evaluating score improvements**
+
+So, I compiled a score of 7.4 for the user's latest revision, which seems decent. I think it's important to acknowledge the improvements while also pointing out a key blocking issue. The new version clearly improved from 6.5, possibly landing around 7.4 or 7.6. For specific scores, I’m considering Problem Fidelity at 9, Method Specificity at 8, and Contribution at 7, leading to an overall potential score of about 7.55. It’s a good increase!
+**Assessing integration and feasibility**
+
+I see there's a central integration mismatch, but the interfaces are solid. I think an engineer could implement this, so I'm giving it an 8. The invalid gate affects the validation focus more than the method specificity. For feasibility, I might consider a 6 because of the invalid gate, yet training resources seem fine. Still, the weak point is in signal stability. Overall, I'm calculating a score around 7.85, which reflects good revisions! Scores below 7 could be Validation Focus at 6 and possibly Feasibility at 7.
+**Evaluating system simplicity**
+
+I need to assess whether the system is simpler or still too complex. Simplifying by removing L_sem_proto and default α-sparsity is a good start, but if both EMA banks and batch-local centroids remain, I need to clarify who’s training versus monitoring.
+
+I think I’ll lay out my findings with sections like a quick judgment paragraph, scores table, and overall assessment. Including actionable items like fixing the C0 gate will be important to enhance clarity.
+**Deciding on model adjustments**
+
+I need to consider my options for freezing parts of the model. I can either freeze the lower trunk while keeping the semantic_head and classifier trainable and apply `L_proto_excl` to the output, or allow `L_proto_excl` to update the semantic_head while the encoder_sem remains frozen. 
+
+The first option seems better since it aligns with maintaining flexibility in the semantic head. It seems C0 may also be best served by freezing only `encoder_sem`, keeping the semantic head trainable for updates.
+**Considering lab opportunities**
+
+I’m thinking that if the lab allows for pretraining later on, a small frozen CLIP domain prompt bank could replace the current hand-built style bank. But, right now, it feels like it’s drifting a bit, as they seem to want something truly better. I should mention “current” without sounding trendy. Under Frontier Leverage, I could emphasize appropriate conservatism. I might also need a score table with a brief rationale for clarity.
+**Clarifying proposal language**
+
+I need to mention that there's no problem with the drift, but I also need to clarify the wording on the proposal. The total budget isn't literally unchanged anymore. However, they did ask for a "Drift Warning," so it’s essential to communicate that clearly. I want to ensure this is understood, as it might impact how the proposal is interpreted moving forward. It's about getting everything accurate for the user!
+**Arranging action items**
+
+I have to organize the action item regarding the novelty claim. It's critical to avoid nested bullet points and stick to single-level lists. I'll keep the markdown headings short to maintain clarity. I think I can structure it into sections like Anchor, Scores, Assessment, Simplification Opportunities, Modernization Opportunities, Remaining Action Items, and Verdict. This layout should work well. Oh, and I’ll aim to keep it under 70 lines to ensure it’s concise!
+codex
+**Anchor Check**
+
+The **Problem Anchor is preserved in substance**. The revised method still targets the original bottleneck: recover Office from `89.09` to `>91.08` without giving back PACS, under `AlexNet from scratch + FedBN + no pretraining + same datasets`.
+
+Two clarifications:
+- There is **no problem drift**.
+- The anchor is **not literally unchanged on compute wording** anymore: the proposal now treats `<=50 GPU-h` as a hard pilot budget and allows a larger full program after promotion. That is a procedural relaxation, not a change in the scientific problem.
+
+**Summary Judgment**
+
+The proposal is **materially better than v1**. The dominant contribution is now **sharper**, the method is **simpler**, and the frontier stance is **appropriate rather than old-school-forced**.
+
+The main remaining blocker is this: the paper now says the key object is federated `Pd`, but the actual exclusion loss is still driven by **batch-local centroids**, and the new **C0 gate is currently invalid as written** because it freezes the only prediction path that could improve accuracy.
+
+**7 Scores**
+
+| Dimension | Score | Reason |
+|---|---:|---|
+| 1. Problem Fidelity | **9/10** | Still solves the anchored Office/PACS problem; no drift into an easier task. |
+| 2. Method Specificity | **8/10** | Much more implementable now: shapes, EMA rules, normalization, and gradient flow are mostly concrete. |
+| 3. Contribution Quality | **7/10** | Sharper than v1, with one clear headline, but the “Pd dual to Pc” story is still a bit overstated relative to the actual training path. |
+| 4. Frontier Leverage | **9/10** | Appropriate conservatism. Under this anchor, avoiding VLM/Diffusion/LLM components is the right call. |
+| 5. Feasibility | **7/10** | Pilot budget is now realistic, but the exclusion signal is still potentially noisy and the integration path needs one more cleanup pass. |
+| 6. Validation Focus | **6/10** | Better staged and lighter, but C0 is flawed as currently specified. |
+| 7. Venue Readiness | **7/10** | This now looks like a sharper paper, but not yet a top-venue-ready one until the mechanism/claim alignment is tightened. |
+
+**Overall Score: 7.8 / 10**
+
+**Verdict: REVISE**
+
+**Drift Warning**
+
+**NONE** on the research problem itself.
+
+**Why It Improved**
+
+- **Dominant contribution:** now clearly sharper. Deleting `L_sem_proto` was the right move.
+- **Method complexity:** now substantially simpler and closer to the smallest adequate mechanism.
+- **Frontier leverage:** now appropriate. I would not force a foundation-model component here.
+
+**Main Remaining Critiques**
+
+- **C0 gate is invalid as written.** If you freeze `encoder_sem + semantic_head + sem_classifier`, then training `encoder_sty + Pd + L_proto_excl` cannot change predictions, because the inference path is frozen. This gate cannot measure the claimed effect.
+- **Headline/implementation mismatch remains.** The proposal says the key mechanism is federated `Pd` with proto-level exclusion, but `L_proto_excl` currently uses **batch-local domain centroids**, not `Pd`. That weakens the central claim.
+- **Pseudo-duality risk.** `Pd` is a real federated training object; `Pc` is mostly an EMA monitor/reference. Calling them fully “dual” overstates symmetry.
+- **Weak-signal risk in Office.** Batch-local class centroids can be noisy under sparse class support. Without explicit singleton/low-count rules, `L_proto_excl` may inject variance instead of geometry.
+
+**Simplification Opportunities**
+
+1. If `Pc` stays monitoring-only, remove it from the headline claim and novelty table. Say the method is **federated domain prototypes excluded against online class centroids**.
+2. Merge the “global `Pd`” and “local domain centroid” roles into one hybrid exclusion axis so you do not maintain two separate semantic stories.
+3. Move `τ` sweep out of the core ablation set until the full method clears Office. It is not a first-order decision boundary.
+
+**Modernization Opportunities**
+
+**NONE.** Under the current anchor, adding VLM/Diffusion/LLM machinery would widen the paper and weaken its causal story.
+
+**Remaining Action Items**
+
+1. **Fix C0.** Freeze `encoder_sem` only, but keep `semantic_head` trainable so `L_proto_excl` can actually move the decision path. Compare against a matched head-only baseline.
+2. **Make `Pd` participate directly in `L_proto_excl`.** A good fix is a hybrid axis such as `stopgrad(Pd[d]) + (mu_d_batch - stopgrad(mu_d_batch))`, so the forward anchor is federated while gradients still reach `encoder_sty`.
+3. **Add sparse-batch rules for exclusion.** Specify a minimum class count per batch, skip singleton class centroids, and define exactly where `z_sem` is taken from for centroid computation.
+4. **Tighten the claim language.** On PACS/Office, `D=K=4`, so be careful not to oversell empirical separation from a client-bank interpretation.
+5. **Keep the paper honest about mechanism.** The strongest version is not “trunk decontamination”; it is “low-dimensional geometric exclusion against a shared domain axis.”
+
+The revision is clearly better. The paper now has a real center. The next step is to make the training path match the headline exactly, and to repair C0 so it can actually falsify the method.
+tokens used
+40,980
+**Anchor Check**
+
+The **Problem Anchor is preserved in substance**. The revised method still targets the original bottleneck: recover Office from `89.09` to `>91.08` without giving back PACS, under `AlexNet from scratch + FedBN + no pretraining + same datasets`.
+
+Two clarifications:
+- There is **no problem drift**.
+- The anchor is **not literally unchanged on compute wording** anymore: the proposal now treats `<=50 GPU-h` as a hard pilot budget and allows a larger full program after promotion. That is a procedural relaxation, not a change in the scientific problem.
+
+**Summary Judgment**
+
+The proposal is **materially better than v1**. The dominant contribution is now **sharper**, the method is **simpler**, and the frontier stance is **appropriate rather than old-school-forced**.
+
+The main remaining blocker is this: the paper now says the key object is federated `Pd`, but the actual exclusion loss is still driven by **batch-local centroids**, and the new **C0 gate is currently invalid as written** because it freezes the only prediction path that could improve accuracy.
+
+**7 Scores**
+
+| Dimension | Score | Reason |
+|---|---:|---|
+| 1. Problem Fidelity | **9/10** | Still solves the anchored Office/PACS problem; no drift into an easier task. |
+| 2. Method Specificity | **8/10** | Much more implementable now: shapes, EMA rules, normalization, and gradient flow are mostly concrete. |
+| 3. Contribution Quality | **7/10** | Sharper than v1, with one clear headline, but the “Pd dual to Pc” story is still a bit overstated relative to the actual training path. |
+| 4. Frontier Leverage | **9/10** | Appropriate conservatism. Under this anchor, avoiding VLM/Diffusion/LLM components is the right call. |
+| 5. Feasibility | **7/10** | Pilot budget is now realistic, but the exclusion signal is still potentially noisy and the integration path needs one more cleanup pass. |
+| 6. Validation Focus | **6/10** | Better staged and lighter, but C0 is flawed as currently specified. |
+| 7. Venue Readiness | **7/10** | This now looks like a sharper paper, but not yet a top-venue-ready one until the mechanism/claim alignment is tightened. |
+
+**Overall Score: 7.8 / 10**
+
+**Verdict: REVISE**
+
+**Drift Warning**
+
+**NONE** on the research problem itself.
+
+**Why It Improved**
+
+- **Dominant contribution:** now clearly sharper. Deleting `L_sem_proto` was the right move.
+- **Method complexity:** now substantially simpler and closer to the smallest adequate mechanism.
+- **Frontier leverage:** now appropriate. I would not force a foundation-model component here.
+
+**Main Remaining Critiques**
+
+- **C0 gate is invalid as written.** If you freeze `encoder_sem + semantic_head + sem_classifier`, then training `encoder_sty + Pd + L_proto_excl` cannot change predictions, because the inference path is frozen. This gate cannot measure the claimed effect.
+- **Headline/implementation mismatch remains.** The proposal says the key mechanism is federated `Pd` with proto-level exclusion, but `L_proto_excl` currently uses **batch-local domain centroids**, not `Pd`. That weakens the central claim.
+- **Pseudo-duality risk.** `Pd` is a real federated training object; `Pc` is mostly an EMA monitor/reference. Calling them fully “dual” overstates symmetry.
+- **Weak-signal risk in Office.** Batch-local class centroids can be noisy under sparse class support. Without explicit singleton/low-count rules, `L_proto_excl` may inject variance instead of geometry.
+
+**Simplification Opportunities**
+
+1. If `Pc` stays monitoring-only, remove it from the headline claim and novelty table. Say the method is **federated domain prototypes excluded against online class centroids**.
+2. Merge the “global `Pd`” and “local domain centroid” roles into one hybrid exclusion axis so you do not maintain two separate semantic stories.
+3. Move `τ` sweep out of the core ablation set until the full method clears Office. It is not a first-order decision boundary.
+
+**Modernization Opportunities**
+
+**NONE.** Under the current anchor, adding VLM/Diffusion/LLM machinery would widen the paper and weaken its causal story.
+
+**Remaining Action Items**
+
+1. **Fix C0.** Freeze `encoder_sem` only, but keep `semantic_head` trainable so `L_proto_excl` can actually move the decision path. Compare against a matched head-only baseline.
+2. **Make `Pd` participate directly in `L_proto_excl`.** A good fix is a hybrid axis such as `stopgrad(Pd[d]) + (mu_d_batch - stopgrad(mu_d_batch))`, so the forward anchor is federated while gradients still reach `encoder_sty`.
+3. **Add sparse-batch rules for exclusion.** Specify a minimum class count per batch, skip singleton class centroids, and define exactly where `z_sem` is taken from for centroid computation.
+4. **Tighten the claim language.** On PACS/Office, `D=K=4`, so be careful not to oversell empirical separation from a client-bank interpretation.
+5. **Keep the paper honest about mechanism.** The strongest version is not “trunk decontamination”; it is “low-dimensional geometric exclusion against a shared domain axis.”
+
+The revision is clearly better. The paper now has a real center. The next step is to make the training path match the headline exactly, and to repair C0 so it can actually falsify the method.

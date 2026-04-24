@@ -1,0 +1,225 @@
+You are a senior ML reviewer for a top venue (NeurIPS/ICML/ICLR).
+This is an early-stage, method-first research proposal in federated cross-domain learning.
+
+Your job is NOT to reward extra modules, contribution sprawl, or a giant benchmark checklist.
+Your job IS to stress-test whether the proposed method:
+(1) still solves the original anchored problem,
+(2) is concrete enough to implement,
+(3) presents a focused, elegant contribution,
+(4) uses foundation-model-era techniques appropriately when they are the natural fit.
+
+Review principles:
+- Prefer the smallest adequate mechanism over a larger system.
+- Penalize parallel contributions that make the paper feel unfocused.
+- If a modern LLM / VLM / Diffusion / RL route would clearly produce a better paper, say so concretely.
+- If the proposal is already modern enough, do NOT force trendy components.
+- Do not ask for extra experiments unless they are needed to prove the core claims.
+
+Read the Problem Anchor first. If your suggested fix would change the problem being solved,
+call that out explicitly as drift instead of treating it as a normal revision request.
+
+Important domain context to keep in mind while reviewing:
+- This work operates in federated learning (FL) with cross-domain feature shift.
+- Target datasets are PACS (7 class, 4 domain/client) and Office-Caltech10 (10 class, 4 domain/client).
+- Backbone is AlexNet from scratch (no pretraining), FedBN-style (BN stats local).
+- Reviewer should treat the author's "must strictly beat local FDSE reproduction" as a hard constraint.
+- The author has run 120+ experiments (EXP-001 to EXP-120). Claims about "X already tried and falsified" should be believed unless obvious contradiction.
+- Key negative results that constrain the design space:
+  * HSIC loss hurts (EXP-017 falsified).
+  * Multi-prototype InfoNCE without safety valves collapses (EXP-076/077/078).
+  * Domain-aware InfoNCE (SCPR) falsified on PACS (EXP-095).
+  * CDANN GRL adversarial falsified: probe 0.96 but 0 accuracy gain (EXP-108).
+  * Regime-dependence is confirmed thrice (PACS vs Office respond oppositely to same mechanism).
+
+=== PROPOSAL ===
+
+# Research Proposal: FedDSA-BiProto — 非对称双编码器与联邦双原型互斥解耦
+
+**Date**: 2026-04-24
+**Stage**: Round-0 Initial Proposal
+**Target**: 在 FDSE_CVPR25 框架下, 3-seed mean AVG Best 严格胜过 FDSE 本地复现 baseline (PACS ≥ 80.91, Office-Caltech10 ≥ 91.08), 同时交付 t-SNE / probe ladder / feature metrics 三套可视化 evidence.
+
+## Problem Anchor (不可变, 每轮必须逐字复刻)
+
+- **Bottom-line problem**: 在 cross-domain 联邦学习 (PACS / Office-Caltech10) 下, 用 AlexNet from scratch, 3-seed {2, 15, 333} × R200 mean AVG Best **必须同时严格超过 FDSE 本地复现 baseline** (PACS > 79.91 / Office > 90.58). 当前 orth_only 战况: PACS 80.64 ✅ (+0.73), Office 89.09 ❌ (−1.49).
+- **Must-solve bottleneck**: Office-Caltech10 必须补回 −1.49 pp 且至少再涨 +0.5 pp, 同时 PACS 不得退 (≥ 80.91). **核心技术悬念**: Office gap 的真实原因是 "shared trunk 被 CE 污染, class 弥散到 z_sty" 还是 "trunk capacity 已饱和 / 聚合不对齐 / Caltech outlier"? EXP-110 / EXP-113 / EXP-120 的证据链倾向后者, 但 trunk-freeze diagnostic **从未做过**, 必须先做诊断再决定架构级投入.
+- **Non-goals**: 不换数据集; 不做诊断论文; 不堆模块凑 novelty; 不预训练; 不换骨干.
+- **Constraints**: AutoDL 4090 / lab 3090; 预算 ≤ 50 GPU-h; AlexNet + FedBN; PACS E=5 / Office E=1; 1 周内 refine + pilot.
+- **Success condition**: 3-seed {2,15,333} × R200 mean AVG Best: PACS ≥ 80.91 且 Office ≥ 91.08; AVG Last 不退; t-SNE + probe ladder + prototype quality 三套可视化 evidence 齐备.
+
+## Technical Gap
+
+当前四派方法的失败点:
+1. "擦除派" (FDSE/FedDP/FedSeProto): domain 当噪声擦除, 不对 domain 建模
+2. "私有派" (FedSTAR/FedBN): 风格本地, domain 被降级为 nuisance
+3. "共享不解耦派" (FISC/StyleDDG/FedCCRL): 混合空间 AdaIN 导致负迁移
+4. "feature-level 对抗派" (CDANN): EXP-108 证伪, probe 0.96 无 accuracy 增益
+
+缺失的机制: 目前所有 FL cross-domain 解耦工作对 "domain 信息" 的处置只有三种: 擦除 / 私有 / 本地对抗. 从未有工作**把 domain 升级为一阶 federated 对象** —— 即像 class prototype 一样在 server 端维护跨 client 的 domain prototype bank, 并在 prototype 级 (而非 feature 级) 强制与 class prototype 几何互斥.
+
+同时, 目前 FL 里**独立 style encoder 几乎都是对称双 trunk** (2× AlexNet), 忽视了 "style ≈ (μ, σ) 统计"的强先验. 一个**轻量非对称统计 encoder** 可以在 <2% 参数膨胀下提供 proper inductive bias.
+
+## Method Thesis
+
+**One-sentence thesis**: 把 domain 从"要擦除的噪声"升级为"联邦共享的一阶原型 (Pd)", 与 class prototype (Pc) 通过 proto-level 几何互斥并列存在; 用非对称统计 encoder 给 Pd 提供 inductive bias; 整套机制在 loss 数目和参数量上保持极简.
+
+**Why smallest adequate**: 相较 CDANN 需 GRL+dom_head+对抗 (已证伪), BiProto 只在 orth_only 基础上加 1 个轻量 encoder (~1M) + 2 条 proto-level InfoNCE + 1 条 proto-cos 排斥. 所有 loss 都在 proto 空间 (低维 K×d, K≤10), 梯度冲突半径极小, 避开 EXP-017/095/108 的全部已知坑.
+
+## Contribution Focus
+
+- **Dominant (C1)**: Federated Domain Prototype (Pd) as a first-class shared object, orthogonal-to-class at the prototype level via cosine exclusion. 首次在 FL cross-domain 将 domain 作为与 class 对称的一阶联邦对象建模. 机制: Pd 由非对称统计 encoder 生成, 跨 client 直接 concat (无聚合歧义, 因为每 client 一个 domain). 监督: Pd 通过 sty-proto InfoNCE 驱动 encoder_sty 学习 same-domain attraction / cross-domain repulsion, 同时 Pd ⊥ Pc 的 proto-level cosine 损失在低维空间强制互斥.
+- **Supporting (C2)**: Asymmetric statistic encoder — 风格 encoder 只做 (μ,σ) 统计提取 + 轻量 MLP (~1M, <2% of 60M AlexNet). 物理上无法编码 class-level 判别信息 (丢弃空间结构), 从架构切断 "sty 承载 class" 泄漏, 无需对抗 loss.
+- **Explicit non-contributions**: 不 claim MI-optimal / 不 claim 通信效率 / 不做收敛证明 / 不跨 backbone / 不做 DP privacy.
+
+## Proposed Method
+
+### Complexity Budget
+- encoder_sem (AlexNet 60M, 继承 orth_only, 不改): 被 L_CE + L_orth + L_sem_proto 训
+- semantic_head + sem_classifier (继承 orth_only)
+- BN running stats (FedBN, 本地)
+- style bank (μ,σ) AdaIN (继承 FedDSA 原方案)
+- encoder_sty (统计 encoder, 新增 ~1M MLP, +1.7% params)
+- style_head (删除, 因为 encoder_sty 是专用路径)
+- class prototype bank Pc [K, 128] (新增, EMA 聚合)
+- domain prototype bank Pd [num_clients, 128] (新增, per-round concat)
+- L_orth (继承), L_sem_proto (新增), L_sty_proto (新增), L_proto_excl (新增)
+
+### Core Mechanism: Pd
+- 每 round 每 client k 上传 z_sty 均值 p_k^sty ∈ ℝ^128
+- Server concat: Pd = stack([p_1, ..., p_K]) (无聚合冲突, num_clients × 1 domain/client)
+- 下发给所有 client
+- L_sty_proto = InfoNCE(z_sty, Pd, domain_label) + 0.5 · MSE(z_sty, stopgrad(Pd[d_i])), 带 α-sparsity cos^0.25
+
+### Supporting: Asymmetric Statistic Encoder
+- Input: conv1-3 的 (μ, σ) per-channel stats 拼接
+- Architecture: 2-layer MLP + LayerNorm, 输出 z_sty [128]
+- Shared forward with encoder_sem but taps.detach() so L_sty_proto 不反传到 encoder_sem
+- 物理上无空间结构 → 无法编码 class 判别信息
+
+### Loss 组合 + 安全阀 Schedule
+L_total = L_CE + L_CE_aug + λ₁·L_orth + λ₂·L_sem_proto + λ₃·L_sty_proto + λ₄·L_proto_excl
+
+| Round | λ_orth | λ_sem_proto | λ_sty_proto | λ_proto_excl | MSE coef |
+|:-:|:-:|:-:|:-:|:-:|:-:|
+| 0-49 | 1.0 | 0 | 0 | 0 | 0 |
+| 50-80 | 1.0 | 0→0.5 | 0→0.5 | 0→0.3 | 0.5 |
+| 80-150 | 1.0 | 0.5 | 0.5 | 0.3 | 0.5 |
+| 150-200 | 1.0 | 0.5→0 | 0.5→0 | 0.3 | 0.5 |
+
+Bell schedule + MSE anchor + α-sparsity 全部是 EXP-076/077 验证过的安全阀.
+
+### FL 聚合
+- encoder_sem / semantic_head / classifier / encoder_sty: FedAvg
+- BN running stats: local (FedBN)
+- Pc: EMA (FedProto-style, 0.9 · Pc + 0.1 · client_mean)
+- Pd: per-round concat (每 client 一个 domain, 无歧义)
+- style bank (μ,σ) AdaIN: 继承 FedDSA 原方案
+- 通信膨胀 ≤ 4% vs baseline
+
+### Failure Modes
+- Office 瓶颈不在架构 → Diag A gate 触发 kill
+- z_sty 坍缩 → L_sty_proto 权重增加 or L_sty_norm_reg
+- InfoNCE 后期崩盘 → Bell ramp-down 已内置
+- Pd 被某 client dominant → 监测 pairwise cosine > 0.9 → 增大 L_sty_proto
+
+## Novelty Matrix
+
+| 方法 | 解耦? | Prototype? | Domain as shared federated object? | exclusion level | 参数 |
+|---|:-:|:-:|:-:|:-:|:-:|
+| FedProto | ❌ | ✅ class | ❌ | — | 1× |
+| FPL | ❌ | ✅ class multi | ❌ | — | 1× |
+| FedPLVM | ❌ | ✅ 2-level | ❌ | — | 1× |
+| I2PFL | ❌ | ✅ intra/inter | ❌ (domain=class variance) | — | 1× |
+| FedSTAR | ✅ FiLM | ✅ content only | ❌ (style 本地) | feature | 1.1× |
+| FDSE | ✅ 层分解 | ❌ | ❌ (擦除) | feature | 0.65× |
+| FedDP / FedSeProto | ✅ MI min | ❌ | ❌ (擦除) | feature | ~1× |
+| FedFSL-CFRD | ✅ 重构 | ❌ | ❌ (共性/个性) | feature | 1.2× |
+| FedPall | ❌ | ✅ class | ❌ | feature (GAN) | 1.1× |
+| FISC/PARDON | ❌ | ❌ | ⚠️ 共享不解耦 | — | 1× |
+| CDANN | ✅ GRL | ❌ | ❌ | feature | ~1× |
+| **FedDSA-BiProto** | ✅ 非对称统计 | ✅ **class + domain 双 bank** | ✅ **首次** (Pd concat) | **proto** | **~1.02×** |
+
+Claim: 第一个在联邦 cross-domain 学习中将 domain 作为与 class 对等的一阶联邦共享原型 (Pd) 建模的工作.
+
+## Claim-Driven Validation Sketch
+
+### Claim 0 (PRE-REQUISITE): Diagnostic Gate
+- Hypothesis: Office -1.49 是 shared trunk 被 CE 污染导致的 feature capacity 瓶颈
+- Minimal experiment: trunk-freeze orth_only Office R200 seed=2 checkpoint, 只重训 head 30 round
+- Decision: 涨 ≥1.5pp → 继续; 涨 0.5-1.5pp → 降档继续; 涨 <0.5pp → **kill BiProto, 改投资聚合/outlier 侧**
+- Cost: 2 GPU-h
+
+### Claim 1 (DOMINANT): Accuracy Win
+- BiProto full × 3-seed × R200 × {PACS, Office} vs FDSE baseline + orth_only + 3 ablations
+- Metric: 3-seed mean AVG Best
+- Expected: PACS ≥ 81.0, Office ≥ 91.1
+- Ablations: −非对称 encoder / −Pd / −L_proto_excl / τ sweep / warmup sweep
+- Kill criteria: R50 崩盘 or R150 drop > 3pp
+- Cost: ~100 GPU-h (6 并行 greedy scheduler)
+
+### Claim 2 (SUPPORTING): Visual Evidence Chain
+**Vis-1 t-SNE** 双面板 (z_sem by class / z_sty by domain) × 4 methods (orth_only / FDSE / CDANN / BiProto), silhouette score quantification
+**Vis-2 Probe ladder**: linear/MLP-64/MLP-256 × 4 directions (z_sem/sty × class/domain)
+- Target: z_sem→class 高, z_sem→domain 低, z_sty→domain 高, z_sty→class 低 (尤其 MLP-256 < 0.50 vs orth_only 0.81)
+**Vis-3 Prototype quality**: Pc/Pd 分离度 + Pc⊥Pd cosine matrix trajectory
+**Vis-4 Feature health**: norm / rank / pairwise similarity
+**Vis-5 Orth quality**: cos(z_sem, z_sty) + HSIC
+
+## Experiment Handoff
+- Must-prove: C0 (gate) → C1 (accuracy) → C2 (visual)
+- Must-run ablations: −Pd (核心), −asymmetric encoder, −proto_excl, τ sweep
+- Critical datasets: PACS + Office-Caltech10, AVG Best + AVG Last + per-domain
+- Highest-risk: Diag A 假设, Pd concat 假设 (每 client 一 domain)
+
+## Compute Estimate
+
+| Stage | GPU-h | Wall |
+|---|:-:|:-:|
+| Diag A | 2 | 2h |
+| Implementation | 0 | 0.5d |
+| Smoke | 4 | 4h |
+| Main pilot | 30 | 1d |
+| Ablations | 50 | 2d |
+| Visualization | 2 | 0.5d |
+| **Total** | **≤90** | **~4-5d** |
+
+## Intentionally Excluded
+DomainNet, ResNet-18, DP, learnable τ/α, FINCH multi-cluster, GRL, HSIC, Kendall weighting — 都是 EXP-* 已证伪或与 anchor 冲突.
+
+=== END PROPOSAL ===
+
+Now score these 7 dimensions from 1-10:
+
+1. **Problem Fidelity**: Does the method still attack the original bottleneck (Office -1.49 vs FDSE, PACS ≥ FDSE), or has it drifted into solving something easier?
+
+2. **Method Specificity**: Are interfaces, representations, losses, training stages, and inference path concrete enough that an engineer could start implementing? Pay attention to: Pd update mechanics, statistic encoder input/output shapes, detach path, FedAvg partition, Pc EMA schedule.
+
+3. **Contribution Quality**: Is there one dominant mechanism-level contribution (Federated Domain Prototype + proto-level exclusion) with real novelty, good parsimony, and no obvious contribution sprawl? Assess whether the "asymmetric statistic encoder" is necessary supporting or unnecessary second contribution.
+
+4. **Frontier Leverage**: The proposal intentionally avoids LLM/VLM/Diffusion because data scale is small. Judge whether this is appropriate conservatism or a missed opportunity (e.g., could VLM provide style descriptors? Could a Diffusion prior regularize style bank?).
+
+5. **Feasibility**: Can this method be trained and integrated with the stated resources (≤90 GPU-h, AlexNet, 4090+3090)? Are the safety valves (Bell + MSE + α-sparsity) sufficient given the falsification history (EXP-076/077/078)?
+
+6. **Validation Focus**: Are the experiments minimal but sufficient? Does the C0 Diag A gate make sense as a prerequisite? Is the visual evidence chain (5 Vis blocks) too heavy, too light, or right-sized? Are ablations hitting the right decision boundaries?
+
+7. **Venue Readiness**: If executed well, would this contribution feel sharp and timely at NeurIPS/ICML/ICLR?
+
+**OVERALL SCORE** (1-10): weighted Problem Fidelity 15%, Method Specificity 25%, Contribution Quality 25%, Frontier Leverage 15%, Feasibility 10%, Validation Focus 5%, Venue Readiness 5%.
+
+For each dimension scoring < 7, provide:
+- The specific weakness
+- A concrete fix at the method level (interface / loss / training recipe / integration point / deletion of unnecessary parts)
+- Priority: CRITICAL / IMPORTANT / MINOR
+
+Then add:
+- **Simplification Opportunities**: 1-3 concrete ways to delete, merge, or reuse components while preserving the main claim. Write "NONE" if already tight.
+- **Modernization Opportunities**: 1-3 concrete ways to replace old-school pieces with more natural foundation-model-era primitives if genuinely better. Write "NONE" if already modern enough.
+- **Drift Warning**: "NONE" if the proposal still solves the anchored problem; otherwise explain the drift clearly.
+- **Verdict**: READY / REVISE / RETHINK
+
+Verdict rule:
+- READY: overall score >= 9, no meaningful drift, one focused dominant contribution, and no obvious complexity bloat remains
+- REVISE: the direction is promising but not yet at READY bar
+- RETHINK: the core mechanism or framing is still fundamentally off
+
+Finally, please write your response in English (Markdown format).
