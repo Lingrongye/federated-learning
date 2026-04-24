@@ -91,13 +91,13 @@ def main():
     print(f'[load] {args.ckpt}')
     print(f'  meta: {meta}')
 
-    # Build VIB model (vib=True to match checkpoint)
+    # Build VIB model (vib=1 to match checkpoint)
     model = FedDSAVIBModel(
         num_classes=7, feat_dim=1024, proj_dim=128,
         tau_etf=meta.get('tau_etf', 0.1),
         use_etf=bool(meta['use_etf']),
-        ca=0, num_clients=4, backbone='alexnet',
-        vib=True,  # <-- critical: use VIBSemanticHead
+        ca=0, num_clients=4,
+        vib=1,  # <-- critical: use VIBSemanticHead
     )
 
     # Load client 0 state (Art, has local BN for FedBN + everything else)
