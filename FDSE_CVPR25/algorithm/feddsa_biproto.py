@@ -320,6 +320,7 @@ class Server(_BaseServer):
             c.ema_decay = self.ema_decay
             c.freeze_encoder_sem = self.freeze_encoder_sem
             c.num_clients_total = len(self.clients)
+            c.num_rounds = int(self.num_rounds)  # ★ Client schedule 用
 
     def _load_orth_only_ckpt(self, ckpt_path):
         """从 orth_only ckpt 加载 encoder/semantic_head/head 权重 (strict=False 跳过 BiProto-only keys).
