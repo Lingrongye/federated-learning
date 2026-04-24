@@ -1,0 +1,31 @@
+# EXP-124 | FedDSA-PCH | Per-Cell Hardness (hw=2.0) PACS R=200
+# Base: orth_only (feddsa_scheduled sm=0 mode) + CE weight 2x for hard cells
+# Hard cells (from EXP-123 Stage B diagnostic):
+#   Client 0 (Art):   guitar, horse, person
+#   Client 2 (Photo): horse
+algo_para:
+- 1.0    # lo
+- 0.0    # lh
+- 1.0    # ls
+- 0.2    # tau
+- 5      # sdn
+- 128    # pd
+- 0      # sm = 0 (orth_only)
+- 60     # bp
+- 30     # bw
+- 80     # cr
+- 10     # gli
+hw: 2.0
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True

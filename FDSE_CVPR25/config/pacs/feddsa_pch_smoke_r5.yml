@@ -1,0 +1,27 @@
+# FedDSA-PCH smoke R=5 快速验证 hook 不崩 + hard cell CE 权重生效
+algo_para:
+- 1.0
+- 0.0
+- 1.0
+- 0.2
+- 5
+- 128
+- 0
+- 60
+- 30
+- 80
+- 10
+hw: 2.0
+learning_rate: 0.05
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 5
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
