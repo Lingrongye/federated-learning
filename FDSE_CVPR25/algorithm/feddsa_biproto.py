@@ -598,6 +598,14 @@ class Client(_BaseClient):
             'domain_count': domain_count,
         }
 
+        # ---- Placeholder for parent Client.pack() compatibility ----
+        # 父类 pack() 需要这些字段; BiProto 不用它们但必须设非 None 占位
+        self._local_protos = {}            # 父类 SAS 用, BiProto 不依赖
+        self._local_proto_counts = {}
+        self._local_style_stats = None
+        self._local_style_stats_scpr = None
+        self._grad_conflict_log = None
+
 
 # ============================================================
 # init_global_module: 提供给 main.py / flgo 创建 model 实例
