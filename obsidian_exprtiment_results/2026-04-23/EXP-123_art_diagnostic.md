@@ -1,9 +1,56 @@
 # EXP-123 | PACS Art Domain 失败根因诊断 — 数据驱动选方向
 
 ## 基本信息
-- **日期**: 2026-04-23 启动
+- **日期**: 2026-04-23 启动, Stage B 2026-04-24 完成
 - **目标**: 通过诊断数据, 回答 "PACS 的 Art domain 为什么只有 64-65%" 的根因, 指导下一步方法设计
-- **状态**: 🟢 **Stage A 完成 (2026-04-23)** — paper-standard metric 重算, 等决策是否启动 Stage B
+- **状态**: 🟢 **Stage B 完成 8/9 runs (2026-04-24 early morning)** — orth_s333 待补 (Round 169/200, 还需 ~1h)
+
+---
+
+## 🎯 Stage B 核心结论 (2026-04-24, 8/9 runs 完整)
+
+**最关键发现**: FDSE 的优势 **90% 来自 3 个 hard cells**, 不是 uniform!
+
+| Cell | FedBN | orth_only | **FDSE** | FDSE Δ vs FedBN |
+|---|:-:|:-:|:-:|:-:|
+| (Art, **guitar**) | 37.25 | 43.94 | **61.57** | **+24.33** ⭐ |
+| (Art, **horse**) | 45.93 | 50.85 | **61.45** | **+15.52** |
+| (Photo, **horse**) | 48.07 | 55.86 | **65.57** | **+17.50** |
+
+这 3 个 cells 贡献 FDSE AVG +2.05pp (总 FDSE-FedBN gap 2.31pp). 其他 25 cells 几乎相抵。
+
+**反噬 cells** (FDSE 反输):
+- (Art, dog): FedBN 60.98 > FDSE 47.62 (-13.36)
+- (Art, giraffe): FedBN 75.62 > FDSE 66.73 (-8.89)
+- (Art, elephant): FedBN 66.58 > FDSE 59.02 (-7.56)
+
+### 3-seed mean 对比 (FDSE 3 seeds, FedBN 3 seeds, orth 仅 2 seeds — s=333 待补)
+
+| Method | AVG Best | Art | Cartoon | Photo | Sketch |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **FDSE** (3) | **81.54** | 64.71 | 85.18 | **86.83** | 89.46 |
+| **orth_only** (🟡 2) | 79.95 | 62.50 | 87.92 | 79.98 | 91.09 |
+| **FedBN** (3) | 79.23 | 62.25 | 85.90 | 80.24 | 88.52 |
+
+### Confidence / Calibration
+
+Art ECE **所有方法 ~0.18** — 是 PACS 固有难点, 不是方法差异.
+Photo ECE: FDSE 0.062 vs FedBN 0.110 → FDSE 校准 Photo 好, 部分解释 +6.6pp.
+
+### 方向判决
+
+| 方向 | 证据强度 |
+|---|:-:|
+| I stage-aware | 🟡 |
+| II calibration | 🟢 (Photo 有效, Art 所有方法都差) |
+| **III per-cell hardness** | **🟢🟢 最强** (3 cells 贡献 90%) |
+| IV local protocol | ⚪ |
+
+**决定方向**: III (per-cell hardness) → EXP-124 PCH (CE re-weight for hard cells, hw=2.0).
+
+详细分析见 `stageB_full/ANALYSIS.md`.
+
+---
 
 ---
 
