@@ -29,6 +29,10 @@ from algorithm.feddsa_scheduled import (
     Client as BaseClient,
     FedDSAModel,
     AlexNetEncoder,
+    init_global_module,
+    init_local_module,
+    init_dataset,
+    model_map,
 )
 
 
