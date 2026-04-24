@@ -234,6 +234,66 @@ python scripts/run_capacity_probes.py \
 
 ---
 
-## 十、结果回填 (运行后)
+## 十、结果回填 (2026-04-24, 完成)
 
-待跑.
+### 运行配置
+- 服务器: lab-lry GPU 1 (24GB free, 0% util)
+- Python: `/home/lry/conda/envs/pfllib/bin/python` (flgo 0.4.3)
+- 启动时间: 2026-04-24 22:24-22:30 (4 runs 并发, ~6 分钟 wall)
+- 加载 ckpt:
+  - Office: `~/fl_checkpoints/feddsa_s2_R200_best122_1776452601` (orth_only Office, AVG 89.38)
+  - PACS: `~/fl_checkpoints/feddsa_s2_R200_best196_1776473922` (orth_only PACS, AVG 78.26)
+
+### 各 run 结果 (R30, seed=2, 单 seed)
+
+| Run | Best | Best round | Last (R30) | Last10 mean |
+|---|:-:|:-:|:-:|:-:|
+| Office A (BiProto-lite, lp=0.5/le=0.3) | 88.26 | R18 | 87.99 | **87.99** |
+| Office B (Head-only baseline, lp=0/le=0) | 88.26 | R18 | 87.99 | **88.08** |
+| PACS A (BiProto-lite) | 75.82 | R2 | 75.59 | **75.69** |
+| PACS B (Head-only baseline) | 75.82 | R2 | 75.59 | **75.59** |
+
+### Δ 矩阵 (A − B)
+
+| 数据集 | Δ best | Δ last10_mean | Δ last |
+|---|:-:|:-:|:-:|
+| Office | **+0.00** | **−0.09** | +0.00 |
+| PACS | **+0.00** | **+0.10** | +0.00 |
+
+### 判决: 🔴 KILL BiProto
+
+按本 NOTE 第四节判决规则:
+- Δ < +0.3pp → **kill BiProto**, 不进 S1/S2/S3 完整 pipeline
+- Office best Δ = 0, last10 Δ = −0.09 (反而略降)
+- PACS best Δ = 0, last10 Δ = +0.10 (≪ 0.3 阈值)
+
+### 结论
+
+**BiProto 的 add-on (encoder_sty + Pd + L_sty_proto + L_proto_excl) 在 frozen encoder_sem + 可训 head 的 R30 setup 下, 对 Office accuracy 完全无增量** (Δ best = 0, Δ last10 = −0.09).
+
+这直接回应了 research-refine R4 reviewer 警告的"empirical question":
+> "the venue case still depends on a narrow but crucial empirical question: whether Pd shows real value beyond a local domain-axis surrogate"
+
+实测**Pd + L_proto_excl 没有跨 local domain centroid 之外的额外 signal**. R4 reviewer 的担忧成立, 实证 falsify.
+
+### 含义
+
+1. Office −1.49pp 的瓶颈**不在 architecture 解耦不够**, 而在其他维度: 聚合 / Caltech outlier / encoder capacity 已饱和
+2. 节省了估计 ~98 GPU-h 的完整 BiProto pipeline 投入 (S0+S1+S2+S3+S4)
+3. 资源应回投: **Calibrator 兜底**(50 行小改动), 或 **SAS τ tune**, 或 **Caltech-specific 聚合权重**
+
+### 下一步建议
+
+- ❌ kill BiProto (本方案完整 pipeline 不再启动)
+- ✅ Calibrator 兜底方案 (`experiments/FALLBACK_PLAN_FedDSA-Calibrator.md`) — 保住 office, 不退 PACS
+- ✅ 回头看 SAS τ tune / Caltech 权重路线 (主攻方向)
+- ✅ 把 BiProto 的 implementation 留作未来 D ≠ K benchmark (DomainNet multi-client-per-domain) 上的 future work
+
+### 设计层面教训 (refine 框架本身有效)
+
+虽然 BiProto 在 D=K=4 setup 下被 falsify, 但 research-refine 4 轮 (6.5→7.8→8.25→8.75) 的过程**精准命中了实证薄弱点**:
+- R4 reviewer 早就指出 "需要 −Pd ablation 才能回答"
+- C0 matched-intervention gate 设计正确, 用 6 GPU-h 拦下 ~98 GPU-h 投入
+- 这是 cost-effective falsification 的成功示例
+
+S0 gate 设计 = 整轮 refine 最重要的产出之一 (即使方法被 kill).
