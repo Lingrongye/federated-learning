@@ -23,6 +23,7 @@ algo_para:
 - 0.9    # [19] emd
 - 1      # [20] se
 - 1      # [21] fz  = 1
+init_ckpt: ~/fl_checkpoints/feddsa_s2_R200_best108_1776428164
 learning_rate: 0.1
 batch_size: 50
 weight_decay: 1e-3

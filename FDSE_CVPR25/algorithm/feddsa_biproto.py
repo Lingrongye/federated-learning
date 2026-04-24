@@ -286,6 +286,11 @@ class Server(_BaseServer):
 
         self._init_agg_keys()
 
+        # ---- Optional: load orth_only checkpoint (for S0 matched-intervention gate) ----
+        ckpt_path = self.option.get('init_ckpt', None)
+        if ckpt_path:
+            self._load_orth_only_ckpt(ckpt_path)
+
         # Pass 给 client
         for c in self.clients:
             # base
@@ -315,6 +320,41 @@ class Server(_BaseServer):
             c.ema_decay = self.ema_decay
             c.freeze_encoder_sem = self.freeze_encoder_sem
             c.num_clients_total = len(self.clients)
+
+    def _load_orth_only_ckpt(self, ckpt_path):
+        """从 orth_only ckpt 加载 encoder/semantic_head/head 权重 (strict=False 跳过 BiProto-only keys).
+
+        Used for S0 matched-intervention gate: 加载 EXP-105 orth_only Office R200 ckpt 后冻结 encoder.
+        ckpt_path: 路径到 ~/fl_checkpoints/feddsa_*/global_model.pt 或绝对路径
+        """
+        import os
+        import torch as _t
+        path = os.path.expanduser(ckpt_path)
+        if os.path.isdir(path):
+            path = os.path.join(path, 'global_model.pt')
+        if not os.path.isfile(path):
+            try:
+                self.gv.logger.warning(f"[BiProto] init_ckpt not found: {path}, skip load")
+            except Exception:
+                pass
+            return
+        try:
+            sd = _t.load(path, map_location='cpu')
+            if isinstance(sd, dict) and 'state_dict' in sd:
+                sd = sd['state_dict']
+            res = self.model.load_state_dict(sd, strict=False)
+            try:
+                self.gv.logger.info(
+                    f"[BiProto] loaded init_ckpt={path}, "
+                    f"missing={len(res.missing_keys)} unexpected={len(res.unexpected_keys)}"
+                )
+            except Exception:
+                pass
+        except Exception as e:
+            try:
+                self.gv.logger.warning(f"[BiProto] failed to load init_ckpt {path}: {e}")
+            except Exception:
+                pass
 
     def _init_agg_keys(self):
         """Override: encoder_sty 全部聚合 (FedAvg); BN running stats 本地; Pc/Pd 不参与 FedAvg

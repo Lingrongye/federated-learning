@@ -25,6 +25,8 @@ algo_para:
 - 0.9    # [19] emd
 - 1      # [20] se  = 1 (save best ckpt)
 - 1      # [21] fz  = freeze_encoder_sem (同对照 A)
+# 同对照 A 加载同一 ckpt
+init_ckpt: ~/fl_checkpoints/feddsa_s2_R200_best196_1776473922
 learning_rate: 0.05
 batch_size: 50
 weight_decay: 1e-3

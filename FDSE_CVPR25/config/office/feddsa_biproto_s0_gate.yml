@@ -25,6 +25,10 @@ algo_para:
 - 0.9    # [19] emd = ema_decay
 - 1      # [20] se  = save_endpoint (1 = save best ckpt)
 - 1      # [21] fz  = freeze_encoder_sem ★ S0 GATE 关键 flag
+# S0 gate 加载 orth_only Office ckpt (lab-lry 上 EXP-083 的 ckpt)
+# 实际部署时填具体路径, 例如: ~/fl_checkpoints/feddsa_s2_R200_best196_1776473922
+# 如果留空则从 random init 训, 用于 sanity check
+init_ckpt: ~/fl_checkpoints/feddsa_s2_R200_best196_1776473922
 learning_rate: 0.05
 batch_size: 50
 weight_decay: 1e-3
