@@ -1,0 +1,26 @@
+# Block 2 PACS ablation: no_dsct (seed=2, R200, E=5)
+algo_para:
+- 0.001    # 0  lambda_rec
+- 1.0    # 1  lambda_saac
+- 0.0    # 2  lambda_dsct
+- 0.01    # 3  lambda_kl
+- 10       # 4  kl_warmup_rounds
+- 10       # 5  saac_warmup_rounds
+- 512      # 6  sem_dim
+- 16       # 7  sty_dim
+- 256      # 8  srm_hidden
+- 4        # 9  bank_K
+- 0.1      # 10 tau
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 5
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
