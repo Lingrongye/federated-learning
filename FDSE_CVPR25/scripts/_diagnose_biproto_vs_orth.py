@@ -58,11 +58,18 @@ def load_ckpt(server, ckpt_dir, is_biproto):
 
 
 def collect_features(client, is_biproto):
-    """Returns z_sem, z_sty, y, plus eval-time logits accuracy on this client."""
+    """Returns z_sem, z_sty, y, plus eval-time logits accuracy on this client.
+
+    严格用 test_data (验证 acc), 如果不存在则报错 (避免 fallback to train 出现 train acc 误导).
+    """
     device = f'cuda:{GPU}' if torch.cuda.is_available() else 'cpu'
-    # 用 train_data + val_data 作为 feature pool (test set 也用来评估)
-    # 这里用 client.test_data (本地 test split)
-    test_data = client.test_data if hasattr(client, 'test_data') and client.test_data else client.train_data
+    test_data = getattr(client, 'test_data', None)
+    if test_data is None or len(test_data) == 0:
+        # 兜底: 使用 client.val_data (split=test_holdout) 这是 client 端的 holdout test
+        test_data = getattr(client, 'val_data', None)
+    if test_data is None or len(test_data) == 0:
+        raise RuntimeError(f"client {client.id} has no test_data/val_data; cannot evaluate test acc")
+    print(f"    [client {client.id}] using test_data of size {len(test_data)}", flush=True)
     loader = client.calculator.get_dataloader(test_data, batch_size=client.batch_size)
     z_sem_list, z_sty_list, y_list, correct = [], [], [], 0
     total = 0
