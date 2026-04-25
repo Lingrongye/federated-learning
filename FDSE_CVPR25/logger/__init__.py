@@ -257,6 +257,26 @@ class PerRunLogger(BasicLogger):
         return res
 
 
+class DualEncLogger(PerRunLogger):
+    """PerRunLogger + 保存 server.style_bank (FedDSA-DualEnc 专用).
+
+    optimal_state 在 PerRunLogger 基础上加:
+        'style_bank': dict {client_id -> z_sty samples tensor}
+    用于 B6 (4x4 swap grid) + B7 (probe) 离线 dump 时直接拿现成 bank,
+    不需要重新 forward 训练集算 z_sty.
+    """
+    def optimal_state(self) -> dict:
+        res = super().optimal_state()
+        if hasattr(self.coordinator, 'style_bank'):
+            # 拷贝成 cpu tensor dict, 避免 deepcopy 整个 nn.Module 引用
+            sb = self.coordinator.style_bank
+            res['style_bank'] = {
+                cid: t.detach().cpu().clone() if t is not None else None
+                for cid, t in sb.items()
+            }
+        return res
+
+
 class PerRunDiagLogger(PerRunLogger):
     """PerRunLogger + per-class + confidence diagnostic on every round.
 
