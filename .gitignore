@@ -9,6 +9,12 @@ mlc-qwen3-vl.zip
 # PDF论文（大文件）
 papers/
 
+# 临时论文文本提取 / 服务器备份(大文件) — 都不入 Git
+_pdf_texts/
+_westb_backup/
+_fedccrl_text.txt
+_*.txt
+
 # === 数据集原始数据（保留生成脚本 .py）===
 # PFLlib 数据集：排除生成出来的数据，保留 generate_*.py
 PFLlib/dataset/MNIST/
