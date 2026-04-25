@@ -272,11 +272,15 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.shared_keys = [k for k in all_keys if k not in self.private_keys]
 
     def pack(self, client_id, mtype=0):
-        """Send global model + style bank dispatch (exclude client's own).
+        """Send global model state_dict + style bank dispatch (exclude client's own).
 
         Codex IMPORTANT 修正: 旧版 fallback 到 self bank, 单 client / sparse-bank 时
         cross-client SAAC/DSCT 退化成 self-source, 语义错误. 修正: 没有别 client 风格
         时返回 None (client 端见 None 直接 saac_active=False, 不进 cycle).
+
+        通信优化: 传 state_dict (per-tensor cpu clone) 而不是 deepcopy 整个 model,
+        避免 Windows 上 nn.Parameter.__deepcopy__ 偶发 access violation, 同时减少
+        通信负载 (无需 model graph metadata).
         """
         dispatched = None
         active_round = max(0, self.current_round - 1) >= max(self.saac_warmup_rounds, 1)
@@ -289,8 +293,11 @@ class Server(flgo.algorithm.fedbase.BasicServer):
                 dispatched = available
             # else: dispatched 保持 None, client 见 None 关闭 SAAC/DSCT
 
+        # 只传 state_dict 副本, 不传 model object (避开 deepcopy nn.Module 在 Windows 上的崩溃)
+        global_state = copy.deepcopy(self.model.state_dict())
+
         return {
-            'model': copy.deepcopy(self.model),
+            'state_dict': global_state,
             'style_bank': dispatched,
             'current_round': self.current_round,
         }
@@ -299,20 +306,22 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         self.selected_clients = self.sample()
         res = self.communicate(self.selected_clients)
 
-        models = res['model']
+        state_dicts = res['state_dict']
         style_samples_list = res['style_samples']
 
         # 1. Aggregate shared parameters (FedAvg, exclude E_sty + BN running stats)
-        self._aggregate_shared(models)
+        self._aggregate_shared(state_dicts)
 
         # 2. Update style bank: each client overwrites its own slot with fresh z_sty samples
         for cid, samples in zip(self.received_clients, style_samples_list):
             if samples is not None and samples.numel() > 0:
                 self.style_bank[cid] = samples
 
-    def _aggregate_shared(self, models):
-        """Sample-count-weighted FedAvg on shared keys."""
-        if len(models) == 0:
+    def _aggregate_shared(self, state_dicts):
+        """Sample-count-weighted FedAvg on shared keys.
+        state_dicts: list of state_dict (per-client OrderedDict).
+        """
+        if len(state_dicts) == 0:
             return
         weights = np.array(
             [len(self.clients[cid].train_data) for cid in self.received_clients],
@@ -321,13 +330,14 @@ class Server(flgo.algorithm.fedbase.BasicServer):
         weights /= weights.sum()
 
         global_dict = self.model.state_dict()
-        model_dicts = [m.state_dict() for m in models]
-
         for k in self.shared_keys:
             if 'num_batches_tracked' in k:
                 continue
-            global_dict[k] = sum(w * md[k] for w, md in zip(weights, model_dicts))
-
+            tensors = [sd[k] for sd in state_dicts]
+            result = tensors[0] * weights[0]
+            for w, t in zip(weights[1:], tensors[1:]):
+                result = result + w * t
+            global_dict[k] = result
         self.model.load_state_dict(global_dict, strict=False)
 
 
@@ -347,32 +357,32 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         self._max_style_samples = 200
 
     def reply(self, svr_pkg):
-        model, style_bank, current_round = self.unpack(svr_pkg)
+        style_bank, current_round = self.unpack(svr_pkg)
         self.current_round = current_round
         self.received_bank = style_bank
-        self.train(model)
+        self.train(self.model)
         return self.pack()
 
     def unpack(self, svr_pkg):
-        """Apply only shared keys; keep style_*_head and BN running stats local."""
-        global_model = svr_pkg['model']
-        if self.model is None:
-            self.model = global_model
-        else:
-            new_dict = self.model.state_dict()
-            global_dict = global_model.state_dict()
-            for key in new_dict.keys():
-                if 'style_mu_head' in key or 'style_logvar_head' in key:
-                    continue
-                if 'bn' in key.lower() and ('running_' in key or 'num_batches_tracked' in key):
-                    continue
-                new_dict[key] = global_dict[key]
-            self.model.load_state_dict(new_dict)
-        return self.model, svr_pkg['style_bank'], svr_pkg['current_round']
+        """Apply only shared keys from server state_dict; keep style_*_head and BN
+        running stats local."""
+        global_state = svr_pkg['state_dict']
+        new_dict = self.model.state_dict()
+        for key in new_dict.keys():
+            if 'style_mu_head' in key or 'style_logvar_head' in key:
+                continue
+            if 'bn' in key.lower() and ('running_' in key or 'num_batches_tracked' in key):
+                continue
+            if key in global_state:
+                new_dict[key] = global_state[key]
+        self.model.load_state_dict(new_dict)
+        return svr_pkg['style_bank'], svr_pkg['current_round']
 
     def pack(self):
+        # 传 state_dict 副本 (deepcopy on dict 安全, deepcopy on nn.Module 在 Windows 偶发崩)
+        local_state = copy.deepcopy(self.model.state_dict())
         return {
-            'model': copy.deepcopy(self.model.to('cpu')),
+            'state_dict': local_state,
             'style_samples': self._uploaded_style_samples,
         }
 
@@ -523,7 +533,13 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         return torch.cat(tensors, dim=0)
 
     def _sample_swap(self, batch_size, device, pool):
-        """For each sample, draw K z_sty from pool, mix via U(-1, 1) linear combo (CDDSA)."""
+        """For each sample, draw K z_sty from pool, mix via U(-1, 1) linear combo (CDDSA).
+
+        Self-review 修正: 旧版用 L1 归一 (sum |alpha|=1), 让混合后 var(z_sty_swap) =
+        Σα² · var(pool) ≈ var(pool)/K, 跟 reparameterize 后 z_sty 量级错位 (decoder
+        训练看的是单点 sample, cycle 喂的是缩水均值, distribution shift). 修正: 改用
+        L2 归一 (Σα² = 1), 这样 var(z_sty_swap) ≈ var(pool), 跟训练分布对齐.
+        """
         if pool is None or pool.size(0) == 0:
             # fallback: 随机噪声 (理论上 saac_active=False 已挡住, 这里防御)
             return torch.randn(batch_size, self.sty_dim, device=device)
@@ -533,7 +549,8 @@ class Client(flgo.algorithm.fedbase.BasicClient):
         idx = torch.randint(0, N, (batch_size, K), device='cpu')
         chosen = pool[idx]  # [B, K, sty_dim]
         alpha = (torch.rand(batch_size, K) * 2.0 - 1.0)  # U(-1, 1)
-        denom = alpha.abs().sum(dim=1, keepdim=True).clamp(min=1e-6)
+        # L2 归一: Σα² = 1, 让混合后方差跟单点 sampled z 一致
+        denom = (alpha ** 2).sum(dim=1, keepdim=True).clamp(min=1e-6).sqrt()
         alpha = alpha / denom
         z_sty_swap = (alpha.unsqueeze(-1) * chosen).sum(dim=1)
         return z_sty_swap.to(device)
