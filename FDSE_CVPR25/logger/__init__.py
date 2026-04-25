@@ -264,6 +264,9 @@ class DualEncLogger(PerRunLogger):
         'style_bank': dict {client_id -> z_sty samples tensor}
     用于 B6 (4x4 swap grid) + B7 (probe) 离线 dump 时直接拿现成 bank,
     不需要重新 forward 训练集算 z_sty.
+
+    额外 override get_output_name: 强制用 algopara_<list> 紧凑形式, 避免 11 项
+    algo_para dict 全展开导致 Linux 文件名超 255 字节上限 (EXP-118 同类坑).
     """
     def optimal_state(self) -> dict:
         res = super().optimal_state()
@@ -275,6 +278,33 @@ class DualEncLogger(PerRunLogger):
                 for cid, t in sb.items()
             }
         return res
+
+    def get_output_name(self, suffix='.json'):
+        """Override: 用紧凑 algopara_<list> 而不是 dict 展开, 防文件名超长."""
+        if not hasattr(self, 'option'):
+            raise NotImplementedError('logger has no attr named "option"')
+        header = "{}_".format(self.option["algorithm"])
+        if self.option.get('algo_para') is not None and len(self.option['algo_para']) > 0:
+            header = header + 'algopara_' + '|'.join([str(p) for p in self.option['algo_para']]) + '_'
+        output_name = header + "M{}_R{}_B{}_".format(
+            self.option['model'], self.option['num_rounds'], self.option['batch_size'])
+        if self.option['num_steps'] < 0:
+            output_name = output_name + ("E{}_".format(self.option['num_epochs']))
+        else:
+            output_name = output_name + ("K{}_".format(self.option['num_steps']))
+        output_name = output_name + "LR{:.2e}_P{:.2e}_S{}_LD{}_WD{:.4e}".format(
+            self.option['learning_rate'],
+            self.option['proportion'],
+            self.option['seed'],
+            self.option['lr_scheduler'] + "_{:.4e}".format(self.option['learning_rate_decay']),
+            self.option['weight_decay'],
+        )
+        output_name = output_name + '_SIM{}_LG{}'.format(
+            self.option['simulator'],
+            self.__class__.__name__,
+        )
+        output_name = output_name + suffix
+        return output_name
 
 
 class PerRunDiagLogger(PerRunLogger):
