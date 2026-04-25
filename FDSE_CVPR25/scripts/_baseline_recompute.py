@@ -2,9 +2,9 @@
 import json, glob, os
 
 ALGOS = {
-    'feddsa_biproto': '/home/lry/code/federated-learning/FDSE_CVPR25/task/{ds}/record/feddsa_biproto_*_{s}_*R200*.json',
-    'feddsa_scheduled (orth_only)': '/home/lry/code/federated-learning/FDSE_CVPR25/task/{ds}/record/feddsa_scheduled_*_{s}_*R200*.json',
-    'fdse': '/home/lry/code/federated-learning/FDSE_CVPR25/task/{ds}/record/fdse_*_{s}_*R200*.json',
+    'feddsa_biproto': '/home/lry/code/federated-learning/FDSE_CVPR25/task/{ds}/record/feddsa_biproto_*R200*_{s}_*.json',
+    'feddsa_scheduled (orth_only)': '/home/lry/code/federated-learning/FDSE_CVPR25/task/{ds}/record/feddsa_scheduled_*R200*_{s}_*.json',
+    'fdse': '/home/lry/code/federated-learning/FDSE_CVPR25/task/{ds}/record/fdse_*R200*_{s}_*.json',
 }
 
 for ds, key in [('Office', 'office_caltech10_c4'), ('PACS', 'PACS_c4')]:
