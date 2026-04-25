@@ -1,0 +1,28 @@
+# FedDSA-DualEnc Office-Caltech10 config (EXP-128)
+# algo_para 顺序必须严格匹配 algorithm/feddsa_dualenc.py Server.initialize()
+algo_para:
+- 0.001    # 0  lambda_rec  (CDDSA 极小, 防主导)
+- 1.0      # 1  lambda_saac (cycle anatomy, 核心 loss)
+- 0.01     # 2  lambda_dsct (z_sty 跨域散开 InfoNCE)
+- 0.01     # 3  lambda_kl   (VAE KL, warmup ramp 至此)
+- 10       # 4  kl_warmup_rounds (前 10 round KL 关闭)
+- 10       # 5  saac_warmup_rounds (前 10 round 风格仓库尚未 warm)
+- 512      # 6  sem_dim
+- 16       # 7  sty_dim
+- 256      # 8  srm_hidden
+- 4        # 9  bank_K (每次采 K 个 z_sty 线性组合)
+- 0.1      # 10 tau (InfoNCE temperature)
+# 训练超参 (沿用 orth_only Office config)
+learning_rate: 0.1
+batch_size: 50
+weight_decay: 1e-3
+lr_scheduler: 0
+learning_rate_decay: 0.9998
+num_rounds: 200
+num_epochs: 1                # Office 用 1 (沿用 EXP-119)
+clip_grad: 10
+proportion: 1.0
+train_holdout: 0.2
+local_test: True
+no_log_console: True
+log_file: True
