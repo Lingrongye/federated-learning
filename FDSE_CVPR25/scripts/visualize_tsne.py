@@ -113,8 +113,13 @@ def main():
     clients = server.clients
 
     # 3. Load weights
+    import copy
     global_state = torch.load(ckpt_dir / 'global_model.pt', map_location=device)
     server.model.load_state_dict(global_state, strict=False)
+    # 先 deepcopy server.model 给 client (BiProto Client.initialize 时 model=None)
+    for c in clients:
+        if c.model is None:
+            c.model = copy.deepcopy(server.model)
     # client_models.pt 可能不存在 (e.g. S0 gate ckpt), 跳过即可
     client_ckpt = ckpt_dir / 'client_models.pt'
     if client_ckpt.is_file():
