@@ -1,11 +1,12 @@
 ---
 date: 2026-04-26
-status: v2 方案敲定 (M1/M2 实测验证完成),等 F2DC sanity 复现完成后开始 W2 实施
+status: v3 方案敲定 (经过 2 轮 review + 实测验证),等 F2DC sanity 复现完成后开始 W2 实施
 based_on: F2DC (CVPR'26),借鉴 RFedDis evidential / Disentanglement-Then-Reconstruction prototype
 expected_gain: PACS 76.47 → 78+ (+1.5pp), Office 66.82 → 68+ (+1.5pp)
 revisions:
   v1 (04-26 早): 设计完成,基于 paper 推理
-  v2 (04-26 晚): 经过 13 项 review critique,M1/M2 经 EXP-130 client 分布实测验证为真问题,锁定 fix
+  v2 (04-26 晚): 经过 review 第一轮 (13 项),M1/M2 经 EXP-130 client 分布实测验证为真问题,锁定 fix
+  v3 (04-26 深夜): 经过 review 第二轮 (NV1-NV4),识别 v2 引入的 magnitude 错配 + 工作流分类错误,锁定 4 个数学结构 fix
 ---
 
 # PG-DFC: Prototype-Guided DFC for Federated Feature Decoupling
@@ -13,7 +14,12 @@ revisions:
 > 把 F2DC 的"盲修复 DFC"改成"有方向的 prototype-guided 校准"
 > 用跨 client 聚合的 class prototype 当抢救锚点,让 DFC 知道 nr_feat 该往哪儿救
 
-> **v2 重要修正**:经过 review + 实测,M1 改成 sample 累加(不用 batch-mean EMA),M2 改成 L2-norm + 等权(不用 sample-weighted)。详见末尾「附录 C: v2 实证修正」。
+> **v3 重要修正**(基于 review 第二轮):
+> - **NV1**: dot-product attention → **cosine attention**(消除 v2 L2-norm 引入的 magnitude 错配)
+> - **NV2**: proto 路径 **预先 detach**(C1 数学必然问题,先稳后验)
+> - **NV3**: 跨 round **不平滑** α_round=0(避免 backbone 错配)
+> - **NV4**: server 端加 **跨 round EMA β=0.8**(平滑投票成员变化)
+> 详见末尾「附录 E: v3 修订」。
 
 ---
 
@@ -867,4 +873,234 @@ for c in range(num_classes):
 | `utils/best_args.py` | 加 f2dc_pg 超参 | **去掉 proto_alpha(不需要 EMA)** | +27 |
 | `main_run.py` | argparse | 不变 | +6 |
 | **总计** | ~216 行 | **~223 行** | 几乎不变 |
+
+---
+
+# 附录 E: v3 修订(2026-04-26 深夜,基于 review 第二轮)
+
+## E.1 触发原因
+
+v2 锁定 M1/M2 fix 后,review 第二轮(NV1-NV4)指出 4 个新问题:
+- NV1: v2 的 L2-norm 聚合引入 magnitude 错配 — **新硬伤**
+- NV2: C1(proto 路径污染 mask)是数学结构问题,应预先 detach 而非"等实测"
+- NV3: 跨 round α_round 文档歧义,应明确 α=0
+- NV4: server 端没考虑投票成员变化导致的 jump
+
+**全部成立**。v2 必须升级到 v3。
+
+## E.2 工作流分类升级(最有价值的洞察)
+
+v2 工作流错在"所有未 fix 项一律等实测验证"。正确分类:
+
+| 问题类型 | 决策方法 | v2 误区 | 例子 |
+|---|---|---|---|
+| **数据驱动** | 实测验证后再 fix | ✓ v2 做对了 | M1, M2 |
+| **数学结构** | 看代码直接预防,事后 ablation 验证 | ✗ v2 推迟错了 | C1, C2, C3, NV1, NV2 |
+| **数值估算** | 实测看现象,但要带预案 | △ v2 部分对 | M3, M4 |
+
+**核心**:autograd 反传路径 / magnitude scale 这种"看代码就能确定"的问题,不需要实测验证 — 直接预防,事后 ablation 证明 fix 有效即可。
+
+## E.3 v3 锁定 fix(在 v2 基础上叠加)
+
+### v3 Fix 1: Cosine Attention(NV1)
+
+**问题**: v2 引入 L2-norm 聚合后,server 下发的 class_proto 是 unit vector(||μ||=1),但 client 端 r_pooled 是 raw vector(||r||~22.6),两边经 Linear 后 magnitude 完全不一致 → attention 行为被 q magnitude 主导。
+
+**v3 (敲定)**:
+```python
+# DFC_PG.forward — 替换 attention 计算
+B, C, H, W = nr_feat.shape
+
+nr_pooled = F.adaptive_avg_pool2d(nr_feat, 1).reshape(B, C)
+q = self.q_proj(nr_pooled)                              # (B, C)
+k = self.k_proj(self.class_proto)                        # (num_classes, C)
+v = self.v_proj(self.class_proto)                        # (num_classes, C)
+
+# ★ Cosine attention(NV1 fix)
+q_norm = F.normalize(q, dim=-1)                          # unit vector
+k_norm = F.normalize(k, dim=-1)
+attn_logits = (q_norm @ k_norm.T) / self.attn_temperature  # τ ∈ {0.1, 0.3, 0.5}
+attn = F.softmax(attn_logits, dim=-1)                    # (B, num_classes)
+proto_clue = attn @ v                                    # (B, C)
+```
+
+**好处**:
+- magnitude 一致(都是 unit) → NV1 解决
+- 同时解决 M4(显式控制 temperature,attention 不会塌缩)
+- BYOL/SwAV/MoCo 标准做法
+
+**新超参**:`attn_temperature` ∈ {0.1, 0.3, 0.5},grid search
+
+### v3 Fix 2: 预先 Detach Proto 路径(NV2)
+
+**问题**: F2DC 的 (1-mask) 在计算图里,反传时 CE 必然到达 mask。加 proto_clue 必然让"推 mask 朝 0"那一边变大,可能让 mask 训练塌缩。**这是数学事实,不是经验猜测**。
+
+期望成本:
+- 不预先 detach: 50% × 9h(崩了重跑) = 4.5h
+- 预先 detach: 0(直接跑 + 1 个 ablation 验证)
+- **预先 detach 占优**
+
+**v3 (敲定)**:
+```python
+# DFC_PG.forward — proto 路径上的 mask 预先 detach
+mask_for_proto = mask.detach()                           # ★ 阻断 proto 路径反传到 mask
+
+rec_feat = nr_feat \
+    + (1 - mask) * rec_units \                          # 原 F2DC 路径,梯度到 mask
+    + (1 - mask_for_proto) * self.proto_weight * proto_clue  # ★ proto 路径,不反传到 mask
+```
+
+**好处**:
+- DFD mask 学习不被 proto 干扰(回到 F2DC 原版的稳定平衡)
+- attention 还能学(q/k/v_proj 通过 proto_clue 自身梯度学习)
+
+**Ablation 必跑** "no detach" 对比,证明 fix 有效(也是 paper 的一个 contribution)。
+
+### v3 Fix 3: 明确 α_round=0(NV3)
+
+**问题**: v2 文档写"α_round 可设 0 或 0.5",其中 0.5 在数学上有问题:
+- round r 的 r_feat 用的是 round r 的 backbone
+- round r-1 的 r_feat 用的是 round r-1 的 backbone
+- 不同 backbone 状态算的统计量混合是 incoherent 的
+
+**v3 (敲定)**:**完全不做 client 端跨 round 平滑**
+```python
+# Round 末算 mean,直接覆盖 μ_local
+# 不做 EMA 跨 round 平滑
+for c in range(num_classes):
+    if count[c] > 0:
+        μ_local[c] = sum_feat[c] / count[c]              # ★ 直接用,无 α 平滑
+    # else: 保持上 round 值(或 0)
+```
+
+**理由**:
+- 单 round PACS sketch ~1500+ samples,sample 累加均值已稳
+- 不需要客户端跨 round 平滑
+- 跨 round 平滑放在 server 端(NV4),不会有 backbone 错配问题
+
+### v3 Fix 4: Server 端 Global EMA β=0.8(NV4)
+
+**问题**: v2 的 server 聚合在某 client 整 round 没采到某类时 mask 掉它,投票成员数 K_c 跨 round 变化 → μ_global jump。
+
+例: round r 由 {client 2, 5, 7} 投票, round r+1 由 {2, 5} 投票(7 没采到)→ 即使 2/5 不变,μ_global 也跳。
+
+**v3 (敲定)**:**server 端跨 round 平滑**
+```python
+# server 端 aggregate_protos
+def aggregate_protos(local_protos, local_counts, online_clients, beta=0.8):
+    for c in range(num_classes):
+        valid = [k for k in online_clients if local_counts[k][c] > 0]
+        if not valid:
+            continue  # 无 client 有此类,保持 μ_global[c] 不变
+
+        # 1. 每个 valid client L2-norm
+        normed = [F.normalize(local_protos[k][c], dim=0) for k in valid]
+        # 2. 等权平均
+        new_agg = torch.stack(normed).mean(0)
+        new_agg = F.normalize(new_agg, dim=0)            # unit vector
+
+        # 3. ★ 跨 round EMA 平滑(NV4 fix)
+        if μ_global[c].abs().sum() < 1e-6:
+            μ_global[c] = new_agg                        # 第一次,直接用
+        else:
+            μ_global[c] = beta * μ_global[c] + (1 - beta) * new_agg
+            μ_global[c] = F.normalize(μ_global[c], dim=0)  # 再 normalize 保 unit
+```
+
+**好处**:
+- 跨 round 平滑放 server 端,**不涉及 backbone**(无 NV3 错配问题)
+- 投票成员变化的 jump 被 EMA 抵消
+- β 是单超参(grid: 0.5, 0.8, 0.95)
+
+**注意**:在我们 K=4 1-1 domain setup 下,client 不会某 round 整轮没采到某类(全 dataset partition)→ NV4 影响小。但加上 server EMA 不会变差,且复现 F2DC K=10 setup 时是必须的。
+
+## E.4 两个 EMA 的对比(澄清概念)
+
+| 维度 | v1 Client EMA(已取消) | v3 Server EMA(NV4 加) |
+|---|---|---|
+| 位置 | client 端,backbone 旁 | server 端,聚合后 |
+| 频率 | 每 batch | 每 round |
+| 输入 | batch_mean(噪声) | 已聚合 prototype(稳定) |
+| 解决问题 | 想平滑 batch 噪声(没解决,反引入 M1+NV3) | 平滑跨 round 投票成员变化(NV4) |
+| 跟 backbone 关系 | 强耦合(NV3 错配) | 无耦合(server 不算 r_feat) |
+| **结论** | **取消** | **保留** |
+
+**v3 的设计原则**:client 端无 EMA(直接 sample 累加),server 端有 EMA(跨 round 稳定性)。
+
+## E.5 v3 必跑 sanity 实验(更新版,5 个跑次)
+
+| 跑次 | 配置 | 验证 | 预期 |
+|---|---|---|---|
+| **#0** | proto_weight=0,所有 v3 fix | 退化等价 F2DC | F2DC ±0.3pp |
+| **#1** | full v3 (cosine + detach + α_round=0 + server EMA β=0.8) | **主推荐配置** | F2DC + 1.0~1.5pp |
+| **#2** | #1 但 dot-product attention(无 cosine) | NV1 ablation | < #1,验证 NV1 |
+| **#3** | #1 但不 detach(C1 raw)| NV2 ablation | 可能崩或不涨,验证 C1 |
+| **#4** | #1 但 server EMA β=0(无平滑)| NV4 ablation | < #1 在 F2DC K=10 setup 严重,在 K=4 影响小 |
+
+每个跑 PACS seed=2 单 seed 即可(W2-3 周内出 5 个数字),决策后再上 3-seed。
+
+## E.6 v3 Reviewer 自己 retract 的 M4
+
+review 第二轮重新核对:
+> 我之前的 review 估算 var=22.6 是误算(混淆了 std 和 var)。这一项收回。
+
+确认 M4(attention temperature)数学上不会让 softmax 一开始就塌缩(/√C 缩放后 std=1)。
+
+但 NV1 的 magnitude 错配让 attention 即使 logits std=1 也异常 — cosine attention(v3 Fix 1)一并解决。
+
+## E.7 v3 不动的部分(最终未 fix 列表)
+
+| 项 | 状态 | 原因 |
+|---|---|---|
+| M3 (proto_weight 量级) | 实测看现象 | 数值估算偏高,实际跟 rec_units 量级相当 |
+| m1 (q/k/v 786K 参数) | 后期 bottleneck | 工程优化,不影响算法正确性 |
+| m2 (buffer FedAvg) | **必须改** persistent=False | 一行代码,直接加进 v3 |
+| m3 (warmup 30) | 看 setup | R=200 我们 setup 下 OK |
+| m4 (权重口径) | 文档写明 | paper Method 章节解释 |
+
+**必加的 m2 fix**:
+```python
+# DFC_PG.__init__
+self.register_buffer('class_proto', torch.zeros(num_classes, C), persistent=False)
+# ★ persistent=False 防止被 FedAvg 误聚合
+```
+
+## E.8 v3 总改动量(更新)
+
+| 文件 | v2 改动 | v3 增量 | v3 总行数 |
+|---|---|---|:--:|
+| `backbone/ResNet_DC.py` | DFC_PG 类 + cosine attention + detach + persistent=False | +5 (cosine) +3 (detach) +1 (persistent) | +69 |
+| `backbone/ResNet_DC.py` | ResNet 用 DFC_PG | 不变 | +3 |
+| `backbone/ResNet_DC.py` | forward 加 return_r_feat | 不变 | +5 |
+| `models/f2dc.py` | F2DC_PG + sample 累加 | 不变 | +85 |
+| `models/utils/federated_model.py` | aggregate_protos L2-norm 等权 | +6 (server EMA) | +41 |
+| `models/__init__.py` | 注册 f2dc_pg | 不变 | +2 |
+| `utils/best_args.py` | 加 attn_temperature, server_ema_beta 超参 | +5 | +32 |
+| `main_run.py` | argparse | +2 | +8 |
+| **总计** | ~223 行 | **+22 行** | **~245 行** |
+
+仍然在"小改动"范围(< 250 行),完全兼容 F2DC。
+
+## E.9 v3 关键经验(累计 3 轮 review)
+
+| 轮次 | 关键发现 | 教训 |
+|---|---|---|
+| 第 1 轮 review (Codex 13 项) | M1/M2 是真问题,实测验证 | review 不全盘接受,数据驱动 |
+| 第 2 轮 review (NV1-NV4) | v2 引入 magnitude 错配 + 工作流分类错误 | review 不预设方向,但数学结构问题不应推迟 |
+| **3 个分类原则** | 数据驱动 / 数学结构 / 数值估算 各有不同决策方法 | **看代码就能定的事不要实测,实测的成本看代码定不了的事** |
+
+## E.10 v3 时间表(更新)
+
+| 周 | 任务 | 产出 |
+|---|---|---|
+| W1 (本周) | EXP-130 F2DC sanity 27 runs(已在跑)| F2DC baseline 数字 |
+| W1 (已完成) | client 分布实测 + v3 方案敲定 | M1/M2 锁定 + NV1-NV4 锁定 |
+| W2 Day 1-2 | 写 DFC_PG v3(cosine + detach + persistent=False)| code v1 编译通过 |
+| W2 Day 3-4 | 写 client sample 累加 + server L2-norm 等权 + EMA β=0.8 | code v1 完整可跑 |
+| W2 Day 5 | 跑 #0 sanity (proto_weight=0,验证退化等价 F2DC) | 跟 F2DC 数字一致 ±0.3pp |
+| W3 Day 1-3 | 跑 #1 PACS seed=2 (full v3) | 第一个 PG-DFC 数字 |
+| W3 Day 4-5 | 跑 #2/#3/#4 ablation | NV1/NV2/NV4 各一个数字 |
+| W4 | full PACS+Office 3-seed 主表 + InfoNCE ablation(PG-Contrast) | 完整方案 |
+| W5 | functional 诊断(DIAD/CCTM)+ 消融完善 | paper Section "Validation" |
+| W6-8 | 写论文 | 初稿 |
 
