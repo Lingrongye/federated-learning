@@ -100,6 +100,20 @@ def parse_args():
         "--lambda2", type=float, default=1.0, help="params for DFC loss"
     )
 
+    # ===== PG-DFC v3.2 超参 =====
+    parser.add_argument("--pg_proto_weight", type=float, default=0.3,
+                        help="PG-DFC: target proto_weight (after warmup+ramp)")
+    parser.add_argument("--pg_attn_temperature", type=float, default=0.3,
+                        help="PG-DFC: cosine attention temperature")
+    parser.add_argument("--pg_warmup_rounds", type=int, default=30,
+                        help="PG-DFC: warmup rounds (proto_weight=0)")
+    parser.add_argument("--pg_ramp_rounds", type=int, default=20,
+                        help="PG-DFC: ramp rounds (proto_weight 0 → target)")
+    parser.add_argument("--pg_server_ema_beta", type=float, default=0.8,
+                        help="PG-DFC: server EMA β for cross-round prototype smoothing")
+    parser.add_argument("--num_classes", type=int, default=7,
+                        help="num classes (for prototype dim)")
+
     parser.add_argument("--ma_select", type=str, default="resnet", help="backbone")
 
     # CPU core intra-op parallelism

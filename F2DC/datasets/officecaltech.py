@@ -114,6 +114,16 @@ class FedLeaOfficeCaltech(FederatedDataset):
                 for j in range(parti_num):
                     nets_list.append(resnet10_dc_office(num_classes=FedLeaOfficeCaltech.N_CLASS,
                                                  gum_tau=FedLeaOfficeCaltech.model_args.gum_tau))
+            elif model_name=='f2dc_pg':
+                from backbone.ResNet_DC_PG import resnet10_dc_pg_office
+                args_obj = FedLeaOfficeCaltech.model_args
+                pw = getattr(args_obj, 'pg_proto_weight', 0.3)
+                tau_attn = getattr(args_obj, 'pg_attn_temperature', 0.3)
+                for j in range(parti_num):
+                    nets_list.append(resnet10_dc_pg_office(num_classes=FedLeaOfficeCaltech.N_CLASS,
+                                                            gum_tau=FedLeaOfficeCaltech.model_args.gum_tau,
+                                                            proto_weight=pw,
+                                                            attn_temperature=tau_attn))
             else:
                 for j in range(parti_num):
                     nets_list.append(resnet10(FedLeaOfficeCaltech.N_CLASS))
