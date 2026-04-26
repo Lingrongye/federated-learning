@@ -155,6 +155,53 @@
 - 实际 grep 全文找到 R7 已完成
 - 教训: 不要用 chained tail+grep+tail, 直接 `grep 'Acc' log | tail -3` 看真实最新
 
+## R18 进度更新 (06:33)
+
+| run | R7 | R18 | trend | round time |
+|-----|:--:|:--:|---|:--:|
+| R0 sanity_pw0 | 29.97 | **52.15** | 单调上涨 ✓ | 282 → 640s/round (3并行+attention 计算后变慢) |
+| R1 full_v32 | 30.22 | **50.97** | 单调上涨 ✓ (跟 R0 同步, warmup 期等价) | 同上 |
+| R2 tau05 | (R1: 23.02) | **R12: 40.47** | 单调上涨 ✓ (启动晚, 进度正常) | 同上 |
+
+### 时间表修正
+
+实测 round time ~640s/round (慢于预期 282s),100 round 需要 17.8h。
+
+| 时间 | 预计事件 |
+|------|---|
+| **08:00 用户起床** | R0/R1 ~R30 (proto_weight 刚开始 ramp), R2 ~R20 |
+| 10:00 | R0/R1 R45 (proto 全开), R2 R30 — 关键观察期 |
+| 13:00 | R0/R1 R65, R2 R55 |
+| **17:00** | R0/R1 R85+, R2 R75 |
+| **21:00** | R0/R1 完成 R100, R2 R95+ |
+| 21:30 | R2 完成, auto_wave2_v2 触发 Office Wave |
+| 22:00 | Office Wave 完成, Wave 2 PACS seed=15+333 启动 |
+| **次日 06:00** | Wave 2 PACS 完成, Wave 2 Office 启动 |
+| **次日 06:30** | 全部完成 |
+
+### 起床后能看到的内容
+
+- ✅ 完整 sanity 验证 (退化等价 F2DC, R0 跟 R1 在 warmup 期一致)
+- ✅ 早期收敛趋势 (R0-R30 acc 数据点)
+- ⏳ PG-DFC vs vanilla 真实差异 (proto_weight 启动后, ~R40 起)
+- ❌ 完整 R=100 数字 (要等到 21:00)
+
+### 起床后的 cheatsheet
+
+```bash
+# 查 PACS R0/R1/R2 当前 round 进度
+ssh sc5 "for log in /root/autodl-tmp/federated-learning/experiments/ablation/EXP-131_PG-DFC_v3.2/logs/R*pacs_seed2.log; do echo \$log; grep Acc \$log | tail -3; echo; done"
+
+# 查 GPU 状态
+ssh sc5 "nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader; nvidia-smi --query-gpu=memory.used,memory.free,utilization.gpu --format=csv,noheader"
+
+# 如果想加速 (可选, 起床后做): 杀 R2 让 R0/R1 加速 ~2x
+# ssh sc5 "kill -9 9414"  # 注意: pid 可能变, 用 nvidia-smi 查最新
+
+# 如果 R0/R1 已完成, 可以跑剩余 ablation R3 R4 R5
+ssh sc5 "PYTHONUNBUFFERED=1 nohup /root/miniconda3/bin/python -u /root/autodl-tmp/federated-learning/F2DC/main_run.py --device_id 0 --communication_epoch 100 --local_epoch 10 --parti_num 10 --model f2dc_pg --dataset fl_pacs --pg_proto_weight 0.3 --pg_attn_temperature 0.1 --pg_server_ema_beta 0.8 --pg_warmup_rounds 30 --pg_ramp_rounds 20 --num_classes 7 --seed 2 > /root/autodl-tmp/federated-learning/experiments/ablation/EXP-131_PG-DFC_v3.2/logs/R3_tau01_pacs_seed2.log 2>&1 &"
+```
+
 ## 结果 (跑完后回填)
 
 ### Wave 1 数字 (PACS R=100 seed=2)
