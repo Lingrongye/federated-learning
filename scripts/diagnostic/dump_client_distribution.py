@@ -31,10 +31,10 @@ if not os.path.exists(F2DC_DIR):
     # fallback: 假设脚本被 cd 到 F2DC/ 后调用
     F2DC_DIR = os.getcwd()
 
+# 注意:F2DC/datasets/utils 也叫 utils,如果把 F2DC/datasets 加到 sys.path 头部,
+# 会让 `from utils.conf` 解析成 datasets/utils(错!)。所以只加 F2DC_DIR 就够了,
+# datasets/backbone/models 都通过 package 路径访问。
 sys.path.insert(0, F2DC_DIR)
-sys.path.insert(0, os.path.join(F2DC_DIR, 'datasets'))
-sys.path.insert(0, os.path.join(F2DC_DIR, 'backbone'))
-sys.path.insert(0, os.path.join(F2DC_DIR, 'models'))
 
 from datasets import get_prive_dataset
 from utils.conf import set_random_seed

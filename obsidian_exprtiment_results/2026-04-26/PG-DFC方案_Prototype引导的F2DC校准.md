@@ -1,14 +1,19 @@
 ---
 date: 2026-04-26
-status: 方案设计完成,等 F2DC sanity 复现完成后开始 W2 实施
+status: v2 方案敲定 (M1/M2 实测验证完成),等 F2DC sanity 复现完成后开始 W2 实施
 based_on: F2DC (CVPR'26),借鉴 RFedDis evidential / Disentanglement-Then-Reconstruction prototype
 expected_gain: PACS 76.47 → 78+ (+1.5pp), Office 66.82 → 68+ (+1.5pp)
+revisions:
+  v1 (04-26 早): 设计完成,基于 paper 推理
+  v2 (04-26 晚): 经过 13 项 review critique,M1/M2 经 EXP-130 client 分布实测验证为真问题,锁定 fix
 ---
 
 # PG-DFC: Prototype-Guided DFC for Federated Feature Decoupling
 
 > 把 F2DC 的"盲修复 DFC"改成"有方向的 prototype-guided 校准"
 > 用跨 client 聚合的 class prototype 当抢救锚点,让 DFC 知道 nr_feat 该往哪儿救
+
+> **v2 重要修正**:经过 review + 实测,M1 改成 sample 累加(不用 batch-mean EMA),M2 改成 L2-norm + 等权(不用 sample-weighted)。详见末尾「附录 C: v2 实证修正」。
 
 ---
 
@@ -671,4 +676,195 @@ class ResNet(nn.Module):
 2. 不能凭 abstract 推方法 — 必须读源码
 3. 不能跨 setup 借鉴 — UDA / FedDG / personalization FL 各有独特约束
 4. critique 要诚实 — 不能为 critique 而 critique
+
+---
+
+# 附录 C: v2 实证修正(2026-04-26 晚)
+
+## C.1 触发原因
+
+经过 review (codex 13 项 critique) 后,有 2 个问题(M1, M2)review 推断"必须改"。
+我们决定:**不依赖 review 推理,先用 EXP-130 真实 F2DC dataloader 实测**。
+
+诊断脚本: `scripts/diagnostic/dump_client_distribution.py`
+执行环境: sc4 (westc, port 14824)
+数据: F2DC 真实 PACS / Office / Digits 在 seed {2, 15, 333} 下的 client 分布
+
+## C.2 实测结果(3-seed mean,2026-04-26 23:00)
+
+| Dataset | M1 single_sample (mean ± std) | M2 size_skew (mean ± std) | M1 决策 | M2 决策 |
+|---|:--:|:--:|---|---|
+| **PACS** | 0.085 ± 0.006 | **4.09 ± 2.02** | EMA + n≥2 保护 | **★ 必须 L2-norm 等权** |
+| **Office** | 0.137 ± 0.014 (max 0.60) | **7.16 ± 0.00** | EMA + n≥2 保护 | **★ 必须 L2-norm 等权** |
+| **Digits** | **0.229 ± 0.043** (max 0.45) | **10.17 ± 0.00** | **★ 必须改 sample 累加** | **★ 必须 L2-norm 等权** |
+
+完整数据: `experiments/ablation/EXP-130_F2DC_baseline_main_table/client_distribution.json`
+
+### 数字解读
+
+**M1 (single_sample_freq)** — 单 batch 内某类只有 0-1 个样本的占比:
+- PACS sketch client 943 sample → batch=46,平均每类 ~6 样本,M1 还行
+- Office dslr client 25 sample → 只够 1 个 batch,某些类只 1-2 样本,M1 max 60%
+- Digits usps/syn client 72/74 sample → 长期单样本 batch,M1 mean 23%
+
+**M2 (size_skew)** — 最大 client / 最小 client 样本数比:
+- PACS: sketch 943 vs photo 400 → 2.36-6.93x(seed 不同)
+- Office: caltech 179 vs **dslr 25** → 7.16x(三 seed 一致)
+- Digits: svhn 732 vs **usps 72** → 10.17x(三 seed 一致)
+
+### Review 预测 vs 实测
+
+| Review 推断 | 实测 | 结论 |
+|---|---|---|
+| M1 在 FL 小 batch 是真问题 | PACS 还行,Office/Digits **更严重** | 真问题,且**比 review 想象更严重** |
+| M2 sample-weighted 不消除 domain skew | 三 dataset 都 4-10x skew | 真问题,**所有 dataset 都必须改** |
+
+**Review 完全正确,实测确认。**
+
+## C.3 锁定 fix v2
+
+### v2 Fix 1: EMA → Sample 累加(M1)
+
+**v1 (废弃)**:
+```python
+# 每 batch 算 batch_mean 用 EMA 更新
+class_mean = r_pooled[mask_c].mean(0)
+μ_local[c] = α * μ_local[c] + (1-α) * class_mean
+```
+**问题**: 单 batch 单类只 1 样本时,outlier 拉飞 EMA(α=0.99 也救不回)
+
+**v2 (敲定)**:
+```python
+# Round 内 sample 累加,round 末统一算均值
+# Client 端初始化(每 round 开始)
+sum_feat = torch.zeros(num_classes, C, device=device)
+count = torch.zeros(num_classes, device=device)
+
+# 每 batch 累加(不算 mean,直接 sum)
+for batch in loader:
+    r_pooled = AdaptiveAvgPool2d(1)(r_feat).flatten(1)   # (B, C)
+    for c in range(num_classes):
+        mask_c = (labels == c)
+        if mask_c.sum() > 0:
+            sum_feat[c] += r_pooled[mask_c].sum(0)        # ★ sum 不是 mean
+            count[c] += mask_c.sum().item()
+
+# Round 末算真实均值 + 跨 round EMA(可选,稳定后期)
+for c in range(num_classes):
+    if count[c] > 0:
+        round_mean = sum_feat[c] / count[c]
+        μ_local[c] = α_round * μ_local[c] + (1 - α_round) * round_mean
+        # α_round 可设 0(不跨 round 平滑)或 0.5(适度平滑)
+```
+
+**关键差别**:
+- v1: 单样本 batch 直接污染 EMA
+- v2: 单样本被淹没在 round 内全部 sample 中(dslr 25 样本 / 10 类 → 至少 2-3 样本/类的均值)
+
+**好处**:
+- 这是 FedProto / FPL 标准做法
+- 数值上稳定(全 sample 均值 ≠ 抖动 batch 均值)
+- 实现简单(sum + count buffer,无 α 调参)
+- 通信量不变(prototype 还是 (num_classes, C))
+
+### v2 Fix 2: Sample-Weighted → L2-norm + 等权(M2)
+
+**v1 (废弃)**:
+```python
+# Server 端聚合 — 按 sample count 加权
+for c in range(num_classes):
+    n_c_total = Σ_k n_c_k
+    μ_global[c] = Σ_k (n_c_k / n_c_total) * μ_local_k[c]
+```
+**问题**: 大 client / 大 domain 主导,小 client 被淹没。
+- PACS: sketch client (943) 主导,photo client (400) 被压
+- Office: caltech (179) 主导,dslr (25) 被压
+- 结果: μ_global 偏向主导 domain,小 domain 的 DFC 拿到的 prototype 反向引导
+
+**v2 (敲定)**:
+```python
+# Server 端聚合 — L2-normalize 后等权平均
+import torch.nn.functional as F
+
+for c in range(num_classes):
+    valid_clients = [k for k in online_clients if local_counts[k][c] > 0]
+    if not valid_clients:
+        continue  # 无 client 有此类,保持 μ_global[c] 不变
+
+    # 1. 每个 client 的 local prototype L2 归一化(只看方向)
+    normalized = [F.normalize(local_protos[k][c], dim=0) for k in valid_clients]
+
+    # 2. 等权平均(每个 valid client 1/K_c 票)
+    μ_global[c] = torch.stack(normalized).mean(0)
+
+    # 3. 输出再 normalize 一次(确保 unit vector,attention 时方向稳定)
+    μ_global[c] = F.normalize(μ_global[c], dim=0)
+```
+
+**关键差别**:
+- v1: 大 client 权重大 → magnitude 主导
+- v2: 都 L2-norm 后等权 → 只看方向,每 domain 平等发声
+
+**好处**:
+- 真正的"跨 domain 共识 prototype"
+- 小 domain 的 client 也能影响 global prototype
+- DFC 引导方向 = 所有 domain 共识方向,不偏任何一边
+- 这是 metric learning / clustering 标准做法
+
+### v2 Fix 不动的部分
+
+| 项 | 状态 | 原因 |
+|---|---|---|
+| C1 (proto_clue 梯度污染 mask) | 先跑加诊断验证,不预先 detach | review 推断,未实测,可能过虑 |
+| C2 (DFD/DFC 冲突放大) | 同 C1 | 同 |
+| C3 (正反馈塌缩) | 同 C1 | C1 fix 后自动解决 |
+| M3 (proto_weight 量级) | 不改,实测看现象 | review 数值估算偏高 |
+| M4 (attention temperature) | 不改,实测看现象 | review 数学推导错 |
+| M5 (EMA α 太慢) | M1 改 sample 累加自动消失 | / |
+| m1-m4 | 不改 | 工程优化,后期再说 |
+
+## C.4 v2 验证 checklist(W2-3 实施时)
+
+| 验证 | 方法 | 通过标准 |
+|---|---|---|
+| Fix 1 (sample 累加) 实施正确 | 跑 1 round,看 prototype 是否稳定 | round 末 prototype 跟 client 真实 r_feat mean 误差 < 1% |
+| Fix 2 (L2-norm 等权) 实施正确 | 跑 1 round,看 server 聚合后 ||μ_global[c]||=1 | norm 都是 1 (±1e-6) |
+| 跟 v1 对比 | 各跑 1 seed PACS | v2 ≥ v1(至少不退步) |
+| 跟 F2DC vanilla 对比 | proto_weight=0 sanity | v2 with proto=0 ≡ F2DC vanilla (±0.3pp) |
+
+## C.5 v2 后续待验证(等 PACS 1-seed 跑出来)
+
+- C1 是否真问题(看 mask sparsity 演化)
+- C3 是否真问题(看 r_feat ER 演化)
+- M3/M4 是否真问题(看 attention entropy + proto/rec 量级比)
+
+如果 C1 实测验证为真问题 → 加 `(1-mask).detach()` fix
+如果不真 → 保持 v2 不动
+
+## C.6 关键经验
+
+**Review 是好的纠错工具,但不应该全盘接受 — 必须用实测数据决定哪些 fix 必做**。
+
+- 实测验证的 fix(M1, M2): 锁定执行
+- 推断的 fix(C1, M3, M4): 加诊断 hook 后实测,数据驱动决策
+- 不要预先优化(避免引入 review 自己也没把握的复杂 fix)
+
+诊断脚本(`scripts/diagnostic/dump_client_distribution.py`)用了 10 分钟产出 9 个分布,
+省了几周可能走错的 fix 路径。
+
+---
+
+# 附录 D: v2 修订版总改动量
+
+| 文件 | v1 改动 | v2 修订 | 总行数 |
+|---|---|---|:--:|
+| `backbone/ResNet_DC.py` | 加 DFC_PG 类 | 不变 | +60 |
+| `backbone/ResNet_DC.py` | ResNet 用 DFC_PG | 不变 | +3 |
+| `backbone/ResNet_DC.py` | forward 加 return_r_feat | 不变 | +5 |
+| `models/f2dc.py` | F2DC_PG 子类 + EMA | **EMA 改 sample 累加(-15 +20)** | +85 |
+| `models/utils/federated_model.py` | aggregate_protos | **改 L2-norm + 等权(-10 +15)** | +35 |
+| `models/__init__.py` | 注册 f2dc_pg | 不变 | +2 |
+| `utils/best_args.py` | 加 f2dc_pg 超参 | **去掉 proto_alpha(不需要 EMA)** | +27 |
+| `main_run.py` | argparse | 不变 | +6 |
+| **总计** | ~216 行 | **~223 行** | 几乎不变 |
 
