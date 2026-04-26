@@ -39,6 +39,14 @@ class FedAvG(FederatedModel):
         return round(all_c_avg_loss, 3)
 
     def _train_net(self, index, net, train_loader):
+        # patch: skip clients with empty dataloader (rand_dataset over-allocates same domain)
+        try:
+            n_avail = len(train_loader.sampler.indices) if hasattr(train_loader.sampler, "indices") else len(train_loader.dataset)
+        except Exception:
+            n_avail = 1
+        if n_avail == 0:
+            print(f"[skip] client {index} has empty dataloader")
+            return 0.0, 0
         net = net.to(self.device)
         net.train()
         optimizer = optim.SGD(net.parameters(), lr=self.local_lr, momentum=0.9, weight_decay=1e-5)
