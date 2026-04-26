@@ -26,7 +26,7 @@ def global_evaluate(
             with torch.no_grad():
                 images, labels = images.to(model.device), labels.to(model.device)
                 if model.NAME == "f2dc":
-                    outputs, _, _, _, _ = net(images)
+                    outputs, _, _, _, _, _, _ = net(images)
                 else:
                     outputs = net(images)
                 _, max5 = torch.topk(outputs, 5, dim=-1)

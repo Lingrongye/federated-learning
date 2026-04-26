@@ -214,6 +214,8 @@ def partition_office_domain_skew_loaders_new(train_datasets: list, test_datasets
 
             used_label = train_labels[selected_idx]
             prob_del_place = np.where(show_up_num >= 2)[0]
+            if len(prob_del_place) == 0:
+                break  # patch: cannot rebalance, skip remaining missing labels
             del_index = np.random.randint(len(prob_del_place))
             del_label = prob_del_place[del_index]
 
@@ -347,6 +349,8 @@ def partition_pacs_domain_skew_loaders(train_datasets: list, test_datasets: list
 
             used_label = train_labels[selected_idx]
             prob_del_place = np.where(show_up_num >= 2)[0]
+            if len(prob_del_place) == 0:
+                break  # patch: cannot rebalance, skip remaining missing labels
             del_index = np.random.randint(len(prob_del_place))
             del_label = prob_del_place[del_index]
 

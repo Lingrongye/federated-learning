@@ -143,10 +143,10 @@ class ResNet(nn.Module):
         # print(out.shape)
 
         r_feat, nr_feat, mask = self.dfd_module(out, is_eval=is_eval)
-        r_out = self.aux(torch.nn.AdaptiveAvgPool2d(1)(r_feat).reshape(r_feat.shape[0], -1))
-        r_outputs.append(r_out)
-        nr_out = self.aux(torch.nn.AdaptiveAvgPool2d(1)(nr_feat).reshape(nr_feat.shape[0], -1))
-        nr_outputs.append(nr_out)
+        ro_flat = torch.nn.AdaptiveAvgPool2d(1)(r_feat).reshape(r_feat.shape[0], -1)
+        re_flat = torch.nn.AdaptiveAvgPool2d(1)(nr_feat).reshape(nr_feat.shape[0], -1)
+        r_outputs.append(self.aux(ro_flat))
+        nr_outputs.append(self.aux(re_flat))
 
         rec_feat = self.dfc_module(nr_feat, mask)
         rec_out = self.aux(torch.nn.AdaptiveAvgPool2d(1)(rec_feat).reshape(rec_feat.shape[0], -1))
@@ -157,9 +157,7 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
         feat = out
         out = self.linear(out)
-        # print(rec_feat.shape)
-        
-        return out, feat, r_outputs, nr_outputs, rec_outputs
+        return out, feat, r_outputs, nr_outputs, rec_outputs, ro_flat, re_flat
 
 
 def ResNet18_FSR(num_classes=10, tau=0.1, image_size=(32, 32)):

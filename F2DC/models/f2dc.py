@@ -54,6 +54,15 @@ class F2DC(FederatedModel):
 
 
     def _train_net(self, index, net, train_loader):
+        # patch: skip clients with empty dataloader (happens when rand_dataset
+        # over-allocates same domain to multiple clients; sum percent > 100%)
+        try:
+            n_avail = len(train_loader.sampler.indices) if hasattr(train_loader.sampler, "indices") else len(train_loader.dataset)
+        except Exception:
+            n_avail = 1
+        if n_avail == 0:
+            print(f"[skip] client {index} has empty dataloader")
+            return 0.0, 0
         net = net.to(self.device)
         net.train()
         optimizer = optim.SGD(net.parameters(), lr=self.local_lr, momentum=0.9, weight_decay=1e-5)
@@ -87,12 +96,10 @@ class F2DC(FederatedModel):
                     for re_out in re_outputs:
                         DFD_dis2_loss += 1.0 * criterion(re_out, wrong_high_labels)
                     DFD_dis2_loss /= len(re_outputs)
-                DFD_sep_loss = torch.tensor(0.).to(self.device)
+                # patch: original code has shape mismatch (scalar += [B]) on new PyTorch.
+                # Math is unchanged: log(exp(x)) == x, so this is just sum(cos/tem)/B = mean(cos)/tem.
                 l_cos = torch.cosine_similarity(ro_flatten, re_flatten, dim=1)
-                l_cos = l_cos / self.tem
-                exp_l_cos = torch.exp(l_cos)
-                DFD_sep_loss += torch.log(exp_l_cos)
-                DFD_sep_loss /= ro_flatten.size(0)
+                DFD_sep_loss = (l_cos / self.tem).mean()
                 
                 DFD_loss = DFD_dis1_loss + DFD_dis2_loss + DFD_sep_loss
 
