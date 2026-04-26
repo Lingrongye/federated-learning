@@ -122,3 +122,13 @@ obsidian_exprtiment_results/未命名*.base
 obsidian_exprtiment_results/.obsidian/workspace.json
 obsidian_exprtiment_results/.obsidian/page-preview.json
 
+
+# F2DC vendored repo
+F2DC/.git/
+F2DC/__pycache__/
+F2DC/**/__pycache__/
+F2DC/checkpoint/
+F2DC/rundata/
+F2DC/data/
+F2DC/_smoke_test/
+F2DC/*.pyc
