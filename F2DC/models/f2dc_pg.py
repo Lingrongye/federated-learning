@@ -193,14 +193,10 @@ class F2DCPG(F2DC):
                 optimizer.step()
 
                 # ★ Sample 累加 (M1 fix) — 用 r_feat (ro_flatten 已经是 pooled)
-                # ro_flatten shape: (B, C)
+                # vectorized 版本: 用 index_add_ + bincount, 全 GPU side, 无 .item() sync
                 with torch.no_grad():
-                    for c in range(N_CLASSES):
-                        mask_c = (labels == c)
-                        n_c = mask_c.sum().item()
-                        if n_c > 0:
-                            sum_feat_round[c] += ro_flatten[mask_c].sum(0)
-                            count_round[c] += n_c
+                    sum_feat_round.index_add_(0, labels, ro_flatten.detach())
+                    count_round += torch.bincount(labels, minlength=N_CLASSES).float()
 
                 batch_size = labels.size(0)
                 epoch_loss += loss.item() * batch_size

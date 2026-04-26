@@ -186,6 +186,56 @@
 - ⏳ PG-DFC vs vanilla 真实差异 (proto_weight 启动后, ~R40 起)
 - ❌ 完整 R=100 数字 (要等到 21:00)
 
+## 🚨 性能 Bug 发现 + Hot-fix (07:30)
+
+### 现象
+- v2 部署后, round time 从 R0-R7 的 244-282s 涨到 R18+ 的 ~640s, R20 时甚至到 1500s/round
+- 100 round 估 17.8-41h, 严重超时
+
+### 根因
+- `_train_net_pg` 里 sample 累加用了 Python for loop + `.item()` GPU→CPU sync
+- 每 batch 7 次 .item() (per class) → 阻塞 GPU 等 CPU
+- 每 epoch ~30 batch × 10 epoch × 7 = 2100 次 sync per round
+- 训练 round 内累计阻塞 → round time 暴涨
+
+### Hot-fix (vectorized)
+
+```python
+# 旧 (慢):
+for c in range(N_CLASSES):
+    mask_c = (labels == c)
+    n_c = mask_c.sum().item()  # ← GPU sync 阻塞
+    if n_c > 0:
+        sum_feat_round[c] += ro_flatten[mask_c].sum(0)
+        count_round[c] += n_c
+
+# 新 (vectorized, 全 GPU):
+sum_feat_round.index_add_(0, labels, ro_flatten.detach())
+count_round += torch.bincount(labels, minlength=N_CLASSES).float()
+```
+
+### Fix 验证结果
+
+| metric | v2 (有 .item) | v3 (vectorized) | 加速 |
+|---|:--:|:--:|:--:|
+| 单跑 round time | ~80s (smoke 估算) | **150s** | n/a |
+| 3 并行 round time | 282 → 1500s | **217s** | **~7x** |
+| 100 round 总时长 (3 并行) | ~17h | **~6h** | **2.8x** |
+
+### 重启时间表 (07:50 重启 v3)
+
+| 时间 | 预计事件 |
+|------|---|
+| 05:48 重启 (3 PACS R0/R1/R2) | R0 第一个 round 217s ✓ |
+| **08:00 用户起床** | R10-R12 (warmup 期, acc 35-45) |
+| 10:00 | R25+ (接近 warmup_30 临界) |
+| 12:00 | R45+ (proto_weight 全 ramp 后) — 关键差异点 |
+| **14:00** | R0/R1/R2 完成 R100 |
+| 14:30 | auto_wave2_v2 触发 Office Wave (4 runs ~30 min) |
+| 15:00 | Wave 2 PACS seed=15+333 启动 |
+| **20:30** | Wave 2 PACS 完成 |
+| 21:00 | Wave 2 Office 完成 — **全部完成** |
+
 ### 起床后的 cheatsheet
 
 ```bash
