@@ -76,7 +76,7 @@ class FedLeaOfficeCaltech(FederatedDataset):
 
     def get_data_loaders(self, selected_domain_list):
 
-        using_list = self.DOMAINS_LIST if selected_domain_list == [] else selected_domain_list
+        using_list = self.DOMAINS_LIST if (selected_domain_list is None or len(selected_domain_list) == 0) else list(selected_domain_list)
 
         nor_transform = self.Nor_TRANSFORM
         train_dataset_list = []
