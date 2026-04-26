@@ -1,0 +1,80 @@
+/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:04<00:14,  4.95s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:08<00:08,  4.36s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:10<00:03,  3.16s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:12<00:00,  2.60s/it]                                                                          Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:04<00:14,  4.81s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:09<00:09,  4.62s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:11<00:03,  3.50s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:13<00:00,  2.87s/it]                                                                          Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:04<00:14,  4.83s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:08<00:08,  4.43s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:10<00:03,  3.20s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:12<00:00,  2.82s/it]                                                                          Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:05<00:15,  5.06s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:08<00:08,  4.23s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:10<00:03,  3.10s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:12<00:00,  2.77s/it]                                                                          Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:04<00:14,  4.74s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:08<00:08,  4.44s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:11<00:03,  3.41s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:13<00:00,  2.93s/it]                                                                          Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:05<00:15,  5.11s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:08<00:08,  4.22s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:10<00:03,  3.23s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:12<00:00,  2.69s/it]                                                                          Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:04<00:13,  4.57s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:08<00:08,  4.11s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:10<00:03,  3.11s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:12<00:00,  2.68s/it]                                                                          Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:04<00:13,  4.64s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:08<00:08,  4.01s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:09<00:02,  2.94s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:12<00:00,  2.64s/it]                                                                          Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:04<00:14,  4.80s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:07<00:07,  3.86s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:10<00:03,  3.15s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:12<00:00,  2.79s/it]                                                                          Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]Local Training on 4 Clients:  25%|██▌       | 1/4 [00:04<00:14,  4.84s/it]Local Training on 4 Clients:  50%|█████     | 2/4 [00:08<00:08,  4.20s/it]Local Training on 4 Clients:  75%|███████▌  | 3/4 [00:10<00:03,  3.19s/it]Local Training on 4 Clients: 100%|██████████| 4/4 [00:12<00:00,  2.64s/it]                                                                          Local Training on 4 Clients:   0%|          | 0/4 [00:00<?, ?it/s]                                                                  Traceback (most recent call last):
+  File "/home/lry/code/federated-learning/FDSE_CVPR25/run_single.py", line 96, in <module>
+    flgo.init(os.path.join('task', task), algo, optimal_option, model=model, Logger=Logger, Simulator=Simulator).run()
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/algorithm/fedbase.py", line 308, in run
+    updated = self.iterate()
+              ^^^^^^^^^^^^^^
+  File "/home/lry/code/federated-learning/FDSE_CVPR25/algorithm/feddsa_dualenc.py", line 307, in iterate
+    res = self.communicate(self.selected_clients)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/simulator/base.py", line 523, in communicate_with_dropout
+    return communicate(self, [cidx for cidx in selected_clients if cidx not in self._dropped_selected_clients], mtype, asynchronous)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/simulator/base.py", line 617, in communicate_with_clock
+    res = communicate(self, selected_clients, mtype, asynchronous)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/algorithm/fedbase.py", line 390, in communicate
+    response_from_client_id = self.communicate_with(self.clients[client_id].id, package=server_pkg)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/simulator/base.py", line 557, in delayed_communicate_with
+    res = communicate_with(self, client_id, package)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/algorithm/fedbase.py", line 454, in communicate_with
+    return super(BasicServer, self).communicate_with(target_id, package)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/algorithm/fedbase.py", line 252, in communicate_with
+    return self.gv.communicator.request(self.id, target_id, package)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/__init__.py", line 17, in request
+    return self.objects_map[target].message_handler(package)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/algorithm/fedbase.py", line 1150, in message_handler
+    res = self.actions[mtype](package)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/code/federated-learning/FDSE_CVPR25/algorithm/feddsa_dualenc.py", line 363, in reply
+    self.train(self.model)
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/simulator/base.py", line 593, in train_with_incomplete_update
+    res = train(self, model, *args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/flgo/utils/fmodule.py", line 935, in cal_on_personal_gpu
+    res = func(self, model, *tuple(new_args), **new_kargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/code/federated-learning/FDSE_CVPR25/algorithm/feddsa_dualenc.py", line 449, in train
+    h_swap = model.encode(x_swap)
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/code/federated-learning/FDSE_CVPR25/algorithm/feddsa_dualenc.py", line 188, in encode
+    return self.encoder(x)
+           ^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/code/federated-learning/FDSE_CVPR25/algorithm/feddsa_dualenc.py", line 70, in forward
+    x = self.features(x)
+        ^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/nn/modules/batchnorm.py", line 193, in forward
+    return F.batch_norm(
+           ^^^^^^^^^^^^^
+  File "/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/nn/functional.py", line 2822, in batch_norm
+    return torch.batch_norm(
+           ^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 36.00 MiB. GPU 0 has a total capacity of 23.57 GiB of which 8.56 MiB is free. Process 1123633 has 4.03 GiB memory in use. Process 1123670 has 6.88 GiB memory in use. Process 1123706 has 780.00 MiB memory in use. Process 1146500 has 2.29 GiB memory in use. Process 1146597 has 2.29 GiB memory in use. Including non-PyTorch memory, this process has 1.84 GiB memory in use. Process 1146783 has 1.80 GiB memory in use. Process 1146881 has 1.80 GiB memory in use. Process 1147045 has 1.80 GiB memory in use. Of the allocated memory 1.46 GiB is allocated by PyTorch, and 62.27 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
