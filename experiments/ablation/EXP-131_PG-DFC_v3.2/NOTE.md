@@ -89,8 +89,58 @@
 
 | Wave | 状态 | 启动时间 | 完成时间 | 输出 |
 |------|:----:|:----:|:----:|------|
-| Wave 1 (6 runs) | 🟡 启动中 | 2026-04-26 深夜 | 待定 | 待回填 |
-| Wave 2 (best × 2 seed) | ⏳ | 等 Wave 1 | 待定 | 待回填 |
+| Wave 1a PACS R0/R1/R2 | 🟡 跑中 (R6, ~282s/round) | 04:02-04:27 | ~12:00 | logs/ |
+| Wave 1a PACS R3/R4/R5 | ❌ 跳过 (时间不够) | - | - | 起床后手动启 |
+| Wave 1b Office × 4 | ⏳ 待 R0/R1/R2 完成 | - | ~12:30 | 由 auto_wave2_v2 触发 |
+| Wave 2 default × seed=15+333 (PACS+Office) | ⏳ 待 Office 完成 | - | ~16:00 | 由 auto_wave2_v2 触发 |
+
+## 实施过程踩的坑 (供回看)
+
+### 坑 1: Stdout buffering 导致 25 min log 一片空白
+- 现象: 启动后 25 min log 只有 import warning,但 GPU 占 22GB 86% util (在跑只是 print 没 flush)
+- 原因: nohup ... > log 时 Python print fully-buffered (非 line-buffered for tty)
+- Fix: 加 `PYTHONUNBUFFERED=1 python -u` (v2 launcher)
+
+### 坑 2: 6 进程并行 (2 PACS + 4 Office) 让单 PACS 慢 3x
+- 现象: 单 PACS round 244s (vs 单跑应 80s)
+- 原因: GPU 100% 共享, PACS 计算重 (128x128 input + ResNet) 受 office 抢占
+- Fix: 杀掉 office, 维持 3 PACS 并行 (但实际还是 282s/round, 没更快 — 3 个 PACS 互相抢 GPU 算力)
+
+### 坑 3: setproctitle 改进程名,pgrep -f main_run.py 找不到
+- 现象: `pgrep -af main_run.py` 显示 0 个进程,但 nvidia-smi 有 3 个 GPU 进程
+- 原因: setproctitle 改成 `f2dc_pg_10_fl_pacs_100_10`
+- Fix: 用 `nvidia-smi --query-compute-apps=pid` 或 `ps -ef | grep f2dc_pg`
+
+## 真实跑次表 (已部署)
+
+### Stage 0: smoke (已完成)
+- ✅ PACS pw=0 R=5: 10.5→23.2 (退化等价 F2DC vanilla)
+- ✅ PACS pw=0.3 R=6: 11.0→24.9 (full v3.2 不崩)
+
+### Stage 1: PACS Wave 1a (跑中)
+- R0 sanity_pw0 (PID 6955) — 04:02 启动
+- R1 full_v32 (PID 7202) — 04:03 启动
+- R2 tau05 (PID 9414) — 04:27 启动 (office 杀后 launcher 自动启)
+
+### Stage 2: Office Wave 1 (auto 触发)
+- R0/R1/R2/R4 office × seed=2 — 等 PACS R0/R1/R2 完成后启
+
+### Stage 3: Wave 2 default × seed=15+333 (auto 触发)
+- 配置: pw=0.3, τ=0.5, β=0.8 (NN 专家预测 best case)
+- PACS × 2 seeds + Office × 2 seeds = 4 runs
+
+## 早期数字 (R0-R6, 04:30 截止)
+
+| run | R0 | R1 | R2 | R3 | R4 | R5 | R6 | trend |
+|-----|:--:|:--:|:--:|:--:|:--:|:--:|:--:|---|
+| R0 sanity_pw0 | 10.31 | 20.78 | 19.43 | 19.18 | 21.58 | - | 29.57 | 单调上涨 ✓ |
+| R1 full_v32 | 10.81 | 21.92 | 23.01 | 21.33 | 23.54 | - | 27.32 | 跟 R0 几乎一致 (warmup 期 pw=0 等价) |
+| R2 tau05 | 10.69 | - | - | - | - | - | - | 04:27 启动, 还在 R0 |
+
+**早期判断**:
+- ✅ Sanity pw=0 跟 F2DC vanilla 完全一致 (退化路径正确)
+- ✅ R1 full v3.2 在 warmup 期数字跟 R0 一致 (proto_weight=0 等价)
+- ⏳ 等 R30+ (proto_weight 启动后) 才能看 PG-DFC vs vanilla 真实差异
 
 ## 结果 (跑完后回填)
 
