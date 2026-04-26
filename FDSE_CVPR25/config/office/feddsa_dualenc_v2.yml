@@ -1,0 +1,25 @@
+# FedDSA-DualEnc V2: BN-fix + sty_dim 16->32 + λ_rec=0.1 (Office grid 最佳)
+# 修复 Bug 1 (BN running stats 污染) + Bug 2 (model 不回 CPU)
+algo_para:
+- 0.1      # 0  lambda_rec  (Office grid 实测最佳)
+- 1.0      # 1  lambda_saac
+- 0.0      # 2  lambda_dsct (砍掉, 实测 -0.30pp 无意义且 self_sim 梯度=0)
+- 0.01     # 3  lambda_kl
+- 10       # 4  kl_warmup_rounds
+- 10       # 5  saac_warmup_rounds
+- 512      # 6  sem_dim
+- 32       # 7  sty_dim ★ 16->32 容量翻倍
+- 256      # 8  srm_hidden
+- 4        # 9  bank_K
+- 0.1      # 10 tau
+
+num_rounds: 200
+num_epochs: 1
+batch_size: 50
+learning_rate: 0.1
+learning_rate_decay: 0.9998
+weight_decay: 1.0e-3
+proportion: 1.0
+seed: 2
+
+model: feddsa_dualenc

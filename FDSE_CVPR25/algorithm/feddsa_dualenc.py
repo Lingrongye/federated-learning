@@ -380,6 +380,9 @@ class Client(flgo.algorithm.fedbase.BasicClient):
 
     def pack(self):
         # 传 state_dict 副本 (deepcopy on dict 安全, deepcopy on nn.Module 在 Windows 偶发崩)
+        # Bug fix: with_multi_gpus 把 model 移到 GPU 训练后没拉回 CPU,
+        # 多 client 串行训练会让每个 client 的 model 都留在 GPU,累计显存爆.
+        self.model.to('cpu')
         local_state = copy.deepcopy(self.model.state_dict())
         return {
             'state_dict': local_state,
@@ -445,15 +448,24 @@ class Client(flgo.algorithm.fedbase.BasicClient):
             if saac_active:
                 z_sty_swap = self._sample_swap(B, x.device, prebuilt_negatives)
                 x_swap = model.decode(z_sem, z_sty_swap)
-                # re-encode (走完整 pipeline backbone -> E_sem + E_sty)
-                h_swap = model.encode(x_swap)
-                z_sem_swap = model.get_semantic(h_swap)
-                mu_swap_after, _ = model.get_style(h_swap)
+                # === Bug fix: cycle re-encode 时关 BN running stats 更新 ===
+                # decoder 输出是 fake 图 (训练初期是模糊灰团), 直接过 BN 会污染
+                # running_mean / running_var, 测试时用被污染的 stats 评估 -> acc 崩.
+                # 修复: 临时切 BN 为 eval (用累积的 running stats 归一化, 不更新),
+                # 仍允许 affine gamma/beta 收梯度. 再切回 train 让真图正常更新.
+                bn_modules = [m for m in model.modules() if isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d))]
+                for bn in bn_modules:
+                    bn.eval()
+                try:
+                    h_swap = model.encode(x_swap)
+                    z_sem_swap = model.get_semantic(h_swap)
+                    mu_swap_after, _ = model.get_style(h_swap)
+                finally:
+                    for bn in bn_modules:
+                        bn.train()
                 # (a) anatomy 一致: GT detach 防 BiProto-style 自循环坍缩
                 loss_anat = F.l1_loss(z_sem_swap, z_sem.detach())
-                # (b) style cycle 一致: 注入的 z_sty_swap 应能被 style_head 识别 (z_sty_swap 来自
-                #     bank 已经 detach, 这里反向梯度通过 decoder + encoder + E_sty 回流, 训练
-                #     style encoder 能从图像里 "看出" 风格 — 防 codex CRITICAL 1)
+                # (b) style cycle 一致: 注入的 z_sty_swap 应能被 style_head 识别
                 loss_style_cyc = F.l1_loss(mu_swap_after, z_sty_swap.detach())
                 loss_saac = loss_anat + loss_style_cyc
 
