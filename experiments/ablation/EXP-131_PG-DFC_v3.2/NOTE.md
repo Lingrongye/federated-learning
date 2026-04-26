@@ -142,6 +142,19 @@
 - ✅ R1 full v3.2 在 warmup 期数字跟 R0 一致 (proto_weight=0 等价)
 - ⏳ 等 R30+ (proto_weight 启动后) 才能看 PG-DFC vs vanilla 真实差异
 
+## R7 进度更新 (05:43)
+
+| run | R6 | R7 | trend |
+|-----|:--:|:--:|---|
+| R0 sanity_pw0 | 29.57 | 29.97 | 单调上涨 ✓ |
+| R1 full_v32 | 27.32 | 30.22 | 单调上涨 ✓, 略高于 R0 (虽 warmup 期等价 — 可能 proto buffer 初始化噪声不同) |
+| R2 tau05 | (启动晚) | (R1: 23.02) | 在 R1, 单调上涨 ✓ |
+
+### 踩的"假停"坑 (供参考)
+- 中间监控时用 `tail -20 ... | grep ... | tail -8` 显示 R0 还在 R6, 误判 1h 没新数据
+- 实际 grep 全文找到 R7 已完成
+- 教训: 不要用 chained tail+grep+tail, 直接 `grep 'Acc' log | tail -3` 看真实最新
+
 ## 结果 (跑完后回填)
 
 ### Wave 1 数字 (PACS R=100 seed=2)
