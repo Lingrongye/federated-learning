@@ -101,6 +101,11 @@ def parse_args():
         "--lambda2", type=float, default=1.0, help="params for DFC loss"
     )
 
+    # ===== FDSE (CVPR 2025) 超参 =====
+    parser.add_argument("--lmbd", type=float, default=0.01, help="FDSE: L_reg consistency loss weight")
+    parser.add_argument("--fdse_tau", type=float, default=0.5, help="FDSE: cosine sim softmax temperature for personalized agg")
+    parser.add_argument("--fdse_beta", type=float, default=0.1, help="FDSE: per-layer exp weight for L_reg")
+
     # ===== PG-DFC v3.2 超参 =====
     parser.add_argument("--pg_proto_weight", type=float, default=0.3,
                         help="PG-DFC: target proto_weight (after warmup+ramp)")

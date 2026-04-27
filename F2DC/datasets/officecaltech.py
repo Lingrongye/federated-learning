@@ -124,6 +124,10 @@ class FedLeaOfficeCaltech(FederatedDataset):
                                                             gum_tau=FedLeaOfficeCaltech.model_args.gum_tau,
                                                             proto_weight=pw,
                                                             attn_temperature=tau_attn))
+            elif model_name=='fdse':
+                from backbone.ResNet_FDSE import resnet10_fdse_office
+                for j in range(parti_num):
+                    nets_list.append(resnet10_fdse_office(num_classes=FedLeaOfficeCaltech.N_CLASS))
             else:
                 for j in range(parti_num):
                     nets_list.append(resnet10(FedLeaOfficeCaltech.N_CLASS))

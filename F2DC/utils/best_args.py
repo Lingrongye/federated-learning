@@ -37,6 +37,13 @@ best_args = {
         'f2dc': {
             'local_lr': 0.01,
             'local_batch_size': 64
+        },
+        'fdse': {
+            'local_lr': 0.01,
+            'local_batch_size': 64,
+            'lmbd': 0.01,
+            'fdse_tau': 0.5,
+            'fdse_beta': 0.1,
         }
     },
 
@@ -78,6 +85,13 @@ best_args = {
         'f2dc': {
             'local_lr': 0.01,
             'local_batch_size': 64
+        },
+        'fdse': {
+            'local_lr': 0.01,
+            'local_batch_size': 64,
+            'lmbd': 0.01,
+            'fdse_tau': 0.5,
+            'fdse_beta': 0.1,
         }
     },
 
@@ -127,6 +141,13 @@ best_args = {
         'f2dc_pg': {
             'local_lr': 0.01,
             'local_batch_size': 64
+        },
+        'fdse': {
+            'local_lr': 0.01,
+            'local_batch_size': 64,
+            'lmbd': 0.01,
+            'fdse_tau': 0.5,
+            'fdse_beta': 0.1,
         }
     }
 }

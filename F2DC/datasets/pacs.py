@@ -124,6 +124,10 @@ class FedLeaPACS(FederatedDataset):
                                                      gum_tau=FedLeaPACS.model_args.gum_tau,
                                                      proto_weight=pw,
                                                      attn_temperature=tau))
+            elif model_name=='fdse':
+                from backbone.ResNet_FDSE import resnet10_fdse_pacs
+                for j in range(parti_num):
+                    nets_list.append(resnet10_fdse_pacs(num_classes=FedLeaPACS.N_CLASS))
             else:
                 for j in range(parti_num):
                     nets_list.append(resnet10(FedLeaPACS.N_CLASS))

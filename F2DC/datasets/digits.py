@@ -169,6 +169,10 @@ class FedLeaDigits(FederatedDataset):
                 for j in range(parti_num):
                     nets_list.append(resnet10_dc_digits(num_classes=FedLeaDigits.N_CLASS,
                                                  gum_tau=FedLeaDigits.model_args.gum_tau))
+            elif model_name=='fdse':
+                from backbone.ResNet_FDSE import resnet10_fdse_digits
+                for j in range(parti_num):
+                    nets_list.append(resnet10_fdse_digits(num_classes=FedLeaDigits.N_CLASS))
             else:
                 for j in range(parti_num):
                     nets_list.append(resnet10(FedLeaDigits.N_CLASS))
