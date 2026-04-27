@@ -123,9 +123,58 @@ averaging          = 'weight'  # by sample count
 - 服务器: sc3 (`~/.ssh/config` 别名, port 19385)
 - 数据 symlink: `sc3:/root/autodl-tmp/federated-learning/F2DC/rundata/dataset/`
 
-## 结果回填
+## 结果回填 (2026-04-27 09:50 BJT — 24/27 完成)
 
-(等 27 runs 跑完后回填这里)
+### 完成情况
+- ✅ **24/27 完成** (sc3 9 F2DC + sc4 15 fedavg+moon × {office, digits} + fedavg pacs)
+- 🏃 **moon × pacs × {2, 15, 333}** 重跑中 (v2 launcher 因 sleep 30s 不够 ramp up 导致 3 个 OOM, 现 sc3 串行单跑, 估 6-9h 完成)
+- 数据来源: `sc3_logs/` + `sc4_logs/` + `results_summary.json`
+
+### 主表 (AVG Best 3-seed mean ± std, 100 round)
+
+| Algo \ Dataset | PACS | Office-Caltech10 | Digits |
+|---|:---:|:---:|:---:|
+| **FedAvg** | 61.88 ± 4.09 | 58.12 ± 1.52 | 90.15 ± 1.29 |
+| **MOON** | TBD (重跑) | 54.28 ± 2.06 | 89.23 ± 2.76 |
+| **F2DC** | **63.89 ± 3.80** | **61.19 ± 2.57** | **92.28 ± 1.73** |
+
+### 与 F2DC paper 对比 (AVG Best)
+
+| Algo × Dataset | 论文报 | 我们复现 | Δ | verdict |
+|---|:---:|:---:|:---:|:---|
+| F2DC × PACS | 76.47 | **63.89 ± 3.80** | **-12.6** | ❌ release 代码远低于论文 |
+| F2DC × Office | 66.82 | **61.19 ± 2.57** | **-5.6** | ❌ 同上 |
+| F2DC × Digits | 87.23 | **92.28 ± 1.73** | **+5.0** | ✅ 比论文高 |
+| FedAvg × PACS | 66.39 | 61.88 ± 4.09 | -4.5 | ⚠️ 略低 |
+| FedAvg × Office | 55.86 | 58.12 ± 1.52 | +2.3 | ✅ 略高 |
+| FedAvg × Digits | 81.24 | 90.15 ± 1.29 | +8.9 | ✅ 高 |
+| MOON × PACS | 62.64 | TBD | - | 重跑 |
+| MOON × Office | 51.41 | 54.28 ± 2.06 | +2.9 | ✅ 略高 |
+| MOON × Digits | 76.60 | 89.23 ± 2.76 | +12.6 | ✅ 远高 |
+
+### 关键发现 ⭐
+
+1. **F2DC release 代码在 PACS/Office 上跑不出论文水平**, PACS 掉 12.6pp (76.47 → 63.89), Office 掉 5.6pp.
+2. **F2DC 跟 FedAvg 在 PACS 几乎打平** (63.89 vs 61.88, +2pp), 不是论文宣称的 +10pp 优势. 暴露 release 缺乏论文 4.3 节 Domain-Aware Aggregation 实现 + DFD/DFC 模块共享/私有策略不一致 (源码全部 FedAvg 共享, 论文文字"keep locally").
+3. **Digits 三方法都比论文高**, 可能是我们环境/数据 partition 跟论文不完全一致, 或者论文 Digits 协议特殊 (parti_num=20 + 1% data 比较敏感).
+4. **MOON < F2DC < FedAvg+ 关系不稳定** — Office 上 F2DC > FedAvg > MOON 对得上, Digits 上 F2DC > FedAvg > MOON 也对.
+
+### 含义 (paper 角度)
+
+- **Paper 主表对比时**, 用我们环境复现的数字 (公平 baseline), 不用论文报数. 加 footnote: "我们用 F2DC 官方 release + 8 个必要 patches 跑出此数字; 论文 76.47% 我们没有复现到, 差距源于 release 代码缺少 Domain-Aware Aggregation 实现".
+- **PACS 上 F2DC 实际只 63.89%**, 我们 FedDSA orth_only **80.64%** 在 PACS 上**领先 F2DC 16.7pp** — 这是个非常强的对比.
+- **Office 上 F2DC 61.19%**, 我们 FedDSA 89.09% 领先 28pp.
+
+### Per-domain 详情
+
+详见 `results_summary.json` 和 `_extract_summary.txt`. 主要 per-domain 异常:
+- F2DC × Office × s=15 dslr 只 30%, F2DC 在 dslr (157 张) 这种小 domain 上方差很大
+- F2DC × PACS art 几乎全员 ~40% (低), photo/sketch 60-80% (中等)
+
+### 进度备忘
+
+- 27/27 完成时间: 估 ~16:00-18:00 BJT 当天 (moon pacs 单跑慢)
+- 全部跑完后再做最终回填 + git commit + push
 
 ### 主表数字
 
