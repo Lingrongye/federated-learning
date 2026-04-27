@@ -111,8 +111,13 @@ class FedBN(FederatedModel):
         return key in self._bn_keys
 
     def aggregate_nets_skip_bn(self):
-        """FedBN 聚合: BN 参数不参与聚合, 留本地。
-        只构造 non-BN 子 dict, 用 strict=False load — 完全不 touch BN buffer."""
+        """FedBN 聚合:
+        - non-BN 参数 (conv/classifier 等): client + global_net 都聚合 (FedAvg style)
+        - BN 参数: client 留本地不聚合 (FedBN 核心) 但 global_net 用 client mean (供 eval)
+
+        F2DC 框架 global_evaluate 用 model.global_net 评估, 如果 global_net 的 BN 永远是
+        init 0, eval 时 BN 没归一化 → accuracy = 乱猜. 所以 global_net BN 必须取 client
+        mean (FedAvg-style avg of client BN), 但不能 sync 回 client (违反 FedBN idea)."""
         online_clients = self.online_clients
 
         if self.args.averaing == 'weight':
@@ -124,26 +129,42 @@ class FedBN(FederatedModel):
             parti_num = len(online_clients)
             freq = [1.0 / parti_num for _ in range(parti_num)]
 
-        # 收集 non-BN keys 列表
         first_sd = self.nets_list[online_clients[0]].state_dict()
         non_bn_keys = [k for k in first_sd if not self._is_bn_key(k)]
+        bn_keys = [k for k in first_sd if self._is_bn_key(k)]
 
-        # 加权累加
-        agg = {}
+        # 加权累加 ALL keys (non-BN + BN), 但分开 dispatch
+        agg_non_bn = {}
+        agg_bn = {}
         for idx, net_id in enumerate(online_clients):
             sd = self.nets_list[net_id].state_dict()
             for k in non_bn_keys:
                 v = sd[k].detach()
-                if k not in agg:
-                    agg[k] = v.clone().float() * freq[idx]
+                if k not in agg_non_bn:
+                    agg_non_bn[k] = v.clone().float() * freq[idx]
                 else:
-                    agg[k] = agg[k] + v.float() * freq[idx]
+                    agg_non_bn[k] = agg_non_bn[k] + v.float() * freq[idx]
+            for k in bn_keys:
+                # num_batches_tracked 是 int, 不参与 mean (取最后一个 client 的)
+                if 'num_batches_tracked' in k:
+                    agg_bn[k] = sd[k].detach().clone()
+                    continue
+                v = sd[k].detach()
+                if k not in agg_bn:
+                    agg_bn[k] = v.clone().float() * freq[idx]
+                else:
+                    agg_bn[k] = agg_bn[k] + v.float() * freq[idx]
 
-        # 把累加结果 cast 回原 dtype
-        for k in agg:
-            agg[k] = agg[k].to(first_sd[k].dtype)
+        # cast 回原 dtype
+        for k in agg_non_bn:
+            agg_non_bn[k] = agg_non_bn[k].to(first_sd[k].dtype)
+        for k in agg_bn:
+            agg_bn[k] = agg_bn[k].to(first_sd[k].dtype)
 
-        # 用 strict=False load — 只覆盖 non-BN, BN 完全不 touch
-        self.global_net.load_state_dict(agg, strict=False)
+        # global_net: load BOTH non-BN + BN (供 eval 用)
+        merged = {**agg_non_bn, **agg_bn}
+        self.global_net.load_state_dict(merged, strict=False)
+
+        # client nets: 只 load non-BN (BN 留本地)
         for net in self.nets_list:
-            net.load_state_dict(agg, strict=False)
+            net.load_state_dict(agg_non_bn, strict=False)

@@ -103,16 +103,24 @@ def test_model(model_name, n_class=7):
         model.aggregate_nets_skip_bn()
         sd0_after_agg = nets[0].state_dict()
 
-        # 关键 assertion: 聚合后 client0 BN running stat 应该跟训练后一致 (没被聚合)
+        # 关键 assertion 1: 聚合后 CLIENT BN 留本地 (跟 train 后一致)
         bn_preserved = 0
         for k in bn_keys:
             if 'num_batches_tracked' in k:
                 continue
             if torch.equal(sd0_after_train[k], sd0_after_agg[k]):
                 bn_preserved += 1
-        print(f"  BN preserved after agg: {bn_preserved}/{len([k for k in bn_keys if 'num_batches_tracked' not in k])} (expected = ALL)")
+        print(f"  CLIENT BN preserved after agg: {bn_preserved}/{len([k for k in bn_keys if 'num_batches_tracked' not in k])} (expected = ALL)")
         assert bn_preserved == len([k for k in bn_keys if 'num_batches_tracked' not in k]), \
-            "FedBN BUG: BN 在聚合后被改了 (应该 skip)"
+            "FedBN BUG: client BN 在聚合后被改了 (应该 skip)"
+
+        # 关键 assertion 2: GLOBAL_NET 的 BN 应该是 client mean (供 eval 用), 不是 init 0
+        gw = model.global_net.state_dict()
+        bn1_global = gw['bn1.running_mean']
+        bn1_clients_mean = sum(nets[i].state_dict()['bn1.running_mean'] for i in range(args.parti_num)) / args.parti_num
+        global_bn_eq_mean = torch.allclose(bn1_global, bn1_clients_mean, atol=1e-5)
+        print(f"  GLOBAL_NET BN ≈ mean of client BN: {global_bn_eq_mean} (expected True, 供 eval)")
+        assert global_bn_eq_mean, "FedBN BUG: global_net BN 不是 client mean, eval 时会用未归一化 BN → acc 乱猜"
 
         # 非 BN 参数应该被聚合 (跟训练后不同, 因为是 mean of all clients)
         nbn_changed = 0
