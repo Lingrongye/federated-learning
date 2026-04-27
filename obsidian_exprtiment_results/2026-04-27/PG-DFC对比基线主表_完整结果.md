@@ -3,8 +3,9 @@ date: 2026-04-27
 type: 实验结果汇总(主表)
 status: PACS / Office 完成,Digits 跑中
 data_source:
-  - sc3_v2_logs (F2DC v2 + fdse v2, fixed allocation)
-  - sc5 EXP-131 logs (PG-DFC v3.2 / v3.3, fixed allocation)
+  - EXP-130 sc3_v2_logs (F2DC v2 + fdse v2, fixed allocation)
+  - EXP-130 sc4_v2_logs (FedAvg + MOON v2, fixed allocation)
+  - EXP-131 sc5 logs (PG-DFC v3.2 / v3.3, fixed allocation)
 allocation: fixed (PACS photo:2/art:3/cartoon:2/sketch:3; Office caltech:3/amazon:2/webcam:2/dslr:3)
 seeds: [15, 333]
 training: R=100, E=10, lr=0.01, batch=46/64
@@ -21,20 +22,22 @@ training: R=100, E=10, lr=0.01, batch=46/64
 
 | Method | photo | art | cartoon | sketch | **AVG Best ↑** | **AVG Last ↑** | Best Round (avg) |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| FedAvg [AISTATS'17] | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+| FedAvg [AISTATS'17] | 64.52 | 53.92 | **81.41** | 77.00 | 69.22 | 68.39 | R96.5 |
 | FedBN [ICLR'21] | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
 | FedProto [AAAI'22] | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
 | FPL [CVPR'23] | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
-| MOON [CVPR'21] | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+| MOON [CVPR'21] | TBD (R34+缺s333) | TBD | TBD | TBD | TBD | TBD | TBD |
 | FDSE [CVPR'25] | TBD (R35+R30 未完成) | TBD | TBD | TBD | **TBD** | TBD | TBD |
-| **F2DC [CVPR'26]** | 69.46 | 56.62 | 78.53 | 79.49 | **71.02** | 69.57 | R93.5 |
-| **PG-DFC v3.2 (Ours)** | 67.82 | **62.99** | **80.45** | **81.53** | **73.20** ⭐ | **71.31** | R95.0 |
-| **Δ vs F2DC** | -1.64 | **+6.37** ⭐ | +1.92 | +2.04 | **+2.18pp** | **+1.74pp** | -1 round |
+| **F2DC [CVPR'26]** | **69.46** | 56.62 | 78.53 | 79.49 | **71.02** | 69.57 | R94.5 |
+| **PG-DFC v3.2 (Ours)** | 67.82 | **62.99** | 80.45 | **81.53** | **73.20** ⭐ | **71.31** | R95.0 |
+| **Δ vs FedAvg** | +3.30 | **+9.07** | -0.96 | +4.53 | **+3.98pp** | **+2.92pp** | -1.5 round |
+| **Δ vs F2DC** | -1.64 | **+6.37** ⭐ | +1.92 | +2.04 | **+2.18pp** | **+1.74pp** | +0.5 round |
 
 ### Per-seed 详细数据 (PACS)
 
 | Method | s=15 best | s=333 best | s=15 last | s=333 last | s=15 best round | s=333 best round |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|
+| FedAvg | 69.565 | 68.865 | 69.565 | 67.205 | R100 | R93 |
 | F2DC v2 | 72.345 | 69.702 | 70.122 | 69.025 | R89 | R98 |
 | **PG-DFC v3.2** | **73.992** | **72.400** | 73.068 | 69.552 | R98 | R92 |
 
@@ -51,17 +54,18 @@ training: R=100, E=10, lr=0.01, batch=46/64
 
 | Method | caltech | amazon | webcam | dslr | **AVG Best ↑** | **AVG Last ↑** | Best Round (avg) |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| FedAvg | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+| FedAvg | 61.83 | 74.47 | 58.62 | 36.67 | 57.90 | 54.01 | R62.0 |
 | FedBN | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
 | FedProto | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
 | FPL | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
-| MOON | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
-| **FDSE [CVPR'25]** | 57.59 | 62.37 | **74.14** | **60.00** | **63.52** ⭐ | 59.33 | R68 |
-| **F2DC [CVPR'26]** | 63.84 | **77.37** | 56.04 | 45.00 | 60.56 | 56.68 | R98 |
+| MOON | 58.70 | 70.53 | 47.42 | 33.33 | 52.49 | 50.11 | R54.0 |
+| **FDSE [CVPR'25]** | 57.59 | 62.37 | **74.14** | **60.00** | **63.52** ⭐ | 59.33 | R69 |
+| **F2DC [CVPR'26]** | 63.84 | 77.37 | 56.04 | 45.00 | 60.56 | 56.68 | R99 |
 | **PG-DFC v3.2 (Ours)** | **65.63** | 76.05 | 50.00 | 53.34 | 61.25 | 56.05 | R92.5 |
 | **PG-DFC v3.3 (A+B)** | 63.17 | **78.42** | 56.04 | 48.33 | 61.49 | **59.09** | R90 |
-| **Δ v3.2 vs F2DC** | +1.79 | -1.32 | -6.04 | +8.34 | +0.69 | -0.63 | -5 round |
-| **Δ v3.3 vs F2DC** | -0.67 | +1.05 | 0 | +3.33 | +0.93 | +2.41 | -8 round |
+| **Δ v3.2 vs FedAvg** | +3.80 | +1.58 | -8.62 | +16.67 | +3.35 | +2.04 | +30.5 round |
+| **Δ v3.2 vs F2DC** | +1.79 | -1.32 | -6.04 | +8.34 | +0.69 | -0.63 | -6.5 round |
+| **Δ v3.3 vs F2DC** | -0.67 | +1.05 | 0 | +3.33 | +0.93 | +2.41 | -9 round |
 
 ⚠️ **重大发现**: FDSE (CVPR'25) 在 Office 上反而最强 (63.52),比 F2DC (60.56) +2.96pp。我们之前低估了 FDSE。
 
@@ -69,6 +73,8 @@ training: R=100, E=10, lr=0.01, batch=46/64
 
 | Method | s=15 best | s=333 best | s=15 last | s=333 last | s=15 best round | s=333 best round |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|
+| FedAvg | 54.485 | 61.312 | 48.830 | 59.188 | R42 | R82 |
+| MOON | 50.067 | 54.920 | 46.205 | 54.023 | R26 | R82 |
 | F2DC v2 | 60.80 | 60.323 | 54.618 | 58.735 | R98 | R98 |
 | FDSE v2 | 60.99 | **66.055** | 58.062 | 60.6 | R81 | R55 |
 | PG-DFC v3.2 | 61.613 | 60.892 | 54.415 | 57.675 | R87 | R98 |
@@ -89,19 +95,22 @@ training: R=100, E=10, lr=0.01, batch=46/64
 
 | Method | mnist | usps | svhn | syn | **AVG Best ↑** | **AVG Last ↑** | Best Round (avg) |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| FedAvg | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+| FedAvg | 96.00 | 91.58 | 87.48 | 92.38 | 91.86 | 91.63 | R89.5 |
 | FedBN | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
 | FedProto | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
 | FPL | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
-| MOON | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
-| FDSE | 92.34 | 91.38 | 74.42 | 88.50 | 86.66 | 84.61 | R73 |
-| **F2DC** | 97.35 | 92.46 | 90.18 | 94.36 | **93.59** ⭐ | 93.40 | R94 |
+| MOON | 95.73 | 91.61 | 87.30 | 91.73 | 91.59 | 90.37 | R87.5 |
+| FDSE | 92.34 | 91.38 | 74.41 | 88.50 | 86.66 | 84.61 | R74.0 |
+| **F2DC** | **97.34** | **92.46** | **90.18** | **94.36** | **93.59** ⭐ | **93.40** | R94.5 |
 | **PG-DFC v3.2 (Ours)** | TBD (R20 跑中)| TBD | TBD | TBD | **TBD** (R20 mean ~89) | TBD | TBD |
+| **Δ F2DC vs FedAvg** | +1.34 | +0.88 | +2.70 | +1.98 | +1.73 | +1.77 | +5 round |
 
 ### Per-seed (Digits)
 
 | Method | s=15 best | s=333 best | s=15 last | s=333 last | s=15 best round | s=333 best round |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|
+| FedAvg | 92.100 | 91.625 | 91.825 | 91.442 | R98 | R81 |
+| MOON | 92.227 | 90.958 | 91.342 | 89.388 | R85 | R90 |
 | F2DC v2 | 93.742 | 93.428 | 93.362 | 93.428 | R88 | R99 |
 | FDSE v2 | 86.732 | 86.585 | 84.905 | 84.322 | R75 | R71 |
 | PG-DFC v3.2 | 跑中 R20 (88.84) | 跑中 R19 (89.15) | - | - | - | - |
@@ -166,12 +175,16 @@ training: R=100, E=10, lr=0.01, batch=46/64
 - [x] PACS F2DC + PG-DFC v3.2 (R100 完成)
 - [x] Office F2DC + FDSE + PG-DFC v3.2 + v3.3 (R100 完成)
 - [x] Digits F2DC + FDSE (R100 完成)
+- [x] **EXP-130 sc4_v2: FedAvg PACS/Office/Digits + MOON Office/Digits 已回填**
 - [ ] **Digits PG-DFC v3.2** (跑中 R20,~30 min 后完成)
 - [ ] PACS v3.3 (跑中 R37)
-- [ ] FedAvg / FedBN / FedProto / FPL / MOON 5 个 baselines (没跑过,需补)
+- [ ] **MOON PACS** (sc4_v2 只到 R34 + 缺 s333,需补 R100×2)
+- [ ] FDSE PACS (sc3_v2 R35+R30 没跑完,需补 R100×2)
+- [ ] FedBN / FedProto / FPL 3 个 baselines (还没跑)
 
 ## 后续 priority
 
 1. **等 Digits PG-DFC v3.2 完成** → 填主表完整 3 dataset
-2. **跑 5 个传统 baselines** (FedAvg/FedBN/FedProto/FPL/MOON) on PACS/Office/Digits → 完整 paper-grade 主表
-3. **画 per-class confusion matrix** (paper Fig 6 风格,展示 art 增益来自哪些类)
+2. **补 MOON PACS + FDSE PACS** (PACS 缺基线,但 FedAvg+F2DC 已可对比)
+3. **跑 FedBN / FedProto / FPL** on PACS/Office/Digits
+4. **画 per-class confusion matrix** (paper Fig 6 风格,展示 art 增益来自哪些类)
