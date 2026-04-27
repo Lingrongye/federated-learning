@@ -264,8 +264,11 @@ class FDSE(FederatedModel):
 
         global_loss = 0.0
         global_samples = 0
-        fn = None
-        vn = None
+        # per-layer EMA (原 FDSE 代码 line 257-258 用单一 fn/vn 跨 layer EMA, 不同 layer
+        # channel 数不同必崩 — 是潜在 bug. 我们改成 per-layer dict 维护独立 EMA, 等价于
+        # 原代码意图但修了 dim mismatch)
+        fn_list = [None] * len(layers)
+        vn_list = [None] * len(layers)
 
         iterator = tqdm(range(self.local_epoch))
         for epoch_iter in iterator:
@@ -277,23 +280,27 @@ class FDSE(FederatedModel):
                 optimizer.zero_grad()
                 outputs = net(images)
                 loss = criterion(outputs, labels)
-                # L_reg consistency loss (FDSE line 198-211)
+                # L_reg consistency loss (FDSE line 252-265, per-layer EMA fix)
                 if self.current_round > 1 and self.lmbd > 0.0 and len(feature_maps) == len(layers):
                     loss_mean = 0.0
                     loss_var = 0.0
-                    for g, w, f, v, ln in zip(global_means, weights, feature_maps, global_vars, layers):
+                    for li, (g, w, f, v, ln) in enumerate(zip(global_means, weights, feature_maps, global_vars, layers)):
                         mf = f.mean(dim=0) if f.ndim > 1 else f
                         vf = f.var(dim=0) if f.ndim > 1 else torch.zeros_like(f)
-                        fn = (1.0 - ln.momentum) * fn + ln.momentum * mf if fn is not None else mf
-                        vn = (1.0 - ln.momentum) * vn + ln.momentum * vf if vn is not None else vf
+                        fn_list[li] = (1.0 - ln.momentum) * fn_list[li] + ln.momentum * mf if fn_list[li] is not None else mf
+                        vn_list[li] = (1.0 - ln.momentum) * vn_list[li] + ln.momentum * vf if vn_list[li] is not None else vf
+                        fn = fn_list[li]
+                        vn = vn_list[li]
                         loss_mean = loss_mean + w * ((g.pow(2) - fn.pow(2)) / (2 * vn + 1e-8)).mean()
                         loss_var = loss_var + w * 0.5 * ((torch.log((vn + 1e-8) / (v + 1e-8)) + v / (vn + 1e-8)).mean())
                     loss = loss + self.lmbd * (loss_mean + loss_var)
                 loss.backward()
                 optimizer.step()
                 feature_maps.clear()
-                if fn is not None: fn = fn.detach()
-                if vn is not None: vn = vn.detach()
+                # detach per-layer (避免梯度跨 step 累加)
+                for li in range(len(fn_list)):
+                    if fn_list[li] is not None: fn_list[li] = fn_list[li].detach()
+                    if vn_list[li] is not None: vn_list[li] = vn_list[li].detach()
                 bs = labels.size(0)
                 epoch_loss += loss.item() * bs
                 epoch_samples += bs
