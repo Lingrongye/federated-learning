@@ -56,17 +56,24 @@ class FDSE(FederatedModel):
 
     def ini(self):
         # ini phase (类似 FDSE Server.initialize): 拆 keys 三类
-        # shared: 'dfe' / 'head' (QP 加权聚合)
+        # shared: 'dfe' / 'head' / stem (conv1, bn1) / shortcut (QP 加权聚合)
+        #         — stem 和 shortcut 是普通 nn.Conv2d/BN, 不做 DSE 分解, 全局共享
         # local:  'dse_bn.running_' (不聚合, FedBN 原则)
-        # personalized: 其他 (cosine sim softmax 聚合)
+        # personalized: 其他 (主要是 dse_conv, cosine sim softmax 聚合)
         sample_state = self.nets_list[0].state_dict()
-        shared_names = ['dfe', 'head']
+        shared_substrings = ['dfe', 'head', '.shortcut.']
+        shared_prefixes = ['conv1.', 'bn1.']  # stem only (用 prefix 避免误匹配 layer1.0.conv1)
         local_names = ['dse_bn.running_']
-        self.shared_keys = [k for k in sample_state if any(s in k for s in shared_names)]
+        self.shared_keys = [
+            k for k in sample_state
+            if any(s in k for s in shared_substrings)
+            or any(k.startswith(p) for p in shared_prefixes)
+        ]
         self.local_keys = [k for k in sample_state if any(s in k for s in local_names)
                            and k not in self.shared_keys]
         self.personalized_keys = [k for k in sample_state
                                    if k not in self.shared_keys and k not in self.local_keys]
+        print(f"[FDSE] keys: shared={len(self.shared_keys)} local={len(self.local_keys)} personalized={len(self.personalized_keys)}")
         # global_net = first client's deepcopy
         self.global_net = copy.deepcopy(self.nets_list[0])
         global_w = self.nets_list[0].state_dict()
