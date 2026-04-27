@@ -280,20 +280,28 @@ class FDSE(FederatedModel):
                 optimizer.zero_grad()
                 outputs = net(images)
                 loss = criterion(outputs, labels)
-                # L_reg consistency loss (FDSE line 252-265, per-layer EMA fix)
+                # L_reg consistency loss (FDSE line 252-265, per-layer EMA fix + 数值稳定)
+                # 原 FDSE 公式 (g²-fn²)/(2vn) + log(vn/v) + v/vn 在 vn 接近 0 时爆炸
+                # (实测 batch 2 loss=322k → batch 3 -inf → batch 4 nan → server agg cvxopt domain error)
+                # 修: vn / v / log argument 全部 clamp; loss nan 检测跳过 L_reg
                 if self.current_round > 1 and self.lmbd > 0.0 and len(feature_maps) == len(layers):
                     loss_mean = 0.0
                     loss_var = 0.0
+                    EPS = 1e-2  # 比原版 1e-8 大很多, 防 1/vn 爆炸
                     for li, (g, w, f, v, ln) in enumerate(zip(global_means, weights, feature_maps, global_vars, layers)):
                         mf = f.mean(dim=0) if f.ndim > 1 else f
                         vf = f.var(dim=0) if f.ndim > 1 else torch.zeros_like(f)
                         fn_list[li] = (1.0 - ln.momentum) * fn_list[li] + ln.momentum * mf if fn_list[li] is not None else mf
                         vn_list[li] = (1.0 - ln.momentum) * vn_list[li] + ln.momentum * vf if vn_list[li] is not None else vf
                         fn = fn_list[li]
-                        vn = vn_list[li]
-                        loss_mean = loss_mean + w * ((g.pow(2) - fn.pow(2)) / (2 * vn + 1e-8)).mean()
-                        loss_var = loss_var + w * 0.5 * ((torch.log((vn + 1e-8) / (v + 1e-8)) + v / (vn + 1e-8)).mean())
-                    loss = loss + self.lmbd * (loss_mean + loss_var)
+                        vn = vn_list[li].clamp(min=EPS)
+                        v_safe = v.clamp(min=EPS)
+                        loss_mean = loss_mean + w * ((g.pow(2) - fn.pow(2)) / (2 * vn)).mean()
+                        loss_var = loss_var + w * 0.5 * ((torch.log(vn / v_safe) + v_safe / vn).mean())
+                    reg = self.lmbd * (loss_mean + loss_var)
+                    # 防爆: 如果 reg 已经 inf/nan, 跳过 L_reg 这一项
+                    if torch.isfinite(reg):
+                        loss = loss + reg
                 loss.backward()
                 optimizer.step()
                 feature_maps.clear()
