@@ -156,3 +156,24 @@ best_args = {
 for _ds in best_args:
     if 'f2dc_pg' not in best_args[_ds]:
         best_args[_ds]['f2dc_pg'] = dict(best_args[_ds].get('f2dc', {'local_lr': 0.01, 'local_batch_size': 64}))
+
+# Inject f2dc_pgv33 (mirror f2dc_pg defaults)
+for _ds in best_args:
+    if 'f2dc_pgv33' not in best_args[_ds]:
+        best_args[_ds]['f2dc_pgv33'] = dict(best_args[_ds].get('f2dc_pg', {'local_lr': 0.01, 'local_batch_size': 64}))
+
+# Inject fedbn into all datasets (mirror fedavg, no extra hyperparams)
+for _ds in best_args:
+    if 'fedbn' not in best_args[_ds]:
+        best_args[_ds]['fedbn'] = dict(best_args[_ds].get('fedavg', {'local_lr': 0.01, 'local_batch_size': 64}))
+
+# Inject fedprox / fedproto for all datasets if missing (some only registered for fl_pacs)
+for _ds in best_args:
+    if 'fedprox' not in best_args[_ds]:
+        _base = dict(best_args[_ds].get('fedavg', {'local_lr': 0.01, 'local_batch_size': 64}))
+        _base['mu'] = 0.01
+        best_args[_ds]['fedprox'] = _base
+    if 'fedproto' not in best_args[_ds]:
+        _base = dict(best_args[_ds].get('fedavg', {'local_lr': 0.01, 'local_batch_size': 64}))
+        _base['mu'] = 1.0
+        best_args[_ds]['fedproto'] = _base

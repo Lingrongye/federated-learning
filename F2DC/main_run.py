@@ -101,6 +101,14 @@ def parse_args():
         "--lambda2", type=float, default=1.0, help="params for DFC loss"
     )
 
+    # ===== Baseline 共用超参 (FedProx / FedProto / MOON) =====
+    parser.add_argument("--mu", type=float, default=1.0,
+                        help="FedProx prox weight / FedProto MSE weight / MOON contrastive weight")
+    parser.add_argument("--temperature", type=float, default=0.5,
+                        help="MOON contrastive temperature")
+    parser.add_argument("--local_lr", type=float, default=0.01, help="local SGD lr")
+    parser.add_argument("--local_batch_size", type=int, default=64, help="local batch size")
+
     # ===== FDSE (CVPR 2025) 超参 =====
     parser.add_argument("--lmbd", type=float, default=0.01, help="FDSE: L_reg consistency loss weight")
     parser.add_argument("--fdse_tau", type=float, default=0.5, help="FDSE: cosine sim softmax temperature for personalized agg")
