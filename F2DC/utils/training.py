@@ -124,19 +124,23 @@ def train(
                 is_ok = True
 
     else:
-        selected_domain_dict = {
-            "mnist": 6,
-            "usps": 4,
-            "svhn": 3,
-            "syn": 7,
-        }  # base for fl_digits
+        # patch: fixed allocation per dataset per F2DC paper Sec 5.1
+        # PACS: photo:2, art:3, cartoon:2, sketch:3 (10 client)
+        # Office: caltech:3, amazon:2, webcam:2, dslr:3 (10 client)
+        # Digits: mnist:3, usps:6, svhn:6, syn:5 (20 client)
+        if model.args.dataset == "fl_pacs":
+            selected_domain_dict = {"photo": 2, "art": 3, "cartoon": 2, "sketch": 3}
+        elif model.args.dataset == "fl_officecaltech":
+            selected_domain_dict = {"caltech": 3, "amazon": 2, "webcam": 2, "dslr": 3}
+        elif model.args.dataset == "fl_digits":
+            selected_domain_dict = {"mnist": 3, "usps": 6, "svhn": 6, "syn": 5}
+        else:
+            raise ValueError(f"Unknown dataset {model.args.dataset}")
         selected_domain_list = []
-        for k in selected_domain_dict:
-            domain_num = selected_domain_dict[k]
-            for i in range(domain_num):
-                selected_domain_list.append(k)
-
-        selected_domain_list = np.random.permutation(selected_domain_list)
+        for k, n in selected_domain_dict.items():
+            selected_domain_list.extend([k] * n)
+        # 不 permute (保持论文确定性 fixed allocation, seed 只影响后续 partition / model init)
+        selected_domain_list = np.array(selected_domain_list)
 
         result = Counter(selected_domain_list)
 

@@ -54,7 +54,8 @@ def parse_args():
 
     parser.add_argument("--seed", type=int, default=55, help="random seed")
     parser.add_argument(
-        "--rand_dataset", type=bool, default=True, help="random set dataset"
+        "--rand_dataset", type=lambda x: x.lower()=="true", default=False,
+        help="random domain allocation; default False = fixed per F2DC paper Sec 5.1"
     )
 
     parser.add_argument(
