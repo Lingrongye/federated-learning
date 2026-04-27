@@ -182,6 +182,22 @@ class FDSE(FederatedModel):
                 agg = _modeldict_weighted_average(per_k_dicts, weight_cid)
                 self.client_states[cid][k] = agg[k].cpu()
 
+        # ---- Step 3: 把 local_keys (dse_bn.running_) 也聚合到 global_net (仅供 evaluate 用)
+        # 原 FDSE 用 client local model evaluate, 所以不需要 global 的 BN running.
+        # F2DC 框架 global_evaluate 用 model.global_net, global_net 的 dse_bn.running 永远不更新
+        # 会导致 eval 时 BN 用 init 0/1 stats → acc 严重低估. 加这步: 简单 mean 聚合 BN running.
+        # 注意: client 训练时仍用自己的 dse_bn (本地保留), 这步只为 eval 服务.
+        if self.local_keys:
+            global_state = self.global_net.state_dict()
+            for k in self.local_keys:
+                if 'num_batches_tracked' in k:
+                    vals = [md[k] for md in mdicts]
+                    global_state[k] = torch.stack(vals).sum(dim=0).long()
+                else:
+                    vals = [md[k].float() for md in mdicts]
+                    global_state[k] = torch.stack(vals).mean(dim=0)
+            self.global_net.load_state_dict(global_state, strict=False)
+
     def _optim_lambda(self, grads):
         """QP 求 optimal lambda (FDSE line 169-189)."""
         n = len(grads)
