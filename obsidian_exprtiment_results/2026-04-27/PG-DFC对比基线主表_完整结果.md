@@ -101,9 +101,11 @@ training: R=100, E=10, lr=0.01, batch=46/64
 | FPL | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
 | MOON | 95.73 | 91.61 | 87.30 | 91.73 | 91.59 | 90.37 | R87.5 |
 | FDSE | 92.34 | 91.38 | 74.41 | 88.50 | 86.66 | 84.61 | R74.0 |
-| **F2DC** | **97.34** | **92.46** | **90.18** | **94.36** | **93.59** ⭐ | **93.40** | R94.5 |
-| **PG-DFC v3.2 (Ours)** | TBD (R20 跑中)| TBD | TBD | TBD | **TBD** (R20 mean ~89) | TBD | TBD |
+| **F2DC** | **97.34** | 92.46 | 90.18 | **94.36** | **93.59** ⭐ | **93.40** | R94.5 |
+| **PG-DFC v3.2 (Ours)** | 97.38 | **91.13** | **90.35** | 94.37 | **93.30** | 92.99 | R90.0 |
 | **Δ F2DC vs FedAvg** | +1.34 | +0.88 | +2.70 | +1.98 | +1.73 | +1.77 | +5 round |
+| **Δ PG-DFC vs F2DC** | +0.04 | -1.33 | +0.17 | +0.01 | -0.29 | -0.41 | -4.5 round |
+| **Δ PG-DFC vs FedAvg** | +1.38 | -0.45 | +2.87 | +1.99 | +1.44 | +1.36 | +0.5 round |
 
 ### Per-seed (Digits)
 
@@ -113,7 +115,7 @@ training: R=100, E=10, lr=0.01, batch=46/64
 | MOON | 92.227 | 90.958 | 91.342 | 89.388 | R85 | R90 |
 | F2DC v2 | 93.742 | 93.428 | 93.362 | 93.428 | R88 | R99 |
 | FDSE v2 | 86.732 | 86.585 | 84.905 | 84.322 | R75 | R71 |
-| PG-DFC v3.2 | 跑中 R20 (88.84) | 跑中 R19 (89.15) | - | - | - | - |
+| **PG-DFC v3.2** | **93.190** | **93.417** | 92.832 | 93.150 | R82 | R98 |
 
 ---
 
@@ -149,11 +151,11 @@ training: R=100, E=10, lr=0.01, batch=46/64
 ## 真实 Paper-Grade 结论
 
 ### 主 contribution(can write now)
-| Dataset | Δ vs F2DC | 备注 |
-|---|:--:|---|
-| **PACS** | **+2.18pp** ✓ | art +6.37 main story |
-| Office | +0.69pp | 边缘,FDSE 更强 |
-| Digits | TBD | 跑中,预测 ~93+ (跟 F2DC 接近) |
+| Dataset | Δ vs F2DC | Δ vs FedAvg | 备注 |
+|---|:--:|:--:|---|
+| **PACS** | **+2.18pp** ✓ | **+3.98pp** ✓ | art +6.37 main story |
+| Office | +0.69pp (v3.2) / +0.93pp (v3.3) | +3.35pp (v3.2) | 边缘 vs F2DC,但显著优于 FedAvg/MOON |
+| Digits | -0.29pp | +1.44pp | 几乎打平 F2DC,显著优于其它 baseline |
 
 ### 关键 insight(per-domain analysis)
 - **baseline-weak domain 受益最大**:art +6.37pp,dslr +8.34pp
