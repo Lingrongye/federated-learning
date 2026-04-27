@@ -86,8 +86,8 @@ def test_model(model_name, n_class=7):
 
         # 收集 client0 训练后的 BN running stat (应该已经 drift)
         sd0_after_train = {k: v.clone() for k, v in nets[0].state_dict().items()}
-        bn_keys = [k for k in sd0_after_train if Cls._is_bn_key(k)]
-        nbn_keys = [k for k in sd0_after_train if not Cls._is_bn_key(k)]
+        bn_keys = [k for k in sd0_after_train if model._is_bn_key(k)]
+        nbn_keys = [k for k in sd0_after_train if not model._is_bn_key(k)]
         print(f"  BN keys ({len(bn_keys)}): e.g., {bn_keys[:3]}")
         print(f"  Non-BN keys ({len(nbn_keys)}): e.g., {nbn_keys[:2]}")
         assert len(bn_keys) > 0, "FedBN: 没有检测到 BN keys, _is_bn_key 可能写错"

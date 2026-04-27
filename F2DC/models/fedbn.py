@@ -6,18 +6,37 @@ import numpy as np
 from models.utils.federated_model import FederatedModel
 
 
+def collect_bn_keys(net):
+    """枚举 net 中所有 BN/GroupNorm/LayerNorm 类型 module 的 state_dict keys.
+    必须基于 named_modules 类型, 不能用字符串 match —
+    ResNet 的 nn.Sequential(Conv, BN) 里 BN 的 key 是 'shortcut.1.weight' 不含 'bn'.
+    """
+    norm_types = (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d,
+                  nn.GroupNorm, nn.LayerNorm, nn.SyncBatchNorm)
+    bn_keys = set()
+    for name, mod in net.named_modules():
+        if isinstance(mod, norm_types):
+            for pname, _ in mod.named_parameters(recurse=False):
+                bn_keys.add(f"{name}.{pname}")
+            for bname, _ in mod.named_buffers(recurse=False):
+                bn_keys.add(f"{name}.{bname}")
+    return bn_keys
+
+
 class FedBN(FederatedModel):
     NAME = 'fedbn'
     COMPATIBILITY = ['heterogeneity']
 
     def __init__(self, nets_list, args, transform):
         super(FedBN, self).__init__(nets_list, args, transform)
+        self._bn_keys = None  # lazy init in ini() after global_net 创建
 
     def ini(self):
         self.global_net = copy.deepcopy(self.nets_list[0])
         global_w = self.nets_list[0].state_dict()
         for _, net in enumerate(self.nets_list):
             net.load_state_dict(global_w)
+        self._bn_keys = collect_bn_keys(self.global_net)
 
     def loc_update(self, priloader_list):
         total_clients = list(range(self.args.parti_num))
@@ -75,14 +94,10 @@ class FedBN(FederatedModel):
         global_avg_loss = global_loss / global_samples
         return round(global_avg_loss, 3), num_c_samples
 
-    @staticmethod
-    def _is_bn_key(key):
-        kl = key.lower()
-        if 'bn' in kl or 'batchnorm' in kl:
-            return True
-        if 'running_mean' in kl or 'running_var' in kl or 'num_batches_tracked' in kl:
-            return True
-        return False
+    def _is_bn_key(self, key):
+        if self._bn_keys is None:
+            self._bn_keys = collect_bn_keys(self.global_net)
+        return key in self._bn_keys
 
     def aggregate_nets_skip_bn(self):
         global_net = self.global_net
