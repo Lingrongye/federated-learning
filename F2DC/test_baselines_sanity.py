@@ -43,7 +43,7 @@ def make_dummy_loader(n=16, n_class=7, img_hw=64):
     x = torch.randn(n, 3, img_hw, img_hw)
     y = torch.randint(0, n_class, (n,))
     ds = TensorDataset(x, y)
-    sampler = SubsetRandomSampler(list(range(n)))
+    sampler = SubsetRandomSampler(np.arange(n))  # 用 np.array, 真实 loader 也是 np
     return DataLoader(ds, batch_size=8, sampler=sampler)
 
 
