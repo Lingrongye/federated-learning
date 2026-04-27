@@ -100,41 +100,39 @@ class FedBN(FederatedModel):
         return key in self._bn_keys
 
     def aggregate_nets_skip_bn(self):
-        global_net = self.global_net
-        nets_list = self.nets_list
+        """FedBN 聚合: BN 参数不参与聚合, 留本地。
+        只构造 non-BN 子 dict, 用 strict=False load — 完全不 touch BN buffer."""
         online_clients = self.online_clients
-        global_w = self.global_net.state_dict()
 
         if self.args.averaing == 'weight':
             online_clients_dl = [self.trainloaders[i] for i in online_clients]
             online_clients_len = [dl.sampler.indices.size for dl in online_clients_dl]
-            total = np.sum(online_clients_len)
-            freq = online_clients_len / total
+            total = float(np.sum(online_clients_len))
+            freq = [n / total for n in online_clients_len]
         else:
             parti_num = len(online_clients)
-            freq = [1 / parti_num for _ in range(parti_num)]
+            freq = [1.0 / parti_num for _ in range(parti_num)]
 
-        first = True
-        for index, net_id in enumerate(online_clients):
-            net_para = nets_list[net_id].state_dict()
-            if first:
-                first = False
-                for key in net_para:
-                    if self._is_bn_key(key):
-                        continue
-                    global_w[key] = net_para[key] * freq[index]
-            else:
-                for key in net_para:
-                    if self._is_bn_key(key):
-                        continue
-                    global_w[key] += net_para[key] * freq[index]
+        # 收集 non-BN keys 列表
+        first_sd = self.nets_list[online_clients[0]].state_dict()
+        non_bn_keys = [k for k in first_sd if not self._is_bn_key(k)]
 
-        global_net.load_state_dict(global_w)
+        # 加权累加
+        agg = {}
+        for idx, net_id in enumerate(online_clients):
+            sd = self.nets_list[net_id].state_dict()
+            for k in non_bn_keys:
+                v = sd[k].detach()
+                if k not in agg:
+                    agg[k] = v.clone().float() * freq[idx]
+                else:
+                    agg[k] = agg[k] + v.float() * freq[idx]
 
-        for net in nets_list:
-            local_w = net.state_dict()
-            for key in global_w:
-                if self._is_bn_key(key):
-                    continue
-                local_w[key] = global_w[key]
-            net.load_state_dict(local_w)
+        # 把累加结果 cast 回原 dtype
+        for k in agg:
+            agg[k] = agg[k].to(first_sd[k].dtype)
+
+        # 用 strict=False load — 只覆盖 non-BN, BN 完全不 touch
+        self.global_net.load_state_dict(agg, strict=False)
+        for net in self.nets_list:
+            net.load_state_dict(agg, strict=False)
