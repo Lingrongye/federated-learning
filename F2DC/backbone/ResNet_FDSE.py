@@ -96,6 +96,7 @@ class ResNet_FDSE(nn.Module):
     """ResNet-10 with FDSE DSEConv blocks, 适配 F2DC 协议 (PACS 128x128 / Office,Digits 32x32)."""
     def __init__(self, num_classes=7, image_size=(128, 128)):
         super().__init__()
+        self.name = 'resnet10_fdse'   # F2DC main_run.py 期望 model.nets_list[0].name
         self.in_planes = 64
         self.image_size = image_size
         # 第一层 conv 用普通 Conv2d (跟 F2DC ResNet.py 一致, 不做 DSE 分解)
