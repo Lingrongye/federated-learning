@@ -7,19 +7,30 @@ from models.utils.federated_model import FederatedModel
 
 
 def collect_bn_keys(net):
-    """枚举 net 中所有 BN/GroupNorm/LayerNorm 类型 module 的 state_dict keys.
-    必须基于 named_modules 类型, 不能用字符串 match —
-    ResNet 的 nn.Sequential(Conv, BN) 里 BN 的 key 是 'shortcut.1.weight' 不含 'bn'.
+    """枚举 state_dict 中所有属于 BN/Norm 模块的 keys (含 alias).
+
+    ResNet 用 _features = nn.Sequential([..., bn1, ...]) 时, state_dict 里同一 BN buffer
+    会有两个 alias key: 'bn1.running_mean' 跟 '_features.1.running_mean'. 必须把两个都
+    判为 BN, 否则 alias key 会被错聚合, load 时通过 alias 写回真 BN buffer.
+
+    实现: 收集所有 BN module 的 buffer/parameter tensor 的 data_ptr (storage 标识),
+    然后检查 state_dict 每个 key 的 tensor data_ptr 是否在该 set 里.
     """
     norm_types = (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d,
                   nn.GroupNorm, nn.LayerNorm, nn.SyncBatchNorm)
-    bn_keys = set()
-    for name, mod in net.named_modules():
+    bn_storage_ptrs = set()
+    for _, mod in net.named_modules():
         if isinstance(mod, norm_types):
-            for pname, _ in mod.named_parameters(recurse=False):
-                bn_keys.add(f"{name}.{pname}")
-            for bname, _ in mod.named_buffers(recurse=False):
-                bn_keys.add(f"{name}.{bname}")
+            for _, p in mod.named_parameters(recurse=False):
+                bn_storage_ptrs.add(p.data_ptr())
+            for _, b in mod.named_buffers(recurse=False):
+                bn_storage_ptrs.add(b.data_ptr())
+
+    bn_keys = set()
+    sd = net.state_dict()
+    for k, v in sd.items():
+        if v.data_ptr() in bn_storage_ptrs:
+            bn_keys.add(k)
     return bn_keys
 
 
