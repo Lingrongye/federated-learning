@@ -25,7 +25,7 @@ def global_evaluate(
         for batch_idx, (images, labels) in enumerate(dl):
             with torch.no_grad():
                 images, labels = images.to(model.device), labels.to(model.device)
-                if model.NAME in ("f2dc", "f2dc_pg"):
+                if model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33"):
                     outputs, _, _, _, _, _, _ = net(images)
                 else:
                     outputs = net(images)
