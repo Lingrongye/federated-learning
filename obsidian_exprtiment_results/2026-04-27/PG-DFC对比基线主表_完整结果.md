@@ -146,12 +146,16 @@ training: R=100, E=10, lr=0.01, batch=46/64
 ## Figures
 
 ### Fig 1. Per-Domain Δ Bar Chart
-路径: `experiments/ablation/EXP-131_PG-DFC_v3.2/fig1_per_domain_comparison.png`
+
+![[figs/fig1_per_domain_comparison.png]]
+
 - 2x2 subplot: PACS (top) / Office (bottom),左 bar 对比 + 右 Δ 条
 - 关键发现:**art +6.37pp / dslr +8.34pp** (baseline-weak domains 增益最大)
 
 ### Fig 2. Convergence Curves (3 datasets)
-路径: `experiments/ablation/EXP-131_PG-DFC_v3.2/fig_convergence_3datasets.png`
+
+![[figs/fig_convergence_3datasets.png]]
+
 - 1x3 subplot: PACS / Office / Digits
 - F2DC 灰,FDSE 紫,PG-DFC v3.2 红,PG-DFC v3.3 蓝(只 Office 完整)
 - 关键发现:
@@ -161,9 +165,7 @@ training: R=100, E=10, lr=0.01, batch=46/64
 
 ### Fig 3. Convergence — All Baselines (跟 F2DC paper Fig 5 风格一致) ⭐ 主图
 
-路径: `experiments/ablation/EXP-132_baselines_3algo/convergence_office_pacs.png`
-
-![EXP-132 Convergence](../../experiments/ablation/EXP-132_baselines_3algo/convergence_office_pacs.png)
+![[figs/convergence_office_pacs.png]]
 
 - 1x2 subplot: Office-Caltech (Left) + PACS (Right)
 - 9 algorithm: FedAvg(蓝)/FedBN(浅蓝)/FedProx(绿)/FedProto(黄)/MOON(粉)/FDSE(紫)/F2DC(灰)/**PG-DFC v3.2(红)** / **PG-DFC v3.3(蓝)**
@@ -172,6 +174,12 @@ training: R=100, E=10, lr=0.01, batch=46/64
   - **Office (Left)**: FDSE 紫线 ~63% 仍是冠军, PG-DFC v3.2/v3.3 红蓝 ~58-62%, F2DC 灰 ~57%, 其它 baseline ~52-58% 紧密
   - **PACS (Right)**: PG-DFC v3.2 红线 + v3.3 蓝线 ~73% **明显领先**, F2DC 灰 ~70%, FedAvg 蓝 ~69%, FedBN 浅蓝 ~62% 最低
   - **暂缺**: PACS FedProto / FedProx / MOON / FDSE 4 条线 (跑中或不完整, 等 sc5 重启完成后重画)
+
+### Fig 4. Office 4 Domain 视觉差异
+
+![[figs/office_domain_compare.png]]
+
+- 4 个 domain × 4 类样本对比, 直观展示 Office-Caltech10 上的域间差异
 
 ---
 
