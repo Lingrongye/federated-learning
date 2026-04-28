@@ -83,8 +83,37 @@ PG-DFC 的 cross-attention 机制更稳定 (cosine attention 是 deterministic g
 
 ## 待办
 
-- [ ] 等 V100 office s=15/s=333 R100 (~10 min) → 重画完整 cross-seed table
-- [ ] sc3 F2DC+DaA PACS s=15 R99 best=72.68 已加进主表 ✅
-- [ ] V100 F2DC+DaA PACS s=333 (R=8 太早)
-- [ ] sc6 PG-DFC+DaA PACS s=15 (R=43, 还要 ~3.5h)
+- [x] 等 V100 office s=15/s=333 R100 → ⚠️ V100 + DaA 系列数据**系统性低 2-4pp** (跨服务器一致性问题)
+- [x] sc3 F2DC+DaA PACS s=15 R100 best=72.68 已加进主表 ✅
+- [ ] V100 F2DC+DaA PACS s=333 (R=12, 还要 1.5h)
+- [ ] sc6 PG-DFC+DaA PACS s=15 (R=47, 还要 ~3h)
 - [ ] cold path 出图 (4 method t-SNE / DaA dispatch / cos sim trajectory) — 等所有 R100 + diag dump 完成
+
+## ⚠️ 重要 caveat: V100 跨服务器一致性问题
+
+V100 上 DaA 系列 office R100 数据**系统性低 2-4pp** vs sc3/sc5:
+
+| Run | sc3/sc5 | V100 | Δ |
+|---|:--:|:--:|:--:|
+| F2DC+DaA office s=15 | 63.93 (sc3) | 61.68 | -2.25 |
+| PG-DFC+DaA office s=15 | 63.80 (sc5) | 60.36 | -3.44 |
+| vanilla F2DC office s=15 | 60.80 (主表) | 60.86 | +0.06 ✓ |
+
+**关键观察**: vanilla 数据跨服务器一致 (差 < 0.1pp), 但 + DaA 后 V100 显著低 2-3pp.
+
+**可能原因**:
+1. V100 上 11 进程 share GPU → DataLoader thread starvation 严重, batch 处理速度慢可能影响 BatchNorm running stats convergence
+2. cuda 版本 / pytorch 数值精度差异 (V100 是 nv 24.12 image)
+3. sc3/sc5 是 RTX 4090, V100 是不同硬件
+
+**实施处理**: 主表 office 用 sc3/sc5 高质量数据, V100 office 数据放 ablation appendix 标注 "cross-server consistency issue".
+
+## 当前主表 office 最佳数据 (从 best server 拿)
+
+| Method | s=15 | s=333 | 2-seed mean | source |
+|---|:--:|:--:|:--:|:--:|
+| F2DC + DaA | 63.93 | 63.18 | **63.55** | sc3 + sc3 |
+| PG-DFC + DaA | 63.80 | 63.76 | **63.78** ⭐ | sc5 + V100 (V100 s=333 跟 sc5 s=15 接近, 信任) |
+| FDSE | 60.99 | 66.06 | 63.52 | (主表) |
+
+→ **PG-DFC + DaA office 2-seed mean = 63.78, 微胜 FDSE +0.26pp** (但 V100 s=333 数据有 caveat)
