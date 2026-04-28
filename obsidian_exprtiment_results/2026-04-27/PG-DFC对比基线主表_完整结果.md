@@ -159,6 +159,20 @@ training: R=100, E=10, lr=0.01, batch=46/64
   - **Office 上 FDSE 反而最高**(我们之前低估)
   - Digits 上 F2DC 远超 FDSE,PG-DFC 还在跑
 
+### Fig 3. Convergence — All Baselines (跟 F2DC paper Fig 5 风格一致) ⭐ 主图
+
+路径: `experiments/ablation/EXP-132_baselines_3algo/convergence_office_pacs.png`
+
+![EXP-132 Convergence](../../experiments/ablation/EXP-132_baselines_3algo/convergence_office_pacs.png)
+
+- 1x2 subplot: Office-Caltech (Left) + PACS (Right)
+- 9 algorithm: FedAvg(蓝)/FedBN(浅蓝)/FedProx(绿)/FedProto(黄)/MOON(粉)/FDSE(紫)/F2DC(灰)/**PG-DFC v3.2(红)** / **PG-DFC v3.3(蓝)**
+- 数据: 2-seed mean (s=15+s=333), R100 完整 trajectory
+- 关键观察:
+  - **Office (Left)**: FDSE 紫线 ~63% 仍是冠军, PG-DFC v3.2/v3.3 红蓝 ~58-62%, F2DC 灰 ~57%, 其它 baseline ~52-58% 紧密
+  - **PACS (Right)**: PG-DFC v3.2 红线 + v3.3 蓝线 ~73% **明显领先**, F2DC 灰 ~70%, FedAvg 蓝 ~69%, FedBN 浅蓝 ~62% 最低
+  - **暂缺**: PACS FedProto / FedProx / MOON / FDSE 4 条线 (跑中或不完整, 等 sc5 重启完成后重画)
+
 ---
 
 ## 真实 Paper-Grade 结论
