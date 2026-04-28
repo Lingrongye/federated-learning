@@ -116,6 +116,38 @@ class FederatedModel(nn.Module):
         online_clients = self.online_clients
         global_w = self.global_net.state_dict()
 
+        # === diagnostic: 在 sync 前算 client 跟 global 的 drift ===
+        # 必须在 client.load_state_dict(global_w) 之前算, 否则 diff = 0
+        try:
+            import torch as _t
+            old_global_keys = list(global_w.keys())
+            critical_patterns = ['conv1.weight', 'layer1.0.conv1', 'layer4.0.conv1',
+                                 'classifier.weight', 'linear.weight', 'cls.weight']
+            actual_layers = [k for k in old_global_keys
+                             if any(p in k for p in critical_patterns)]
+            old_global_snapshot = {k: global_w[k].detach().clone().float()
+                                   for k in actual_layers}
+            layer_l2 = {}
+            grad_l2 = {}
+            for net_id in online_clients:
+                client_sd = self.nets_list[net_id].state_dict()
+                client_drift = {}
+                sq_sum = 0.0
+                for layer in actual_layers:
+                    if layer in client_sd:
+                        diff = client_sd[layer].detach().float() - old_global_snapshot[layer]
+                        l2 = float(diff.norm().item())
+                        client_drift[layer] = l2
+                        sq_sum += l2 ** 2
+                layer_l2[net_id] = client_drift
+                grad_l2[net_id] = sq_sum ** 0.5
+            self._last_layer_l2 = layer_l2
+            self._last_grad_l2 = grad_l2
+        except Exception as _e:
+            # 任何错误都不要让 train 死
+            self._last_layer_l2 = {}
+            self._last_grad_l2 = {}
+
         if self.args.averaing == 'weight':
             online_clients_dl = [self.trainloaders[online_clients_index] for online_clients_index in online_clients]
             online_clients_len = [dl.sampler.indices.size for dl in online_clients_dl]

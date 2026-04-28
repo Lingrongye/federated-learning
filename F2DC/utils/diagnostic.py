@@ -159,40 +159,16 @@ def dump_round_metadata(model, round_idx, eval_results, all_dataset_names, args)
         except Exception as e:
             print(f"[diag] local_protos dump failed: {e}")
 
-    # === per-layer L2 drift (client_i vs global) — 只 dump 几个关键 layer 名 ===
-    layer_l2 = {}
-    try:
-        if hasattr(model, 'global_net') and model.global_net is not None:
-            global_sd = model.global_net.state_dict()
-            critical_layers = []
-            # auto detect: conv1 / layer1.0/layer4.0 / linear / classifier
-            for k in global_sd.keys():
-                if any(p in k for p in ['conv1.weight', 'layer1.0.conv1', 'layer4.0.conv1',
-                                        'classifier.weight', 'linear.weight']):
-                    critical_layers.append(k)
-            if not critical_layers:
-                # fallback first 3 weight layers
-                critical_layers = [k for k in global_sd if k.endswith('.weight')][:3]
-            for ki, client_id in enumerate(online_clients):
-                client_sd = model.nets_list[client_id].state_dict()
-                client_drift = {}
-                for layer in critical_layers:
-                    if layer in client_sd and layer in global_sd:
-                        diff = (client_sd[layer].float() - global_sd[layer].float())
-                        client_drift[layer] = float(diff.norm().item())
-                layer_l2[client_id] = client_drift
-    except Exception as e:
-        print(f"[diag] layer_l2 dump failed: {e}")
-
-    # === gradient L2 (= ||client - global|| 总和) ===
+    # === per-layer L2 drift + grad L2 (从 aggregate_nets 内部 hook 读取) ===
+    # Note: 必须从 model._last_layer_l2 / _last_grad_l2 读, 不能自己算 —
+    # 因为 dump 在 aggregate 后, client 已被 sync 到 global, 自己算 = 全 0.
+    # aggregate_nets 在 sync 前已 store 真值到 self._last_layer_l2.
+    layer_l2 = getattr(model, '_last_layer_l2', {}) or {}
+    grad_l2_dict = getattr(model, '_last_grad_l2', {}) or {}
     grad_l2 = np.zeros(K, dtype=np.float32)
-    try:
-        if layer_l2:
-            for ki, client_id in enumerate(online_clients):
-                if client_id in layer_l2:
-                    grad_l2[ki] = sum(v ** 2 for v in layer_l2[client_id].values()) ** 0.5
-    except Exception:
-        pass
+    for ki, client_id in enumerate(online_clients):
+        if client_id in grad_l2_dict:
+            grad_l2[ki] = float(grad_l2_dict[client_id])
 
     # === domain per client (跟我们 setup 一致, 用于 cold path 按 domain 分组) ===
     selected_domain_list = getattr(model, '_selected_domain_list', None)
