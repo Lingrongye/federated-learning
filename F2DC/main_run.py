@@ -92,8 +92,12 @@ def parse_args():
         "--gum_tau", type=float, default=0.1, help="gumbel concrete distribution"
     )
     parser.add_argument("--tem", type=float, default=0.06, help="DFD sep temperature")
-    parser.add_argument("--agg_a", type=float, default=1.0, help="domain-aware agg")
-    parser.add_argument("--agg_b", type=float, default=0.4, help="domain-aware agg")
+    parser.add_argument("--agg_a", type=float, default=1.0, help="domain-aware agg α (paper Eq 11)")
+    parser.add_argument("--agg_b", type=float, default=0.4, help="domain-aware agg β (paper Eq 11)")
+    parser.add_argument("--use_daa", type=lambda x: x.lower()=="true", default=False,
+                        help="enable F2DC paper Domain-Aware Aggregation (Eq 10/11)")
+    parser.add_argument("--num_domains_q", type=int, default=4,
+                        help="domain 数 Q (PACS=4, Office=4, Digits=4)")
     parser.add_argument(
         "--lambda1", type=float, default=0.8, help="params for DFD loss"
     )

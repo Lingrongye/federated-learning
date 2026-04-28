@@ -78,6 +78,33 @@ class FederatedModel(nn.Module):
             prev_net = prev_nets_list[net_id]
             prev_net.load_state_dict(net_para)
 
+    def _compute_daa_freq(self, online_clients_len):
+        """F2DC paper Eq (10)(11) — Domain-Aware Aggregation reweight.
+
+        Eq (10):  d_k = sqrt(C/2) * |n_k/N - 1/Q|
+                  其中 C = num_classes (paper 把 B_k^c 简化为 n_k/N const vec),
+                       Q = num_domains (PACS/Office/Digits 都 = 4)
+        Eq (11):  p_k = sigmoid(α·n_k/N - β·d_k) / Σ_j sigmoid(...)
+                  default α=1.0, β=0.4 (paper Fig 7 推荐范围)
+
+        Note: paper 的 B_k 在 label-balance 简化后只依赖 n_k/N, d_k 实际上
+        只 reflect sample-size 偏离 1/Q 的程度. 不真正依赖 client 持有的 domain id.
+        """
+        n_arr = np.array(online_clients_len, dtype=np.float64)
+        N = n_arr.sum()
+        sample_share = n_arr / N
+        Q = float(getattr(self.args, 'num_domains_q', 4))
+        C = float(getattr(self.args, 'num_classes', 7))
+        # Eq (10) 简化形式 d_k = sqrt(C/2) * |n_k/N - 1/Q|
+        d = np.sqrt(C / 2.0) * np.abs(sample_share - 1.0 / Q)
+        alpha = float(getattr(self.args, 'agg_a', 1.0))
+        beta = float(getattr(self.args, 'agg_b', 0.4))
+        # Eq (11) sigmoid + normalize
+        score = alpha * sample_share - beta * d
+        sig = 1.0 / (1.0 + np.exp(-score))
+        freq = sig / sig.sum()
+        return freq
+
     def aggregate_nets(self, freq=None):
         global_net = self.global_net
         nets_list = self.nets_list
@@ -91,7 +118,10 @@ class FederatedModel(nn.Module):
             online_clients_dl = [self.trainloaders[online_clients_index] for online_clients_index in online_clients]
             online_clients_len = [dl.sampler.indices.size for dl in online_clients_dl]
             online_clients_all = np.sum(online_clients_len)
-            freq = online_clients_len / online_clients_all
+            if getattr(self.args, 'use_daa', False):
+                freq = self._compute_daa_freq(online_clients_len)
+            else:
+                freq = online_clients_len / online_clients_all
         else:
             parti_num = len(online_clients)
             freq = [1 / parti_num for _ in range(parti_num)]
