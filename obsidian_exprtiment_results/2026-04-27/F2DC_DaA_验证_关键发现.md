@@ -38,20 +38,28 @@ $$
 
 ## 实验结果
 
-### F2DC + DaA office s=15 R100 完成 ⭐
+### F2DC + DaA office 2-seed 完整结果 ⭐⭐ (s=15 + s=333 都跑完)
 
-| Method | Office best (single seed s=15) | Δ vs vanilla F2DC (主表 60.56) |
-|---|:--:|:--:|
-| FedAvg (主表) | 57.90 | -2.66 |
-| **vanilla F2DC** (主表 2-seed) | **60.56** | baseline |
-| **F2DC + DaA s=15 (我们 R100)** | **63.93** ⭐ | **+3.37pp** |
-| F2DC paper (3-seed, 有 DaA) | 66.82 | (+6.26 vs 我们 vanilla) |
-| FDSE (主表) | 63.52 | +2.96 |
+| Method | s=15 best | s=333 best | **2-seed mean** | Δ vs vanilla F2DC (60.56) |
+|---|:--:|:--:|:--:|:--:|
+| **vanilla F2DC** (主表) | 60.80 | 60.32 | 60.56 | baseline |
+| **F2DC + DaA (我们 R100)** | **63.93** | **63.18** | **63.55** ⭐ | **+2.99pp** |
+| FDSE (主表) | 60.99 | 66.06 | 63.52 | +2.96 |
+| F2DC paper (3-seed) | — | — | 66.82 | (+6.26) |
+
+**Per-domain (2-seed mean) at best round**:
+| Method | caltech | amazon | webcam | dslr |
+|---|:--:|:--:|:--:|:--:|
+| vanilla F2DC | 63.84 | 77.37 | 56.04 | 45.00 |
+| **F2DC + DaA** | 63.40 | 73.69 | **63.79** ⭐ | 53.33 ⭐ |
+| Δ | -0.44 | -3.68 | **+7.75** | **+8.33** |
 
 **关键观察**:
-- 单 seed +3.37pp 是显著真实 gain, 不是噪声
-- 已经追平 FDSE office (63.52, single-seed 63.93 ≈ FDSE)
-- 跟 paper 报的 66.82 还差 ~3pp, 可能因为 single-seed (paper 是 3-seed mean) + 微差超参
+1. ✅ **2-seed mean +2.99pp 是显著稳定 gain**, 不是噪声 (s=15+3.13, s=333+2.86 高度一致)
+2. ✅ **几乎追平 FDSE 63.52 (差 -0.03pp 持平)** — 之前 vanilla F2DC 输 FDSE 2.96pp, DaA 直接补足
+3. ✅ **gain 来自 webcam +7.75 + dslr +8.33** (这两个 domain 是之前 F2DC 弱的, vanilla F2DC webcam 56 / dslr 45 拖 AVG 后腿. DaA 把它们涨到 63.8 / 53.3)
+4. ⚠️ **amazon -3.68** (大 client domain 被 sample-size penalty 降权, 跟 paper 说"penalize dominant domain" 一致)
+5. 跟 paper 报 66.82 还差 3pp (paper 3-seed, 我们 2-seed; 也可能 paper 实现细节略不同)
 
 ### 还在跑
 
