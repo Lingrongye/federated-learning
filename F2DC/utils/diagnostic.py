@@ -97,43 +97,65 @@ def dump_round_metadata(model, round_idx, eval_results, all_dataset_names, args)
             print(f"[diag] global_proto dump failed: {e}")
 
     # === local protos (per-client per-class) ===
+    # 兼容 3 种 model 形式:
+    # - PG-DFC: list[parti_num] of tensor (C, D) — index 直接索引
+    # - FedProto: dict[client_id] -> {label: tensor} (list-wrapped possible)
+    # - 其它: None
     local_protos_arr = None
     local_protos_obj = getattr(model, 'local_protos', None)
-    if local_protos_obj:
+    if local_protos_obj is not None:
         try:
             C = args.num_classes
-            stack = []
             D_local = None
-            for i in online_clients:
-                client_proto = local_protos_obj.get(i, {})
-                if isinstance(client_proto, dict):
-                    slots = []
-                    for c in range(C):
-                        val = client_proto.get(c, None)
-                        if val is None:
-                            slots.append(None)
+            stack = []
+            for ki, i in enumerate(online_clients):
+                # 处理 list 形式 (PG-DFC)
+                if isinstance(local_protos_obj, list):
+                    if i < len(local_protos_obj) and local_protos_obj[i] is not None:
+                        t = local_protos_obj[i]
+                        if torch.is_tensor(t):
+                            arr = t.detach().cpu().numpy()  # (C, D)
+                            D_local = D_local or arr.shape[-1]
+                            stack.append(arr.astype(np.float16))
+                            continue
+                    stack.append(None)
+                    continue
+                # 处理 dict 形式 (FedProto-like)
+                if isinstance(local_protos_obj, dict):
+                    client_proto = local_protos_obj.get(i, None)
+                    if isinstance(client_proto, dict):
+                        slots = []
+                        for c in range(C):
+                            val = client_proto.get(c, None)
+                            if val is None:
+                                slots.append(None)
+                            else:
+                                v = val[0] if isinstance(val, list) else val
+                                if torch.is_tensor(v):
+                                    slots.append(v.detach().cpu().numpy())
+                                    D_local = D_local or slots[-1].shape[-1]
+                                else:
+                                    slots.append(None)
+                        if D_local:
+                            m = np.zeros((C, D_local), dtype=np.float16)
+                            for c, s in enumerate(slots):
+                                if s is not None:
+                                    m[c] = s.astype(np.float16)
+                            stack.append(m)
                         else:
-                            v = val[0] if isinstance(val, list) else val
-                            slots.append(v.detach().cpu().numpy())
-                            D_local = D_local or slots[-1].shape[-1]
-                    if D_local:
-                        m = np.zeros((C, D_local), dtype=np.float16)
-                        for c, s in enumerate(slots):
-                            if s is not None:
-                                m[c] = s.astype(np.float16)
-                        stack.append(m)
+                            stack.append(None)
                     else:
                         stack.append(None)
                 else:
                     stack.append(None)
+
             if any(s is not None for s in stack):
-                # 用 0 padding 缺失 client
                 D_local = D_local or 512
-                arr = np.zeros((K, C, D_local), dtype=np.float16)
+                arr_full = np.zeros((K, C, D_local), dtype=np.float16)
                 for ki, s in enumerate(stack):
-                    if s is not None:
-                        arr[ki] = s
-                local_protos_arr = arr
+                    if s is not None and s.shape == (C, D_local):
+                        arr_full[ki] = s
+                local_protos_arr = arr_full
         except Exception as e:
             print(f"[diag] local_protos dump failed: {e}")
 
@@ -274,18 +296,35 @@ def dump_heavy_snapshot(model, test_loaders, prefix, round_idx, current_acc, arg
             for x, y in dl:
                 x = x.to(device)
                 y = y.to(device)
-                # extract features (penultimate)
-                feat = model.global_net.features(x)
-                # logits (final layer)
-                # if backbone has classifier method use it, else net(x)
-                if hasattr(model.global_net, 'classifier'):
-                    logit = model.global_net.classifier(feat)
-                else:
-                    if use_tuple:
-                        out = model.global_net(x)
-                        logit = out[0] if isinstance(out, tuple) else out
+                # extract features + logits — 兼容 3 类 model:
+                # 1. PG-DFC / F2DC ResNet_PG / ResNet_DC: forward 返回 7-tuple
+                #    (out, feat, r_outputs, nr_outputs, rec_outputs, ro_flat, re_flat)
+                # 2. 标准 ResNet (FedAvg/FedBN/FedProx/FedProto/MOON): 有 .features() 跟 .classifier()
+                # 3. FDSE: ResNet_FDSE 有 .features() 但 forward 返回单 tensor
+                if use_tuple:
+                    out_tuple = model.global_net(x, is_eval=True) if 'is_eval' in model.global_net.forward.__code__.co_varnames else model.global_net(x)
+                    if isinstance(out_tuple, tuple) and len(out_tuple) >= 2:
+                        logit = out_tuple[0]
+                        feat = out_tuple[1]
                     else:
-                        logit = model.global_net(x)
+                        logit = out_tuple
+                        # fallback: 用 .features() 如果有
+                        feat = model.global_net.features(x) if hasattr(model.global_net, 'features') else logit
+                elif hasattr(model.global_net, 'features') and hasattr(model.global_net, 'classifier'):
+                    feat = model.global_net.features(x)
+                    logit = model.global_net.classifier(feat)
+                elif hasattr(model.global_net, 'features'):
+                    feat = model.global_net.features(x)
+                    logit = model.global_net(x)
+                    if isinstance(logit, tuple):
+                        logit = logit[0]
+                else:
+                    logit = model.global_net(x)
+                    if isinstance(logit, tuple):
+                        feat = logit[1] if len(logit) >= 2 else logit[0]
+                        logit = logit[0]
+                    else:
+                        feat = logit  # fallback, won't have penultimate features
                 pred = logit.argmax(dim=-1)
 
                 feats_list.append(feat.detach().cpu().numpy().astype(np.float16))
