@@ -98,6 +98,15 @@ def parse_args():
                         help="enable F2DC paper Domain-Aware Aggregation (Eq 10/11)")
     parser.add_argument("--num_domains_q", type=int, default=4,
                         help="domain 数 Q (PACS=4, Office=4, Digits=4)")
+    # ===== Diagnostic hook =====
+    parser.add_argument("--dump_diag", type=str, default=None,
+                        help="diagnostic dump dir (None=disabled). 启用后每 round dump 元数据 + best/final dump heavy snapshot")
+    parser.add_argument("--dump_warmup", type=int, default=30,
+                        help="diag: heavy dump warmup rounds (R 之前不 dump heavy)")
+    parser.add_argument("--dump_min_gain", type=float, default=1.0,
+                        help="diag: heavy dump 最小 acc gain (跟上次 dump 的 best 比)")
+    parser.add_argument("--dump_min_interval", type=int, default=5,
+                        help="diag: heavy dump 最小 round 间隔")
     parser.add_argument(
         "--lambda1", type=float, default=0.8, help="params for DFD loss"
     )

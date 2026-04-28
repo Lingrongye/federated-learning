@@ -103,6 +103,8 @@ class FederatedModel(nn.Module):
         score = alpha * sample_share - beta * d
         sig = 1.0 / (1.0 + np.exp(-score))
         freq = sig / sig.sum()
+        # 暴露给 diagnostic hook (cold path 后处理用)
+        self._last_daa_freq = freq.tolist()
         return freq
 
     def aggregate_nets(self, freq=None):

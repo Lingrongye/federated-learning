@@ -152,9 +152,16 @@ def train(
     )
     model.trainloaders = pri_train_loaders
     model.testlodaers = test_loaders
+    # 暴露给 diagnostic hook (per-client domain id, for cold path 按 domain 分组)
+    model._selected_domain_list = list(selected_domain_list)
 
     if hasattr(model, "ini"):
         model.ini()
+
+    # === diagnostic hook init ===
+    from utils.diagnostic import init_diag_state, dump_round_metadata, \
+        should_dump_heavy_best, dump_heavy_snapshot, dump_meta
+    diag_state = init_diag_state(args)
 
     accs_dict = {}
     mean_accs_list = []
@@ -207,6 +214,22 @@ def train(
         print(accs)
         print()
 
+        # === diagnostic hook: light dump per round + heavy on best/final ===
+        try:
+            dump_round_metadata(model, epoch_index + 1, accs, all_dataset_names, args)
+            if mean_acc > best_mean_acc + 1e-6:
+                if should_dump_heavy_best(epoch_index + 1, mean_acc, args, diag_state):
+                    dump_heavy_snapshot(model, test_loaders,
+                                        f"best_R{epoch_index+1:03d}",
+                                        epoch_index + 1, mean_acc, args, diag_state)
+                best_mean_acc = mean_acc
+            if epoch_index == Epoch - 1:
+                dump_heavy_snapshot(model, test_loaders,
+                                    f"final_R{epoch_index+1:03d}",
+                                    epoch_index + 1, mean_acc, args, diag_state)
+        except Exception as _diag_err:
+            print(f"[diag hook ERR] {_diag_err}")
+
         if args.save:
             if args.save_name == "No":
                 pth_name = args.model
@@ -218,6 +241,12 @@ def train(
 
     if args.csv_log:
         csv_writer.write_acc(accs_dict, mean_accs_list)
+
+    # === diagnostic hook: 写 meta.json ===
+    try:
+        dump_meta(args, diag_state, total_rounds=Epoch, final_acc=mean_accs_list[-1])
+    except Exception as _meta_err:
+        print(f"[diag meta ERR] {_meta_err}")
 
     print("ALL Loss: ", all_epoch_loss)
     return mean_accs_list
