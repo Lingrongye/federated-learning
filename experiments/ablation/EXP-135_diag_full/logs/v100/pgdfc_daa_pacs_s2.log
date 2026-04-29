@@ -1,0 +1,24 @@
+f2dc_pg_10_fl_pacs_100_10
+selected_domain_list for 10 clients as:
+['photo' 'photo' 'art' 'art' 'art' 'cartoon' 'cartoon' 'sketch' 'sketch'
+ 'sketch']
+The 0 Communcation Time: 625.15
+The 0 Communcation Accuracy: 10.778 Method: f2dc_pg epoch loss: 7.723
+[10.78, 9.31, 7.48, 15.54]
+
+The 1 Communcation Time: 975.027
+The 1 Communcation Accuracy: 24.123 Method: f2dc_pg epoch loss: 5.334
+[30.84, 24.26, 25.85, 15.54]
+
+The 2 Communcation Time: 1130.815
+The 2 Communcation Accuracy: 24.92 Method: f2dc_pg epoch loss: 4.866
+[31.14, 26.47, 24.36, 17.71]
+
+The 3 Communcation Time: 1133.321
+The 3 Communcation Accuracy: 27.548 Method: f2dc_pg epoch loss: 4.548
+[32.63, 26.23, 25.85, 25.48]
+
+The 4 Communcation Time: 1131.065
+The 4 Communcation Accuracy: 29.522 Method: f2dc_pg epoch loss: 4.372
+[32.93, 27.21, 30.56, 27.39]
+
