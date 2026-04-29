@@ -1,0 +1,9 @@
+[10:29:52] sc3 v2 launcher: 6 F2DC tasks (seeds 15 + 333)
+[10:29:53] LAUNCH f2dc_fl_pacs_s15 (free=24092MB, need=8000MB)
+[10:30:53] LAUNCH f2dc_fl_pacs_s333 (free=16766MB, need=8000MB)
+[10:31:53] LAUNCH f2dc_fl_officecaltech_s15 (free=9435MB, need=4000MB)
+[10:32:53] LAUNCH f2dc_fl_officecaltech_s333 (free=8065MB, need=4000MB)
+[10:33:53] LAUNCH f2dc_fl_digits_s15 (free=6684MB, need=4000MB)
+[10:34:53] LAUNCH f2dc_fl_digits_s333 (free=5119MB, need=4000MB)
+[10:35:53] All 6 dispatched, waiting...
+[17:30:09] sc3 v2 ALL DONE

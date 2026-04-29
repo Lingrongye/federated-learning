@@ -1,0 +1,6 @@
+[01:27:46] sc3 moon_pacs launcher: 2 tasks, MIN_FREE_MB=13500
+  实测 moon pacs 单 run ~12.8 GB, 必须串行 (24 GB GPU 只塞 1 个)
+[03:44:56] LAUNCH moon_fl_pacs_s15 (free=14795MB)
+[16:31:18] LAUNCH moon_fl_pacs_s333 (free=16746MB)
+[16:32:48] All 2 dispatched, waiting...
+[04:55:31] moon_pacs ALL DONE
