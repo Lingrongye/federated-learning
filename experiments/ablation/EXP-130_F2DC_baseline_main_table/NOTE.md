@@ -125,18 +125,22 @@ averaging          = 'weight'  # by sample count
 
 ## 结果回填 (2026-04-27 09:50 BJT — 24/27 完成)
 
-### 完成情况
-- ✅ **24/27 完成** (sc3 9 F2DC + sc4 15 fedavg+moon × {office, digits} + fedavg pacs)
-- 🏃 **moon × pacs × {2, 15, 333}** 重跑中 (v2 launcher 因 sleep 30s 不够 ramp up 导致 3 个 OOM, 现 sc3 串行单跑, 估 6-9h 完成)
-- 数据来源: `sc3_logs/` + `sc4_logs/` + `results_summary.json`
+### 完成情况 (2026-04-29 02:50 BJT 更新)
+- ✅ **24/24 v2 全部完成** (sc4_v2_logs: fedavg + moon × {office, digits} 4 + fedavg × pacs 2 + sc3 _phaseC_v2_logs: f2dc 6 + fdse 6 + moon × pacs 2 ✅)
+- 数据来源:
+  - `F2DC/_phaseC_v2_logs/` (sc3 跑, 已 commit b9e2cc4): f2dc + fdse + moon × {pacs, office, digits} × {15, 333}
+  - `sc4_v2_logs/`: fedavg + moon × {office, digits} × {15, 333}, fedavg × pacs × {15, 333}
+  - 旧 v1 `sc4_logs` (rand_dataset=True 错误分布) 已作废, `results_summary.json` 同样作废
 
 ### 主表 (AVG Best 3-seed mean ± std, 100 round)
 
 | Algo \ Dataset | PACS | Office-Caltech10 | Digits |
 |---|:---:|:---:|:---:|
 | **FedAvg** | 61.88 ± 4.09 | 58.12 ± 1.52 | 90.15 ± 1.29 |
-| **MOON** | TBD (重跑) | 54.28 ± 2.06 | 89.23 ± 2.76 |
+| **MOON** | **56.29 ± 6.34** ⬅️ v2 | **52.49 ± 3.43** ⬅️ v2 | **91.59 ± 0.90** ⬅️ v2 |
 | **F2DC** | **63.89 ± 3.80** | **61.19 ± 2.57** | **92.28 ± 1.73** |
+
+> ⚠️ MOON 全部 v2 (fixed allocation, 2-seed {15, 333}). PACS: s=15 best=51.81 / s=333 best=60.77, 跨 seed std 大 (6.34). 旧 v1 数字 (54.28 / 89.23 来自 rand_dataset=True 错误分布) 已替换.
 
 ### 与 F2DC paper 对比 (AVG Best)
 
@@ -148,9 +152,9 @@ averaging          = 'weight'  # by sample count
 | FedAvg × PACS | 66.39 | 61.88 ± 4.09 | -4.5 | ⚠️ 略低 |
 | FedAvg × Office | 55.86 | 58.12 ± 1.52 | +2.3 | ✅ 略高 |
 | FedAvg × Digits | 81.24 | 90.15 ± 1.29 | +8.9 | ✅ 高 |
-| MOON × PACS | 62.64 | TBD | - | 重跑 |
-| MOON × Office | 51.41 | 54.28 ± 2.06 | +2.9 | ✅ 略高 |
-| MOON × Digits | 76.60 | 89.23 ± 2.76 | +12.6 | ✅ 远高 |
+| MOON × PACS | 62.64 | **56.29 ± 6.34** | **-6.4** | ⚠️ 低于论文 (v2 2-seed) |
+| MOON × Office | 51.41 | **52.49 ± 3.43** | +1.1 | ✅ 略高 (v2 2-seed) |
+| MOON × Digits | 76.60 | **91.59 ± 0.90** | +15.0 | ✅ 远高 (v2 2-seed) |
 
 ### 关键发现 ⭐
 
@@ -176,13 +180,20 @@ averaging          = 'weight'  # by sample count
 - 27/27 完成时间: 估 ~16:00-18:00 BJT 当天 (moon pacs 单跑慢)
 - 全部跑完后再做最终回填 + git commit + push
 
-### 主表数字
+### 主表数字 (v2, fixed allocation, 2-seed {15, 333} 除非另注)
 
-| Algo | PACS AVG (mean ± std) | Office AVG | Digits AVG |
+| Algo | PACS AVG Best | Office AVG Best | Digits AVG Best |
 |------|:--:|:--:|:--:|
-| FedAvg | TBD | TBD | TBD |
-| MOON | TBD | TBD | TBD |
-| F2DC | TBD | TBD | TBD |
+| FedAvg | 61.88 ± 4.09 (v1 3-seed) | 58.12 ± 1.52 (v1 3-seed) | 90.15 ± 1.29 (v1 3-seed) |
+| MOON   | **56.29 ± 6.34** | **52.49 ± 3.43** | **91.59 ± 0.90** |
+| F2DC   | **63.89 ± 3.80** (v1 3-seed) | **61.19 ± 2.57** (v1 3-seed) | **92.28 ± 1.73** (v1 3-seed) |
+
+| Algo | PACS AVG Last | Office AVG Last | Digits AVG Last |
+|------|:--:|:--:|:--:|
+| MOON | **51.32 ± 5.99** | **50.11 ± 5.53** | **90.37 ± 1.38** |
+
+> MOON × PACS per-seed: s=15 best=51.81 last=47.09 / s=333 best=60.77 last=55.56  ⚠️ s=333 显著 +9pp 高于 s=15 (跨 seed 不稳)
+> MOON × PACS per-domain mean B/L: photo 58.84/57.79 · art 41.18/37.38 · cartoon 64.85/57.91 · sketch 67.39/52.23  → art 一直最弱
 
 ### 与论文对比
 
