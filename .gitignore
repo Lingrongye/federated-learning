@@ -132,3 +132,14 @@ F2DC/rundata/
 F2DC/data/
 F2DC/_smoke_test/
 F2DC/*.pyc
+
+
+c1先跑着看看 但是要加一些诊断指标 如果效果不好是否真的如这个语言一般
+m1，m2 要实际看一下我们现在复线的实验里面各个client分布如何再下定论
+其他的没太多问题先不管
+infonce加ablation试试
+然后改一下实验的设计方案
+# === cold path 诊断 dump (大文件, ~1.5GB, 服务器有备份) ===
+experiments/cold_path_analysis/diag_office/
+experiments/cold_path_analysis/diag_pacs/
+experiments/cold_path_analysis/figs/*.png
