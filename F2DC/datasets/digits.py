@@ -169,6 +169,16 @@ class FedLeaDigits(FederatedDataset):
                 for j in range(parti_num):
                     nets_list.append(resnet10_dc_digits(num_classes=FedLeaDigits.N_CLASS,
                                                  gum_tau=FedLeaDigits.model_args.gum_tau))
+            elif model_name in ('f2dc_pg', 'f2dc_pgv33'):
+                from backbone.ResNet_DC_PG import resnet10_dc_pg_digits
+                args_obj = FedLeaDigits.model_args
+                pw = getattr(args_obj, 'pg_proto_weight', 0.3)
+                tau_attn = getattr(args_obj, 'pg_attn_temperature', 0.3)
+                for j in range(parti_num):
+                    nets_list.append(resnet10_dc_pg_digits(num_classes=FedLeaDigits.N_CLASS,
+                                                            gum_tau=FedLeaDigits.model_args.gum_tau,
+                                                            proto_weight=pw,
+                                                            attn_temperature=tau_attn))
             elif model_name=='fdse':
                 from backbone.ResNet_FDSE import resnet10_fdse_digits
                 for j in range(parti_num):

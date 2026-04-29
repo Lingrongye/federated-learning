@@ -229,3 +229,10 @@ def resnet10_dc_pg_office(num_classes=10, gum_tau=0.1,
     return ResNet_PG(BasicBlock, [1, 1, 1, 1], num_classes=num_classes,
                      tau=gum_tau, image_size=(32, 32),
                      proto_weight=proto_weight, attn_temperature=attn_temperature)
+
+
+def resnet10_dc_pg_digits(num_classes=10, gum_tau=0.1,
+                          proto_weight=0.3, attn_temperature=0.3):
+    return ResNet_PG(BasicBlock, [1, 1, 1, 1], num_classes=num_classes,
+                     tau=gum_tau, image_size=(32, 32),
+                     proto_weight=proto_weight, attn_temperature=attn_temperature)
