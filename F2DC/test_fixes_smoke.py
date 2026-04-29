@@ -14,20 +14,17 @@ import torch
 import numpy as np
 
 
-def test_aggregation_whitelist():
-    """Fix #1: dfd/dfc/aux 不参与聚合, client local 应保留差异"""
+def test_aggregation_default():
+    """Fix #1 已 revert: 验证全聚合 (跟 F2DC release 默认行为一致)"""
     print("\n" + "=" * 70)
-    print("Test #1: 聚合白名单 (dfd/dfc/aux 不聚合)")
+    print("Test #1 (revert 后): 全聚合 dfd/dfc/aux/conv (跟 F2DC release 一致)")
     print("=" * 70)
 
     from backbone.ResNet_DC_PG import resnet10_dc_pg_office
-
-    # 创建 2 个 client model, 给 dfd/dfc/aux/conv1 设不同 sentinel value
     net0 = resnet10_dc_pg_office(num_classes=10, gum_tau=0.1, proto_weight=0.3)
     net1 = resnet10_dc_pg_office(num_classes=10, gum_tau=0.1, proto_weight=0.3)
     global_net = resnet10_dc_pg_office(num_classes=10, gum_tau=0.1, proto_weight=0.3)
 
-    # 哨兵值
     with torch.no_grad():
         net0.dfd_module.net[0].weight.fill_(0.0)
         net1.dfd_module.net[0].weight.fill_(2.0)
@@ -38,52 +35,35 @@ def test_aggregation_whitelist():
         net0.conv1.weight.fill_(100.0)
         net1.conv1.weight.fill_(200.0)
 
-    # 模拟聚合 (用我们的白名单逻辑)
-    def _is_aggregatable(key):
-        local_patterns = ['dfd_module', 'dfc_module', 'aux.', 'class_proto',
-                          'q_proj', 'k_proj', 'v_proj']
-        return not any(p in key for p in local_patterns)
-
     nets_list = [net0, net1]
     global_w = global_net.state_dict()
-    keys_to_agg = [k for k in global_w.keys() if _is_aggregatable(k)]
-
     freq = [0.5, 0.5]
+
     first = True
     for index, net in enumerate(nets_list):
         net_para = net.state_dict()
         if first:
             first = False
-            for key in keys_to_agg:
+            for key in net_para:
                 global_w[key] = net_para[key] * freq[index]
         else:
-            for key in keys_to_agg:
+            for key in net_para:
                 global_w[key] += net_para[key] * freq[index]
-
     global_net.load_state_dict(global_w)
 
-    global_sd = global_net.state_dict()
     for net in nets_list:
-        client_sd = net.state_dict()
-        for key in keys_to_agg:
-            client_sd[key] = global_sd[key]
-        net.load_state_dict(client_sd)
+        net.load_state_dict(global_net.state_dict())
 
-    # 验证
-    print(f"  conv1 (应聚合到 150):       net0={net0.conv1.weight[0,0,0,0].item():.1f}  global={global_net.conv1.weight[0,0,0,0].item():.1f}")
-    print(f"  dfd_module (应保持差异 0/2): net0={net0.dfd_module.net[0].weight[0,0,0,0].item():.1f}  net1={net1.dfd_module.net[0].weight[0,0,0,0].item():.1f}")
-    print(f"  dfc_module (应保持差异 10/14): net0={net0.dfc_module.net[0].weight[0,0,0,0].item():.1f}  net1={net1.dfc_module.net[0].weight[0,0,0,0].item():.1f}")
-    print(f"  aux (应保持差异 20/24):     net0={net0.aux[0].weight[0,0].item():.1f}  net1={net1.aux[0].weight[0,0].item():.1f}")
+    print(f"  conv1 (聚合到 150):    global={global_net.conv1.weight[0,0,0,0].item():.1f}")
+    print(f"  dfd_module (聚合到 1): global={global_net.dfd_module.net[0].weight[0,0,0,0].item():.1f}")
+    print(f"  dfc_module (聚合到 12): global={global_net.dfc_module.net[0].weight[0,0,0,0].item():.1f}")
+    print(f"  aux (聚合到 22):       global={global_net.aux[0].weight[0,0].item():.1f}")
 
-    # 验证
-    assert abs(global_net.conv1.weight[0,0,0,0].item() - 150.0) < 0.01, "conv1 应聚合"
-    assert abs(net0.dfd_module.net[0].weight[0,0,0,0].item() - 0.0) < 0.01, "dfd 不应被聚合"
-    assert abs(net1.dfd_module.net[0].weight[0,0,0,0].item() - 2.0) < 0.01, "dfd 不应被聚合"
-    assert abs(net0.dfc_module.net[0].weight[0,0,0,0].item() - 10.0) < 0.01, "dfc 不应被聚合"
-    assert abs(net1.dfc_module.net[0].weight[0,0,0,0].item() - 14.0) < 0.01, "dfc 不应被聚合"
-    assert abs(net0.aux[0].weight[0,0].item() - 20.0) < 0.01, "aux 不应被聚合"
-    assert abs(net1.aux[0].weight[0,0].item() - 24.0) < 0.01, "aux 不应被聚合"
-    print("  ✅ Pass: dfd/dfc/aux 保持 local, conv1 正确聚合")
+    assert abs(global_net.conv1.weight[0,0,0,0].item() - 150.0) < 0.01
+    assert abs(global_net.dfd_module.net[0].weight[0,0,0,0].item() - 1.0) < 0.01
+    assert abs(global_net.dfc_module.net[0].weight[0,0,0,0].item() - 12.0) < 0.01
+    assert abs(global_net.aux[0].weight[0,0].item() - 22.0) < 0.01
+    print("  ✅ Pass: 全聚合行为跟 F2DC release 一致, global_net.dfd/dfc 是聚合后值 (不是 random init)")
     return True
 
 
@@ -179,7 +159,7 @@ if __name__ == "__main__":
 
     results = []
     for name, fn in [
-        ("聚合白名单", test_aggregation_whitelist),
+        ("全聚合 (Fix #1 已 revert)", test_aggregation_default),
         ("Deterministic eval", test_deterministic_eval),
         ("硬编码 7 fix", test_hardcoded_classes),
         ("class_proto buffer 非 persistent (bug 来源)", test_class_proto_buffer_not_persistent),

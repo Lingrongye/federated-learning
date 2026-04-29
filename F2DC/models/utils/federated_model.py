@@ -160,37 +160,28 @@ class FederatedModel(nn.Module):
             parti_num = len(online_clients)
             freq = [1 / parti_num for _ in range(parti_num)]
 
-        # patch (2026-04-29): F2DC paper Sec 4.3 — A_D / A_C / m 本地保留, 不参与聚合.
-        # 之前对 state_dict() 全 key 聚合, 把 dfd_module/dfc_module/aux 也平均了, 跟论文不一致.
-        # 这里加白名单: 只聚合 backbone (conv1/bn1/layer1-4) + 主分类器 (linear/classifier).
-        # dfd_module / dfc_module / aux / class_proto buffer 等保持本地, server 不下发.
-        def _is_aggregatable(key: str) -> bool:
-            # 排除本地模块 (DFD attribution net + DFC corrector net + aux 分类器 + class_proto buffer)
-            local_patterns = ['dfd_module', 'dfc_module', 'aux.', 'class_proto',
-                              'q_proj', 'k_proj', 'v_proj']
-            return not any(p in key for p in local_patterns)
-
-        keys_to_agg = [k for k in global_w.keys() if _is_aggregatable(k)]
-
+        # NOTE (2026-04-29): 维持 F2DC release 默认行为 — state_dict 全 key 聚合.
+        # 论文 Sec 4.3 文字描述 A_D/A_C/m 本地保留, 但 release 代码 + 论文报数字 76.47
+        # 实际是按全聚合 + global_net eval 跑出来的 (跟我们当前流程一致).
+        # 之前曾尝试加聚合白名单 (commit 0e5f1df fix #1), 但跟 global_net eval 不兼容
+        # (global_net.dfd/dfc 永远是 random init, eval forward 走 garbage path), 已 revert.
+        # class_proto buffer (persistent=False) 仍然不在 state_dict, 由 _sync_global_proto
+        # 显式同步到 global_net.dfc_module (在 f2dc_pg.loc_update 末尾调用).
         first = True
         for index, net_id in enumerate(online_clients):
             net = nets_list[net_id]
             net_para = net.state_dict()
             if first:
                 first = False
-                for key in keys_to_agg:
+                for key in net_para:
                     global_w[key] = net_para[key] * freq[index]
             else:
-                for key in keys_to_agg:
+                for key in net_para:
                     global_w[key] += net_para[key] * freq[index]
 
         global_net.load_state_dict(global_w)
 
-        # 同步: 只覆盖 client 的 aggregatable keys, 保留 client 的本地模块 weights
-        global_sd = global_net.state_dict()
+
         for _, net in enumerate(nets_list):
-            client_sd = net.state_dict()
-            for key in keys_to_agg:
-                client_sd[key] = global_sd[key]
-            net.load_state_dict(client_sd)
+            net.load_state_dict(global_net.state_dict())
             
