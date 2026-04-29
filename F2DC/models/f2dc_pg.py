@@ -109,6 +109,10 @@ class F2DCPG(F2DC):
         if self.epoch_index >= self.warmup_rounds - 1:
             self.aggregate_protos_v3()
 
+        # class_proto is a non-persistent buffer and is skipped by state_dict.
+        # Sync it explicitly so global evaluation uses the same PG-DFC path.
+        self._sync_global_proto_to_global_net(current_pw)
+
         # 记录 round diagnostic
         round_summary = self._summarize_round_diag(round_diag_collect)
         round_summary['round'] = self.epoch_index
@@ -121,6 +125,20 @@ class F2DCPG(F2DC):
 
         all_c_avg_loss = all_clients_loss / len(online_clients)
         return round(all_c_avg_loss, 3)
+
+    def _sync_global_proto_to_global_net(self, proto_weight):
+        if self.global_net is None or not hasattr(self.global_net, 'dfc_module'):
+            return
+        dfc = self.global_net.dfc_module
+        if hasattr(dfc, 'set_proto_weight'):
+            dfc.set_proto_weight(proto_weight)
+        if not hasattr(dfc, 'class_proto'):
+            return
+        with torch.no_grad():
+            if self.global_proto_unit is None:
+                dfc.class_proto.zero_()
+            else:
+                dfc.class_proto.copy_(self.global_proto_unit.to(self.device))
 
     def _train_net_pg(self, index, net, train_loader):
         """F2DC._train_net 加 sample 累加 prototype 更新"""
@@ -225,7 +243,14 @@ class F2DCPG(F2DC):
         - RV2: server EMA 在 raw 空间 (不在 unit 球面) 避免凸组合数学不一致
         - NV4: 跨 round EMA β=0.8 平滑投票成员变化
         """
-        N_CLASSES = self.local_protos[0].shape[0] if self.local_protos[0] is not None else 7
+        # patch (2026-04-29): 用 args.num_classes 而不是 fallback 7 (Office/Digits 是 10 类)
+        # 之前 fallback 7 在 client0 没在第一次 proto 聚合前上线时会生成 (7, 512) global proto
+        # 然后跟 10 类 class_proto 同步报 size mismatch.
+        N_CLASSES = (
+            self.local_protos[0].shape[0]
+            if (self.local_protos[0] is not None)
+            else int(getattr(self.args, 'num_classes', 7))
+        )
         C = self.feat_dim
 
         if self.global_proto_raw is None:

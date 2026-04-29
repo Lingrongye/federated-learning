@@ -26,7 +26,10 @@ def global_evaluate(
             with torch.no_grad():
                 images, labels = images.to(model.device), labels.to(model.device)
                 if model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33"):
-                    outputs, _, _, _, _, _, _ = net(images)
+                    # patch (2026-04-29): 必须传 is_eval=True 走 deterministic gumbel
+                    # (gumbel_sigmoid.py:17 在 is_eval=False 时随机采样, 同 model 同 input
+                    #  两次 eval 输出不一致, max_abs_diff ~0.0004, 引入 acc 噪声)
+                    outputs, _, _, _, _, _, _ = net(images, is_eval=True)
                 else:
                     outputs = net(images)
                 _, max5 = torch.topk(outputs, 5, dim=-1)

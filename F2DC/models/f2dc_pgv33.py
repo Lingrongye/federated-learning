@@ -100,6 +100,10 @@ class F2DCPGv33(F2DCPG):
         if self.epoch_index >= self.warmup_rounds - 1:
             self.aggregate_protos_v33()
 
+        # class_proto is a non-persistent buffer and is skipped by state_dict.
+        # Sync it explicitly so global evaluation uses the same PG-DFC path.
+        self._sync_global_proto_to_global_net(base_pw)
+
         # 记录 round diagnostic
         round_summary = self._summarize_round_diag(round_diag_collect)
         round_summary['round'] = self.epoch_index
@@ -123,7 +127,12 @@ class F2DCPGv33(F2DCPG):
         - 用 inlier 重新聚合 (L2-norm + 等权 + raw EMA β)
         - 同时记录每个 client 的 sim, 给 client 自适应 proto_weight 用 (方案 B 的输入)
         """
-        N_CLASSES = self.local_protos[0].shape[0] if self.local_protos[0] is not None else 7
+        # patch (2026-04-29): 用 args.num_classes 而不是 fallback 7
+        N_CLASSES = (
+            self.local_protos[0].shape[0]
+            if (self.local_protos[0] is not None)
+            else int(getattr(self.args, 'num_classes', 7))
+        )
         C = self.feat_dim
 
         if self.global_proto_raw is None:

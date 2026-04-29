@@ -160,21 +160,37 @@ class FederatedModel(nn.Module):
             parti_num = len(online_clients)
             freq = [1 / parti_num for _ in range(parti_num)]
 
+        # patch (2026-04-29): F2DC paper Sec 4.3 — A_D / A_C / m 本地保留, 不参与聚合.
+        # 之前对 state_dict() 全 key 聚合, 把 dfd_module/dfc_module/aux 也平均了, 跟论文不一致.
+        # 这里加白名单: 只聚合 backbone (conv1/bn1/layer1-4) + 主分类器 (linear/classifier).
+        # dfd_module / dfc_module / aux / class_proto buffer 等保持本地, server 不下发.
+        def _is_aggregatable(key: str) -> bool:
+            # 排除本地模块 (DFD attribution net + DFC corrector net + aux 分类器 + class_proto buffer)
+            local_patterns = ['dfd_module', 'dfc_module', 'aux.', 'class_proto',
+                              'q_proj', 'k_proj', 'v_proj']
+            return not any(p in key for p in local_patterns)
+
+        keys_to_agg = [k for k in global_w.keys() if _is_aggregatable(k)]
+
         first = True
-        for index,net_id in enumerate(online_clients):
+        for index, net_id in enumerate(online_clients):
             net = nets_list[net_id]
             net_para = net.state_dict()
             if first:
                 first = False
-                for key in net_para:
+                for key in keys_to_agg:
                     global_w[key] = net_para[key] * freq[index]
             else:
-                for key in net_para:
+                for key in keys_to_agg:
                     global_w[key] += net_para[key] * freq[index]
 
         global_net.load_state_dict(global_w)
 
-
+        # 同步: 只覆盖 client 的 aggregatable keys, 保留 client 的本地模块 weights
+        global_sd = global_net.state_dict()
         for _, net in enumerate(nets_list):
-            net.load_state_dict(global_net.state_dict())
+            client_sd = net.state_dict()
+            for key in keys_to_agg:
+                client_sd[key] = global_sd[key]
+            net.load_state_dict(client_sd)
             
