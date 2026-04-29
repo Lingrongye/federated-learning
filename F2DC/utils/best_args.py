@@ -162,6 +162,11 @@ for _ds in best_args:
     if 'f2dc_pgv33' not in best_args[_ds]:
         best_args[_ds]['f2dc_pgv33'] = dict(best_args[_ds].get('f2dc_pg', {'local_lr': 0.01, 'local_batch_size': 64}))
 
+# Inject f2dc_pg_ml (mirror f2dc_pgv33 defaults)
+for _ds in best_args:
+    if 'f2dc_pg_ml' not in best_args[_ds]:
+        best_args[_ds]['f2dc_pg_ml'] = dict(best_args[_ds].get('f2dc_pgv33', {'local_lr': 0.01, 'local_batch_size': 64}))
+
 # Inject fedbn into all datasets (mirror fedavg, no extra hyperparams)
 for _ds in best_args:
     if 'fedbn' not in best_args[_ds]:

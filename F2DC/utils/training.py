@@ -12,25 +12,33 @@ import matplotlib.pyplot as plt
 from backbone.ResNet import resnet10, resnet12
 import time
 
-
+# 测试函数，model是当前联邦学习的算法对象 比如说f2dc, testdl 是一个传进来的list的dataloarder，每个domain一个
 def global_evaluate(
     model: FederatedModel, test_dl: DataLoader, setting: str, name: str
 ) -> Tuple[list, list]:
+    # 每个domain的准确率
     accs = []
+    # 全局模型，server端上保存的，联邦学习有两种一种是client.model.nets_lists
     net = model.global_net
     status = net.training
+    # 全局模型设置为评估模式
     net.eval()
+    # 这里测试的是全局模型在每个domain上的表现
     for j, dl in enumerate(test_dl):
+        # total总样本数，top1,预测第一名出线的准确率，top5 真实标签出现在前5个多准确率
         correct, total, top1, top5 = 0.0, 0.0, 0.0, 0.0
         for batch_idx, (images, labels) in enumerate(dl):
             with torch.no_grad():
+                # 将数据集加载到device上
                 images, labels = images.to(model.device), labels.to(model.device)
-                if model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33"):
+                # 如果模型是f2dc，f2dc_pg，f2dc_pgv33, f2dc_pg_ml,则需要传 is_eval=True 走 deterministic gumbel
+                if model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml"):
                     # patch (2026-04-29): 必须传 is_eval=True 走 deterministic gumbel
                     # (gumbel_sigmoid.py:17 在 is_eval=False 时随机采样, 同 model 同 input
                     #  两次 eval 输出不一致, max_abs_diff ~0.0004, 引入 acc 噪声)
                     outputs, _, _, _, _, _, _ = net(images, is_eval=True)
                 else:
+                    # 普通模型通常只返回logits
                     outputs = net(images)
                 _, max5 = torch.topk(outputs, 5, dim=-1)
                 labels = labels.view(-1, 1)

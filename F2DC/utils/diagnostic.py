@@ -68,29 +68,32 @@ def dump_round_metadata(model, round_idx, eval_results, all_dataset_names, args)
 
     # === global proto (server 端 cross-client class proto) ===
     global_proto_arr = None
-    proto_obj = getattr(model, 'global_protos', None)
-    if proto_obj:
+    proto_obj = getattr(model, 'global_proto_unit', None)
+    if proto_obj is None:
+        proto_obj = getattr(model, 'global_protos', None)
+    if proto_obj is not None:
         # 不同 model 可能 dict 或 tensor — 都 normalize 成 (C, D) array fp16
         try:
             if isinstance(proto_obj, dict):
-                # FedProto: {label: tensor(D,)} or {label: [tensor]}
-                C = args.num_classes
-                D = None
-                slots = []
-                for c in range(C):
-                    val = proto_obj.get(c, None)
-                    if val is None:
-                        slots.append(None)
-                    else:
-                        v = val[0] if isinstance(val, list) else val
-                        slots.append(v.detach().cpu().numpy())
-                        D = D or slots[-1].shape[-1]
-                if D is not None:
-                    matrix = np.zeros((C, D), dtype=np.float16)
-                    for c, s in enumerate(slots):
-                        if s is not None:
-                            matrix[c] = s.astype(np.float16)
-                    global_proto_arr = matrix
+                if len(proto_obj) > 0:
+                    # FedProto: {label: tensor(D,)} or {label: [tensor]}
+                    C = args.num_classes
+                    D = None
+                    slots = []
+                    for c in range(C):
+                        val = proto_obj.get(c, None)
+                        if val is None:
+                            slots.append(None)
+                        else:
+                            v = val[0] if isinstance(val, list) else val
+                            slots.append(v.detach().cpu().numpy())
+                            D = D or slots[-1].shape[-1]
+                    if D is not None:
+                        matrix = np.zeros((C, D), dtype=np.float16)
+                        for c, s in enumerate(slots):
+                            if s is not None:
+                                matrix[c] = s.astype(np.float16)
+                        global_proto_arr = matrix
             elif torch.is_tensor(proto_obj):
                 global_proto_arr = proto_obj.detach().cpu().numpy().astype(np.float16)
         except Exception as e:
@@ -263,7 +266,7 @@ def dump_heavy_snapshot(model, test_loaders, prefix, round_idx, current_acc, arg
         domain_names = [f"d{i}" for i in range(len(test_loaders))]
 
     NC = int(args.num_classes)
-    use_tuple = model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33")
+    use_tuple = model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml")
 
     with torch.no_grad():
         for di, dl in enumerate(test_loaders):

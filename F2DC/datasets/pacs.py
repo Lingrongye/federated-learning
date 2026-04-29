@@ -63,6 +63,7 @@ class FedLeaPACS(FederatedDataset):
     NAME = 'fl_pacs'
     SETTING = 'domain_skew'
     DOMAINS_LIST = ['photo', 'art', 'cartoon', 'sketch']
+    # 每个domain 按 30% 的训练样本给client使用 
     percent_dict = {'photo':0.3, 'art':0.3, 'cartoon':0.3, 'sketch':0.3} # 30% data size
 
     N_SAMPLES_PER_Class = None
@@ -124,6 +125,20 @@ class FedLeaPACS(FederatedDataset):
                                                      gum_tau=FedLeaPACS.model_args.gum_tau,
                                                      proto_weight=pw,
                                                      attn_temperature=tau))
+            elif model_name == 'f2dc_pg_ml':
+                from backbone.ResNet_DC_PG_ML import resnet10_dc_pg_ml
+                args_obj = FedLeaPACS.model_args
+                pw = getattr(args_obj, 'pg_proto_weight', 0.3)
+                tau = getattr(args_obj, 'pg_attn_temperature', 0.3)
+                lc = getattr(args_obj, 'ml_lite_channel', 32)
+                lt = getattr(args_obj, 'ml_lite_tau', 0.5)
+                for j in range(parti_num):
+                    nets_list.append(resnet10_dc_pg_ml(num_classes=FedLeaPACS.N_CLASS,
+                                                       gum_tau=FedLeaPACS.model_args.gum_tau,
+                                                       proto_weight=pw,
+                                                       attn_temperature=tau,
+                                                       ml_lite_channel=lc,
+                                                       ml_lite_tau=lt))
             elif model_name=='fdse':
                 from backbone.ResNet_FDSE import resnet10_fdse_pacs
                 for j in range(parti_num):

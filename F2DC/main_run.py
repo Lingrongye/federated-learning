@@ -141,6 +141,14 @@ def parse_args():
     parser.add_argument("--num_classes", type=int, default=7,
                         help="num classes (for prototype dim)")
 
+    # ===== PG-DFC Multi-Layer (f2dc_pg_ml) 超参 =====
+    parser.add_argument("--ml_aux_alpha", type=float, default=0.1,
+                        help="ML deep sup loss weight (aux3 CE), 0 = disable lite branch")
+    parser.add_argument("--ml_lite_channel", type=int, default=32,
+                        help="ML DFD/DFC lite 内部 channel 数 (vs PG-DFC 原 64)")
+    parser.add_argument("--ml_lite_tau", type=float, default=0.5,
+                        help="ML lite gumbel tau (浅层 mask 更软, vs 深层 0.1)")
+
     parser.add_argument("--ma_select", type=str, default="resnet", help="backbone")
 
     # CPU core intra-op parallelism
@@ -166,14 +174,16 @@ def main_F2DC(args=None):
     args.conf_jobnum = str(uuid.uuid4())
     args.conf_timestamp = str(datetime.datetime.now())
     args.conf_host = socket.gethostname()
-
+    # 获取数据集对象
     priv_dataset = get_prive_dataset(args)
-    # default resnet_dc for f2dc
+    # 获取模型对象，每个client一个模型 默认resnet_dc for f2dc
     backbones_list = priv_dataset.get_backbone(args.parti_num, None, args.model)
     # default f2dc method
+    # 创建算法对象
     model = get_model(backbones_list, args, priv_dataset.get_transform())
+    # model里面包含了所有的client模型也就是nets_list，server模型是global_net，所有的超参数arg
     args.arch = model.nets_list[0].name
-
+    # 打印日志
     print(
         "{}_{}_{}_{}_{}".format(
             args.model,
@@ -192,7 +202,7 @@ def main_F2DC(args=None):
             args.local_epoch,
         )
     )
-
+    # 训练
     domains_acc_list = train(model, priv_dataset, args)
 
     print(f"Accuracy List {args.model} ({args.dataset}):", domains_acc_list)
