@@ -1,0 +1,414 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_pg_10_fl_pacs_100_10
+selected_domain_list for 10 clients as:
+['photo' 'photo' 'art' 'art' 'art' 'cartoon' 'cartoon' 'sketch' 'sketch'
+ 'sketch']
+The 0 Communcation Time: 223.338
+The 0 Communcation Accuracy: 11.432 Method: f2dc_pg epoch loss: 7.794
+[11.38, 10.05, 8.76, 15.54]
+
+The 1 Communcation Time: 217.233
+The 1 Communcation Accuracy: 24.048 Method: f2dc_pg epoch loss: 5.396
+[27.54, 25.74, 23.29, 19.62]
+
+The 2 Communcation Time: 218.969
+The 2 Communcation Accuracy: 24.282 Method: f2dc_pg epoch loss: 4.877
+[32.34, 23.28, 24.57, 16.94]
+
+The 3 Communcation Time: 216.454
+The 3 Communcation Accuracy: 27.395 Method: f2dc_pg epoch loss: 4.515
+[29.34, 24.51, 29.49, 26.24]
+
+The 4 Communcation Time: 218.02
+The 4 Communcation Accuracy: 25.7 Method: f2dc_pg epoch loss: 4.327
+[30.54, 27.94, 25.21, 19.11]
+
+The 5 Communcation Time: 218.167
+The 5 Communcation Accuracy: 28.63 Method: f2dc_pg epoch loss: 4.087
+[32.63, 26.72, 27.14, 28.03]
+
+The 6 Communcation Time: 218.702
+The 6 Communcation Accuracy: 32.802 Method: f2dc_pg epoch loss: 3.996
+[34.73, 24.51, 39.1, 32.87]
+
+The 7 Communcation Time: 218.13
+The 7 Communcation Accuracy: 32.988 Method: f2dc_pg epoch loss: 3.765
+[41.02, 31.37, 37.39, 22.17]
+
+The 8 Communcation Time: 220.409
+The 8 Communcation Accuracy: 34.072 Method: f2dc_pg epoch loss: 3.53
+[44.31, 28.43, 37.82, 25.73]
+
+The 9 Communcation Time: 219.298
+The 9 Communcation Accuracy: 36.525 Method: f2dc_pg epoch loss: 3.427
+[43.11, 33.33, 43.8, 25.86]
+
+The 10 Communcation Time: 217.675
+The 10 Communcation Accuracy: 38.442 Method: f2dc_pg epoch loss: 3.298
+[45.51, 32.11, 41.88, 34.27]
+
+The 11 Communcation Time: 220.321
+The 11 Communcation Accuracy: 43.67 Method: f2dc_pg epoch loss: 3.124
+[47.31, 34.56, 50.64, 42.17]
+
+The 12 Communcation Time: 220.422
+The 12 Communcation Accuracy: 44.198 Method: f2dc_pg epoch loss: 3.056
+[47.31, 38.97, 49.36, 41.15]
+
+The 13 Communcation Time: 216.81
+The 13 Communcation Accuracy: 44.205 Method: f2dc_pg epoch loss: 2.865
+[50.9, 37.99, 45.51, 42.42]
+
+The 14 Communcation Time: 221.837
+The 14 Communcation Accuracy: 41.71 Method: f2dc_pg epoch loss: 2.785
+[49.4, 38.48, 43.16, 35.8]
+
+The 15 Communcation Time: 221.491
+The 15 Communcation Accuracy: 36.695 Method: f2dc_pg epoch loss: 2.759
+[50.6, 37.01, 36.11, 23.06]
+
+The 16 Communcation Time: 222.451
+The 16 Communcation Accuracy: 38.633 Method: f2dc_pg epoch loss: 2.604
+[50.9, 36.03, 38.68, 28.92]
+
+The 17 Communcation Time: 218.386
+The 17 Communcation Accuracy: 41.522 Method: f2dc_pg epoch loss: 2.508
+[53.89, 39.95, 42.31, 29.94]
+
+The 18 Communcation Time: 215.931
+The 18 Communcation Accuracy: 40.868 Method: f2dc_pg epoch loss: 2.408
+[55.09, 39.22, 38.46, 30.7]
+
+The 19 Communcation Time: 218.135
+The 19 Communcation Accuracy: 43.242 Method: f2dc_pg epoch loss: 2.341
+[56.29, 39.46, 43.59, 33.63]
+
+The 20 Communcation Time: 219.636
+The 20 Communcation Accuracy: 46.067 Method: f2dc_pg epoch loss: 2.299
+[59.58, 41.18, 44.66, 38.85]
+
+The 21 Communcation Time: 222.519
+The 21 Communcation Accuracy: 45.91 Method: f2dc_pg epoch loss: 2.218
+[60.78, 39.46, 46.58, 36.82]
+
+The 22 Communcation Time: 220.462
+The 22 Communcation Accuracy: 50.17 Method: f2dc_pg epoch loss: 2.123
+[59.58, 43.63, 49.57, 47.9]
+
+The 23 Communcation Time: 219.567
+The 23 Communcation Accuracy: 47.15 Method: f2dc_pg epoch loss: 2.103
+[59.88, 39.46, 46.58, 42.68]
+
+The 24 Communcation Time: 219.267
+The 24 Communcation Accuracy: 49.492 Method: f2dc_pg epoch loss: 2.048
+[58.68, 43.38, 50.43, 45.48]
+
+The 25 Communcation Time: 218.253
+The 25 Communcation Accuracy: 51.935 Method: f2dc_pg epoch loss: 1.959
+[61.08, 45.34, 52.78, 48.54]
+
+The 26 Communcation Time: 220.551
+The 26 Communcation Accuracy: 53.982 Method: f2dc_pg epoch loss: 1.967
+[61.08, 48.77, 53.21, 52.87]
+
+The 27 Communcation Time: 220.76
+The 27 Communcation Accuracy: 51.272 Method: f2dc_pg epoch loss: 1.887
+[63.47, 42.4, 49.79, 49.43]
+
+The 28 Communcation Time: 222.955
+The 28 Communcation Accuracy: 54.92 Method: f2dc_pg epoch loss: 1.865
+[62.87, 46.32, 54.06, 56.43]
+
+The 29 Communcation Time: 217.933
+The 29 Communcation Accuracy: 53.605 Method: f2dc_pg epoch loss: 1.777
+[61.98, 46.32, 54.27, 51.85]
+
+The 30 Communcation Time: 221.13
+The 30 Communcation Accuracy: 56.118 Method: f2dc_pg epoch loss: 1.758
+[66.17, 51.23, 56.62, 50.45]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-137_pg_rerun_after_fix/diag_pgdfc_daa_pacs_s333/best_R031.npz (acc=56.118)
+The 31 Communcation Time: 225.657
+The 31 Communcation Accuracy: 56.405 Method: f2dc_pg epoch loss: 1.791
+[64.07, 48.28, 56.84, 56.43]
+
+The 32 Communcation Time: 221.79
+The 32 Communcation Accuracy: 56.248 Method: f2dc_pg epoch loss: 1.672
+[63.47, 50.25, 56.62, 54.65]
+
+The 33 Communcation Time: 221.214
+The 33 Communcation Accuracy: 56.15 Method: f2dc_pg epoch loss: 1.711
+[64.67, 48.53, 57.26, 54.14]
+
+The 34 Communcation Time: 220.587
+The 34 Communcation Accuracy: 57.62 Method: f2dc_pg epoch loss: 1.664
+[63.77, 48.77, 57.05, 60.89]
+
+The 35 Communcation Time: 224.852
+The 35 Communcation Accuracy: 55.948 Method: f2dc_pg epoch loss: 1.608
+[65.27, 46.57, 56.41, 55.54]
+
+The 36 Communcation Time: 226.598
+The 36 Communcation Accuracy: 55.022 Method: f2dc_pg epoch loss: 1.622
+[65.87, 50.98, 56.62, 46.62]
+
+The 37 Communcation Time: 225.576
+The 37 Communcation Accuracy: 60.462 Method: f2dc_pg epoch loss: 1.552
+[64.97, 52.94, 64.96, 58.98]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-137_pg_rerun_after_fix/diag_pgdfc_daa_pacs_s333/best_R038.npz (acc=60.462)
+The 38 Communcation Time: 230.279
+The 38 Communcation Accuracy: 57.067 Method: f2dc_pg epoch loss: 1.536
+[64.07, 51.96, 61.54, 50.7]
+
+The 39 Communcation Time: 217.655
+The 39 Communcation Accuracy: 59.232 Method: f2dc_pg epoch loss: 1.59
+[66.17, 54.41, 60.68, 55.67]
+
+The 40 Communcation Time: 224.297
+The 40 Communcation Accuracy: 56.578 Method: f2dc_pg epoch loss: 1.49
+[63.77, 50.25, 57.26, 55.03]
+
+The 41 Communcation Time: 225.728
+The 41 Communcation Accuracy: 57.942 Method: f2dc_pg epoch loss: 1.482
+[66.17, 54.17, 61.11, 50.32]
+
+The 42 Communcation Time: 234.853
+The 42 Communcation Accuracy: 57.94 Method: f2dc_pg epoch loss: 1.466
+[64.67, 53.68, 59.4, 54.01]
+
+The 43 Communcation Time: 275.992
+The 43 Communcation Accuracy: 58.948 Method: f2dc_pg epoch loss: 1.427
+[62.87, 53.92, 64.1, 54.9]
+
+The 44 Communcation Time: 278.416
+The 44 Communcation Accuracy: 59.798 Method: f2dc_pg epoch loss: 1.509
+[63.17, 55.88, 60.9, 59.24]
+
+The 45 Communcation Time: 274.256
+The 45 Communcation Accuracy: 58.282 Method: f2dc_pg epoch loss: 1.423
+[67.96, 50.0, 61.54, 53.63]
+
+The 46 Communcation Time: 276.173
+The 46 Communcation Accuracy: 60.022 Method: f2dc_pg epoch loss: 1.377
+[67.37, 53.92, 65.17, 53.63]
+
+The 47 Communcation Time: 274.084
+The 47 Communcation Accuracy: 59.332 Method: f2dc_pg epoch loss: 1.419
+[63.77, 53.92, 64.74, 54.9]
+
+The 48 Communcation Time: 275.958
+The 48 Communcation Accuracy: 60.382 Method: f2dc_pg epoch loss: 1.413
+[68.86, 52.7, 63.03, 56.94]
+
+The 49 Communcation Time: 276.618
+The 49 Communcation Accuracy: 61.372 Method: f2dc_pg epoch loss: 1.304
+[65.87, 56.13, 66.67, 56.82]
+
+The 50 Communcation Time: 276.904
+The 50 Communcation Accuracy: 60.505 Method: f2dc_pg epoch loss: 1.351
+[65.27, 55.15, 65.17, 56.43]
+
+The 51 Communcation Time: 279.509
+The 51 Communcation Accuracy: 59.378 Method: f2dc_pg epoch loss: 1.377
+[67.96, 54.66, 64.32, 50.57]
+
+The 52 Communcation Time: 278.18
+The 52 Communcation Accuracy: 59.415 Method: f2dc_pg epoch loss: 1.313
+[64.97, 53.68, 65.38, 53.63]
+
+The 53 Communcation Time: 260.239
+The 53 Communcation Accuracy: 62.265 Method: f2dc_pg epoch loss: 1.294
+[68.26, 57.11, 66.24, 57.45]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-137_pg_rerun_after_fix/diag_pgdfc_daa_pacs_s333/best_R054.npz (acc=62.265)
+The 54 Communcation Time: 223.745
+The 54 Communcation Accuracy: 61.782 Method: f2dc_pg epoch loss: 1.353
+[64.37, 56.86, 66.03, 59.87]
+
+The 55 Communcation Time: 221.919
+The 55 Communcation Accuracy: 60.615 Method: f2dc_pg epoch loss: 1.248
+[66.47, 54.9, 63.89, 57.2]
+
+The 56 Communcation Time: 223.026
+The 56 Communcation Accuracy: 63.825 Method: f2dc_pg epoch loss: 1.34
+[69.76, 56.37, 66.88, 62.29]
+
+The 57 Communcation Time: 219.608
+The 57 Communcation Accuracy: 62.988 Method: f2dc_pg epoch loss: 1.339
+[71.56, 57.35, 63.68, 59.36]
+
+The 58 Communcation Time: 223.268
+The 58 Communcation Accuracy: 62.372 Method: f2dc_pg epoch loss: 1.265
+[67.07, 56.62, 64.53, 61.27]
+
+The 59 Communcation Time: 222.135
+The 59 Communcation Accuracy: 63.682 Method: f2dc_pg epoch loss: 1.224
+[69.46, 54.9, 67.31, 63.06]
+
+The 60 Communcation Time: 226.272
+The 60 Communcation Accuracy: 61.048 Method: f2dc_pg epoch loss: 1.237
+[67.37, 56.37, 64.53, 55.92]
+
+The 61 Communcation Time: 219.76
+The 61 Communcation Accuracy: 60.252 Method: f2dc_pg epoch loss: 1.207
+[67.37, 52.94, 63.25, 57.45]
+
+The 62 Communcation Time: 225.562
+The 62 Communcation Accuracy: 62.698 Method: f2dc_pg epoch loss: 1.238
+[69.46, 58.09, 67.95, 55.29]
+
+The 63 Communcation Time: 225.933
+The 63 Communcation Accuracy: 60.212 Method: f2dc_pg epoch loss: 1.262
+[67.96, 53.68, 62.39, 56.82]
+
+The 64 Communcation Time: 217.036
+The 64 Communcation Accuracy: 62.475 Method: f2dc_pg epoch loss: 1.225
+[67.96, 57.6, 68.16, 56.18]
+
+The 65 Communcation Time: 221.858
+The 65 Communcation Accuracy: 62.905 Method: f2dc_pg epoch loss: 1.215
+[66.77, 59.07, 67.31, 58.47]
+
+The 66 Communcation Time: 221.315
+The 66 Communcation Accuracy: 60.7 Method: f2dc_pg epoch loss: 1.184
+[69.16, 56.13, 61.97, 55.54]
+
+The 67 Communcation Time: 224.612
+The 67 Communcation Accuracy: 62.772 Method: f2dc_pg epoch loss: 1.148
+[67.96, 57.6, 67.95, 57.58]
+
+The 68 Communcation Time: 223.878
+The 68 Communcation Accuracy: 62.278 Method: f2dc_pg epoch loss: 1.242
+[68.86, 56.86, 66.45, 56.94]
+
+The 69 Communcation Time: 227.854
+The 69 Communcation Accuracy: 63.665 Method: f2dc_pg epoch loss: 1.157
+[68.56, 57.35, 67.09, 61.66]
+
+The 70 Communcation Time: 230.706
+The 70 Communcation Accuracy: 62.74 Method: f2dc_pg epoch loss: 1.107
+[67.96, 59.56, 66.24, 57.2]
+
+The 71 Communcation Time: 224.221
+The 71 Communcation Accuracy: 62.195 Method: f2dc_pg epoch loss: 1.231
+[69.16, 58.09, 66.24, 55.29]
+
+The 72 Communcation Time: 221.196
+The 72 Communcation Accuracy: 63.495 Method: f2dc_pg epoch loss: 1.158
+[66.47, 60.29, 67.09, 60.13]
+
+The 73 Communcation Time: 217.202
+The 73 Communcation Accuracy: 63.558 Method: f2dc_pg epoch loss: 1.125
+[67.66, 57.6, 67.95, 61.02]
+
+The 74 Communcation Time: 221.367
+The 74 Communcation Accuracy: 64.025 Method: f2dc_pg epoch loss: 1.074
+[70.36, 58.82, 66.67, 60.25]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-137_pg_rerun_after_fix/diag_pgdfc_daa_pacs_s333/best_R075.npz (acc=64.025)
+The 75 Communcation Time: 219.815
+The 75 Communcation Accuracy: 61.312 Method: f2dc_pg epoch loss: 1.11
+[70.96, 59.07, 62.61, 52.61]
+
+The 76 Communcation Time: 220.41
+The 76 Communcation Accuracy: 62.8 Method: f2dc_pg epoch loss: 1.149
+[69.16, 61.52, 68.16, 52.36]
+
+The 77 Communcation Time: 221.335
+The 77 Communcation Accuracy: 63.895 Method: f2dc_pg epoch loss: 1.117
+[70.06, 58.33, 67.95, 59.24]
+
+The 78 Communcation Time: 225.187
+The 78 Communcation Accuracy: 63.245 Method: f2dc_pg epoch loss: 1.093
+[70.96, 60.54, 66.45, 55.03]
+
+The 79 Communcation Time: 224.413
+The 79 Communcation Accuracy: 62.808 Method: f2dc_pg epoch loss: 1.111
+[69.16, 58.33, 66.03, 57.71]
+
+The 80 Communcation Time: 225.794
+The 80 Communcation Accuracy: 62.537 Method: f2dc_pg epoch loss: 1.073
+[69.76, 58.33, 64.74, 57.32]
+
+The 81 Communcation Time: 221.056
+The 81 Communcation Accuracy: 62.855 Method: f2dc_pg epoch loss: 1.116
+[71.26, 56.86, 63.68, 59.62]
+
+The 82 Communcation Time: 223.282
+The 82 Communcation Accuracy: 64.963 Method: f2dc_pg epoch loss: 1.121
+[70.06, 57.84, 69.02, 62.93]
+
+The 83 Communcation Time: 219.42
+The 83 Communcation Accuracy: 64.97 Method: f2dc_pg epoch loss: 1.018
+[71.56, 60.54, 69.44, 58.34]
+
+The 84 Communcation Time: 220.146
+The 84 Communcation Accuracy: 64.772 Method: f2dc_pg epoch loss: 1.101
+[73.35, 60.05, 67.09, 58.6]
+
+The 85 Communcation Time: 221.693
+The 85 Communcation Accuracy: 63.152 Method: f2dc_pg epoch loss: 1.062
+[70.36, 56.13, 68.16, 57.96]
+
+The 86 Communcation Time: 219.284
+The 86 Communcation Accuracy: 65.862 Method: f2dc_pg epoch loss: 1.008
+[71.86, 61.52, 68.16, 61.91]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-137_pg_rerun_after_fix/diag_pgdfc_daa_pacs_s333/best_R087.npz (acc=65.862)
+The 87 Communcation Time: 222.781
+The 87 Communcation Accuracy: 64.992 Method: f2dc_pg epoch loss: 1.064
+[72.46, 59.31, 67.95, 60.25]
+
+The 88 Communcation Time: 225.086
+The 88 Communcation Accuracy: 63.108 Method: f2dc_pg epoch loss: 1.052
+[68.56, 56.13, 68.38, 59.36]
+
+The 89 Communcation Time: 220.99
+The 89 Communcation Accuracy: 65.09 Method: f2dc_pg epoch loss: 1.065
+[69.76, 57.11, 70.94, 62.55]
+
+The 90 Communcation Time: 226.37
+The 90 Communcation Accuracy: 66.023 Method: f2dc_pg epoch loss: 1.01
+[70.66, 62.5, 69.02, 61.91]
+
+The 91 Communcation Time: 223.902
+The 91 Communcation Accuracy: 64.355 Method: f2dc_pg epoch loss: 0.979
+[69.76, 59.56, 71.79, 56.31]
+
+The 92 Communcation Time: 222.727
+The 92 Communcation Accuracy: 63.74 Method: f2dc_pg epoch loss: 1.05
+[66.47, 60.54, 68.59, 59.36]
+
+The 93 Communcation Time: 225.127
+The 93 Communcation Accuracy: 64.402 Method: f2dc_pg epoch loss: 0.968
+[71.26, 60.05, 69.87, 56.43]
+
+The 94 Communcation Time: 221.821
+The 94 Communcation Accuracy: 62.848 Method: f2dc_pg epoch loss: 1.128
+[71.26, 60.29, 68.38, 51.46]
+
+The 95 Communcation Time: 226.539
+The 95 Communcation Accuracy: 65.305 Method: f2dc_pg epoch loss: 0.999
+[71.56, 63.73, 71.15, 54.78]
+
+The 96 Communcation Time: 219.59
+The 96 Communcation Accuracy: 63.89 Method: f2dc_pg epoch loss: 1.014
+[70.06, 61.03, 69.44, 55.03]
+
+The 97 Communcation Time: 227.414
+The 97 Communcation Accuracy: 66.038 Method: f2dc_pg epoch loss: 0.98
+[70.96, 62.5, 71.58, 59.11]
+
+The 98 Communcation Time: 219.498
+The 98 Communcation Accuracy: 65.303 Method: f2dc_pg epoch loss: 0.976
+[72.46, 60.54, 69.87, 58.34]
+
+The 99 Communcation Time: 221.746
+The 99 Communcation Accuracy: 66.835 Method: f2dc_pg epoch loss: 0.956
+[73.05, 60.54, 72.22, 61.53]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-137_pg_rerun_after_fix/diag_pgdfc_daa_pacs_s333/final_R100.npz (acc=66.835)
+ALL Loss:  [7.794, 5.396, 4.877, 4.515, 4.327, 4.087, 3.996, 3.765, 3.53, 3.427, 3.298, 3.124, 3.056, 2.865, 2.785, 2.759, 2.604, 2.508, 2.408, 2.341, 2.299, 2.218, 2.123, 2.103, 2.048, 1.959, 1.967, 1.887, 1.865, 1.777, 1.758, 1.791, 1.672, 1.711, 1.664, 1.608, 1.622, 1.552, 1.536, 1.59, 1.49, 1.482, 1.466, 1.427, 1.509, 1.423, 1.377, 1.419, 1.413, 1.304, 1.351, 1.377, 1.313, 1.294, 1.353, 1.248, 1.34, 1.339, 1.265, 1.224, 1.237, 1.207, 1.238, 1.262, 1.225, 1.215, 1.184, 1.148, 1.242, 1.157, 1.107, 1.231, 1.158, 1.125, 1.074, 1.11, 1.149, 1.117, 1.093, 1.111, 1.073, 1.116, 1.121, 1.018, 1.101, 1.062, 1.008, 1.064, 1.052, 1.065, 1.01, 0.979, 1.05, 0.968, 1.128, 0.999, 1.014, 0.98, 0.976, 0.956]
+Accuracy List f2dc_pg (fl_pacs): [11.432, 24.048, 24.282, 27.395, 25.7, 28.63, 32.802, 32.988, 34.072, 36.525, 38.442, 43.67, 44.198, 44.205, 41.71, 36.695, 38.633, 41.522, 40.868, 43.242, 46.067, 45.91, 50.17, 47.15, 49.492, 51.935, 53.982, 51.272, 54.92, 53.605, 56.118, 56.405, 56.248, 56.15, 57.62, 55.948, 55.022, 60.462, 57.067, 59.232, 56.578, 57.942, 57.94, 58.948, 59.798, 58.282, 60.022, 59.332, 60.382, 61.372, 60.505, 59.378, 59.415, 62.265, 61.782, 60.615, 63.825, 62.988, 62.372, 63.682, 61.048, 60.252, 62.698, 60.212, 62.475, 62.905, 60.7, 62.772, 62.278, 63.665, 62.74, 62.195, 63.495, 63.558, 64.025, 61.312, 62.8, 63.895, 63.245, 62.808, 62.537, 62.855, 64.963, 64.97, 64.772, 63.152, 65.862, 64.992, 63.108, 65.09, 66.023, 64.355, 63.74, 64.402, 62.848, 65.305, 63.89, 66.038, 65.303, 66.835]

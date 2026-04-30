@@ -1,0 +1,15 @@
+[2026-04-23 16:53:10] EXP-121 Digits-5 launcher start, MIN_FREE=1600MB GPU=0
+[16:53:10] LAUNCH fedavg_s2 algo=fedavg seed=2 (free=24092MB)
+[16:53:25] LAUNCH fedavg_s15 algo=fedavg seed=15 (free=22728MB)
+[16:53:40] LAUNCH fedavg_s333 algo=fedavg seed=333 (free=20721MB)
+[16:53:55] LAUNCH fedbn_s2 algo=fedbn seed=2 (free=18841MB)
+[16:54:10] LAUNCH fedbn_s15 algo=fedbn seed=15 (free=16898MB)
+[16:54:25] LAUNCH fedbn_s333 algo=fedbn seed=333 (free=14827MB)
+[16:54:40] LAUNCH fdse_s2 algo=fdse seed=2 (free=12755MB)
+[16:54:55] LAUNCH fdse_s15 algo=fdse seed=15 (free=11142MB)
+[16:55:10] LAUNCH fdse_s333 algo=fdse seed=333 (free=9469MB)
+[16:55:26] LAUNCH sgpa_uw1uc1_s2 algo=feddsa_sgpa seed=2 (free=7789MB)
+[16:55:41] LAUNCH sgpa_uw1uc1_s15 algo=feddsa_sgpa seed=15 (free=6016MB)
+[16:55:56] LAUNCH sgpa_uw1uc1_s333 algo=feddsa_sgpa seed=333 (free=5015MB)
+[2026-04-23 16:56:11] 12 runs launched, waiting...
+[2026-04-23 17:38:51] ALL DONE

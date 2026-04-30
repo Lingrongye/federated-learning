@@ -143,3 +143,7 @@ infonce加ablation试试
 experiments/cold_path_analysis/diag_office/
 experiments/cold_path_analysis/diag_pacs/
 experiments/cold_path_analysis/figs/*.png
+
+# === EXP-13x 实验 cold-path diagnostic dump (太大, 用 rsync 同步, 不入 git) ===
+experiments/ablation/EXP-135_diag_full/diag_*/
+experiments/ablation/EXP-137_pg_rerun_after_fix/diag_*/
