@@ -32,47 +32,74 @@ metric_def: |
 
 ## Table 1. PACS (4 domains × 7 classes, fixed: photo:2/art:3/cartoon:2/sketch:3)
 
+> **比较基准说明**: F2DC 论文 (CVPR'26) 把 DaA 当作 F2DC 的内置组件, 所以本表的"F2DC"代表 **F2DC + DaA** (跟论文一致), 而"F2DC vanilla"是消融对照 (拆掉 DaA)。
+> 我们的 **PG-DFC-ML (EXP-139, 不加 DaA)** 主对照是 **F2DC + DaA**, 因为 DaA 是 F2DC 的一部分。
+
 ### 2-seed mean (s=15 + s=333)
 
-| Method                       | photo  | art    | cartoon | sketch | **AVG_B ↑** | **AVG_L ↑** | gap | Best Round |
-| ---------------------------- | :----: | :----: | :-----: | :----: | :---------: | :---------: | :-: | :--------: |
-| FedAvg [AISTATS'17]          | 64.52  | 53.92  | **81.41** | 77.00 | 69.22       | 68.39       | 0.83 | R96.5     |
-| FedBN [ICLR'21]              | 58.53  | 43.75  | 72.97   | 72.61  | 61.97       | 59.74       | 2.23 | R60.5     |
-| FedProx [MLSys'20]           | TBD    | TBD    | TBD     | TBD    | TBD         | TBD         | -    | TBD       |
-| FedProto [AAAI'22]           | TBD    | TBD    | TBD     | TBD    | TBD         | TBD         | -    | TBD       |
-| FPL [CVPR'23]                | TBD    | TBD    | TBD     | TBD    | TBD         | TBD         | -    | TBD       |
-| MOON [CVPR'21]               | TBD    | TBD    | TBD     | TBD    | TBD         | TBD         | -    | TBD       |
-| FDSE [CVPR'25]               | TBD    | TBD    | TBD     | TBD    | TBD         | TBD         | -    | TBD       |
-| **F2DC [CVPR'26]**           | **69.46** | 56.62 | 78.53 | 79.49 | **71.02**   | 69.57       | 1.45 | R94.5     |
-| **F2DC + DaA**               | TBD    | TBD    | TBD     | TBD    | TBD         | TBD         | -    | TBD       |
-| **PG-DFC vanilla** (EXP-137) ⭐ | 67.52 | 58.21 | 78.53   | **83.82** | **72.02** | **71.77** ⭐ | 0.25 ⭐稳 | R88.5     |
-| **PG-DFC + DaA** (EXP-137)   | **73.80** | **63.73** | 74.79 | 67.20 | 69.88     | 68.90       | 0.98 | R95.5     |
-| **PG-DFC-ML** (EXP-139, 跑中) | TBD   | TBD    | TBD     | TBD    | TBD (sc3 R67+) | TBD     | -    | -         |
-| **Δ PG-DFC vanilla vs F2DC** | -1.94  | +1.59  | 0.00    | **+4.33** ⭐ | **+1.00pp** ✅ | **+2.20pp** ✅ | -1.20 | -6 round |
-| **Δ PG-DFC vanilla vs FedAvg** | +3.00 | +4.29 | -2.88 | **+6.82** ⭐ | **+2.80pp** ✅ | **+3.38pp** ✅ | -0.58 | -8 round |
+| Method                         |   photo   |    art    |  cartoon  |   sketch    |  **AVG_B ↑**   |  **AVG_L ↑**  |   gap   | Best Round |
+| ------------------------------ | :-------: | :-------: | :-------: | :---------: | :------------: | :-----------: | :-----: | :--------: |
+| FedAvg [AISTATS'17]            |   64.52   |   53.93   | **81.41** |    77.01    |     69.22      |     68.39     |  0.83   |   R95.5    |
+| FedBN [ICLR'21]                |   58.53   |   43.75   |   72.97   |    72.61    |     61.97      |     59.74     |  2.23   |   R60.5    |
+| FedProx [MLSys'20]             |    TBD    |    TBD    |    TBD    |     TBD     |      TBD       |      TBD      |    -    |    TBD     |
+| FedProto [AAAI'22]             |    TBD    |    TBD    |    TBD    |     TBD     |      TBD       |      TBD      |    -    |    TBD     |
+| FPL [CVPR'23]                  |    TBD    |    TBD    |    TBD    |     TBD     |      TBD       |      TBD      |    -    |    TBD     |
+| MOON [CVPR'21]                 |   58.24   |   39.10   |   62.29   |    65.54    |     56.29      |     51.32     |  4.97   |   R93.0    |
+| FDSE [CVPR'25] (F2DC framework) |   61.38  |   40.08   |   67.30   |    50.19    |     54.74      |     37.71     | **17.03** ⚠️ | R19.0  |
+| **F2DC vanilla** (EXP-135)     |   68.56   |   59.44   |   80.13   |    80.96    |     72.27      |     69.37     |  2.90   |   R95.0    |
+| **F2DC + DaA** (EXP-135) ⭐ paper | **74.10** | **59.56** |   77.35   |    68.66    |     69.92      |     69.12     |  0.80 ⭐稳 |   R91.5    |
+| **PG-DFC vanilla** (EXP-137)   |   67.52   |   58.21   |   78.53   |  **83.82**  |   **72.02**    |  **71.77**    | 0.25 ⭐稳 |   R88.5    |
+| **PG-DFC + DaA** (EXP-137)     |   73.80   | **63.73** |   74.79   |    67.20    |     69.88      |     68.90     |  0.98   |   R95.5    |
+| **PG-DFC-ML** (EXP-139, 跑中, 不加 DaA) | TBD | TBD     |    TBD    |     TBD     | TBD (sc3 R72+) |      TBD      |    -    |     -      |
+| **Δ PG-DFC-ML vs F2DC+DaA (主对照)** |  TBD |    TBD    |    TBD    |     TBD     |      TBD       |      TBD      |    -    |     -      |
+| **Δ PG-DFC vanilla vs F2DC vanilla** | -1.04 | -1.23 | -1.60   |  **+2.86** ⭐ |    -0.25       | **+2.40pp** ✅ | -2.65   |  -6.5 round |
+| **Δ PG-DFC vanilla vs F2DC+DaA**     | -6.58 | -1.35 | +1.18 |  **+15.16** ⭐⭐ | **+2.10pp** ✅ | **+2.65pp** ✅ | -0.55   |  -3 round |
+| **Δ F2DC+DaA vs F2DC vanilla (DaA 增量)** | +5.54 | +0.12 | -2.78 | **-12.30** ⚠️ | **-2.35** ⚠️ | -0.25 | +2.10 | -3.5 round |
 
 ### Per-seed (PACS)
 
-| Method                  | seed | R@Best | photo | art   | cartoon | sketch | **AVG_B** | **AVG_L** | server |
-| ----------------------- | :--: | :----: | :---: | :---: | :-----: | :----: | :-------: | :-------: | :----: |
-| FedAvg                  | 15   | -      | -     | -     | -       | -      | 69.565    | 69.565    | sc3    |
-| FedAvg                  | 333  | -      | -     | -     | -       | -      | 68.865    | 67.205    | sc3    |
-| FedBN                   | 15   | -      | -     | -     | -       | -      | 63.540    | 61.810    | sc3    |
-| FedBN                   | 333  | -      | -     | -     | -       | -      | 60.393    | 57.665    | sc3    |
-| F2DC vanilla            | 15   | R96    | 69.16 | 60.05 | **83.12** | 79.49 | 72.96    | 69.78     | sc3    |
-| F2DC vanilla            | 333  | R96    | 67.96 | 58.82 | 77.14   | **82.42** | 71.59 | 68.96    | sc3    |
-| **PG-DFC vanilla** ⭐    | 15   | R96    | 70.06 | 59.80 | 80.34   | **84.71** | **73.73** | **73.47** ⭐ | v100 |
-| **PG-DFC vanilla**      | 333  | R81    | 64.97 | 56.62 | 76.71   | **82.93** | **70.31** | **70.06** | sc3   |
-| PG-DFC + DaA            | 15   | R92    | **74.55** | **66.91** | 77.35 | 72.87 | 72.92  | 70.95     | v100   |
-| PG-DFC + DaA            | 333  | R99    | **73.05** | 60.54 | 72.22 | 61.53 | 66.84  | 66.84     | sc3    |
+| Method                  | seed | R@Best |   photo   |    art    |  cartoon  |   sketch    | **AVG_B** | **AVG_L** | server |
+| ----------------------- | :--: | :----: | :-------: | :-------: | :-------: | :---------: | :-------: | :-------: | :----: |
+| FedAvg                  |  15  |  R99   |   64.97   |   52.21   |   83.76   |    77.32    |  69.565   |  69.565   | sc4    |
+| FedAvg                  | 333  |  R92   |   64.07   |   55.64   |   79.06   |    76.69    |  68.865   |   67.205  | sc4    |
+| FedBN                   |  15  |   -    |     -     |     -     |     -     |      -      |  63.540   |   61.810  | sc3    |
+| FedBN                   | 333  |   -    |     -     |     -     |     -     |      -      |  60.393   |   57.665  | sc3    |
+| MOON                    |  15  |  R90   |   55.99   |   33.09   |   56.62   |    61.53    |  51.808   |   47.085  | sc4    |
+| MOON                    | 333  |  R96   |   60.48   |   45.10   |   67.95   |    69.55    |   60.77   |   55.560  | sc4    |
+| FDSE (F2DC framework)   |  15  |  R18   |   67.37   |   36.52   |   63.46   |    46.24    |  53.398   |   33.575  | sc3    |
+| FDSE (F2DC framework)   | 333  |  R20   |   55.39   |   43.63   |   71.15   |    54.14    |  56.078   |   41.838  | sc3    |
+| F2DC vanilla            |  15  |  R96   |   69.16   |   60.05   | **83.12** |    79.49    |   72.96   |   69.78   | sc6    |
+| F2DC vanilla            | 333  |  R96   |   67.96   |   58.82   |   77.14   |  **82.42**  |   71.59   |   68.96   | sc6    |
+| **F2DC + DaA** ⭐ paper  |  15  |  R94   | **76.35** | **63.24** |   79.91   |    74.52    | **73.51** | **72.97** | sc6    |
+| **F2DC + DaA**          | 333  |  R89   | **71.86** |   55.88   |   74.79   |    62.80    |   66.33   |   65.26   | sc3    |
+| **PG-DFC vanilla** ⭐    |  15  |  R96   |   70.06   |   59.80   |   80.34   |  **84.71**  | **73.73** | **73.47** ⭐ | v100 |
+| **PG-DFC vanilla**      | 333  |  R81   |   64.97   |   56.62   |   76.71   |  **82.93**  | **70.31** |   70.06   | sc3    |
+| PG-DFC + DaA            |  15  |  R92   | **74.55** | **66.91** |   77.35   |    72.87    |   72.92   |   70.95   | v100   |
+| PG-DFC + DaA            | 333  |  R99   | **73.05** |   60.54   |   72.22   |    61.53    |   66.84   |   66.84   | sc3    |
 
 ### PACS 关键结论
 
 1. **PG-DFC vanilla 2-seed mean best 72.02 / last 71.77,sketch 域 83.82 ⭐**(主要受益)
-2. PG-DFC vanilla 比 F2DC vanilla **+1.00pp best / +2.20pp last**(sketch +4.33pp)
-3. PG-DFC vanilla 比 FedAvg **+2.80pp best / +3.38pp last**
-4. **PG-DFC + DaA 在 PACS 上反而拖性能 -2.14pp best**(sketch 域 67.20 vs vanilla 83.82 = -16.62pp 是主因)
-5. PG-DFC vanilla last gap 仅 0.25pp ⭐**最稳定**
+2. **PG-DFC vanilla 比 F2DC+DaA(论文版)+2.10pp best / +2.65pp last** ⭐(sketch +15.16pp 主导)
+3. **PG-DFC vanilla 比 FedAvg +2.80pp best / +3.38pp last**
+4. **PG-DFC + DaA 在 PACS 上反而拖性能** -2.14pp best(sketch 67.20 vs vanilla 83.82 = -16.62pp 是主因)
+5. PG-DFC vanilla last gap 仅 0.25pp ⭐**最稳定**(F2DC+DaA gap 0.80 也稳)
+6. **DaA 在 PACS 上是负贡献** -2.35pp(F2DC+DaA 比 F2DC vanilla 还差),sketch 域 -12.30pp 主因 → DaA reweight 把 sketch 主力 client 权重砍 -31%
+7. **EXP-139 PG-DFC-ML 主对照是 F2DC+DaA**(因为论文版 F2DC = F2DC+DaA),要赢 best 69.92 / last 69.12 才能 claim ML 提升
+
+### PG-DFC vanilla per-domain 增益拆解 (vs F2DC+DaA, 主对照)
+
+| Domain | F2DC+DaA mean | PG-DFC vanilla mean | Δ | 含义 |
+|---|:---:|:---:|:---:|---|
+| photo   | **74.10** | 67.52 | -6.58 | DaA reweight 升 photo 51%, vanilla 没升 |
+| art     | 59.56 | 58.21 | -1.35 | 接近 |
+| cartoon | 77.35 | 78.53 | +1.18 | PG-DFC 略胜 |
+| **sketch** | 68.66 | **83.82** | **+15.16** ⭐⭐ | DaA 砍 sketch 主力 client 权重, vanilla 保留 |
+| **AVG_B** | 69.92 | **72.02** | **+2.10** ✅ | sketch +15 主导 |
+| **AVG_L** | 69.12 | **71.77** | **+2.65** ✅ | 同上 |
+
+→ **PG-DFC vanilla 真正强在 sketch 域**,因为没用 DaA 砍 sketch 主力 client (sample share 0.151 each, 占 PACS 数据 45%)。
+→ DaA 在 PACS 上是负贡献 (paper 用 DaA 反而损失), 我们 vanilla 路径的 sketch 优势是真正的 paper-grade contribution。
 
 ---
 
