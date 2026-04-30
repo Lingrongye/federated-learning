@@ -1,15 +1,21 @@
 ---
 date: 2026-04-27
 type: 实验结果汇总(主表)
-status: PACS / Office 完成,Digits 跑中
-last_revised: 2026-04-28 (Table 1b PACS per-seed AVG_B 修正: 错算→真实 best-round-AVG)
+status: EXP-137 4-bug fix 后 sc3 全部 8 run R100 已完成 (PACS s333 + Office s2/s15/s333 各 vanilla/+DaA), v100 PACS s15 in progress
+last_revised: 2026-04-29 (EXP-137 sc3 8 run 回填到 Table 1b-NEW + Table 2-NEW; EXP-135 PG-DFC 数据标注已废弃)
 data_source:
   - EXP-130 sc3_v2_logs (F2DC v2 + fdse v2, fixed allocation)
   - EXP-130 sc4_v2_logs (FedAvg + MOON v2, fixed allocation)
-  - EXP-131 sc5 logs (PG-DFC v3.2 / v3.3, fixed allocation)
-  - EXP-135 sc6+sc3 logs (4-method × 2-seed PACS R100 with diag, 2026-04-28 重算入主表)
+  - EXP-131 sc5 logs (PG-DFC v3.2 / v3.3, fixed allocation, ⚠️ 4-bug fix 前)
+  - EXP-135 sc6+sc3 logs (4-method × 2-seed PACS R100 with diag, ⚠️ PG-DFC 部分已被 EXP-137 取代)
+  - **EXP-137 sc3 logs (PG-DFC vanilla/+DaA, 4-bug fix 后, 主结果用本表) ⭐**
+4-bug fix:
+  - bug 1: 聚合白名单 (revert, 维持 release 默认全聚合, commit 38457ff)
+  - bug 2: deterministic eval (is_eval=True 走 0.5 noise)
+  - bug 3: 硬编码 num_classes=7 → args.num_classes (支持 Office 10 类)
+  - bug 4: class_proto persistent=False → server eval 时显式同步 (commit 0e5f1df)
 allocation: fixed (PACS photo:2/art:3/cartoon:2/sketch:3; Office caltech:3/amazon:2/webcam:2/dslr:3)
-seeds: [15, 333]
+seeds: [2, 15, 333]
 training: R=100, E=10, lr=0.01, batch=46/64
 metric_def: |
   AVG Best = 100 轮中"4 域简单平均"最大的那一轮的值 (单 round 同时刻);
@@ -63,7 +69,40 @@ metric_def: |
 
 ---
 
-### Table 1b. PACS — EXP-135 完整 4-method × 2-seed R100 数据 (2026-04-28 重算回填, sc 高质量诊断版)
+### Table 1b-NEW. PACS — EXP-137 完整 R100 数据 (2026-04-29 回填, **4-bug fix 后**) ⭐
+
+> ⚠️ **2026-04-29 重要更新**: EXP-137 在 EXP-135 之后修了 4 个 paper-grade bug
+> (聚合白名单 / deterministic eval / 硬编码 num_classes / class_proto sync), 跑出新 R100 数据,
+> **PG-DFC vanilla 路径在 4-bug fix 后 +3.40pp** (s333 last 66.66 → 70.06)。
+> **Table 1b-OLD (EXP-135 PG-DFC 数据) 已不准, 主结果用本表**。
+> Office 同理 (sc3 EXP-137 8 个 R100 已完成, 见 Table 2-NEW)。
+
+#### Per-seed 数据 (sc3 EXP-137, 4-bug fix 后)
+
+| Method                | seed | R@Best |   photo   |    art    |  cartoon  |  sketch   | **AVG_B** | **AVG_L** | gap  |
+| --------------------- | :--: | :----: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :--: |
+| **PG-DFC vanilla** ⭐  | 333  |  R81   |   64.97   |   56.62   |   76.71   | **82.93** | **70.31** | **70.06** | 0.25 ⭐稳 |
+| **PG-DFC vanilla**    |  15  |  TBD   |    TBD    |    TBD    |    TBD    |    TBD    | (v100 EXP-137 跑中) |    -      |   -  |
+| **PG-DFC + DaA**      | 333  |  R99   | **73.05** |   60.54   |   72.22   |   61.53   |   66.84   |   66.84   | 0.00 ⭐稳 |
+| **PG-DFC + DaA**      |  15  |  TBD   |    TBD    |    TBD    |    TBD    |    TBD    | (v100 EXP-137 跑中) |    -      |   -  |
+
+#### 跟 Table 1b-OLD (4-bug fix 前 EXP-135) 同 seed 对比
+
+| Method | seed | EXP-135 best | EXP-137 best | Δ best | EXP-135 last | EXP-137 last | Δ last |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| PG-DFC vanilla | 333 | 68.29 | **70.31** | **+2.02** ✅ | 66.66 | **70.06** | **+3.40** ✅ |
+| PG-DFC +DaA | 333 | 69.28 | 66.84 | -2.44 | 66.88 | 66.84 | -0.04 (持平) |
+
+→ **vanilla 4-bug fix 主要受益** (Δ last +3.40pp); +DaA 路径基本持平。
+→ s=15 数据等 v100 EXP-137 跑完回填。
+
+---
+
+### Table 1b-OLD. PACS — EXP-135 完整 4-method × 2-seed R100 数据 (2026-04-28 重算)
+
+> ⚠️ **2026-04-29 标注**: PG-DFC vanilla / +DaA 数据已被 EXP-137 4-bug fix 取代 (见 Table 1b-NEW)。
+> **F2DC vanilla / F2DC+DaA 数据仍准** (4-bug 是 PG-DFC class_proto 特有 bug, F2DC 不受影响)。
+> 历史保留供对照, **不用本表 PG-DFC 数据写论文**。
 
 > 数据来源: sc6 + sc3 R100 完成的 EXP-135_diag_full 全套诊断 dump
 > 全部带诊断 hook (round_*.npz light + best/final heavy dump)
@@ -167,12 +206,12 @@ metric_def: |
 
 #### DaA dispatch ratio (100 round mean, 按 client_id 对齐)
 
-| Client          | Domain  | sample share | DaA freq | ratio       |
-| :-------------: | :-----: | :----------: | :------: | :---------: |
-| photo (449)     | photo   | 0.064        | 0.097    | **+51%** ⬆ |
-| art (552)       | art     | 0.079        | 0.098    | +24%        |
-| cartoon (631)   | cartoon | 0.090        | 0.099    | +10%        |
-| sketch (1059)   | sketch  | 0.151        | 0.105    | **−31%** ⬇ |
+|    Client     | Domain  | sample share | DaA freq |   ratio    |
+| :-----------: | :-----: | :----------: | :------: | :--------: |
+|  photo (449)  |  photo  |    0.064     |  0.097   | **+51%** ⬆ |
+|   art (552)   |   art   |    0.079     |  0.098   |    +24%    |
+| cartoon (631) | cartoon |    0.090     |  0.099   |    +10%    |
+| sketch (1059) | sketch  |    0.151     |  0.105   | **−31%** ⬇ |
 
 → sketch 总聚合权重: vanilla 45.4% → DaA 31.4% (−14pp), 主力被砍 → sketch acc 跌 −13.57
 
@@ -202,48 +241,61 @@ metric_def: |
 
 ## Table 2. Office-Caltech (4 domains × 10 classes, fixed: caltech:3/amazon:2/webcam:2/dslr:3)
 
-| Method | caltech | amazon | webcam | dslr | **AVG Best ↑** | **AVG Last ↑** | Best Round (avg) |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| FedAvg | 61.83 | 74.47 | 58.62 | 36.67 | 57.90 | 54.01 | R62.0 |
-| FedBN | 61.61 | 72.89 | 51.73 | 38.34 | 56.14 | 52.61 | R82.5 |
-| FedProx | 62.95 | 71.58 | 55.17 | 40.00 | 57.43 | 55.45 | R79.0 |
-| FedProto | 63.84 | 74.47 | 62.94 | 38.33 | 59.90 | 58.04 | R86.0 |
-| FPL | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
-| MOON | 58.70 | 70.53 | 47.42 | 33.33 | 52.49 | 50.11 | R54.0 |
-| **FDSE [CVPR'25]** | 57.59 | 62.37 | **74.14** | **60.00** | **63.52** ⭐ | 59.33 | R69 |
-| **F2DC [CVPR'26]** (release, 无 DaA) | 63.84 | 77.37 | 56.04 | 45.00 | 60.56 | 56.68 | R99 |
-| **F2DC + DaA (我们补)** ⭐ | 63.40 | **73.69** | **63.79** | 53.33 | **63.55** | 62.07 | R84.0 |
-| **PG-DFC + DaA (sc5 s=15)** | TBD | TBD | TBD | TBD | **63.80** | 59.29 | TBD |
-| **PG-DFC + DaA (V100 s=333)** ⭐ | 64.73 | 71.58 | 62.07 | 56.67 | **63.76** (有 diag) | 63.76 | R100 |
-| **PG-DFC + DaA 2-seed mean (sc5+V100)** | — | — | — | — | **63.78** ⭐ | — | — |
-| **Δ PG-DFC+DaA vs vanilla PG-DFC** | — | — | — | — | **+2.53pp** | — | — |
-| **Δ PG-DFC+DaA vs FDSE 63.52** | — | — | — | — | **+0.26pp** ⭐ | — | — |
-| | | | | | | | |
-| **=== EXP-135 V100 完整 3-seed 数据 (2026-04-29 补, 算法 B = best round AVG, 跟主表算法一致) ===** | | | | | | | |
-| F2DC vanilla (V100 s=2) | 68.75 | 77.37 | 51.72 | 53.33 | 62.79 | 56.31 | R95 |
-| F2DC vanilla (V100 s=15) | 63.39 | 74.74 | 58.62 | 46.67 | 60.85 | 53.41 | R65 |
-| **F2DC vanilla V100 2-seed mean** | 66.07 | 76.06 | 55.17 | 50.00 | **61.82** | 54.86 | R80.0 |
-| F2DC+DaA (V100 s=2) | 61.61 | 68.95 | 56.90 | 63.33 | 62.70 | 61.29 | R87 |
-| F2DC+DaA (V100 s=15) | 62.05 | 64.21 | 63.79 | 56.67 | 61.68 | 55.37 | R77 |
-| F2DC+DaA (V100 s=333) | 66.07 | 77.37 | 62.07 | 46.67 | 63.05 | 63.05 | R100 |
-| **F2DC+DaA V100 3-seed mean** | 63.24 | 70.18 | 60.92 | 55.56 | **62.47** | 59.90 | R88.0 |
-| PG-DFC vanilla (V100 s=2) | 66.96 | 77.37 | 50.00 | 50.00 | 61.08 | 59.53 | R88 |
-| PG-DFC vanilla (V100 s=15) | 60.27 | 69.47 | 53.45 | 43.33 | 56.63 | 51.86 | R86 |
-| **PG-DFC vanilla V100 2-seed mean** | 63.61 | 73.42 | 51.72 | 46.67 | **58.86** | 55.70 | R87.0 |
-| PG-DFC+DaA (V100 s=2) | 61.61 | 68.42 | 58.62 | **70.00** | **64.66** ⭐ | 60.62 | R93 |
-| PG-DFC+DaA (V100 s=15) | 61.61 | 69.47 | 60.34 | 50.00 | 60.35 | 57.58 | R85 |
-| PG-DFC+DaA (V100 s=333) | 64.73 | 71.58 | 62.07 | 56.67 | 63.76 | 63.76 | R100 |
-| **PG-DFC+DaA V100 3-seed mean** ⭐ | 62.65 | 69.82 | 60.34 | **58.89** | **62.93** | **60.65** | R92.7 |
-| **Δ PG-DFC+DaA vs F2DC+DaA (V100 公平比)** | -0.59 | -0.36 | -0.58 | **+3.33** | **+0.46pp** ⭐ | **+0.75pp** ⭐ | +4.7 round |
-| **Δ PG-DFC+DaA vs F2DC vanilla (V100 公平比)** | -3.42 | -6.24 | +5.17 | **+8.89** | **+1.11pp** ⭐ | **+5.79pp** ⭐ | +12.7 round |
-| **Δ PG-DFC vanilla vs F2DC vanilla (V100, PG-DFC 单独)** | -2.46 | -2.64 | -3.45 | -3.33 | **-2.96pp** ⚠️ | +0.84pp | +7.0 round |
-| | | | | | | | |
-| **数据质量 caveat**: V100 数据跟 sc 服务器有 ±1pp 一致性差异 (跨 GPU 硬件 + cuda 版本). 主表用 sc 数据为准, V100 数据是 3-seed 完整诊断版 (有 cold path dump), 可做诊断分析. | | | | | | | |
-| **PG-DFC v3.2 (Ours)** | **65.63** | 76.05 | 50.00 | 53.34 | 61.25 | 56.05 | R92.5 |
-| **PG-DFC v3.3 (A+B)** | 63.17 | **78.42** | 56.04 | 48.33 | 61.49 | **59.09** | R90 |
-| **Δ v3.2 vs FedAvg** | +3.80 | +1.58 | -8.62 | +16.67 | +3.35 | +2.04 | +30.5 round |
-| **Δ v3.2 vs F2DC** | +1.79 | -1.32 | -6.04 | +8.34 | +0.69 | -0.63 | -6.5 round |
-| **Δ v3.3 vs F2DC** | -0.67 | +1.05 | 0 | +3.33 | +0.93 | +2.41 | -9 round |
+| Method                                                                                                                            |  caltech  |  amazon   |  webcam   |   dslr    |   **AVG Best ↑**   | **AVG Last ↑** | Best Round (avg) |
+| --------------------------------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-------: | :-------: | :----------------: | :------------: | :--------------: |
+| FedAvg                                                                                                                            |   61.83   |   74.47   |   58.62   |   36.67   |       57.90        |     54.01      |      R62.0       |
+| FedBN                                                                                                                             |   61.61   |   72.89   |   51.73   |   38.34   |       56.14        |     52.61      |      R82.5       |
+| FedProx                                                                                                                           |   62.95   |   71.58   |   55.17   |   40.00   |       57.43        |     55.45      |      R79.0       |
+| FedProto                                                                                                                          |   63.84   |   74.47   |   62.94   |   38.33   |       59.90        |     58.04      |      R86.0       |
+| FPL                                                                                                                               |    TBD    |    TBD    |    TBD    |    TBD    |        TBD         |      TBD       |       TBD        |
+| MOON                                                                                                                              |   58.70   |   70.53   |   47.42   |   33.33   |       52.49        |     50.11      |      R54.0       |
+| **FDSE [CVPR'25]**                                                                                                                |   57.59   |   62.37   | **74.14** | **60.00** |    **63.52** ⭐     |     59.33      |       R69        |
+| **F2DC [CVPR'26]** (release, 无 DaA)                                                                                               |   63.84   |   77.37   |   56.04   |   45.00   |       60.56        |     56.68      |       R99        |
+| **F2DC + DaA (我们补)** ⭐                                                                                                            |   63.40   | **73.69** | **63.79** |   53.33   |     **63.55**      |     62.07      |      R84.0       |
+| **PG-DFC + DaA (sc5 s=15)**                                                                                                       |    TBD    |    TBD    |    TBD    |    TBD    |     **63.80**      |     59.29      |       TBD        |
+| **PG-DFC + DaA (V100 s=333)** ⭐                                                                                                   |   64.73   |   71.58   |   62.07   |   56.67   | **63.76** (有 diag) |     63.76      |       R100       |
+| **PG-DFC + DaA 2-seed mean (sc5+V100)**                                                                                           |     —     |     —     |     —     |     —     |    **63.78** ⭐     |       —        |        —         |
+| **Δ PG-DFC+DaA vs vanilla PG-DFC**                                                                                                |     —     |     —     |     —     |     —     |    **+2.53pp**     |       —        |        —         |
+| **Δ PG-DFC+DaA vs FDSE 63.52**                                                                                                    |     —     |     —     |     —     |     —     |   **+0.26pp** ⭐    |       —        |        —         |
+|                                                                                                                                   |           |           |           |           |                    |                |                  |
+| **=== Table 2-NEW: EXP-137 sc3 完整 R100 (2026-04-29, 4-bug fix 后, 替代 EXP-135 V100 PG-DFC 数据) ⭐ ===**                                  |           |           |           |           |                    |                |                  |
+| PG-DFC vanilla (sc3 EXP-137 s=2)                                                                                                  | **65.62** | **74.21** |   53.45   |   60.00   |     **63.32**      |     59.33      |       R93        |
+| PG-DFC vanilla (sc3 EXP-137 s=15)                                                                                                 |   64.29   | **77.37** |   51.72   |   40.00   |       58.35        |     54.15      |       R75        |
+| PG-DFC vanilla (sc3 EXP-137 s=333)                                                                                                | **68.30** | **77.89** |   58.62   |   50.00   |       63.70        |     55.60      |       R88        |
+| **PG-DFC vanilla sc3 EXP-137 3-seed mean** ⭐                                                                                       |   66.07   | **76.49** |   54.60   |   50.00   |     **61.79**      |     56.36      |      R85.3       |
+| PG-DFC + DaA (sc3 EXP-137 s=2)                                                                                                    | **67.41** | **70.00** |   62.07   | **73.33** |    **68.20** ⭐     |   **66.82**    |       R97        |
+| PG-DFC + DaA (sc3 EXP-137 s=15)                                                                                                   |   58.04   |   66.84   | **63.79** |   56.67   |       61.34        |     55.91      |       R56        |
+| PG-DFC + DaA (sc3 EXP-137 s=333)                                                                                                  |   64.29   | **71.58** | **65.52** |   56.67   |       64.52        |     58.33      |       R91        |
+| **PG-DFC + DaA sc3 EXP-137 3-seed mean** ⭐⭐                                                                                        |   63.25   | **69.47** |   63.79   | **62.22** |   **64.69** ⭐     |   **60.35**    |      R81.3       |
+| **Δ PG-DFC+DaA vs vanilla (EXP-137 sc3 公平比)**                                                                                     |   -2.82   |   -7.02   |   +9.19   | **+12.22** |   **+2.90pp** ⭐    | **+3.99pp** ⭐  |     -4 round     |
+| **Δ EXP-137 vs EXP-135 V100 (vanilla 3-seed mean)**                                                                                |   +2.46   |   +3.07   |   +2.88   |   +3.33   |    **+2.93pp** ✅   |   **+0.66pp**  |        -         |
+| **Δ EXP-137 vs EXP-135 V100 (+DaA 3-seed mean)**                                                                                   |   +0.60   |   -0.35   |   +3.45   |   +3.33   |    **+1.76pp** ✅   |   -0.30pp      |        -         |
+|                                                                                                                                   |           |           |           |           |                    |                |                  |
+| **=== Table 2-OLD: EXP-135 V100 完整 3-seed 数据 (2026-04-29 补, ⚠️ PG-DFC 部分已被 EXP-137 取代, F2DC 部分仍准) ===**                              |           |           |           |           |                    |                |                  |
+| F2DC vanilla (V100 s=2)                                                                                                           |   68.75   |   77.37   |   51.72   |   53.33   |       62.79        |     56.31      |       R95        |
+| F2DC vanilla (V100 s=15)                                                                                                          |   63.39   |   74.74   |   58.62   |   46.67   |       60.85        |     53.41      |       R65        |
+| **F2DC vanilla V100 2-seed mean**                                                                                                 |   66.07   |   76.06   |   55.17   |   50.00   |     **61.82**      |     54.86      |      R80.0       |
+| F2DC+DaA (V100 s=2)                                                                                                               |   61.61   |   68.95   |   56.90   |   63.33   |       62.70        |     61.29      |       R87        |
+| F2DC+DaA (V100 s=15)                                                                                                              |   62.05   |   64.21   |   63.79   |   56.67   |       61.68        |     55.37      |       R77        |
+| F2DC+DaA (V100 s=333)                                                                                                             |   66.07   |   77.37   |   62.07   |   46.67   |       63.05        |     63.05      |       R100       |
+| **F2DC+DaA V100 3-seed mean**                                                                                                     |   63.24   |   70.18   |   60.92   |   55.56   |     **62.47**      |     59.90      |      R88.0       |
+| ⚠️ PG-DFC vanilla (V100 s=2) **已废弃, 见 Table 2-NEW**                                                                            |   66.96   |   77.37   |   50.00   |   50.00   |       61.08        |     59.53      |       R88        |
+| ⚠️ PG-DFC vanilla (V100 s=15) **已废弃**                                                                                           |   60.27   |   69.47   |   53.45   |   43.33   |       56.63        |     51.86      |       R86        |
+| ⚠️ **PG-DFC vanilla V100 2-seed mean 已废弃**                                                                                       |   63.61   |   73.42   |   51.72   |   46.67   |     ~~58.86~~      |    ~~55.70~~   |      R87.0       |
+| ⚠️ PG-DFC+DaA (V100 s=2) **已废弃**                                                                                                |   61.61   |   68.42   |   58.62   | **70.00** |    ~~64.66~~      |     60.62      |       R93        |
+| ⚠️ PG-DFC+DaA (V100 s=15) **已废弃**                                                                                               |   61.61   |   69.47   |   60.34   |   50.00   |       60.35        |     57.58      |       R85        |
+| ⚠️ PG-DFC+DaA (V100 s=333) **已废弃**                                                                                              |   64.73   |   71.58   |   62.07   |   56.67   |       63.76        |     63.76      |       R100       |
+| ⚠️ **PG-DFC+DaA V100 3-seed mean 已废弃**                                                                                          |   62.65   |   69.82   |   60.34   | **58.89** |     ~~62.93~~      |   ~~60.65~~    |      R92.7       |
+| **Δ PG-DFC+DaA vs F2DC+DaA (V100 公平比)**                                                                                           |   -0.59   |   -0.36   |   -0.58   | **+3.33** |   **+0.46pp** ⭐    | **+0.75pp** ⭐  |    +4.7 round    |
+| **Δ PG-DFC+DaA vs F2DC vanilla (V100 公平比)**                                                                                       |   -3.42   |   -6.24   |   +5.17   | **+8.89** |   **+1.11pp** ⭐    | **+5.79pp** ⭐  |   +12.7 round    |
+| **Δ PG-DFC vanilla vs F2DC vanilla (V100, PG-DFC 单独)**                                                                            |   -2.46   |   -2.64   |   -3.45   |   -3.33   |   **-2.96pp** ⚠️   |    +0.84pp     |    +7.0 round    |
+|                                                                                                                                   |           |           |           |           |                    |                |                  |
+| **数据质量 caveat**: V100 数据跟 sc 服务器有 ±1pp 一致性差异 (跨 GPU 硬件 + cuda 版本). 主表用 sc 数据为准, V100 数据是 3-seed 完整诊断版 (有 cold path dump), 可做诊断分析. |           |           |           |           |                    |                |                  |
+| **PG-DFC v3.2 (Ours)**                                                                                                            | **65.63** |   76.05   |   50.00   |   53.34   |       61.25        |     56.05      |      R92.5       |
+| **PG-DFC v3.3 (A+B)**                                                                                                             |   63.17   | **78.42** |   56.04   |   48.33   |       61.49        |   **59.09**    |       R90        |
+| **Δ v3.2 vs FedAvg**                                                                                                              |   +3.80   |   +1.58   |   -8.62   |  +16.67   |       +3.35        |     +2.04      |   +30.5 round    |
+| **Δ v3.2 vs F2DC**                                                                                                                |   +1.79   |   -1.32   |   -6.04   |   +8.34   |       +0.69        |     -0.63      |    -6.5 round    |
+| **Δ v3.3 vs F2DC**                                                                                                                |   -0.67   |   +1.05   |     0     |   +3.33   |       +0.93        |     +2.41      |     -9 round     |
 
 ⚠️ **重大发现**: FDSE (CVPR'25) 在 Office 上反而最强 (63.52),比 F2DC (60.56) +2.96pp。我们之前低估了 FDSE。
 
