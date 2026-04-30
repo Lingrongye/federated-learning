@@ -28,7 +28,7 @@ for SEED in 15 333; do
   echo "================================================================"
   python -u main_run.py \
     --model f2dc_pg --dataset fl_digits --seed $SEED \
-    --communication_epoch 100 \
+    --communication_epoch 100 --parti_num 20 \
     --num_classes 10 \
      \
     --pg_proto_weight 0.3 --pg_warmup_rounds 30 --pg_ramp_rounds 20 \
