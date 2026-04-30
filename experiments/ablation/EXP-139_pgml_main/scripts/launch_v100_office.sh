@@ -24,6 +24,7 @@ echo "=== Launching Office s15 (R100, ml_aux_alpha=0.1) ==="
 setsid python -u main_run.py \
   --model f2dc_pg_ml --dataset fl_officecaltech --seed 15 \
   --communication_epoch 100 \
+  --num_classes 10 \
   --ml_aux_alpha 0.1 \
   --pg_proto_weight 0.3 --pg_warmup_rounds 30 --pg_ramp_rounds 20 \
   --use_daa False --device_id 0 \
@@ -35,6 +36,7 @@ echo "=== Launching Office s333 (R100, ml_aux_alpha=0.1) ==="
 setsid python -u main_run.py \
   --model f2dc_pg_ml --dataset fl_officecaltech --seed 333 \
   --communication_epoch 100 \
+  --num_classes 10 \
   --ml_aux_alpha 0.1 \
   --pg_proto_weight 0.3 --pg_warmup_rounds 30 --pg_ramp_rounds 20 \
   --use_daa False --device_id 0 \
