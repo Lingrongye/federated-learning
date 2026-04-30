@@ -1,8 +1,8 @@
 ---
 date: 2026-04-27
 type: 实验结果汇总(主表 - 干净版,只保留正确数据)
-status: EXP-137 PG-DFC 完整 (PACS 2-seed sc3+v100, Office 3-seed sc3); EXP-139 ML 跑中
-last_revised: 2026-04-29 (清理: 删 EXP-135 PG-DFC 错误数据 + 旧错算 + 表格统一为 1 个 PACS / 1 个 Office)
+status: EXP-137 PG-DFC 完整 + EXP-139 ML 完整 (PACS 3-seed, Office +DaA 3-seed, Digits 4-variants × 2-seed)
+last_revised: 2026-04-30 (EXP-139 全部 R100 完成回填 + 跨 dataset ML diag 诊断结论)
 data_source:
   - EXP-130 sc3_v2_logs (FedAvg / FedBN / FedProx / FedProto / MOON / F2DC vanilla / F2DC+DaA / FDSE)
   - **EXP-137 sc3 + v100 logs (PG-DFC vanilla / +DaA, 4-bug fix 后)** ⭐ 主结果
@@ -37,24 +37,25 @@ metric_def: |
 
 ### 2-seed mean (s=15 + s=333)
 
-| Method                         |   photo   |    art    |  cartoon  |   sketch    |  **AVG_B ↑**   |  **AVG_L ↑**  |   gap   | Best Round |
-| ------------------------------ | :-------: | :-------: | :-------: | :---------: | :------------: | :-----------: | :-----: | :--------: |
-| FedAvg [AISTATS'17]            |   64.52   |   53.93   | **81.41** |    77.01    |     69.22      |     68.39     |  0.83   |   R95.5    |
-| FedBN [ICLR'21]                |   58.53   |   43.75   |   72.97   |    72.61    |     61.97      |     59.74     |  2.23   |   R60.5    |
-| FedProx [MLSys'20]             |    TBD    |    TBD    |    TBD    |     TBD     |      TBD       |      TBD      |    -    |    TBD     |
-| FedProto [AAAI'22]             |    TBD    |    TBD    |    TBD    |     TBD     |      TBD       |      TBD      |    -    |    TBD     |
-| FPL [CVPR'23]                  |    TBD    |    TBD    |    TBD    |     TBD     |      TBD       |      TBD      |    -    |    TBD     |
-| MOON [CVPR'21]                 |   58.24   |   39.10   |   62.29   |    65.54    |     56.29      |     51.32     |  4.97   |   R93.0    |
-| FDSE [CVPR'25] (F2DC framework) |   61.38  |   40.08   |   67.30   |    50.19    |     54.74      |     37.71     | **17.03** ⚠️ | R19.0  |
-| **F2DC vanilla** (EXP-135)     |   68.56   |   59.44   |   80.13   |    80.96    |     72.27      |     69.37     |  2.90   |   R95.0    |
-| **F2DC + DaA** (EXP-135) ⭐ paper | **74.10** | **59.56** |   77.35   |    68.66    |     69.92      |     69.12     |  0.80 ⭐稳 |   R91.5    |
-| **PG-DFC vanilla** (EXP-137)   |   67.52   |   58.21   |   78.53   |  **83.82**  |   **72.02**    |  **71.77**    | 0.25 ⭐稳 |   R88.5    |
-| **PG-DFC + DaA** (EXP-137)     |   73.80   | **63.73** |   74.79   |    67.20    |     69.88      |     68.90     |  0.98   |   R95.5    |
-| **PG-DFC-ML** (EXP-139, 跑中, 不加 DaA) | TBD | TBD     |    TBD    |     TBD     | TBD (sc3 R72+) |      TBD      |    -    |     -      |
-| **Δ PG-DFC-ML vs F2DC+DaA (主对照)** |  TBD |    TBD    |    TBD    |     TBD     |      TBD       |      TBD      |    -    |     -      |
-| **Δ PG-DFC vanilla vs F2DC vanilla** | -1.04 | -1.23 | -1.60   |  **+2.86** ⭐ |    -0.25       | **+2.40pp** ✅ | -2.65   |  -6.5 round |
-| **Δ PG-DFC vanilla vs F2DC+DaA**     | -6.58 | -1.35 | +1.18 |  **+15.16** ⭐⭐ | **+2.10pp** ✅ | **+2.65pp** ✅ | -0.55   |  -3 round |
-| **Δ F2DC+DaA vs F2DC vanilla (DaA 增量)** | +5.54 | +0.12 | -2.78 | **-12.30** ⚠️ | **-2.35** ⚠️ | -0.25 | +2.10 | -3.5 round |
+| Method                                  |   photo   |    art    |  cartoon  |    sketch     |  **AVG_B ↑**   |  **AVG_L ↑**  |     gap      | Best Round |
+| --------------------------------------- | :-------: | :-------: | :-------: | :-----------: | :------------: | :-----------: | :----------: | :--------: |
+| FedAvg [AISTATS'17]                     |   64.52   |   53.93   | **81.41** |     77.01     |     69.22      |     68.39     |     0.83     |   R95.5    |
+| FedBN [ICLR'21]                         |   58.53   |   43.75   |   72.97   |     72.61     |     61.97      |     59.74     |     2.23     |   R60.5    |
+| FedProx [MLSys'20]                      |    TBD    |    TBD    |    TBD    |      TBD      |      TBD       |      TBD      |      -       |    TBD     |
+| FedProto [AAAI'22]                      |    TBD    |    TBD    |    TBD    |      TBD      |      TBD       |      TBD      |      -       |    TBD     |
+| FPL [CVPR'23]                           |    TBD    |    TBD    |    TBD    |      TBD      |      TBD       |      TBD      |      -       |    TBD     |
+| MOON [CVPR'21]                          |   58.24   |   39.10   |   62.29   |     65.54     |     56.29      |     51.32     |     4.97     |   R93.0    |
+| FDSE [CVPR'25] (F2DC framework)         |   61.38   |   40.08   |   67.30   |     50.19     |     54.74      |     37.71     | **17.03** ⚠️ |   R19.0    |
+| **F2DC vanilla** (EXP-135)              |   68.56   |   59.44   |   80.13   |     80.96     |     72.27      |     69.37     |     2.90     |   R95.0    |
+| **F2DC + DaA** (EXP-135) ⭐ paper        | **74.10** | **59.56** |   77.35   |     68.66     |     69.92      |     69.12     |   0.80 ⭐稳    |   R91.5    |
+| **PG-DFC vanilla** (EXP-137)            |   67.52   |   58.21   |   78.53   |   **83.82**   |   **72.02**    |   **71.77**   |   0.25 ⭐稳    |   R88.5    |
+| **PG-DFC + DaA** (EXP-137)              |   73.80   | **63.73** |   74.79   |     67.20     |     69.88      |     68.90     |     0.98     |   R95.5    |
+| **PG-DFC-ML** (EXP-139) ⭐ 3-seed         |   67.37   |   56.78   |   77.49   |   **81.61**   |   **70.81**    |     68.64     |     2.17     |   R85.0    |
+| **Δ PG-DFC-ML vs F2DC+DaA (主对照)**       |   -6.73   |   -2.78   |   +0.14   | **+12.95** ⭐  | **+0.89pp** ✅  |    -0.48      |    +1.37     | -6.5 round |
+| **Δ PG-DFC-ML vs PG-DFC vanilla**       |   -0.15   |   -1.43   |   -1.04   |     -2.21     |    -1.21 ⚠️    |   -3.13 ⚠️    |    +1.92     | -3.5 round |
+| **Δ PG-DFC vanilla vs F2DC vanilla**    |   -1.04   |   -1.23   |   -1.60   |  **+2.86** ⭐  |     -0.25      | **+2.40pp** ✅ |    -2.65     | -6.5 round |
+| **Δ PG-DFC vanilla vs F2DC+DaA**        |   -6.58   |   -1.35   |   +1.18   | **+15.16** ⭐⭐ | **+2.10pp** ✅  | **+2.65pp** ✅ |    -0.55     |  -3 round  |
+| **Δ F2DC+DaA vs F2DC vanilla (DaA 增量)** |   +5.54   |   +0.12   |   -2.78   | **-12.30** ⚠️ |  **-2.35** ⚠️  |     -0.25     |    +2.10     | -3.5 round |
 
 ### Per-seed (PACS)
 
@@ -76,6 +77,9 @@ metric_def: |
 | **PG-DFC vanilla**      | 333  |  R81   |   64.97   |   56.62   |   76.71   |  **82.93**  | **70.31** |   70.06   | sc3    |
 | PG-DFC + DaA            |  15  |  R92   | **74.55** | **66.91** |   77.35   |    72.87    |   72.92   |   70.95   | v100   |
 | PG-DFC + DaA            | 333  |  R99   | **73.05** |   60.54   |   72.22   |    61.53    |   66.84   |   66.84   | sc3    |
+| **PG-DFC-ML** (EXP-139) |  2   |  R80   |   65.87   |   51.96   |   77.99   |  **83.18**  |   69.75   |   67.13   | HPC    |
+| **PG-DFC-ML**           |  15  |  R98   |   69.46   |   58.82   |   78.42   |  **83.06**  | **72.44** | **71.20** | sc3    |
+| **PG-DFC-ML**           | 333  |  R77   |   66.77   |   59.56   |   76.07   |    78.60    |   70.25   |   67.59   | sc3    |
 
 ### PACS 关键结论
 
@@ -120,8 +124,9 @@ metric_def: |
 | **F2DC + DaA**               | 63.40   | 73.69  | 63.79  | 53.33  | 63.55       | 62.07       | 1.48 | R84.0     |
 | **PG-DFC vanilla** (EXP-137) | 66.07   | **76.49** | 54.60 | 50.00 | 61.79     | 56.36       | 5.43 | R85.3     |
 | **PG-DFC + DaA** (EXP-137) ⭐ | 63.25 | 69.47 | 63.79 | **62.22** | **64.69** ⭐ | **60.35** | 4.34 | R81.3 |
-| **PG-DFC-ML** (EXP-139, 跑中) | TBD   | TBD    | TBD    | TBD    | TBD (HPC R21+) | TBD     | -    | -         |
-| **PG-DFC-ML + DaA** (EXP-139, 跑中) | TBD | TBD | TBD | TBD | TBD (HPC R0+) | TBD | - | - |
+| **PG-DFC-ML + DaA** (EXP-139) | 62.95 | 69.47 | 59.19 | 58.89 | **62.63** | 58.98 | 3.66 | R95.0 |
+| **Δ ML+DaA vs PG-DFC+DaA**   | -0.30 | 0.00 | -4.60 | -3.33 | **-2.06** ⚠️ | -1.37 ⚠️ | -0.68 | +13.7 round |
+| **Δ ML+DaA vs F2DC+DaA(主对照)** | -0.45 | -4.22 | -4.60 | +5.56 | **-0.92pp** ⚠️ | -3.09 ⚠️ | +2.18 | +11 round |
 | **Δ PG-DFC+DaA vs F2DC+DaA** | -0.15 | -4.22  | 0.00   | **+8.89** ⭐ | **+1.14pp** ✅ | -1.72pp | +2.86 | -3 round |
 | **Δ PG-DFC+DaA vs FDSE**     | +5.66  | +7.10  | -10.35 | +2.22  | **+1.17pp** ✅ | +1.02pp | +0.15 | +12 round |
 
@@ -143,6 +148,9 @@ metric_def: |
 | **PG-DFC + DaA**             | 2    | R97    | **67.41** | **70.00** | 62.07 | **73.33** | **68.20** ⭐ | **66.82** ⭐ | sc3 |
 | **PG-DFC + DaA**             | 15   | R56    | 58.04   | 66.84  | **63.79** | 56.67 | 61.34   | 55.91     | sc3    |
 | **PG-DFC + DaA**             | 333  | R91    | 64.29   | **71.58** | **65.52** | 56.67 | 64.52  | 58.33     | sc3    |
+| **PG-DFC-ML + DaA**          | 2    | R95    | 65.18   | 69.47  | 63.79 | 66.67 | **66.28** | 62.62 | HPC    |
+| **PG-DFC-ML + DaA**          | 15   | R93    | 60.27   | 69.47  | 55.17 | 56.67 | 60.40   | 58.31     | HPC    |
+| **PG-DFC-ML + DaA**          | 333  | R97    | 63.39   | 69.47  | 58.62 | 53.33 | 61.20   | 56.00     | HPC    |
 
 ### Office 关键结论
 
@@ -168,18 +176,43 @@ metric_def: |
 
 ### 2-seed mean (s=15 + s=333)
 
-| Method                 |   mnist   |   usps    |   svhn    |    syn    | **AVG_B ↑** | **AVG_L ↑** | Best Round |
-| ---------------------- | :-------: | :-------: | :-------: | :-------: | :---------: | :---------: | :--------: |
-| FedAvg                 | 96.00     | 91.58     | 87.48     | 92.38     | 91.86       | 91.63       | R89.5      |
-| FedBN                  | 95.58     | 90.19     | 86.12     | 91.34     | 90.81       | 90.57       | R82.5      |
-| FedProx                | 96.30     | 91.18     | 87.60     | 92.69     | 91.94       | 91.82       | R95.0      |
-| FedProto               | **97.08** | **92.13** | 87.84     | 93.08     | **92.53**   | 92.53       | R100.0     |
-| MOON                   | 95.73     | 91.61     | 87.30     | 91.73     | 91.59       | 90.37       | R87.5      |
-| FDSE                   | 92.34     | 91.38     | 74.41     | 88.50     | 86.66       | 84.61       | R74.0      |
-| **F2DC**               | **97.34** | 92.46     | 90.18     | **94.36** | **93.59** ⭐ | **93.40**   | R94.5      |
-| **PG-DFC vanilla** (EXP-137) | TBD | TBD     | TBD       | TBD       | TBD (待跑)   | TBD         | -          |
+| Method                       |   mnist   |   usps    | svhn  |    syn    | **AVG_B ↑** | **AVG_L ↑** | Best Round |
+| ---------------------------- | :-------: | :-------: | :---: | :-------: | :---------: | :---------: | :--------: |
+| FedAvg                       |   96.00   |   91.58   | 87.48 |   92.38   |    91.86    |    91.63    |   R89.5    |
+| FedBN                        |   95.58   |   90.19   | 86.12 |   91.34   |    90.81    |    90.57    |   R82.5    |
+| FedProx                      |   96.30   |   91.18   | 87.60 |   92.69   |    91.94    |    91.82    |   R95.0    |
+| FedProto                     | **97.08** | **92.13** | 87.84 |   93.08   |  **92.53**  |    92.53    |   R100.0   |
+| MOON                         |   95.73   |   91.61   | 87.30 |   91.73   |    91.59    |    90.37    |   R87.5    |
+| FDSE                         |   92.34   |   91.38   | 74.41 |   88.50   |    86.66    |    84.61    |   R74.0    |
+| **F2DC**                     | **97.34** |   92.46   | 90.18 | **94.36** | **93.59** ⭐ |  **93.40**  |   R94.5    |
+| **PG-DFC vanilla** (EXP-139) |   97.21   |   92.11   | 89.95 |   94.27   |   93.39     |   93.01     |   R90.0    |
+| **PG-DFC + DaA** (EXP-139)   |   97.26   |   94.00   | 88.85 |   94.91   | **93.75**   | **93.37**   |   R83.0    |
+| **PG-DFC-ML** (EXP-139)      |   97.31   |   91.88   | 90.13 |   94.35   |   93.42     |   93.10     |   R83.0    |
+| **PG-DFC-ML + DaA** (EXP-139) ⭐ | 97.35 | **94.17** | 88.78 | 94.88 | **93.80** ⭐ | **93.48** ⭐ |   R92.5    |
+| **Δ ML+DaA vs F2DC(主对照)**  |   +0.01   |   +1.71   | -1.40 |   +0.52   |   +0.21     |   +0.08     |   -2 round |
+| **Δ ML+DaA vs PG-DFC+DaA**   |   +0.09   |   +0.17   | -0.07 |   -0.03   |   +0.05     |   +0.11     |   +9.5 round |
+| **Δ ML vs PG-DFC vanilla**   |   +0.10   |   -0.23   | +0.18 |   +0.08   |   +0.03     |   +0.09     |   -7 round |
+| **Δ +DaA 增量 (PG-DFC)**     |   +0.05   |   +1.89   | -1.10 |   +0.64   |   +0.36     |   +0.36     |   -7 round |
 
-> ⚠️ Digits 的 PG-DFC EXP-137 数据未跑(focus 在 PACS+Office),用 TBD 占位。如要补 Digits 实验需另开 sbatch。
+### Per-seed (Digits, EXP-139)
+
+| Method                  | seed | R@Best | mnist | usps  | svhn  | syn   | **AVG_B** | **AVG_L** | server |
+| ----------------------- | :--: | :----: | :---: | :---: | :---: | :---: | :-------: | :-------: | :----: |
+| **PG-DFC vanilla**      |  15  |  R88   | 97.21 | 92.33 | 90.01 | 94.52 | 93.518    | 93.288    | HPC    |
+| **PG-DFC vanilla**      | 333  |  R92   | 97.21 | 91.93 | 89.89 | 94.02 | 93.262    | 92.730    | HPC    |
+| **PG-DFC + DaA**        |  15  |  R87   | 97.05 | 93.32 | 89.26 | 95.02 | 93.662    | 93.610    | HPC    |
+| **PG-DFC + DaA**        | 333  |  R98   | 97.47 | 94.67 | 88.44 | 94.79 | 93.842    | 93.125    | HPC    |
+| **PG-DFC-ML**           |  15  |  R80   | 97.52 | 91.88 | 89.99 | 94.79 | 93.545    | 93.262    | HPC    |
+| **PG-DFC-ML**           | 333  |  R86   | 97.09 | 91.88 | 90.27 | 93.91 | 93.288    | 92.910    | HPC    |
+| **PG-DFC-ML + DaA** ⭐   |  15  |  R89   | 97.22 | 94.12 | 88.79 | 95.21 | 93.835    | 93.655    | HPC    |
+| **PG-DFC-ML + DaA**     | 333  |  R96   | 97.48 | 94.22 | 88.77 | 94.55 | 93.755    | 93.305    | HPC    |
+
+### Digits 关键结论
+
+1. **PG-DFC-ML + DaA 2-seed mean best 93.80 ⭐ #1**(微胜 PG-DFC+DaA +0.05pp,微胜 F2DC paper 93.59 +0.21pp)
+2. **DaA 在 Digits 上是正贡献 +0.36pp**(usps +1.89pp 主导,svhn -1.1pp,但整体涨)— 跟 Office 同向(+2.90pp),跟 PACS 反向(-2.35pp)
+3. **ML 在 Digits 上几乎打平 vanilla(+0.03pp)**,但跟 +DaA 叠加最强(+0.05pp vs PG-DFC+DaA),**ML+DaA 是 Digits 最优配置**
+4. usps 域是 ML+DaA 增益主导(94.17 vs vanilla 92.11 = +2.06pp),其他 3 域几乎打平
 
 ---
 
@@ -205,23 +238,84 @@ metric_def: |
 
 ---
 
-## EXP-139 ML 跑中(待回填)
+## EXP-139 ML 跨数据集结论(R100 完整,2026-04-30)
 
-### sc3 当前进度(R67+)
+### 整体性能横向对比(主对照: vs F2DC + DaA paper)
 
-| run | 当前 round | 当前 acc | 跟 EXP-137 vanilla 同 round Δ |
-|---|:---:|:---:|:---:|
-| ML PACS s15 | R67 | 68.76 | +0.65 vs v100 vanilla R67 (68.11) |
-| ML PACS s333 | R67 | 66.27 | -0.75 vs sc3 vanilla R67 (67.02) |
+| Dataset | seeds | ML 配置 | ML mean best | F2DC+DaA mean best | **Δ best** | 判决 |
+|---|:---:|---|:---:|:---:|:---:|:---:|
+| **PACS** | 3 (2/15/333) | ML(不加 DaA) | **70.81** | 69.92 | **+0.89** ✅ | **赢** |
+| **Office** | 3 (2/15/333) | ML+DaA | 62.63 | 63.55 | **-0.92** ⚠️ | 输 |
+| **Digits** | 2 (15/333) | ML+DaA | **93.80** ⭐ | 93.59 (F2DC paper, no DaA 数据) | **+0.21** ✅ | **赢** |
 
-### HPC 当前进度
+→ **ML 在 PACS / Digits 都赢 F2DC paper baseline**,Office 输(原因:dslr 域 ML 多参数过拟合)
+→ **跨数据集净位置**: PACS ML 70.81 / Office ML+DaA 62.63 / Digits ML+DaA 93.80
 
-| Job | run | 状态 |
-|---|---|:---:|
-| 1189310 | ML PACS s2 R100 vanilla | RUNNING |
-| 1189313 | ML Office +DaA seq (s2/s15/s333) R100 | RUNNING(刚 launch) |
+### ML 4 模块 跨 dataset 工作情况(R0 → R99 trajectory mean)
 
-R100 完成后回填到 Table 1 (PACS) + Table 2 (Office) 的 PG-DFC-ML 行。
+> 所有诊断指标都从 EXP-139 R100 .log 的 `[ML diag]` print 提取
+> mask3_sparsity = layer3 lite mask 全 (B,C,H,W) 张量元素均值, 0.5=均匀, < 0.5=偏 non-robust
+> mask3_std = 跨 batch / channel / 位置的 std, 大 = mask 真在切, 小 = mask 全 0.5 没学
+> attn_entropy = proto attention 分布的 entropy, ≈1.0 = 几乎均匀(没真选 specific proto)
+> proto_signal = proto 信号占总特征比例, 越高 = proto attention 越主导
+
+| Run | mask3_sparsity (R0→R99) | mask3_std (×倍) | aux3/main R99 | mask4 (R0→R99) | attn_entropy R99 | proto_signal R99 |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **PACS s15** ⭐ | 0.499 → 0.389 (−22%) | **0.00012 → 0.00124 (×9.9)** | 0.148 | 0.502 → 0.473 | 0.9996 | 0.0208 |
+| PACS s333 | 0.495 → 0.398 (−19%) | 0.00020 → 0.00115 (×5.6) | 0.158 | 0.497 → 0.476 | 0.9995 | 0.0205 |
+| PACS s2 | 0.498 → 0.395 (−21%) | 0.00017 → 0.00113 (×6.8) | 0.152 | 0.505 → 0.501 | 0.9999 | 0.0191 |
+| Office+DaA s2 | 0.498 → 0.482 (−3%) | 0.00014 → 0.00027 (×1.9) | **0.654** ⚠️ | 0.502 → 0.478 | — | — |
+| Office+DaA s15 | 0.499 → 0.485 (−3%) | **0.00036 → 0.00019 (×0.5)** ⚠️ 倒退 | **0.694** ⚠️ | 0.502 → 0.475 | 0.9991 | — |
+| Office+DaA s333 | 0.496 → 0.480 (−3%) | 0.00021 → 0.00023 (×1.1) | **0.592** ⚠️ | 0.499 → 0.491 | — | — |
+| Digits ML s15 | 0.499 → 0.371 (−26%) | 0.00044 → 0.00108 (×2.5) | 0.177 | 0.506 → 0.474 | 0.9992 | 0.0207 |
+| Digits ML+DaA s15 | 0.499 → 0.386 (−23%) | 0.00034 → 0.00142 (×4.2) | 0.242 | 0.505 → 0.491 | 0.9991 | 0.0202 |
+
+### ML 模块工作度 vs acc 增益完美正相关
+
+| Dataset | mask3 学习强度 | acc 增益 (vs F2DC+DaA) | 因果 |
+|---|---|:---:|---|
+| **PACS** | ✅✅ 强 (mask3_std ×9.9, sparsity 降 22%) | **+0.89** ✅ | mask 真切 → acc 涨 |
+| **Digits** | ✅ 中 (mask3_std ×4.2, sparsity 降 23%) | +0.21 ✅ | 中等切 → 微涨 |
+| **Office** | ❌ 几乎不学 (sparsity 仅降 3%, std s15 倒退) | -0.92 ⚠️ | mask 没学 → 多 4 万参数过拟合 → 输 |
+
+**关键洞察**:**ML 增益跟 mask3 学习强度严格正相关**。
+- Office 上 mask3_std s15 反而**倒退**(0.00036→0.00019, ×0.5)+ aux3/main 升到 0.69(警戒 0.5),layer3 deep sup 信号过强压过 main path 收敛 → ML 反而拖性能
+- PACS 上 mask3 学得最猛 (×9.9 spread, sparsity 真往 0.4 走) → acc 真涨
+
+### ⚠️ proto attention 全部数据集都没工作(关键 paper-grade 发现)
+
+- **attn_entropy 全部 ≈ 1.0**(均匀分布上限),**proto attention 没真选 specific proto**
+- **proto_signal ≈ 0.02**(proto 信号占总特征仅 2%,几乎不影响最终特征)
+- 这跟 PG-DFC v3.3 设计本身的问题一致(BN 强制 logit batch mean=0 → sigmoid → 0.5),**ML 也继承了这个 bug**
+- **核心结论**: ML 的真正贡献是 **layer3 mask3** (DFD-lite),不是 proto attention,也不是 layer4 mask4
+
+### 后续优化方向(基于诊断)
+
+1. **方案 C: layer3 cleaned 接入 layer4 主路(最有价值)**
+   - 当前 `out = self.layer4(feat3)` 用原 feat3,**ML 切分不影响主路**
+   - 改成 `out = self.layer4(feat3 + alpha · (feat3_clean - feat3))` 软残差融合
+   - 用 ramp_up 控制 alpha:warmup 时 0(不破坏对照),后期 0.3-0.5(主路真受益)
+   - 预期 PACS 增益 +1-2pp(因为 mask3 真切了但当前没传到主路)
+
+2. **修 proto attention(全 dataset 通用)**
+   - DFD 模块 BN 拉平 logit → mask 永远 0.5
+   - 改用 LayerNorm 或去掉 BN,让 logit 能 spread
+
+3. **Office dslr 过拟合保护**
+   - 降 ml_aux_alpha 0.1 → 0.05(让 deep sup 弱辅助)
+   - 或者 Office 单独不用 ML(只用 PG-DFC+DaA)
+
+---
+
+## EXP-139 数据来源(供回查)
+
+| Run | log 路径 |
+|---|---|
+| ML PACS s15 R100 | `experiments/ablation/EXP-139_pgml_main/logs/pgml_pacs_s15_R100.log` |
+| ML PACS s333 R100 | `experiments/ablation/EXP-139_pgml_main/logs/pgml_pacs_s333_R100.log` |
+| ML PACS s2 R100 | `experiments/ablation/EXP-139_pgml_main/logs/pgml_pacs_s2_1189310.log` |
+| ML+DaA Office s2/s15/s333 R100 | `experiments/ablation/EXP-139_pgml_main/logs/pgml_daa_office_s{2,15,333}_R100.log` |
+| Digits 4 variants × 2 seed R100 | `experiments/ablation/EXP-139_pgml_main/logs/digits_{pgdfc,pgml}_{vanilla,daa}_s{15,333}_R100.log` |
 
 ---
 

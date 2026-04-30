@@ -356,3 +356,60 @@ The 85 Communcation Accuracy: 93.125 Method: f2dc_pg epoch loss: 0.572
 [96.89, 94.02, 87.61, 93.98]
 
 The 86 Communcation Time: 42.772
+The 86 Communcation Accuracy: 93.515 Method: f2dc_pg epoch loss: 0.614
+[96.79, 93.87, 88.95, 94.45]
+
+The 87 Communcation Time: 42.725
+The 87 Communcation Accuracy: 93.465 Method: f2dc_pg epoch loss: 0.538
+[97.1, 93.77, 88.32, 94.67]
+
+The 88 Communcation Time: 42.578
+The 88 Communcation Accuracy: 92.935 Method: f2dc_pg epoch loss: 0.61
+[97.14, 93.52, 87.04, 94.04]
+
+The 89 Communcation Time: 42.49
+The 89 Communcation Accuracy: 93.172 Method: f2dc_pg epoch loss: 0.567
+[97.07, 94.02, 87.8, 93.8]
+
+The 90 Communcation Time: 42.512
+The 90 Communcation Accuracy: 93.355 Method: f2dc_pg epoch loss: 0.545
+[97.2, 94.17, 87.78, 94.27]
+
+The 91 Communcation Time: 42.673
+The 91 Communcation Accuracy: 93.682 Method: f2dc_pg epoch loss: 0.557
+[97.42, 94.27, 88.43, 94.61]
+
+The 92 Communcation Time: 42.744
+The 92 Communcation Accuracy: 93.465 Method: f2dc_pg epoch loss: 0.561
+[97.12, 94.47, 87.81, 94.46]
+
+The 93 Communcation Time: 42.402
+The 93 Communcation Accuracy: 92.788 Method: f2dc_pg epoch loss: 0.555
+[97.29, 93.52, 86.36, 93.98]
+
+The 94 Communcation Time: 42.607
+The 94 Communcation Accuracy: 93.36 Method: f2dc_pg epoch loss: 0.492
+[97.29, 93.92, 87.7, 94.53]
+
+The 95 Communcation Time: 42.575
+The 95 Communcation Accuracy: 93.49 Method: f2dc_pg epoch loss: 0.508
+[96.94, 93.82, 88.52, 94.68]
+
+The 96 Communcation Time: 42.472
+The 96 Communcation Accuracy: 93.398 Method: f2dc_pg epoch loss: 0.558
+[96.94, 94.32, 87.77, 94.56]
+
+The 97 Communcation Time: 42.489
+The 97 Communcation Accuracy: 93.723 Method: f2dc_pg epoch loss: 0.542
+[97.15, 94.52, 88.66, 94.56]
+
+The 98 Communcation Time: 42.621
+The 98 Communcation Accuracy: 93.842 Method: f2dc_pg epoch loss: 0.529
+[97.47, 94.67, 88.44, 94.79]
+
+The 99 Communcation Time: 42.586
+The 99 Communcation Accuracy: 93.458 Method: f2dc_pg epoch loss: 0.492
+[97.27, 94.22, 87.77, 94.57]
+
+ALL Loss:  [13.289, 9.174, 7.436, 6.433, 5.368, 4.46, 3.987, 3.517, 3.049, 2.694, 2.528, 2.303, 2.138, 2.089, 1.87, 1.841, 1.84, 1.675, 1.692, 1.565, 1.564, 1.505, 1.49, 1.416, 1.371, 1.377, 1.301, 1.258, 1.25, 1.276, 1.299, 1.169, 1.194, 1.105, 1.116, 1.144, 1.145, 1.041, 1.046, 1.014, 0.973, 1.041, 0.952, 0.942, 0.946, 0.979, 0.92, 0.875, 0.837, 0.865, 0.871, 0.825, 0.9, 0.871, 0.797, 0.753, 0.847, 0.741, 0.765, 0.768, 0.729, 0.803, 0.787, 0.762, 0.689, 0.701, 0.733, 0.745, 0.735, 0.822, 0.617, 0.696, 0.61, 0.668, 0.609, 0.65, 0.628, 0.608, 0.601, 0.638, 0.624, 0.623, 0.597, 0.699, 0.579, 0.572, 0.614, 0.538, 0.61, 0.567, 0.545, 0.557, 0.561, 0.555, 0.492, 0.508, 0.558, 0.542, 0.529, 0.492]
+Accuracy List f2dc_pg (fl_digits): [13.542, 13.542, 14.385, 21.685, 39.172, 39.58, 47.418, 55.352, 62.162, 70.568, 73.845, 78.378, 80.408, 83.415, 84.03, 84.352, 86.585, 87.055, 87.1, 86.617, 87.797, 88.765, 88.815, 88.942, 89.627, 89.992, 90.435, 90.61, 90.705, 90.435, 89.225, 90.635, 90.62, 90.76, 91.023, 91.405, 90.945, 91.59, 91.645, 91.865, 91.158, 91.398, 91.672, 91.348, 92.18, 91.602, 92.448, 92.242, 92.122, 92.212, 92.702, 92.542, 92.01, 92.642, 92.598, 92.635, 92.168, 92.333, 92.592, 93.122, 93.018, 93.125, 92.542, 92.762, 93.165, 93.045, 92.965, 92.765, 92.758, 92.72, 92.922, 92.755, 93.232, 93.03, 93.175, 93.205, 93.15, 93.37, 93.218, 93.71, 93.142, 93.132, 93.51, 92.885, 93.522, 93.125, 93.515, 93.465, 92.935, 93.172, 93.355, 93.682, 93.465, 92.788, 93.36, 93.49, 93.398, 93.723, 93.842, 93.458]
