@@ -32,6 +32,7 @@ python -u main_run.py \
   --dataset fl_officecaltech \
   --seed 2 \
   --communication_epoch 10 \
+  --num_classes 10 \
   --ml_aux_alpha 0.1 \
   --pg_proto_weight 0.3 \
   --pg_warmup_rounds 5 \
