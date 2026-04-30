@@ -1,0 +1,508 @@
+/share/home/202230040034/miniconda3/envs/f2dc/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_pg_ml_10_fl_officecaltech_100_10
+selected_domain_list for 10 clients as:
+['caltech' 'caltech' 'caltech' 'amazon' 'amazon' 'webcam' 'webcam' 'dslr'
+ 'dslr' 'dslr']
+[ML diag] {'mask3_sparsity_mean': 0.4982749527320266, 'mask3_sparsity_std': 0.00014076526969714154, 'aux3_loss_mean': 2.254951926441532, 'main_loss_mean': 15.097256769775873, 'aux3_over_main_ratio': 0.14936169933572693, 'mask_sparsity_mean': 0.5019974708557129}
+The 0 Communcation Time: 25.583
+The 0 Communcation Accuracy: 10.895 Method: f2dc_pg_ml epoch loss: 15.939
+[9.38, 10.53, 10.34, 13.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.49851565449326124, 'mask3_sparsity_std': 0.00023048280386673198, 'aux3_loss_mean': 2.248686428609573, 'main_loss_mean': 10.930072340004058, 'aux3_over_main_ratio': 0.20573390172170974, 'mask_sparsity_mean': 0.5016520619392395}
+The 1 Communcation Time: 24.745
+The 1 Communcation Accuracy: 10.628 Method: f2dc_pg_ml epoch loss: 11.531
+[11.61, 8.95, 8.62, 13.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.49837606564164166, 'mask3_sparsity_std': 0.00039359647769774276, 'aux3_loss_mean': 2.2533878884532235, 'main_loss_mean': 9.284905121354717, 'aux3_over_main_ratio': 0.24269369035021893, 'mask_sparsity_mean': 0.49955766399701435}
+The 2 Communcation Time: 23.555
+The 2 Communcation Accuracy: 10.402 Method: f2dc_pg_ml epoch loss: 9.558
+[10.71, 8.95, 8.62, 13.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4984616244832675, 'mask3_sparsity_std': 0.000345201854147808, 'aux3_loss_mean': 2.2112731692583663, 'main_loss_mean': 8.727690961992316, 'aux3_over_main_ratio': 0.25336290880235146, 'mask_sparsity_mean': 0.5002233882745107}
+The 3 Communcation Time: 23.432
+The 3 Communcation Accuracy: 13.105 Method: f2dc_pg_ml epoch loss: 9.032
+[12.05, 18.42, 8.62, 13.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.49820903523100746, 'mask3_sparsity_std': 0.00014032053570865808, 'aux3_loss_mean': 2.168332403921798, 'main_loss_mean': 7.767234211524014, 'aux3_over_main_ratio': 0.2791640299329082, 'mask_sparsity_mean': 0.49817024171352386}
+The 4 Communcation Time: 23.413
+The 4 Communcation Accuracy: 17.665 Method: f2dc_pg_ml epoch loss: 7.995
+[21.43, 22.11, 13.79, 13.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4981463961303234, 'mask3_sparsity_std': 9.808918137243236e-05, 'aux3_loss_mean': 2.114171446158952, 'main_loss_mean': 7.129571826938584, 'aux3_over_main_ratio': 0.29653554203223037}
+The 5 Communcation Time: 23.99
+The 5 Communcation Accuracy: 24.332 Method: f2dc_pg_ml epoch loss: 7.234
+[25.0, 28.42, 17.24, 26.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4983237443225724, 'mask3_sparsity_std': 0.00022705962626770173, 'aux3_loss_mean': 2.056493282483029, 'main_loss_mean': 6.65040602212838, 'aux3_over_main_ratio': 0.3092282299216483, 'mask_sparsity_mean': 0.4989643692970276}
+The 6 Communcation Time: 23.827
+The 6 Communcation Accuracy: 32.215 Method: f2dc_pg_ml epoch loss: 6.659
+[29.46, 35.26, 24.14, 40.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.49796574669224875, 'mask3_sparsity_std': 0.0002961016444916509, 'aux3_loss_mean': 2.009483139128553, 'main_loss_mean': 6.327077163208144, 'aux3_over_main_ratio': 0.3176005424453595, 'mask_sparsity_mean': 0.498700812458992}
+The 7 Communcation Time: 23.51
+The 7 Communcation Accuracy: 29.265 Method: f2dc_pg_ml epoch loss: 6.266
+[29.91, 34.74, 22.41, 30.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.49780558546384174, 'mask3_sparsity_std': 0.00026625040716661314, 'aux3_loss_mean': 1.9608320387809173, 'main_loss_mean': 6.030388189869907, 'aux3_over_main_ratio': 0.32515851004000096, 'mask_sparsity_mean': 0.498134324947993}
+The 8 Communcation Time: 23.569
+The 8 Communcation Accuracy: 29.455 Method: f2dc_pg_ml epoch loss: 5.905
+[28.12, 32.11, 27.59, 30.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.497744182869792, 'mask3_sparsity_std': 0.0001379110481496019, 'aux3_loss_mean': 1.920791350699696, 'main_loss_mean': 5.749685408710962, 'aux3_over_main_ratio': 0.33406894710963386, 'mask_sparsity_mean': 0.49825214594602585}
+The 9 Communcation Time: 23.924
+The 9 Communcation Accuracy: 31.795 Method: f2dc_pg_ml epoch loss: 5.57
+[33.04, 40.0, 24.14, 30.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4978741081431508, 'mask3_sparsity_std': 0.0001571272832263492, 'aux3_loss_mean': 1.8643099377160015, 'main_loss_mean': 5.270555077310608, 'aux3_over_main_ratio': 0.3537217447440656, 'mask_sparsity_mean': 0.4975183606147766}
+The 10 Communcation Time: 23.556
+The 10 Communcation Accuracy: 37.908 Method: f2dc_pg_ml epoch loss: 5.174
+[32.14, 33.16, 39.66, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4974623486399651, 'mask3_sparsity_std': 0.00023221438959030824, 'aux3_loss_mean': 1.8107451424179342, 'main_loss_mean': 4.712178226681095, 'aux3_over_main_ratio': 0.38426923925865325, 'mask_sparsity_mean': 0.496162012219429}
+The 11 Communcation Time: 23.631
+The 11 Communcation Accuracy: 38.122 Method: f2dc_pg_ml epoch loss: 4.457
+[37.95, 43.16, 41.38, 30.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4975661567279271, 'mask3_sparsity_std': 0.00032232492715214816, 'aux3_loss_mean': 1.7543561092125097, 'main_loss_mean': 4.29535643552603, 'aux3_over_main_ratio': 0.40843085679749014, 'mask_sparsity_mean': 0.4967986196279526}
+The 12 Communcation Time: 24.599
+The 12 Communcation Accuracy: 40.048 Method: f2dc_pg_ml epoch loss: 4.016
+[40.62, 44.74, 44.83, 30.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.49746209258834523, 'mask3_sparsity_std': 0.00031334122874647035, 'aux3_loss_mean': 1.7072947565039156, 'main_loss_mean': 4.010987194453775, 'aux3_over_main_ratio': 0.42565450193027077, 'mask_sparsity_mean': 0.4955264925956726}
+The 13 Communcation Time: 25.28
+The 13 Communcation Accuracy: 39.008 Method: f2dc_pg_ml epoch loss: 3.622
+[44.2, 48.95, 36.21, 26.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4973102554678917, 'mask3_sparsity_std': 0.0001819521382836875, 'aux3_loss_mean': 1.66040086160771, 'main_loss_mean': 3.6932538658851692, 'aux3_over_main_ratio': 0.4495766935885298, 'mask_sparsity_mean': 0.495541512966156}
+The 14 Communcation Time: 24.472
+The 14 Communcation Accuracy: 38.88 Method: f2dc_pg_ml epoch loss: 3.383
+[44.64, 47.89, 39.66, 23.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4976177867501974, 'mask3_sparsity_std': 0.0002759446808625989, 'aux3_loss_mean': 1.6201332341187555, 'main_loss_mean': 3.4877837525997237, 'aux3_over_main_ratio': 0.4645165380196352, 'mask_sparsity_mean': 0.49405770003795624}
+The 15 Communcation Time: 24.297
+The 15 Communcation Accuracy: 41.42 Method: f2dc_pg_ml epoch loss: 3.122
+[46.43, 53.16, 32.76, 33.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.49727055138696435, 'mask3_sparsity_std': 0.0002313002739183938, 'aux3_loss_mean': 1.564397875122402, 'main_loss_mean': 3.1858230924300055, 'aux3_over_main_ratio': 0.49104982597421887, 'mask_sparsity_mean': 0.4939238205552101}
+The 16 Communcation Time: 24.344
+The 16 Communcation Accuracy: 42.162 Method: f2dc_pg_ml epoch loss: 2.887
+[49.55, 51.05, 41.38, 26.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49745861981064077, 'mask3_sparsity_std': 0.00014555155460205965, 'aux3_loss_mean': 1.52809531444853, 'main_loss_mean': 3.0312362262500603, 'aux3_over_main_ratio': 0.5041162088310536, 'mask_sparsity_mean': 0.4935617446899414}
+The 17 Communcation Time: 25.107
+The 17 Communcation Accuracy: 48.095 Method: f2dc_pg_ml epoch loss: 2.735
+[49.11, 56.84, 43.1, 43.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4972355328500271, 'mask3_sparsity_std': 0.0002464554278558442, 'aux3_loss_mean': 1.4914373847335696, 'main_loss_mean': 2.9365802881392566, 'aux3_over_main_ratio': 0.50788237963642, 'mask_sparsity_mean': 0.4929240942001343}
+The 18 Communcation Time: 24.017
+The 18 Communcation Accuracy: 46.332 Method: f2dc_pg_ml epoch loss: 2.676
+[50.89, 57.89, 46.55, 30.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.49698970615863797, 'mask3_sparsity_std': 0.00014142102588788512, 'aux3_loss_mean': 1.4563111127247452, 'main_loss_mean': 2.7816355650839597, 'aux3_over_main_ratio': 0.5235448996284272, 'mask_sparsity_mean': 0.4925439655780792}
+The 19 Communcation Time: 24.694
+The 19 Communcation Accuracy: 48.575 Method: f2dc_pg_ml epoch loss: 2.485
+[51.34, 61.58, 41.38, 40.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4967521571864684, 'mask3_sparsity_std': 0.0002206453204622191, 'aux3_loss_mean': 1.4268124163150788, 'main_loss_mean': 2.7121307191877024, 'aux3_over_main_ratio': 0.526085415507707, 'mask_sparsity_mean': 0.4927445501089096}
+The 20 Communcation Time: 24.788
+The 20 Communcation Accuracy: 45.422 Method: f2dc_pg_ml epoch loss: 2.435
+[50.0, 55.26, 43.1, 33.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.49677766291868114, 'mask3_sparsity_std': 0.0001728173810305734, 'aux3_loss_mean': 1.3939467335878153, 'main_loss_mean': 2.6004728322973834, 'aux3_over_main_ratio': 0.5360358763511232, 'mask_sparsity_mean': 0.49295811355113983}
+The 21 Communcation Time: 24.559
+The 21 Communcation Accuracy: 47.575 Method: f2dc_pg_ml epoch loss: 2.34
+[50.0, 50.53, 43.1, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4968897134065628, 'mask3_sparsity_std': 0.00022920574155815268, 'aux3_loss_mean': 1.3587043806851618, 'main_loss_mean': 2.449174997805371, 'aux3_over_main_ratio': 0.5547600240499981, 'mask_sparsity_mean': 0.491773784160614}
+The 22 Communcation Time: 24.54
+The 22 Communcation Accuracy: 48.7 Method: f2dc_pg_ml epoch loss: 2.213
+[52.68, 55.79, 39.66, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4965211440015722, 'mask3_sparsity_std': 0.0001432719638642107, 'aux3_loss_mean': 1.3370139355244843, 'main_loss_mean': 2.322656727137537, 'aux3_over_main_ratio': 0.5756399212604405, 'mask_sparsity_mean': 0.4921037256717682}
+The 23 Communcation Time: 24.233
+The 23 Communcation Accuracy: 51.402 Method: f2dc_pg_ml epoch loss: 2.087
+[54.46, 56.32, 44.83, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4965463646998008, 'mask3_sparsity_std': 0.00023424631127802155, 'aux3_loss_mean': 1.3052726393631795, 'main_loss_mean': 2.2590168626058715, 'aux3_over_main_ratio': 0.5778056202101529}
+The 24 Communcation Time: 23.909
+The 24 Communcation Accuracy: 49.778 Method: f2dc_pg_ml epoch loss: 2.048
+[52.68, 60.0, 43.1, 43.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4962073291341464, 'mask3_sparsity_std': 0.00021422801859360486, 'aux3_loss_mean': 1.2783948323472216, 'main_loss_mean': 2.1571754432655132, 'aux3_over_main_ratio': 0.5926244137157425, 'mask_sparsity_mean': 0.4905899167060852}
+The 25 Communcation Time: 23.853
+The 25 Communcation Accuracy: 51.415 Method: f2dc_pg_ml epoch loss: 1.973
+[54.02, 58.42, 46.55, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4961454696456592, 'mask3_sparsity_std': 0.00018912457364909485, 'aux3_loss_mean': 1.256892138519306, 'main_loss_mean': 2.1401659624555367, 'aux3_over_main_ratio': 0.5872872293872017, 'mask_sparsity_mean': 0.4900323450565338}
+The 26 Communcation Time: 25.101
+The 26 Communcation Accuracy: 49.385 Method: f2dc_pg_ml epoch loss: 1.929
+[53.12, 59.47, 48.28, 36.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4958525583857582, 'mask3_sparsity_std': 0.00028784951942512034, 'aux3_loss_mean': 1.2276592619216489, 'main_loss_mean': 2.08403688992554, 'aux3_over_main_ratio': 0.5890775100269513, 'mask_sparsity_mean': 0.48993146419525146}
+The 27 Communcation Time: 23.911
+The 27 Communcation Accuracy: 53.045 Method: f2dc_pg_ml epoch loss: 1.891
+[54.46, 61.05, 50.0, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49574450993289554, 'mask3_sparsity_std': 0.00017882934592117927, 'aux3_loss_mean': 1.2028263091275344, 'main_loss_mean': 2.000776431700693, 'aux3_over_main_ratio': 0.601179767049291, 'mask_sparsity_mean': 0.4897701293230057}
+The 28 Communcation Time: 25.871
+The 28 Communcation Accuracy: 51.498 Method: f2dc_pg_ml epoch loss: 1.816
+[54.91, 59.47, 48.28, 43.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.49584145719806355, 'mask3_sparsity_std': 0.00024372127353290606, 'aux3_loss_mean': 1.1878034118135927, 'main_loss_mean': 1.9352385159832215, 'aux3_over_main_ratio': 0.6137762358507601, 'mask_sparsity_mean': 0.4886224567890167}
+The 29 Communcation Time: 24.362
+The 29 Communcation Accuracy: 50.44 Method: f2dc_pg_ml epoch loss: 1.721
+[53.57, 58.42, 43.1, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49541661072345006, 'mask3_sparsity_std': 0.00015987882455793532, 'aux3_loss_mean': 1.1615452082614182, 'main_loss_mean': 1.8379779866325996, 'aux3_over_main_ratio': 0.6319690533342627, 'mask_sparsity_mean': 0.489959180355072}
+The 30 Communcation Time: 24.414
+The 30 Communcation Accuracy: 54.832 Method: f2dc_pg_ml epoch loss: 1.728
+[53.57, 57.37, 51.72, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49546706420246256, 'mask3_sparsity_std': 0.00021003575473924844, 'aux3_loss_mean': 1.1508837361993054, 'main_loss_mean': 1.9582818621585492, 'aux3_over_main_ratio': 0.5877007587307806, 'mask_sparsity_mean': 0.48884962995847064}
+The 31 Communcation Time: 24.531
+The 31 Communcation Accuracy: 49.138 Method: f2dc_pg_ml epoch loss: 1.716
+[50.0, 60.0, 46.55, 40.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.49538352340459824, 'mask3_sparsity_std': 0.00011583179151300558, 'aux3_loss_mean': 1.124408577311887, 'main_loss_mean': 1.7836908121118433, 'aux3_over_main_ratio': 0.6303831189109601, 'mask_sparsity_mean': 0.4888351261615753}
+The 32 Communcation Time: 25.029
+The 32 Communcation Accuracy: 52.992 Method: f2dc_pg_ml epoch loss: 1.644
+[55.8, 57.89, 48.28, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.49511173802117503, 'mask3_sparsity_std': 0.00022719416189359047, 'aux3_loss_mean': 1.1013760171506717, 'main_loss_mean': 1.7514566864479673, 'aux3_over_main_ratio': 0.6288342872950582, 'mask_sparsity_mean': 0.4884130408366521, 'attn_entropy_mean': 0.9993923010161174}
+The 33 Communcation Time: 25.904
+The 33 Communcation Accuracy: 54.26 Method: f2dc_pg_ml epoch loss: 1.594
+[58.93, 63.16, 48.28, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49510427185644706, 'mask3_sparsity_std': 0.00015482244158374425, 'aux3_loss_mean': 1.0763397544445727, 'main_loss_mean': 1.6274090542505852, 'aux3_over_main_ratio': 0.661382429717538, 'mask_sparsity_mean': 0.4880580008029938}
+The 34 Communcation Time: 24.579
+The 34 Communcation Accuracy: 50.625 Method: f2dc_pg_ml epoch loss: 1.504
+[55.8, 58.42, 48.28, 40.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.49479283630847937, 'mask3_sparsity_std': 0.00018338791001387, 'aux3_loss_mean': 1.0780843811485137, 'main_loss_mean': 1.7584003048805381, 'aux3_over_main_ratio': 0.6131052059967406, 'mask_sparsity_mean': 0.4891602098941803}
+The 35 Communcation Time: 24.961
+The 35 Communcation Accuracy: 54.348 Method: f2dc_pg_ml epoch loss: 1.565
+[59.38, 61.58, 43.1, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4947852107385794, 'mask3_sparsity_std': 0.00018367632016041318, 'aux3_loss_mean': 1.056594549131252, 'main_loss_mean': 1.6368953650765738, 'aux3_over_main_ratio': 0.6454869209565052, 'mask_sparsity_mean': 0.487004816532135}
+The 36 Communcation Time: 26.132
+The 36 Communcation Accuracy: 55.038 Method: f2dc_pg_ml epoch loss: 1.506
+[56.7, 60.0, 53.45, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4945484951690391, 'mask3_sparsity_std': 0.00019160650955191014, 'aux3_loss_mean': 1.035072767775756, 'main_loss_mean': 1.635820333933524, 'aux3_over_main_ratio': 0.6327545551942131, 'mask_sparsity_mean': 0.4864807277917862}
+The 37 Communcation Time: 24.484
+The 37 Communcation Accuracy: 57.62 Method: f2dc_pg_ml epoch loss: 1.475
+[60.71, 66.32, 53.45, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4944441967333356, 'mask3_sparsity_std': 0.00021464459628709332, 'aux3_loss_mean': 1.0198921147071325, 'main_loss_mean': 1.5781500126356665, 'aux3_over_main_ratio': 0.6462580277801423, 'mask_sparsity_mean': 0.4865614374478658, 'attn_entropy_mean': 0.9993717475575554, 'proto_signal_ratio_mean': 0.006608519004589594}
+The 38 Communcation Time: 25.394
+The 38 Communcation Accuracy: 54.315 Method: f2dc_pg_ml epoch loss: 1.404
+[56.7, 58.95, 48.28, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4943587264666955, 'mask3_sparsity_std': 0.0003394208410029655, 'aux3_loss_mean': 0.999836037411049, 'main_loss_mean': 1.5355049497112927, 'aux3_over_main_ratio': 0.6511447830884812, 'mask_sparsity_mean': 0.4862479418516159}
+The 39 Communcation Time: 24.623
+The 39 Communcation Accuracy: 54.67 Method: f2dc_pg_ml epoch loss: 1.375
+[59.38, 62.63, 50.0, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49396272665924496, 'mask3_sparsity_std': 0.00021519579157326893, 'aux3_loss_mean': 0.9749047541924616, 'main_loss_mean': 1.469766386666081, 'aux3_over_main_ratio': 0.6633059260552758, 'mask_sparsity_mean': 0.4859025478363037, 'attn_entropy_mean': 0.9993730418559534, 'proto_signal_ratio_mean': 0.007988576239461295}
+The 40 Communcation Time: 23.951
+The 40 Communcation Accuracy: 54.285 Method: f2dc_pg_ml epoch loss: 1.317
+[58.04, 61.05, 41.38, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49407305621675085, 'mask3_sparsity_std': 0.00013943284024936587, 'aux3_loss_mean': 0.9707207407934864, 'main_loss_mean': 1.5100176849472429, 'aux3_over_main_ratio': 0.6428538887128342, 'mask_sparsity_mean': 0.4860980212688446}
+The 41 Communcation Time: 25.029
+The 41 Communcation Accuracy: 54.488 Method: f2dc_pg_ml epoch loss: 1.364
+[58.04, 64.74, 55.17, 40.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4940001526847482, 'mask3_sparsity_std': 0.0002816952043487363, 'aux3_loss_mean': 0.944752886037346, 'main_loss_mean': 1.4541426114355152, 'aux3_over_main_ratio': 0.6496975458993636, 'mask_sparsity_mean': 0.4858728051185608, 'proto_signal_ratio_mean': 0.00961570806204614}
+The 42 Communcation Time: 24.629
+The 42 Communcation Accuracy: 54.897 Method: f2dc_pg_ml epoch loss: 1.314
+[58.04, 63.16, 51.72, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49372404856341223, 'mask3_sparsity_std': 0.00032945739807658115, 'aux3_loss_mean': 0.9320948364352991, 'main_loss_mean': 1.4380968142079977, 'aux3_over_main_ratio': 0.6481447057155406, 'mask_sparsity_mean': 0.48528815309206647}
+The 43 Communcation Time: 24.984
+The 43 Communcation Accuracy: 57.24 Method: f2dc_pg_ml epoch loss: 1.271
+[61.16, 62.63, 55.17, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.49351127550557805, 'mask3_sparsity_std': 0.0001888792525051929, 'aux3_loss_mean': 0.9132788653548056, 'main_loss_mean': 1.3616252558151252, 'aux3_over_main_ratio': 0.6707270311375645, 'mask_sparsity_mean': 0.48589855432510376, 'attn_entropy_mean': 0.9993677611184892}
+The 44 Communcation Time: 24.985
+The 44 Communcation Accuracy: 55.758 Method: f2dc_pg_ml epoch loss: 1.216
+[59.38, 65.26, 51.72, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49329964975516, 'mask3_sparsity_std': 0.00012236517835720475, 'aux3_loss_mean': 0.9168963178403293, 'main_loss_mean': 1.4337530109221521, 'aux3_over_main_ratio': 0.6395078586447785, 'mask_sparsity_mean': 0.4847087562084198}
+The 45 Communcation Time: 24.928
+The 45 Communcation Accuracy: 53.978 Method: f2dc_pg_ml epoch loss: 1.244
+[58.48, 64.21, 46.55, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49304777433474856, 'mask3_sparsity_std': 0.00017536641584554196, 'aux3_loss_mean': 0.906297743102543, 'main_loss_mean': 1.3775720447743598, 'aux3_over_main_ratio': 0.6578949874458221}
+The 46 Communcation Time: 24.989
+The 46 Communcation Accuracy: 57.76 Method: f2dc_pg_ml epoch loss: 1.211
+[59.38, 63.16, 55.17, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.49284393205529164, 'mask3_sparsity_std': 0.0001794805223020051, 'aux3_loss_mean': 0.8818049108145737, 'main_loss_mean': 1.3384838419263307, 'aux3_over_main_ratio': 0.6588087828878756}
+The 47 Communcation Time: 25.447
+The 47 Communcation Accuracy: 58.348 Method: f2dc_pg_ml epoch loss: 1.199
+[61.16, 62.11, 53.45, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4928360758792786, 'mask3_sparsity_std': 0.00016462179185621512, 'aux3_loss_mean': 0.859232445773871, 'main_loss_mean': 1.2985033965246244, 'aux3_over_main_ratio': 0.6617098176820801, 'mask_sparsity_mean': 0.48429518938064575}
+The 48 Communcation Time: 23.921
+The 48 Communcation Accuracy: 56.165 Method: f2dc_pg_ml epoch loss: 1.148
+[60.71, 62.11, 55.17, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4925918599797619, 'mask3_sparsity_std': 0.00030244937228996046, 'aux3_loss_mean': 0.853340204189653, 'main_loss_mean': 1.2544917998342175, 'aux3_over_main_ratio': 0.6802278056360535, 'mask_sparsity_mean': 0.4837507406870524, 'attn_entropy_mean': 0.9993345235356256}
+The 49 Communcation Time: 25.505
+The 49 Communcation Accuracy: 55.052 Method: f2dc_pg_ml epoch loss: 1.133
+[60.27, 63.16, 53.45, 43.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4926262405656633, 'mask3_sparsity_std': 0.00016919672791841794, 'aux3_loss_mean': 0.8475111955121571, 'main_loss_mean': 1.3187235827178587, 'aux3_over_main_ratio': 0.6426753920373944, 'mask_sparsity_mean': 0.48383741080760956, 'proto_signal_ratio_mean': 0.015729906793214652}
+The 50 Communcation Time: 23.981
+The 50 Communcation Accuracy: 54.805 Method: f2dc_pg_ml epoch loss: 1.148
+[58.48, 65.79, 48.28, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49214211137344444, 'mask3_sparsity_std': 0.0002985145324061648, 'aux3_loss_mean': 0.8356428858143068, 'main_loss_mean': 1.322986064327093, 'aux3_over_main_ratio': 0.6316339289933017, 'mask_sparsity_mean': 0.4838488698005676, 'proto_signal_ratio_mean': 0.015859275496930003}
+The 51 Communcation Time: 23.794
+The 51 Communcation Accuracy: 55.582 Method: f2dc_pg_ml epoch loss: 1.163
+[56.7, 63.68, 58.62, 43.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.492107800518473, 'mask3_sparsity_std': 6.898871219366481e-05, 'aux3_loss_mean': 0.827737269936343, 'main_loss_mean': 1.3051435237551632, 'aux3_over_main_ratio': 0.6342116823709738}
+The 52 Communcation Time: 24.064
+The 52 Communcation Accuracy: 56.865 Method: f2dc_pg_ml epoch loss: 1.156
+[60.71, 61.58, 55.17, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4920534739891689, 'mask3_sparsity_std': 0.00019593562359228802, 'aux3_loss_mean': 0.8193594164910759, 'main_loss_mean': 1.330198272037883, 'aux3_over_main_ratio': 0.6159678851753471, 'mask_sparsity_mean': 0.4831835925579071, 'attn_entropy_mean': 0.9993982030168128}
+The 53 Communcation Time: 24.501
+The 53 Communcation Accuracy: 58.0 Method: f2dc_pg_ml epoch loss: 1.147
+[61.16, 65.79, 51.72, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4919818482465214, 'mask3_sparsity_std': 0.0003064300099600767, 'aux3_loss_mean': 0.8046311248255813, 'main_loss_mean': 1.2665220774238994, 'aux3_over_main_ratio': 0.6353076185313703, 'mask_sparsity_mean': 0.48306435346603394, 'proto_signal_ratio_mean': 0.015399153715085271}
+The 54 Communcation Time: 23.795
+The 54 Communcation Accuracy: 57.885 Method: f2dc_pg_ml epoch loss: 1.108
+[62.95, 65.26, 50.0, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4915317821626862, 'mask3_sparsity_std': 6.706385102356625e-05, 'aux3_loss_mean': 0.786990112837831, 'main_loss_mean': 1.1699027140856733, 'aux3_over_main_ratio': 0.6726970570821318, 'mask_sparsity_mean': 0.4830111463864644, 'attn_entropy_mean': 0.999369314276567, 'proto_signal_ratio_mean': 0.015250395315555934}
+The 55 Communcation Time: 23.828
+The 55 Communcation Accuracy: 55.002 Method: f2dc_pg_ml epoch loss: 1.039
+[62.05, 64.74, 46.55, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49159328722291523, 'mask3_sparsity_std': 0.00018097992109207905, 'aux3_loss_mean': 0.7820555816231509, 'main_loss_mean': 1.2147423970016096, 'aux3_over_main_ratio': 0.6438036439277378, 'mask_sparsity_mean': 0.48347005248069763}
+The 56 Communcation Time: 24.027
+The 56 Communcation Accuracy: 56.535 Method: f2dc_pg_ml epoch loss: 1.068
+[64.73, 64.74, 50.0, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4912448348822417, 'mask3_sparsity_std': 0.00013285434109147856, 'aux3_loss_mean': 0.7585586038090495, 'main_loss_mean': 1.1667636342140526, 'aux3_over_main_ratio': 0.6501390526454183, 'mask_sparsity_mean': 0.48251375555992126}
+The 57 Communcation Time: 23.643
+The 57 Communcation Accuracy: 58.908 Method: f2dc_pg_ml epoch loss: 1.052
+[62.5, 64.74, 51.72, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4909058319404721, 'mask3_sparsity_std': 0.000227583971193435, 'aux3_loss_mean': 0.7651807188693243, 'main_loss_mean': 1.1873576667351213, 'aux3_over_main_ratio': 0.6444399529362896, 'mask_sparsity_mean': 0.48282894492149353}
+The 58 Communcation Time: 23.647
+The 58 Communcation Accuracy: 57.098 Method: f2dc_pg_ml epoch loss: 1.044
+[62.95, 62.11, 50.0, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.49100971424660717, 'mask3_sparsity_std': 0.0002241765364393215, 'aux3_loss_mean': 0.7352934802414871, 'main_loss_mean': 1.091597934485424, 'aux3_over_main_ratio': 0.6735936895924067, 'mask_sparsity_mean': 0.48174814383188885, 'attn_entropy_mean': 0.9993329703775479}
+The 59 Communcation Time: 24.258
+The 59 Communcation Accuracy: 57.022 Method: f2dc_pg_ml epoch loss: 0.962
+[62.95, 65.26, 46.55, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4906211874137322, 'mask3_sparsity_std': 0.00012400473602385562, 'aux3_loss_mean': 0.7384633834153531, 'main_loss_mean': 1.1495334278291511, 'aux3_over_main_ratio': 0.6424027049042952, 'mask_sparsity_mean': 0.4825744181871414, 'attn_entropy_mean': 0.9993110190767158, 'proto_signal_ratio_mean': 0.015059664093301306}
+The 60 Communcation Time: 24.717
+The 60 Communcation Accuracy: 55.66 Method: f2dc_pg_ml epoch loss: 0.99
+[62.95, 64.74, 48.28, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.49053990273248577, 'mask3_sparsity_std': 0.00028470823392729686, 'aux3_loss_mean': 0.7152295639804701, 'main_loss_mean': 1.124102416325346, 'aux3_over_main_ratio': 0.6362672596314953, 'mask_sparsity_mean': 0.48188890516757965, 'attn_entropy_mean': 0.9992866862668313}
+The 61 Communcation Time: 24.404
+The 61 Communcation Accuracy: 60.362 Method: f2dc_pg_ml epoch loss: 0.999
+[64.29, 62.11, 51.72, 63.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.49006446273553944, 'mask3_sparsity_std': 0.0002447455032540343, 'aux3_loss_mean': 0.7131495942858603, 'main_loss_mean': 1.107673068898233, 'aux3_over_main_ratio': 0.6438267881652187, 'mask_sparsity_mean': 0.48239439725875854}
+The 62 Communcation Time: 26.759
+The 62 Communcation Accuracy: 59.09 Method: f2dc_pg_ml epoch loss: 0.981
+[64.29, 63.68, 51.72, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.48986373599717226, 'mask3_sparsity_std': 0.00030520204256760935, 'aux3_loss_mean': 0.6900481988495517, 'main_loss_mean': 1.0830765388081431, 'aux3_over_main_ratio': 0.6371185914606791, 'mask_sparsity_mean': 0.48222438659932876, 'attn_entropy_mean': 0.9994099034743318, 'proto_signal_ratio_mean': 0.015309039689529394}
+The 63 Communcation Time: 28.033
+The 63 Communcation Accuracy: 59.888 Method: f2dc_pg_ml epoch loss: 0.959
+[64.73, 66.32, 55.17, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4898467129096389, 'mask3_sparsity_std': 0.0001242495545173298, 'aux3_loss_mean': 0.7065872423291913, 'main_loss_mean': 1.1693554015454686, 'aux3_over_main_ratio': 0.6042536267377192, 'mask_sparsity_mean': 0.48134833574295044, 'proto_signal_ratio_mean': 0.014736789388702265}
+The 64 Communcation Time: 23.991
+The 64 Communcation Accuracy: 55.892 Method: f2dc_pg_ml epoch loss: 1.007
+[62.95, 65.79, 44.83, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.48979325766364734, 'mask3_sparsity_std': 0.0003441752971576935, 'aux3_loss_mean': 0.6814740695353789, 'main_loss_mean': 1.0693548418640384, 'aux3_over_main_ratio': 0.6372759002497919}
+The 65 Communcation Time: 23.991
+The 65 Communcation Accuracy: 61.655 Method: f2dc_pg_ml epoch loss: 0.979
+[62.5, 68.95, 55.17, 60.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.48923914817472297, 'mask3_sparsity_std': 0.00020373948963543247, 'aux3_loss_mean': 0.6647275656402818, 'main_loss_mean': 0.9843487193506107, 'aux3_over_main_ratio': 0.6752968257822414}
+The 66 Communcation Time: 24.586
+The 66 Communcation Accuracy: 59.938 Method: f2dc_pg_ml epoch loss: 0.889
+[62.5, 63.68, 56.9, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4891604279478391, 'mask3_sparsity_std': 0.00023197956281162814, 'aux3_loss_mean': 0.6687412289880481, 'main_loss_mean': 1.0336952640855384, 'aux3_over_main_ratio': 0.6469423361242271}
+The 67 Communcation Time: 24.134
+The 67 Communcation Accuracy: 63.525 Method: f2dc_pg_ml epoch loss: 0.894
+[63.84, 68.42, 55.17, 66.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.48881733790040016, 'mask3_sparsity_std': 0.0002398099613057008, 'aux3_loss_mean': 0.6697476629506458, 'main_loss_mean': 1.1548712374885446, 'aux3_over_main_ratio': 0.579932758917021, 'mask_sparsity_mean': 0.48136553168296814, 'attn_entropy_mean': 0.9993195096742075}
+The 68 Communcation Time: 25.676
+The 68 Communcation Accuracy: 57.867 Method: f2dc_pg_ml epoch loss: 0.963
+[61.16, 65.26, 51.72, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.48894912004470825, 'mask3_sparsity_std': 0.0001655359561010796, 'aux3_loss_mean': 0.6661849961273755, 'main_loss_mean': 1.133463568922147, 'aux3_over_main_ratio': 0.5877427509742336, 'mask_sparsity_mean': 0.48100869357585907, 'attn_entropy_mean': 0.9993493303093001, 'proto_signal_ratio_mean': 0.015008120216958801}
+The 69 Communcation Time: 24.18
+The 69 Communcation Accuracy: 59.082 Method: f2dc_pg_ml epoch loss: 0.984
+[58.93, 62.11, 58.62, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.48877297788858415, 'mask3_sparsity_std': 0.00021572815553017873, 'aux3_loss_mean': 0.6475184213149218, 'main_loss_mean': 1.0453270220679964, 'aux3_over_main_ratio': 0.6194410052022954}
+The 70 Communcation Time: 24.031
+The 70 Communcation Accuracy: 58.138 Method: f2dc_pg_ml epoch loss: 0.884
+[65.18, 67.37, 50.0, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4884315128127734, 'mask3_sparsity_std': 0.0001343443979084402, 'aux3_loss_mean': 0.6286596973629102, 'main_loss_mean': 0.9861575001931708, 'aux3_over_main_ratio': 0.6374840704854619, 'mask_sparsity_mean': 0.4806593358516693}
+The 71 Communcation Time: 24.953
+The 71 Communcation Accuracy: 63.142 Method: f2dc_pg_ml epoch loss: 0.866
+[65.62, 63.16, 63.79, 60.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.48811915930774474, 'mask3_sparsity_std': 0.00021435875860588416, 'aux3_loss_mean': 0.6248814137645154, 'main_loss_mean': 0.9995796799556658, 'aux3_over_main_ratio': 0.625144174391611, 'mask_sparsity_mean': 0.4813278913497925, 'attn_entropy_mean': 0.999333591640779}
+The 72 Communcation Time: 23.964
+The 72 Communcation Accuracy: 63.37 Method: f2dc_pg_ml epoch loss: 0.841
+[66.52, 66.84, 53.45, 66.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.48769187712007095, 'mask3_sparsity_std': 0.00021110739084521262, 'aux3_loss_mean': 0.6159005944583963, 'main_loss_mean': 0.9737071084086838, 'aux3_over_main_ratio': 0.6325316813851284, 'mask_sparsity_mean': 0.48047085106372833}
+The 73 Communcation Time: 24.155
+The 73 Communcation Accuracy: 64.102 Method: f2dc_pg_ml epoch loss: 0.822
+[66.52, 66.32, 56.9, 66.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.48796076234430075, 'mask3_sparsity_std': 0.00018309359164683442, 'aux3_loss_mean': 0.6006720520526524, 'main_loss_mean': 0.925705098315131, 'aux3_over_main_ratio': 0.6488805702225592, 'mask_sparsity_mean': 0.48003286123275757, 'attn_entropy_mean': 0.9992933130746297, 'proto_signal_ratio_mean': 0.015034868573740093}
+The 74 Communcation Time: 24.932
+The 74 Communcation Accuracy: 60.218 Method: f2dc_pg_ml epoch loss: 0.804
+[64.29, 64.74, 55.17, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4873319184407592, 'mask3_sparsity_std': 0.00013470339779988262, 'aux3_loss_mean': 0.5957094193476697, 'main_loss_mean': 0.9385714636747486, 'aux3_over_main_ratio': 0.6346979877433245, 'mask_sparsity_mean': 0.4804886132478714, 'attn_entropy_mean': 0.9993609272229471}
+The 75 Communcation Time: 25.108
+The 75 Communcation Accuracy: 59.525 Method: f2dc_pg_ml epoch loss: 0.796
+[62.95, 61.58, 56.9, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4872898409561235, 'mask3_sparsity_std': 0.00035125156919473335, 'aux3_loss_mean': 0.5999452746373862, 'main_loss_mean': 0.9873675850054374, 'aux3_over_main_ratio': 0.6076209952082662, 'mask_sparsity_mean': 0.4801967442035675}
+The 76 Communcation Time: 24.361
+The 76 Communcation Accuracy: 56.988 Method: f2dc_pg_ml epoch loss: 0.833
+[63.39, 67.89, 50.0, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4869889903951575, 'mask3_sparsity_std': 0.0001184940526478096, 'aux3_loss_mean': 0.5915186399027057, 'main_loss_mean': 0.9402516089372425, 'aux3_over_main_ratio': 0.6291067564045901}
+The 77 Communcation Time: 25.093
+The 77 Communcation Accuracy: 55.795 Method: f2dc_pg_ml epoch loss: 0.802
+[64.29, 62.11, 53.45, 43.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4869729537339437, 'mask3_sparsity_std': 0.00028149053488628226, 'aux3_loss_mean': 0.576327892581347, 'main_loss_mean': 0.8834651530628266, 'aux3_over_main_ratio': 0.6523493208343466, 'mask_sparsity_mean': 0.47993361949920654, 'attn_entropy_mean': 0.9992942967414122}
+The 78 Communcation Time: 23.902
+The 78 Communcation Accuracy: 58.982 Method: f2dc_pg_ml epoch loss: 0.753
+[63.39, 67.37, 55.17, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.48680685223252684, 'mask3_sparsity_std': 0.0002919736204730417, 'aux3_loss_mean': 0.5670646155098445, 'main_loss_mean': 0.9211576264587198, 'aux3_over_main_ratio': 0.6155999790066946}
+The 79 Communcation Time: 23.686
+The 79 Communcation Accuracy: 62.278 Method: f2dc_pg_ml epoch loss: 0.787
+[64.73, 67.37, 60.34, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.48661883064994105, 'mask3_sparsity_std': 0.00026681817561602844, 'aux3_loss_mean': 0.5778693953875025, 'main_loss_mean': 0.9789299952536232, 'aux3_over_main_ratio': 0.5903071702668452, 'mask_sparsity_mean': 0.4792652726173401}
+The 80 Communcation Time: 23.883
+The 80 Communcation Accuracy: 59.245 Method: f2dc_pg_ml epoch loss: 0.813
+[64.29, 65.79, 56.9, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4861302210224999, 'mask3_sparsity_std': 0.00015827288265830156, 'aux3_loss_mean': 0.5906397966910963, 'main_loss_mean': 1.0673177743794418, 'aux3_over_main_ratio': 0.5533870145041904, 'mask_sparsity_mean': 0.47979624569416046, 'proto_signal_ratio_mean': 0.014765707114623121}
+The 81 Communcation Time: 23.707
+The 81 Communcation Accuracy: 61.35 Method: f2dc_pg_ml epoch loss: 0.899
+[60.27, 67.89, 67.24, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.48585185781121254, 'mask3_sparsity_std': 0.00018516967536847865, 'aux3_loss_mean': 0.5411354308071815, 'main_loss_mean': 0.8479742439500546, 'aux3_over_main_ratio': 0.6381507866164083, 'mask_sparsity_mean': 0.47917431592941284}
+The 82 Communcation Time: 24.479
+The 82 Communcation Accuracy: 63.345 Method: f2dc_pg_ml epoch loss: 0.74
+[64.73, 64.74, 67.24, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.48574492832024885, 'mask3_sparsity_std': 0.0001305631179881046, 'aux3_loss_mean': 0.5326560150404929, 'main_loss_mean': 0.805351344447421, 'aux3_over_main_ratio': 0.6613958227212824, 'mask_sparsity_mean': 0.4797375351190567}
+The 83 Communcation Time: 24.746
+The 83 Communcation Accuracy: 57.63 Method: f2dc_pg_ml epoch loss: 0.7
+[65.18, 66.84, 55.17, 43.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4855074640363455, 'mask3_sparsity_std': 0.00012505571979657684, 'aux3_loss_mean': 0.5355456110075293, 'main_loss_mean': 0.8155353336363088, 'aux3_over_main_ratio': 0.6566798382844292, 'mask_sparsity_mean': 0.47924406826496124, 'proto_signal_ratio_mean': 0.014948997208653959}
+The 84 Communcation Time: 24.149
+The 84 Communcation Accuracy: 58.14 Method: f2dc_pg_ml epoch loss: 0.693
+[62.95, 67.89, 51.72, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.485249967003862, 'mask3_sparsity_std': 0.0001482320500918905, 'aux3_loss_mean': 0.5641560256039436, 'main_loss_mean': 0.9876494939435317, 'aux3_over_main_ratio': 0.5712107676493164, 'mask_sparsity_mean': 0.47872842848300934, 'attn_entropy_mean': 0.9992708440544384}
+The 85 Communcation Time: 23.815
+The 85 Communcation Accuracy: 55.01 Method: f2dc_pg_ml epoch loss: 0.816
+[60.27, 66.32, 53.45, 40.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4847939417318061, 'mask3_sparsity_std': 0.0003648040485077317, 'aux3_loss_mean': 0.5434772613609261, 'main_loss_mean': 0.9455114975210883, 'aux3_over_main_ratio': 0.574797094256175}
+The 86 Communcation Time: 25.627
+The 86 Communcation Accuracy: 59.11 Method: f2dc_pg_ml epoch loss: 0.782
+[65.62, 67.37, 53.45, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4847915262604753, 'mask3_sparsity_std': 0.00015309100298554766, 'aux3_loss_mean': 0.5162449790113293, 'main_loss_mean': 0.7922141009801814, 'aux3_over_main_ratio': 0.6516483086738746, 'mask_sparsity_mean': 0.47893060743808746, 'attn_entropy_mean': 0.9993668292236425, 'proto_signal_ratio_mean': 0.014893097626209901}
+The 87 Communcation Time: 25.015
+The 87 Communcation Accuracy: 58.988 Method: f2dc_pg_ml epoch loss: 0.686
+[62.95, 71.05, 58.62, 43.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4846294836865531, 'mask3_sparsity_std': 0.0003662809178687461, 'aux3_loss_mean': 0.5031871549991279, 'main_loss_mean': 0.7836616347842066, 'aux3_over_main_ratio': 0.6420974725114472, 'mask_sparsity_mean': 0.4793643007675807, 'proto_signal_ratio_mean': 0.01472505195902085}
+The 88 Communcation Time: 24.878
+The 88 Communcation Accuracy: 61.022 Method: f2dc_pg_ml epoch loss: 0.666
+[65.18, 66.84, 62.07, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.48450183651099604, 'mask3_sparsity_std': 0.0002553927284392305, 'aux3_loss_mean': 0.5101286334894862, 'main_loss_mean': 0.7920729000592538, 'aux3_over_main_ratio': 0.644042528725985, 'mask_sparsity_mean': 0.47877930104732513}
+The 89 Communcation Time: 24.615
+The 89 Communcation Accuracy: 60.988 Method: f2dc_pg_ml epoch loss: 0.666
+[66.52, 70.53, 56.9, 50.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.4846703290939331, 'mask3_sparsity_std': 0.00019453763961791993, 'aux3_loss_mean': 0.4932256840994, 'main_loss_mean': 0.740062592527553, 'aux3_over_main_ratio': 0.6664648221373747, 'mask_sparsity_mean': 0.4789533283975389, 'attn_entropy_mean': 0.9993561642048421, 'proto_signal_ratio_mean': 0.014515588720430355}
+The 90 Communcation Time: 24.193
+The 90 Communcation Accuracy: 60.933 Method: f2dc_pg_ml epoch loss: 0.642
+[67.86, 67.37, 55.17, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.48379122856117424, 'mask3_sparsity_std': 0.0001459434193620161, 'aux3_loss_mean': 0.5017017964406212, 'main_loss_mean': 0.8002293746565052, 'aux3_over_main_ratio': 0.6269474882198299}
+The 91 Communcation Time: 24.76
+The 91 Communcation Accuracy: 62.005 Method: f2dc_pg_ml epoch loss: 0.666
+[66.07, 70.0, 58.62, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.4837531655405959, 'mask3_sparsity_std': 0.00023135415719324732, 'aux3_loss_mean': 0.48242271155295635, 'main_loss_mean': 0.7177335930730514, 'aux3_over_main_ratio': 0.6721473206895794, 'mask_sparsity_mean': 0.4789029359817505}
+The 92 Communcation Time: 25.751
+The 92 Communcation Accuracy: 60.112 Method: f2dc_pg_ml epoch loss: 0.623
+[66.07, 67.37, 60.34, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4833508024524365, 'mask3_sparsity_std': 0.00013757795616392392, 'aux3_loss_mean': 0.47811541394164914, 'main_loss_mean': 0.729959162558786, 'aux3_over_main_ratio': 0.6549892630509243, 'mask_sparsity_mean': 0.4786548465490341, 'attn_entropy_mean': 0.9993346270794975}
+The 93 Communcation Time: 25.41
+The 93 Communcation Accuracy: 59.472 Method: f2dc_pg_ml epoch loss: 0.641
+[65.62, 65.26, 60.34, 46.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.48314538101355237, 'mask3_sparsity_std': 0.00014268175912402284, 'aux3_loss_mean': 0.502181619335069, 'main_loss_mean': 0.882634240658328, 'aux3_over_main_ratio': 0.5689577813800971, 'mask_sparsity_mean': 0.4790881276130676, 'attn_entropy_mean': 0.9992486856658627}
+The 94 Communcation Time: 25.748
+The 94 Communcation Accuracy: 52.238 Method: f2dc_pg_ml epoch loss: 0.732
+[63.39, 65.79, 43.1, 36.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.48299319234987104, 'mask3_sparsity_std': 0.00021278999751860234, 'aux3_loss_mean': 0.4746359201611973, 'main_loss_mean': 0.7594317520088829, 'aux3_over_main_ratio': 0.6249882479968333, 'mask_sparsity_mean': 0.47823113948106766, 'attn_entropy_mean': 0.9992778850377242, 'proto_signal_ratio_mean': 0.014796695298965502}
+The 95 Communcation Time: 25.915
+The 95 Communcation Accuracy: 66.278 Method: f2dc_pg_ml epoch loss: 0.696
+[65.18, 69.47, 63.79, 66.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.4828592381307057, 'mask3_sparsity_std': 0.00024080496606097664, 'aux3_loss_mean': 0.5003095597043457, 'main_loss_mean': 0.8985886428033999, 'aux3_over_main_ratio': 0.5567726275100577, 'mask_sparsity_mean': 0.47876349091529846, 'proto_signal_ratio_mean': 0.014792386941289707}
+The 96 Communcation Time: 23.841
+The 96 Communcation Accuracy: 56.158 Method: f2dc_pg_ml epoch loss: 0.719
+[66.07, 66.84, 51.72, 40.0]
+
+[ML diag] {'mask3_sparsity_mean': 0.48284612808908733, 'mask3_sparsity_std': 0.0002161106913350843, 'aux3_loss_mean': 0.46366625431586395, 'main_loss_mean': 0.7599712660970542, 'aux3_over_main_ratio': 0.6101102436373563, 'mask_sparsity_mean': 0.4789465367794037, 'attn_entropy_mean': 0.999306152514739}
+The 97 Communcation Time: 24.975
+The 97 Communcation Accuracy: 61.715 Method: f2dc_pg_ml epoch loss: 0.667
+[64.73, 66.84, 58.62, 56.67]
+
+[ML diag] {'mask3_sparsity_mean': 0.48224668204784393, 'mask3_sparsity_std': 0.00035290930779740366, 'aux3_loss_mean': 0.46766770735913116, 'main_loss_mean': 0.6974922759068224, 'aux3_over_main_ratio': 0.6704987617979108, 'mask_sparsity_mean': 0.47802913188934326, 'proto_signal_ratio_mean': 0.015214382646906773}
+The 98 Communcation Time: 25.316
+The 98 Communcation Accuracy: 58.82 Method: f2dc_pg_ml epoch loss: 0.59
+[63.39, 66.84, 51.72, 53.33]
+
+[ML diag] {'mask3_sparsity_mean': 0.48199229895004203, 'mask3_sparsity_std': 0.00026903681125113745, 'aux3_loss_mean': 0.4418555632999292, 'main_loss_mean': 0.6756056269490908, 'aux3_over_main_ratio': 0.6540140367025459, 'mask_sparsity_mean': 0.4781337380409241}
+The 99 Communcation Time: 25.396
+The 99 Communcation Accuracy: 62.618 Method: f2dc_pg_ml epoch loss: 0.571
+[65.18, 70.0, 58.62, 56.67]
+
+ALL Loss:  [15.939, 11.531, 9.558, 9.032, 7.995, 7.234, 6.659, 6.266, 5.905, 5.57, 5.174, 4.457, 4.016, 3.622, 3.383, 3.122, 2.887, 2.735, 2.676, 2.485, 2.435, 2.34, 2.213, 2.087, 2.048, 1.973, 1.929, 1.891, 1.816, 1.721, 1.728, 1.716, 1.644, 1.594, 1.504, 1.565, 1.506, 1.475, 1.404, 1.375, 1.317, 1.364, 1.314, 1.271, 1.216, 1.244, 1.211, 1.199, 1.148, 1.133, 1.148, 1.163, 1.156, 1.147, 1.108, 1.039, 1.068, 1.052, 1.044, 0.962, 0.99, 0.999, 0.981, 0.959, 1.007, 0.979, 0.889, 0.894, 0.963, 0.984, 0.884, 0.866, 0.841, 0.822, 0.804, 0.796, 0.833, 0.802, 0.753, 0.787, 0.813, 0.899, 0.74, 0.7, 0.693, 0.816, 0.782, 0.686, 0.666, 0.666, 0.642, 0.666, 0.623, 0.641, 0.732, 0.696, 0.719, 0.667, 0.59, 0.571]
+Accuracy List f2dc_pg_ml (fl_officecaltech): [10.895, 10.628, 10.402, 13.105, 17.665, 24.332, 32.215, 29.265, 29.455, 31.795, 37.908, 38.122, 40.048, 39.008, 38.88, 41.42, 42.162, 48.095, 46.332, 48.575, 45.422, 47.575, 48.7, 51.402, 49.778, 51.415, 49.385, 53.045, 51.498, 50.44, 54.832, 49.138, 52.992, 54.26, 50.625, 54.348, 55.038, 57.62, 54.315, 54.67, 54.285, 54.488, 54.897, 57.24, 55.758, 53.978, 57.76, 58.348, 56.165, 55.052, 54.805, 55.582, 56.865, 58.0, 57.885, 55.002, 56.535, 58.908, 57.098, 57.022, 55.66, 60.362, 59.09, 59.888, 55.892, 61.655, 59.938, 63.525, 57.867, 59.082, 58.138, 63.142, 63.37, 64.102, 60.218, 59.525, 56.988, 55.795, 58.982, 62.278, 59.245, 61.35, 63.345, 57.63, 58.14, 55.01, 59.11, 58.988, 61.022, 60.988, 60.933, 62.005, 60.112, 59.472, 52.238, 66.278, 56.158, 61.715, 58.82, 62.618]
