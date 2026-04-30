@@ -77,24 +77,39 @@ metric_def: |
 > **Table 1b-OLD (EXP-135 PG-DFC 数据) 已不准, 主结果用本表**。
 > Office 同理 (sc3 EXP-137 8 个 R100 已完成, 见 Table 2-NEW)。
 
-#### Per-seed 数据 (sc3 EXP-137, 4-bug fix 后)
+#### Per-seed 数据 (sc3 + v100 EXP-137, 4-bug fix 后, 完整 2-seed)
 
-| Method                | seed | R@Best |   photo   |    art    |  cartoon  |  sketch   | **AVG_B** | **AVG_L** | gap  |
-| --------------------- | :--: | :----: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :--: |
-| **PG-DFC vanilla** ⭐  | 333  |  R81   |   64.97   |   56.62   |   76.71   | **82.93** | **70.31** | **70.06** | 0.25 ⭐稳 |
-| **PG-DFC vanilla**    |  15  |  TBD   |    TBD    |    TBD    |    TBD    |    TBD    | (v100 EXP-137 跑中) |    -      |   -  |
-| **PG-DFC + DaA**      | 333  |  R99   | **73.05** |   60.54   |   72.22   |   61.53   |   66.84   |   66.84   | 0.00 ⭐稳 |
-| **PG-DFC + DaA**      |  15  |  TBD   |    TBD    |    TBD    |    TBD    |    TBD    | (v100 EXP-137 跑中) |    -      |   -  |
+| Method                  | seed | R@Best |   photo   |    art    |  cartoon  |  sketch   | **AVG_B** | **AVG_L** | gap  | server |
+| ----------------------- | :--: | :----: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :--: | :----: |
+| **PG-DFC vanilla**      |  15  |  R96   |   70.06   |   59.80   |   80.34   | **84.71** | **73.73** | **73.47** | 0.26 ⭐稳 | v100 |
+| **PG-DFC vanilla** ⭐    | 333  |  R81   |   64.97   |   56.62   |   76.71   | **82.93** | **70.31** | **70.06** | 0.25 ⭐稳 | sc3  |
+| **PG-DFC vanilla 2-seed mean** ⭐⭐ | — | — | 67.52 | 58.21 | 78.53 | **83.82** | **72.02** | **71.77** | 0.25 | — |
+| **PG-DFC + DaA**        |  15  |  R92   | **74.55** | **66.91** |   77.35   |   72.87   |   72.92   |   70.95   | 1.97 | v100 |
+| **PG-DFC + DaA**        | 333  |  R99   | **73.05** |   60.54   |   72.22   |   61.53   |   66.84   |   66.84   | 0.00 ⭐稳 | sc3  |
+| **PG-DFC + DaA 2-seed mean** | — | — | **73.80** | **63.73** | 74.79 | 67.20 | **69.88** | **68.90** | 0.99 | — |
 
-#### 跟 Table 1b-OLD (4-bug fix 前 EXP-135) 同 seed 对比
+#### 跟 Table 1b-OLD (4-bug fix 前 EXP-135) 2-seed mean 对比 ⭐ 关键结论
 
-| Method | seed | EXP-135 best | EXP-137 best | Δ best | EXP-135 last | EXP-137 last | Δ last |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| PG-DFC vanilla | 333 | 68.29 | **70.31** | **+2.02** ✅ | 66.66 | **70.06** | **+3.40** ✅ |
-| PG-DFC +DaA | 333 | 69.28 | 66.84 | -2.44 | 66.88 | 66.84 | -0.04 (持平) |
+| Method | EXP-135 mean best | EXP-137 mean best | Δ best | EXP-135 mean last | EXP-137 mean last | Δ last |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| **PG-DFC vanilla** | 70.58 | **72.02** | **+1.44** ✅ | 69.01 | **71.77** | **+2.76** ✅ |
+| **PG-DFC +DaA**    | 70.24 | 69.88 | -0.36 (持平) | 68.07 | **68.90** | +0.83 |
 
-→ **vanilla 4-bug fix 主要受益** (Δ last +3.40pp); +DaA 路径基本持平。
-→ s=15 数据等 v100 EXP-137 跑完回填。
+→ **PG-DFC vanilla 4-bug fix 后 2-seed mean last +2.76pp**, 是真正的 paper-grade fix。
+→ +DaA 路径在 fix 前后基本持平 (best -0.36 / last +0.83), 说明 DaA reweight 跟 4-bug 之间有 trade-off。
+→ s=15 单 seed: vanilla EXP-137 best 73.73 vs EXP-135 72.87 = **+0.86pp** (sketch 域 84.71 vs 80.64 = +4.07pp 主要贡献)
+→ s=333 单 seed: vanilla EXP-137 best 70.31 vs EXP-135 68.29 = **+2.02pp**
+
+#### Per-domain 增益拆解 (EXP-137 vs EXP-135 vanilla 2-seed mean per_dom)
+
+| Domain | EXP-135 mean | EXP-137 mean | Δ |
+|---|:---:|:---:|:---:|
+| photo   | 67.37 | 67.52 | +0.15 |
+| art     | 56.86 | 58.21 | +1.35 |
+| cartoon | 77.78 | 78.53 | +0.75 |
+| sketch  | **80.32** | **83.82** | **+3.50** ⭐ |
+
+→ **sketch 域是主要受益**, +3.50pp (4-bug fix 让 sketch 能学到的训练信号更准, photo/art 影响小)
 
 ---
 
