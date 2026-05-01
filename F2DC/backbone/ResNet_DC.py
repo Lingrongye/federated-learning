@@ -4,12 +4,39 @@ import torch.nn.functional as F
 from backbone.gumbel_sigmoid import GumbelSigmoid
 
 
+@torch.no_grad()
+def compute_mask_stats(mask: torch.Tensor) -> dict:
+    """7-stat mask diagnostic over a single batch tensor (B, C, H, W) ∈ [0, 1].
+
+    Returns: dict with keys
+      - mean        : 全 element 平均 (旧 sparsity)
+      - unit_std    : 单 batch 内全 element std (>0.2 真 selective, <0.05 接近常数)
+      - hard_ratio  : (mask<0.1 OR >0.9) 比例 (>0.7 真二值化)
+      - mid_ratio   : (0.4<mask<0.6) 比例 (>0.7 卡 0.5)
+      - sample_std  : per-sample mean 的 std (>0.05 样本间真区分)
+      - channel_std : per-channel mean 的 std (>0.1 通道真区分)
+      - spatial_std : per-spatial-position mean 的 std (>0.05 位置真区分)
+    """
+    m = mask.detach().float()
+    return dict(
+        mean=m.mean().item(),
+        unit_std=m.std().item(),
+        hard_ratio=((m < 0.1) | (m > 0.9)).float().mean().item(),
+        mid_ratio=((m > 0.4) & (m < 0.6)).float().mean().item(),
+        sample_std=m.mean(dim=[1, 2, 3]).std().item() if m.size(0) > 1 else 0.0,
+        channel_std=m.mean(dim=[0, 2, 3]).std().item() if m.size(1) > 1 else 0.0,
+        spatial_std=m.mean(dim=[0, 1]).std().item() if (m.size(2) > 1 and m.size(3) > 1) else 0.0,
+    )
+
+
+# feature decoupling
 class DFD(torch.nn.Module):
     def __init__(self, size, num_channel=64, tau=0.1):
         super(DFD, self).__init__()
         C, H, W = size
         self.C, self.H, self.W = C, H, W
         self.tau = tau
+        # 一个小的cnn标准的，用来预测每个feature unit是否robust 
         self.net = nn.Sequential(
             nn.Conv2d(C, num_channel, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(num_channel),
@@ -19,20 +46,26 @@ class DFD(torch.nn.Module):
 
     def forward(self, feat, is_eval=False):
         rob_map = self.net(feat)
+        # 先生成一个robust map,还要去sigmoid到【0，1】
         mask = rob_map.reshape(rob_map.shape[0], 1, -1)
         mask = torch.nn.Sigmoid()(mask)
+
+        # 把连续的概率通过一个gumbel层
         mask = GumbelSigmoid(tau=self.tau)(mask, is_eval=is_eval)
+        # 取第0个就是属于robust的概率
         mask = mask[:, 0].reshape(mask.shape[0], self.C, self.H, self.W)
+        # mask接近于1的位置，就是r_feat
         r_feat = feat * mask
         nr_feat = feat * (1 - mask)
 
         return r_feat, nr_feat, mask
 
-
+# 不要直接去丢掉no_rb的信息，还可以进行恢复跟校准
 class DFC(nn.Module):
     def __init__(self, size, num_channel=64):
         super(DFC, self).__init__()
         C, H, W = size
+        # 仍然是一个小的cnn
         self.net = nn.Sequential(
             nn.Conv2d(C, num_channel, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(num_channel),
@@ -41,8 +74,11 @@ class DFC(nn.Module):
         )
 
     def forward(self, nr_feat, mask):
+        # 通过这个小的cnn去生成一个校正后的feature
         rec_units = self.net(nr_feat)
+        # 确保只拿到r_feature
         rec_units = rec_units * (1 - mask)
+        # 相加得到重建特征
         rec_feat = nr_feat + rec_units
         return rec_feat
 
@@ -118,6 +154,7 @@ class ResNet(nn.Module):
                                            int(self.image_size[1] / 8)), tau=self.tau)
         self.dfc_module = DFC(size=(512, int(self.image_size[0] / 8), 
                                                  int(self.image_size[1] / 8))) 
+        # 这是一个辅助的分类器
         self.aux = nn.Sequential(nn.Linear(512, num_classes))
 
         self.linear = nn.Linear(512 * block.expansion, num_classes)
@@ -141,8 +178,9 @@ class ResNet(nn.Module):
         out = self.layer3(out)
         out = self.layer4(out)
         # print(out.shape)
-
+        # 只在第四层
         r_feat, nr_feat, mask = self.dfd_module(out, is_eval=is_eval)
+        # 池化后
         ro_flat = torch.nn.AdaptiveAvgPool2d(1)(r_feat).reshape(r_feat.shape[0], -1)
         re_flat = torch.nn.AdaptiveAvgPool2d(1)(nr_feat).reshape(nr_feat.shape[0], -1)
         r_outputs.append(self.aux(ro_flat))
@@ -151,7 +189,7 @@ class ResNet(nn.Module):
         rec_feat = self.dfc_module(nr_feat, mask)
         rec_out = self.aux(torch.nn.AdaptiveAvgPool2d(1)(rec_feat).reshape(rec_feat.shape[0], -1))
         rec_outputs.append(rec_out)
-
+        # out = r_feat + rec_feat = mask * feat + (1-mask) * feat + rec_units = feat + rec_units 
         out = r_feat + rec_feat
         out = nn.AdaptiveAvgPool2d(1)(out)
         out = out.view(out.size(0), -1)

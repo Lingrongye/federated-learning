@@ -169,27 +169,32 @@ class F2DCPGML(F2DCPGv33):
         return round(global_avg_loss, 3), num_c_samples
 
     def _summarize_round_diag(self, client_diags):
-        """覆盖父类 summary: 加上 mask3 sparsity / aux3-vs-main loss 比值."""
+        """覆盖父类 summary: 加上 mask3 7-stat / aux3-vs-main loss 比值.
+
+        新增 (2026-05-01): mask3 7 个 healthcheck 指标 (unit_std / hard_ratio /
+        mid_ratio / sample_std / channel_std / spatial_std), 用 compute_mask_stats
+        在 backbone 收集. backward compat 保留 mask3_sparsity_mean / std.
+        """
+        import numpy as np
         summary = super()._summarize_round_diag(client_diags)
 
-        # 收集 lite mask3 sparsity (从所有 online client 的 dfd_lite.get_diag_summary)
-        m3_means = []
-        m3_stds = []
+        # 收集 lite mask3 全部 7-stat (从所有 online client 的 dfd_lite.get_diag_summary)
+        # mask3_*_mean keys: mean / unit_std / hard_ratio / mid_ratio /
+        #                    sample_std / channel_std / spatial_std
+        # backward compat keys: mask3_sparsity_mean / mask3_sparsity_std
+        m3_collect = {}  # key -> list of values
         for k in self.online_clients:
             net = self.nets_list[k]
             if hasattr(net, 'dfd_lite') and hasattr(net.dfd_lite, 'get_diag_summary'):
                 d = net.dfd_lite.get_diag_summary()
-                if d is not None:
-                    if d.get('mask3_sparsity_mean') is not None:
-                        m3_means.append(d['mask3_sparsity_mean'])
-                    if d.get('mask3_sparsity_std') is not None:
-                        m3_stds.append(d['mask3_sparsity_std'])
-        if m3_means:
-            import numpy as np
-            summary['mask3_sparsity_mean'] = float(np.mean(m3_means))
-        if m3_stds:
-            import numpy as np
-            summary['mask3_sparsity_std'] = float(np.mean(m3_stds))
+                if d is None:
+                    continue
+                for kk, vv in d.items():
+                    if isinstance(vv, (int, float)) and vv is not None:
+                        m3_collect.setdefault(kk, []).append(vv)
+        for kk, vals in m3_collect.items():
+            if vals:
+                summary[kk] = float(np.mean(vals))
 
         # aux3 / main loss 比值
         if self._round_aux3_samples > 0:
@@ -205,11 +210,24 @@ class F2DCPGML(F2DCPGv33):
         self._round_aux3_samples = 0
         self._round_main_loss_sum = 0.0
 
-        # I6 fix: round summary 也直接 print 出来, smoke test 能直接 grep
+        # round summary 直接 print 出来, smoke test 能直接 grep
+        # 7-stat 完整 print + aux3 + 旧字段 backward compat
         keys_show = [
-            'round', 'mask3_sparsity_mean', 'mask3_sparsity_std',
+            'round',
+            # mask3 7-stat (layer3 lite, ML 新增)
+            'mask3_mean_mean', 'mask3_unit_std_mean',
+            'mask3_hard_ratio_mean', 'mask3_mid_ratio_mean',
+            'mask3_sample_std_mean', 'mask3_channel_std_mean', 'mask3_spatial_std_mean',
+            # aux3 deep sup
             'aux3_loss_mean', 'main_loss_mean', 'aux3_over_main_ratio',
-            'mask_sparsity_mean', 'attn_entropy_mean', 'proto_signal_ratio_mean',
+            # mask4 7-stat (layer4, F2DC 原版 DFD via DFC_PG 收集)
+            'mask_mean_mean', 'mask_unit_std_mean',
+            'mask_hard_ratio_mean', 'mask_mid_ratio_mean',
+            'mask_sample_std_mean', 'mask_channel_std_mean', 'mask_spatial_std_mean',
+            # PG-DFC attention
+            'attn_entropy_mean', 'proto_signal_ratio_mean',
+            # backward compat
+            'mask3_sparsity_mean', 'mask_sparsity_mean',
         ]
         printable = {k: summary.get(k) for k in keys_show if summary.get(k) is not None}
         if printable:

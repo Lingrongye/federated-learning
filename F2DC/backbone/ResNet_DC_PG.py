@@ -20,7 +20,7 @@ from math import sqrt
 
 # 复用 F2DC 原 DFD 和 BasicBlock(避免重复定义)
 from backbone.gumbel_sigmoid import GumbelSigmoid
-from backbone.ResNet_DC import DFD, BasicBlock, Bottleneck
+from backbone.ResNet_DC import DFD, BasicBlock, Bottleneck, compute_mask_stats
 
 
 class DFC_PG(nn.Module):
@@ -49,37 +49,50 @@ class DFC_PG(nn.Module):
         self.q_proj = nn.Linear(C, C)
         self.k_proj = nn.Linear(C, C)
         self.v_proj = nn.Linear(C, C)
-
+        # 形状为【k，512】
         # class_proto buffer: 由 server 下发, persistent=False 防 FedAvg 误聚合 (m2 fix)
         self.register_buffer('class_proto', torch.zeros(num_classes, C),
                              persistent=False)
 
         # 诊断 buffers (训练时记录, 不参与 backprop)
-        self._diag_mask_sparsity = []
+        # _diag_mask_stats: list[dict], 每个 dict 是单 batch mask 的 7-stat (compute_mask_stats)
+        self._diag_mask_stats = []
         self._diag_attn_entropy = []
         self._diag_proto_signal_ratio = []
-
+    # 用于warmup,前几轮先不加上这个prototype引导，后面再加
     def set_proto_weight(self, w):
         """warmup ramp 调用"""
         self.proto_weight = w
 
     def reset_diag(self):
         """每 round 末重置诊断 buffer"""
-        self._diag_mask_sparsity = []
+        self._diag_mask_stats = []
         self._diag_attn_entropy = []
         self._diag_proto_signal_ratio = []
 
     def get_diag_summary(self):
-        """返回 round 内诊断指标的 mean (供 NOTE.md / log)"""
-        if not self._diag_mask_sparsity:
+        """返回 round 内诊断指标的 mean (供 NOTE.md / log)
+
+        新增: 7-stat mask 形态诊断 (mask_unit_std / hard_ratio / mid_ratio 等),
+              旧 mask_sparsity_mean / mask_sparsity_std backward compat 保留 (alias 自 mean).
+        """
+        if not self._diag_mask_stats:
             return None
         import numpy as np
-        return dict(
-            mask_sparsity_mean=float(np.mean(self._diag_mask_sparsity)),
-            mask_sparsity_std=float(np.std(self._diag_mask_sparsity)),
-            attn_entropy_mean=float(np.mean(self._diag_attn_entropy)) if self._diag_attn_entropy else None,
-            proto_signal_ratio_mean=float(np.mean(self._diag_proto_signal_ratio)) if self._diag_proto_signal_ratio else None,
-        )
+
+        # 把 list of dict 平均化 (每个 stat 跨 batch 取 mean)
+        keys = list(self._diag_mask_stats[0].keys())
+        agg = {f'mask_{k}_mean': float(np.mean([s[k] for s in self._diag_mask_stats]))
+               for k in keys}
+        # backward compat alias
+        agg['mask_sparsity_mean'] = agg.get('mask_mean_mean')
+        agg['mask_sparsity_std'] = float(np.std([s['mean'] for s in self._diag_mask_stats]))
+        # PG-DFC 特有
+        agg['attn_entropy_mean'] = (float(np.mean(self._diag_attn_entropy))
+                                    if self._diag_attn_entropy else None)
+        agg['proto_signal_ratio_mean'] = (float(np.mean(self._diag_proto_signal_ratio))
+                                          if self._diag_proto_signal_ratio else None)
+        return agg
 
     def forward(self, nr_feat, mask, r_feat=None):
         """
@@ -89,10 +102,9 @@ class DFC_PG(nn.Module):
         """
         B, C, H, W = nr_feat.shape
 
-        # 诊断: mask sparsity (1% 采样, 不影响速度)
+        # 诊断: mask 7-stat 形态 (1% 采样, 不影响速度)
         if self.training and torch.rand(1).item() < 0.01:
-            with torch.no_grad():
-                self._diag_mask_sparsity.append(mask.mean().item())
+            self._diag_mask_stats.append(compute_mask_stats(mask))
 
         # ============================================================
         # 路径 1: 原 F2DC conv 残差 (保留)
@@ -119,6 +131,7 @@ class DFC_PG(nn.Module):
             q_norm = F.normalize(q, dim=-1, eps=1e-8)               # unit
             k_norm = F.normalize(k, dim=-1, eps=1e-8)               # unit
             attn_logits = (q_norm @ k_norm.T) / self.attn_temperature  # (B, K)
+            # attn里面有每个种类的原型的概率
             attn = F.softmax(attn_logits, dim=-1)                   # (B, K)
 
             # 诊断: attention entropy
@@ -128,8 +141,9 @@ class DFC_PG(nn.Module):
                     max_ent = float(torch.log(torch.tensor(attn.size(-1), dtype=torch.float)).item())
                     self._diag_attn_entropy.append(entropy / max_ent)  # 归一化 [0, 1]
 
-            # 加权 select v
-            proto_clue = attn @ v                                   # (B, C)
+            # 就是通过attetion权重混合出来的一个prototype
+            proto_clue = attn @ v   
+            # reshape回nr_feature的形状                                # (B, C)
             proto_clue = proto_clue.reshape(B, C, 1, 1).expand(-1, -1, H, W)
 
             # NV2 fix: proto 路径上 mask 预先 detach (阻断 proto → mask 反传)

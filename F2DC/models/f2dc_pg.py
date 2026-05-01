@@ -37,18 +37,22 @@ class F2DCPG(F2DC):
         # PG-DFC v3.2 超参 (从 args 读, 默认值见 main_run.py)
         self.proto_weight_target = getattr(args, 'pg_proto_weight', 0.3)
         self.warmup_rounds = getattr(args, 'pg_warmup_rounds', 30)
+        # ramp_round表示warmup结束后用多少轮吧这个prototype strength 从0慢慢升到目标值，防止震荡
         self.ramp_rounds = getattr(args, 'pg_ramp_rounds', 20)
+        # 控制gloabal的跨round平滑 ，新的gloabl = 0.8 * 上一轮的 + 0.2 * 新上传的global prototype
         self.server_ema_beta = getattr(args, 'pg_server_ema_beta', 0.8)
         # attn_temperature 在模型里, 通过 args 传给 backbone
 
         # Client 本地 prototype state (per-client per-class)
-        # 结构: list of (num_classes, C) tensors, 每个 client 一个
+        # 结构: list of (num_classes, C) tensors, 每个 client 一个,每个client都保存一个自己的prototype
         self.local_protos = [None] * args.parti_num
         self.local_class_counts = [None] * args.parti_num
         self.feat_dim = None  # backbone output channel, 第一次 forward 后填
 
         # Server raw prototype (用于跨 round EMA, RV2 fix - 在 raw 空间不在 unit 球面)
+        # 也就是用的原始的prototye 不一定是单位长度的
         self.global_proto_raw = None         # (num_classes, C), 未 normalize 的 EMA
+        # nomalize 之后
         self.global_proto_unit = None        # (num_classes, C), normalize 后下发的版本
 
         # 诊断 logs
@@ -79,9 +83,11 @@ class F2DCPG(F2DC):
         for i in online_clients:
             net = self.nets_list[i]
             if hasattr(net, 'dfc_module') and hasattr(net.dfc_module, 'set_proto_weight'):
+                # 把当前的prototype weight 下发到每一个client里面
                 net.dfc_module.set_proto_weight(current_pw)
                 # 下发 global prototype (m2 fix: persistent=False, 不被 FedAvg 误聚合)
                 if self.global_proto_unit is not None:
+                    # 这个class proto是sever端下发的一个buffer
                     net.dfc_module.class_proto.copy_(self.global_proto_unit.to(self.device))
                 # 重置 client 端诊断
                 if hasattr(net.dfc_module, 'reset_diag'):
@@ -111,6 +117,7 @@ class F2DCPG(F2DC):
 
         # class_proto is a non-persistent buffer and is skipped by state_dict.
         # Sync it explicitly so global evaluation uses the same PG-DFC path.
+
         self._sync_global_proto_to_global_net(current_pw)
 
         # 记录 round diagnostic
@@ -129,15 +136,20 @@ class F2DCPG(F2DC):
     def _sync_global_proto_to_global_net(self, proto_weight):
         if self.global_net is None or not hasattr(self.global_net, 'dfc_module'):
             return
+        # 取出global module里面的dfc 模块
         dfc = self.global_net.dfc_module
+        # 把prototye 的强度给设置进去
         if hasattr(dfc, 'set_proto_weight'):
             dfc.set_proto_weight(proto_weight)
+        # 如果说这个模型没有class_proto这个参数就是return
         if not hasattr(dfc, 'class_proto'):
             return
+
         with torch.no_grad():
             if self.global_proto_unit is None:
                 dfc.class_proto.zero_()
             else:
+                # 必须手动把这个prototye 复制过去
                 dfc.class_proto.copy_(self.global_proto_unit.to(self.device))
 
     def _train_net_pg(self, index, net, train_loader):
@@ -252,10 +264,10 @@ class F2DCPG(F2DC):
             else int(getattr(self.args, 'num_classes', 7))
         )
         C = self.feat_dim
-
+        # 旧的
         if self.global_proto_raw is None:
             self.global_proto_raw = torch.zeros(N_CLASSES, C)
-
+        # 新的
         new_aggregated = torch.zeros(N_CLASSES, C)
 
         for c in range(N_CLASSES):
@@ -270,7 +282,8 @@ class F2DCPG(F2DC):
                 new_aggregated[c] = self.global_proto_raw[c]
                 continue
 
-            # M2 fix: L2-normalize 每个 client 的 prototype, 再等权平均
+            # L2-normalize 每个 client 的 prototype, 再等权平均
+            # 防止feature norm 大的这个client去主导聚合 
             normed_list = []
             for k in valid_clients:
                 p = self.local_protos[k][c]
@@ -282,11 +295,11 @@ class F2DCPG(F2DC):
             if not normed_list:
                 new_aggregated[c] = self.global_proto_raw[c]
                 continue
-
+            # 按照client数进行等权的平均
             new_aggregated[c] = torch.stack(normed_list).mean(0)
             # 注: 这里不再 normalize, 留到最后 unit 化时做
 
-        # ★ RV2 fix: server EMA 在 raw 空间
+        # ★ RV2 fix: server EMA 在 raw 空间，ema平滑平均
         beta = self.server_ema_beta
         if self.global_proto_raw.abs().sum() < 1e-6:
             # 第一次, 直接用
@@ -310,12 +323,21 @@ class F2DCPG(F2DC):
         self.global_proto_unit = unit_protos
 
     def _summarize_round_diag(self, client_diags):
-        """聚合 client 端 diagnostic 成 round summary"""
+        """聚合 client 端 diagnostic 成 round summary.
+
+        新增: 自动收集所有 mask_*_mean 7-stat 指标 (compute_mask_stats 输出).
+        backward compat: 保留旧 mask_sparsity_mean / mask_sparsity_std / attn / proto_signal.
+        """
         if not client_diags:
             return {}
-        keys = ['mask_sparsity_mean', 'mask_sparsity_std', 'attn_entropy_mean', 'proto_signal_ratio_mean']
+        # 自动收集所有 client_diags 出现的 numeric 字段
+        all_keys = set()
+        for d in client_diags:
+            all_keys.update(k for k, v in d.items() if isinstance(v, (int, float)) and v is not None)
+        # 过滤掉 client_id (per-client meta, 不该 mean)
+        all_keys.discard('client_id')
         summary = {}
-        for k in keys:
+        for k in sorted(all_keys):
             vals = [d[k] for d in client_diags if d.get(k) is not None]
             if vals:
                 summary[k] = float(np.mean(vals))

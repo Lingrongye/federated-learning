@@ -32,7 +32,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from backbone.gumbel_sigmoid import GumbelSigmoid
-from backbone.ResNet_DC import BasicBlock
+from backbone.ResNet_DC import BasicBlock, compute_mask_stats
 from backbone.ResNet_DC_PG import ResNet_PG, DFC_PG
 
 
@@ -56,20 +56,28 @@ class DFD_lite(nn.Module):
             nn.ReLU(),
             nn.Conv2d(num_channel, C, kernel_size=3, stride=1, padding=1, bias=False),
         )
-        # 诊断 buffer (round 内累积, trainer 抓走)
-        self._diag_mask_sparsity = []
+        # 诊断 buffer: list[dict], 每个 dict 是单 batch mask3 的 7-stat
+        self._diag_mask_stats = []
 
     def reset_diag(self):
-        self._diag_mask_sparsity = []
+        self._diag_mask_stats = []
 
     def get_diag_summary(self):
-        if not self._diag_mask_sparsity:
+        """返回 round 内 mask3 7-stat mean (跨 batch).
+
+        新增 7 个细化指标 (mask3_unit_std / hard_ratio / mid_ratio 等),
+        backward compat 保留旧 mask3_sparsity_mean / mask3_sparsity_std.
+        """
+        if not self._diag_mask_stats:
             return None
         import numpy as np
-        return dict(
-            mask3_sparsity_mean=float(np.mean(self._diag_mask_sparsity)),
-            mask3_sparsity_std=float(np.std(self._diag_mask_sparsity)),
-        )
+        keys = list(self._diag_mask_stats[0].keys())
+        agg = {f'mask3_{k}_mean': float(np.mean([s[k] for s in self._diag_mask_stats]))
+               for k in keys}
+        # backward compat
+        agg['mask3_sparsity_mean'] = agg.get('mask3_mean_mean')
+        agg['mask3_sparsity_std'] = float(np.std([s['mean'] for s in self._diag_mask_stats]))
+        return agg
 
     def forward(self, feat, is_eval=False):
         rob_map = self.net(feat)
@@ -77,10 +85,9 @@ class DFD_lite(nn.Module):
         mask = torch.sigmoid(mask)
         mask = GumbelSigmoid(tau=self.tau)(mask, is_eval=is_eval)
         mask = mask[:, 0].reshape(mask.shape[0], self.C, self.H, self.W)
-        # 诊断: 10% 采样 (R10 smoke 短跑能采到, vs PG-DFC 1% 是为长跑省 sync)
+        # 诊断: 10% 采样 7-stat 形态 (R10 smoke 短跑能采到, vs PG-DFC 1% 是为长跑省 sync)
         if self.training and torch.rand(1).item() < self.diag_sample_rate:
-            with torch.no_grad():
-                self._diag_mask_sparsity.append(mask.mean().item())
+            self._diag_mask_stats.append(compute_mask_stats(mask))
         r_feat = feat * mask
         nr_feat = feat * (1 - mask)
         return r_feat, nr_feat, mask
