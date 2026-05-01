@@ -31,18 +31,47 @@ def compute_mask_stats(mask: torch.Tensor) -> dict:
 
 # feature decoupling
 class DFD(torch.nn.Module):
-    def __init__(self, size, num_channel=64, tau=0.1):
+    def __init__(self, size, num_channel=64, tau=0.1, diag_sample_rate=0.01):
         super(DFD, self).__init__()
         C, H, W = size
         self.C, self.H, self.W = C, H, W
         self.tau = tau
-        # 一个小的cnn标准的，用来预测每个feature unit是否robust 
+        self.diag_sample_rate = diag_sample_rate
+        # 一个小的cnn标准的，用来预测每个feature unit是否robust
         self.net = nn.Sequential(
             nn.Conv2d(C, num_channel, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(num_channel),
             nn.ReLU(),
             nn.Conv2d(num_channel, C, kernel_size=3, stride=1, padding=1, bias=False)
         )
+        # 诊断 buffers (pre-Gumbel + post-Gumbel mask 的 7-stat)
+        self._diag_pre_mask_stats = []   # sigmoid(rob_map) 概率 (Gumbel 噪声前)
+        self._diag_post_mask_stats = []  # GumbelSigmoid(...) 后的 mask (实际用)
+
+    def reset_diag(self):
+        self._diag_pre_mask_stats = []
+        self._diag_post_mask_stats = []
+
+    def get_diag_summary(self):
+        """返回 pre-Gumbel 跟 post-Gumbel mask 7-stat (各自跨 batch mean).
+        pre_mask_*_mean : sigmoid(rob_map) 的概率分布 7-stat (★ 真正反映模型学到的)
+        mask_*_mean     : post-Gumbel mask (训练时实际用的, 受 tau noise 影响)
+        """
+        if not self._diag_pre_mask_stats:
+            return None
+        import numpy as np
+        keys = list(self._diag_pre_mask_stats[0].keys())
+        agg = {}
+        # pre-Gumbel
+        for k in keys:
+            agg[f'pre_mask_{k}_mean'] = float(np.mean([s[k] for s in self._diag_pre_mask_stats]))
+        # post-Gumbel
+        if self._diag_post_mask_stats:
+            for k in keys:
+                agg[f'mask_{k}_mean'] = float(np.mean([s[k] for s in self._diag_post_mask_stats]))
+            agg['mask_sparsity_mean'] = agg.get('mask_mean_mean')
+            agg['mask_sparsity_std'] = float(np.std([s['mean'] for s in self._diag_post_mask_stats]))
+        return agg
 
     def forward(self, feat, is_eval=False):
         rob_map = self.net(feat)
@@ -50,10 +79,18 @@ class DFD(torch.nn.Module):
         mask = rob_map.reshape(rob_map.shape[0], 1, -1)
         mask = torch.nn.Sigmoid()(mask)
 
+        # ★ 同一次采样 pre + post mask 形态 (训练时 sample, eval 不采)
+        do_diag = self.training and torch.rand(1).item() < self.diag_sample_rate
+        if do_diag:
+            pre_4d = mask[:, 0].reshape(mask.shape[0], self.C, self.H, self.W)
+            self._diag_pre_mask_stats.append(compute_mask_stats(pre_4d))
+
         # 把连续的概率通过一个gumbel层
         mask = GumbelSigmoid(tau=self.tau)(mask, is_eval=is_eval)
         # 取第0个就是属于robust的概率
         mask = mask[:, 0].reshape(mask.shape[0], self.C, self.H, self.W)
+        if do_diag:
+            self._diag_post_mask_stats.append(compute_mask_stats(mask))
         # mask接近于1的位置，就是r_feat
         r_feat = feat * mask
         nr_feat = feat * (1 - mask)

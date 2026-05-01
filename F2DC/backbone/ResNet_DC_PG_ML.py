@@ -56,37 +56,51 @@ class DFD_lite(nn.Module):
             nn.ReLU(),
             nn.Conv2d(num_channel, C, kernel_size=3, stride=1, padding=1, bias=False),
         )
-        # 诊断 buffer: list[dict], 每个 dict 是单 batch mask3 的 7-stat
+        # 诊断 buffers: pre-Gumbel + post-Gumbel mask3 7-stat
+        self._diag_pre_mask_stats = []
         self._diag_mask_stats = []
 
     def reset_diag(self):
+        self._diag_pre_mask_stats = []
         self._diag_mask_stats = []
 
     def get_diag_summary(self):
         """返回 round 内 mask3 7-stat mean (跨 batch).
 
-        新增 7 个细化指标 (mask3_unit_std / hard_ratio / mid_ratio 等),
-        backward compat 保留旧 mask3_sparsity_mean / mask3_sparsity_std.
+        新增 pre-Gumbel mask3 概率诊断 (★ 真正反映模型学到):
+          pre_mask3_*_mean : sigmoid(rob_map) 的概率分布 7-stat
+        post-Gumbel mask3 (训练时实际用):
+          mask3_*_mean : GumbelSigmoid 后 7-stat (受 tau 噪声影响, hard_ratio 天然 50%)
+        backward compat: mask3_sparsity_mean / mask3_sparsity_std.
         """
-        if not self._diag_mask_stats:
+        if not self._diag_pre_mask_stats:
             return None
         import numpy as np
-        keys = list(self._diag_mask_stats[0].keys())
-        agg = {f'mask3_{k}_mean': float(np.mean([s[k] for s in self._diag_mask_stats]))
-               for k in keys}
-        # backward compat
-        agg['mask3_sparsity_mean'] = agg.get('mask3_mean_mean')
-        agg['mask3_sparsity_std'] = float(np.std([s['mean'] for s in self._diag_mask_stats]))
+        keys = list(self._diag_pre_mask_stats[0].keys())
+        agg = {}
+        # pre-Gumbel
+        for k in keys:
+            agg[f'pre_mask3_{k}_mean'] = float(np.mean([s[k] for s in self._diag_pre_mask_stats]))
+        # post-Gumbel (跟之前的 mask3_*_mean 保持兼容)
+        if self._diag_mask_stats:
+            for k in keys:
+                agg[f'mask3_{k}_mean'] = float(np.mean([s[k] for s in self._diag_mask_stats]))
+            agg['mask3_sparsity_mean'] = agg.get('mask3_mean_mean')
+            agg['mask3_sparsity_std'] = float(np.std([s['mean'] for s in self._diag_mask_stats]))
         return agg
 
     def forward(self, feat, is_eval=False):
         rob_map = self.net(feat)
         mask = rob_map.reshape(rob_map.shape[0], 1, -1)
         mask = torch.sigmoid(mask)
+        # ★ 同一次采样 pre + post mask 形态 (10% 采样, R10 smoke 能采到)
+        do_diag = self.training and torch.rand(1).item() < self.diag_sample_rate
+        if do_diag:
+            pre_4d = mask[:, 0].reshape(mask.shape[0], self.C, self.H, self.W)
+            self._diag_pre_mask_stats.append(compute_mask_stats(pre_4d))
         mask = GumbelSigmoid(tau=self.tau)(mask, is_eval=is_eval)
         mask = mask[:, 0].reshape(mask.shape[0], self.C, self.H, self.W)
-        # 诊断: 10% 采样 7-stat 形态 (R10 smoke 短跑能采到, vs PG-DFC 1% 是为长跑省 sync)
-        if self.training and torch.rand(1).item() < self.diag_sample_rate:
+        if do_diag:
             self._diag_mask_stats.append(compute_mask_stats(mask))
         r_feat = feat * mask
         nr_feat = feat * (1 - mask)

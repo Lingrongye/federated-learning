@@ -89,9 +89,11 @@ class F2DCPG(F2DC):
                 if self.global_proto_unit is not None:
                     # 这个class proto是sever端下发的一个buffer
                     net.dfc_module.class_proto.copy_(self.global_proto_unit.to(self.device))
-                # 重置 client 端诊断
+                # 重置 client 端诊断 (DFD layer4 + DFC_PG layer4)
                 if hasattr(net.dfc_module, 'reset_diag'):
                     net.dfc_module.reset_diag()
+                if hasattr(net, 'dfd_module') and hasattr(net.dfd_module, 'reset_diag'):
+                    net.dfd_module.reset_diag()
 
         # 训练所有 online clients
         round_diag_collect = []
@@ -100,13 +102,28 @@ class F2DCPG(F2DC):
             all_clients_loss += c_loss
             self.num_samples.append(c_samples)
 
-            # 收集 client 端诊断
+            # 收集 client 端诊断 (合并 DFD + DFC_PG)
             net = self.nets_list[i]
+            d = {}
+            if hasattr(net, 'dfd_module') and hasattr(net.dfd_module, 'get_diag_summary'):
+                dfd_d = net.dfd_module.get_diag_summary()
+                if dfd_d is not None:
+                    d.update(dfd_d)  # pre_mask_*_mean + mask_*_mean
             if hasattr(net, 'dfc_module') and hasattr(net.dfc_module, 'get_diag_summary'):
-                d = net.dfc_module.get_diag_summary()
-                if d is not None:
-                    d['client_id'] = i
-                    round_diag_collect.append(d)
+                dfc_d = net.dfc_module.get_diag_summary()
+                if dfc_d is not None:
+                    # DFC_PG 的 mask 跟 DFD 的 post mask 一样, 不重复, 但保留 attn / proto_signal
+                    for k, v in dfc_d.items():
+                        if k.startswith('attn_') or k.startswith('proto_'):
+                            d[k] = v
+                    # 如果 DFD 没收集到 (比如 sample rate 没采到), 用 DFC 的 mask 字段 fallback
+                    if 'mask_mean_mean' not in d:
+                        for k, v in dfc_d.items():
+                            if k.startswith('mask_'):
+                                d[k] = v
+            if d:
+                d['client_id'] = i
+                round_diag_collect.append(d)
 
         # F2DC 原 backbone 聚合 (FedAvg)
         self.aggregate_nets(None)

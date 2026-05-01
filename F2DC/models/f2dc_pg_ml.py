@@ -211,19 +211,24 @@ class F2DCPGML(F2DCPGv33):
         self._round_main_loss_sum = 0.0
 
         # round summary 直接 print 出来, smoke test 能直接 grep
-        # 7-stat 完整 print + aux3 + 旧字段 backward compat
+        # 完整 print: pre/post Gumbel mask 7-stat + aux3 + attention + backward compat
         keys_show = [
             'round',
-            # mask3 7-stat (layer3 lite, ML 新增)
+            # ★ pre-Gumbel mask3 (真正反映模型学到的 layer3 lite 概率分布)
+            'pre_mask3_mean_mean', 'pre_mask3_unit_std_mean',
+            'pre_mask3_hard_ratio_mean', 'pre_mask3_mid_ratio_mean',
+            'pre_mask3_channel_std_mean', 'pre_mask3_spatial_std_mean', 'pre_mask3_sample_std_mean',
+            # post-Gumbel mask3 (实际用, 受 tau noise 影响)
             'mask3_mean_mean', 'mask3_unit_std_mean',
-            'mask3_hard_ratio_mean', 'mask3_mid_ratio_mean',
-            'mask3_sample_std_mean', 'mask3_channel_std_mean', 'mask3_spatial_std_mean',
+            'mask3_hard_ratio_mean', 'mask3_channel_std_mean',
             # aux3 deep sup
             'aux3_loss_mean', 'main_loss_mean', 'aux3_over_main_ratio',
-            # mask4 7-stat (layer4, F2DC 原版 DFD via DFC_PG 收集)
-            'mask_mean_mean', 'mask_unit_std_mean',
-            'mask_hard_ratio_mean', 'mask_mid_ratio_mean',
-            'mask_sample_std_mean', 'mask_channel_std_mean', 'mask_spatial_std_mean',
+            # ★ pre-Gumbel mask4 (layer4 真正学到的)
+            'pre_mask_mean_mean', 'pre_mask_unit_std_mean',
+            'pre_mask_hard_ratio_mean', 'pre_mask_mid_ratio_mean',
+            'pre_mask_channel_std_mean',
+            # post-Gumbel mask4
+            'mask_mean_mean', 'mask_unit_std_mean', 'mask_hard_ratio_mean', 'mask_channel_std_mean',
             # PG-DFC attention
             'attn_entropy_mean', 'proto_signal_ratio_mean',
             # backward compat

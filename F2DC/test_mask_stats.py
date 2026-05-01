@@ -181,11 +181,64 @@ def test_t4_large_n_sanity():
     print("T4 PASS\n")
 
 
+def test_t5_pre_post_gumbel():
+    """T5: 验证 DFD/DFD_lite 的 pre-Gumbel 跟 post-Gumbel mask 7-stat 都被收集.
+
+    pre-Gumbel = sigmoid(rob_map) (Gumbel noise 前) — 真正反映模型学到
+    post-Gumbel = GumbelSigmoid(...) (实际用) — 受 tau noise 影响, hard_ratio 天然 50%
+    """
+    print("=== T5: pre/post Gumbel mask 7-stat ===")
+    torch.manual_seed(0)
+
+    # DFD_lite (mask3)
+    dfd_lite = DFD_lite(size=(32, 8, 8), num_channel=8, tau=0.5, diag_sample_rate=1.0)
+    dfd_lite.train()
+    dfd_lite.reset_diag()
+    for _ in range(3):
+        feat = torch.randn(4, 32, 8, 8)
+        _, _, _ = dfd_lite(feat)
+    s = dfd_lite.get_diag_summary()
+    pre_keys = [k for k in s if k.startswith('pre_mask3_')]
+    post_keys = [k for k in s if k.startswith('mask3_') and not k.startswith('mask3_sparsity')]
+    assert len(pre_keys) == 7, f"pre_mask3_*_mean 应该 7 个, 实际 {len(pre_keys)}"
+    assert len(post_keys) == 7, f"mask3_*_mean 应该 7 个, 实际 {len(post_keys)}"
+    print(f"  ✓ DFD_lite 同时输出 pre_mask3 (7) + mask3 (7) 共 14 + 2 backward compat keys")
+    pre_hard = s['pre_mask3_hard_ratio_mean']
+    post_hard = s['mask3_hard_ratio_mean']
+    pre_mid = s['pre_mask3_mid_ratio_mean']
+    post_mid = s['mask3_mid_ratio_mean']
+    print(f"  pre_mask3:  hard_ratio={pre_hard:.3f}  mid_ratio={pre_mid:.3f}  (random init: 接近 sigmoid(N(0,1)))")
+    print(f"  post_mask3: hard_ratio={post_hard:.3f}  mid_ratio={post_mid:.3f}  (Gumbel 推到 ~50%)")
+    # post hard 应该比 pre hard 高 (Gumbel 推到 0/1)
+    assert post_hard >= pre_hard - 0.1, f"post hard ratio ({post_hard}) 应该 ≥ pre ({pre_hard})"
+
+    # DFD (mask4) — 之前没 diag, 验证新加的 reset_diag/get_diag_summary
+    from backbone.ResNet_DC import DFD
+    dfd = DFD(size=(16, 4, 4), num_channel=8, tau=0.1, diag_sample_rate=1.0)
+    dfd.train()
+    dfd.reset_diag()
+    for _ in range(3):
+        feat = torch.randn(4, 16, 4, 4)
+        _, _, _ = dfd(feat)
+    s = dfd.get_diag_summary()
+    pre_keys = [k for k in s if k.startswith('pre_mask_')]
+    post_keys = [k for k in s if k.startswith('mask_') and not k.startswith('mask_sparsity')]
+    assert len(pre_keys) == 7, f"DFD pre_mask_*_mean 应该 7 个, 实际 {len(pre_keys)}"
+    assert len(post_keys) == 7, f"DFD mask_*_mean 应该 7 个, 实际 {len(post_keys)}"
+    print(f"  ✓ DFD 同时输出 pre_mask (7) + mask (7) keys, mask4 tau=0.1 比 mask3 tau=0.5 更硬")
+    pre_hard = s['pre_mask_hard_ratio_mean']
+    post_hard = s['mask_hard_ratio_mean']
+    print(f"  pre_mask4:  hard_ratio={pre_hard:.3f}  unit_std={s['pre_mask_unit_std_mean']:.4f}")
+    print(f"  post_mask4: hard_ratio={post_hard:.3f}  unit_std={s['mask_unit_std_mean']:.4f}  (tau=0.1 强推 0/1)")
+    print("T5 PASS\n")
+
+
 if __name__ == '__main__':
     test_t1_compute_mask_stats()
     test_t2_dfd_lite()
     test_t3_dfc_pg()
     test_t4_large_n_sanity()
+    test_t5_pre_post_gumbel()
     print("=" * 60)
-    print("ALL 4 TESTS PASS — 7-stat mask 诊断已就位")
+    print("ALL 5 TESTS PASS — 7-stat mask 诊断已就位 (pre + post Gumbel)")
     print("=" * 60)
