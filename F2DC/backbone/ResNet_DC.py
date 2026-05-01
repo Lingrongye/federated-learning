@@ -31,7 +31,7 @@ def compute_mask_stats(mask: torch.Tensor) -> dict:
 
 # feature decoupling
 class DFD(torch.nn.Module):
-    def __init__(self, size, num_channel=64, tau=0.1, diag_sample_rate=0.01):
+    def __init__(self, size, num_channel=64, tau=0.1, diag_sample_rate=0.1):
         super(DFD, self).__init__()
         C, H, W = size
         self.C, self.H, self.W = C, H, W

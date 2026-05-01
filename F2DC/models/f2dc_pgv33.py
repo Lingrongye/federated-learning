@@ -77,6 +77,8 @@ class F2DCPGv33(F2DCPG):
                     net.dfc_module.class_proto.copy_(self.global_proto_unit.to(self.device))
                 if hasattr(net.dfc_module, 'reset_diag'):
                     net.dfc_module.reset_diag()
+                if hasattr(net, 'dfd_module') and hasattr(net.dfd_module, 'reset_diag'):
+                    net.dfd_module.reset_diag()
 
         # 训练所有 online clients
         round_diag_collect = []
@@ -85,13 +87,30 @@ class F2DCPGv33(F2DCPG):
             all_clients_loss += c_loss
             self.num_samples.append(c_samples)
 
-            # 收集 client 端诊断
+            # 收集 client 端诊断 (合并 DFD layer4 + DFC_PG)
+            # DFD 输出 pre_mask_*_mean / mask_*_mean (layer4)
+            # DFC_PG 输出 mask_*_mean (post-Gumbel, 跟 DFD 一致, 重复) + attn_/proto_signal_
             net = self.nets_list[i]
+            d = {}
+            if hasattr(net, 'dfd_module') and hasattr(net.dfd_module, 'get_diag_summary'):
+                dfd_d = net.dfd_module.get_diag_summary()
+                if dfd_d is not None:
+                    d.update(dfd_d)
             if hasattr(net, 'dfc_module') and hasattr(net.dfc_module, 'get_diag_summary'):
-                d = net.dfc_module.get_diag_summary()
-                if d is not None:
-                    d['client_id'] = i
-                    round_diag_collect.append(d)
+                dfc_d = net.dfc_module.get_diag_summary()
+                if dfc_d is not None:
+                    # 只保留 attn_/proto_ (mask 已经从 DFD 拿到)
+                    for k, v in dfc_d.items():
+                        if k.startswith('attn_') or k.startswith('proto_'):
+                            d[k] = v
+                    if 'mask_mean_mean' not in d:
+                        # fallback: DFD 没采到 (sample rate 太低), 用 DFC_PG 的
+                        for k, v in dfc_d.items():
+                            if k.startswith('mask_'):
+                                d[k] = v
+            if d:
+                d['client_id'] = i
+                round_diag_collect.append(d)
 
         # backbone 聚合
         self.aggregate_nets(None)
