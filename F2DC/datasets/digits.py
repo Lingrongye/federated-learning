@@ -185,14 +185,16 @@ class FedLeaDigits(FederatedDataset):
                 pw = getattr(args_obj, 'pg_proto_weight', 0.3)
                 tau_attn = getattr(args_obj, 'pg_attn_temperature', 0.3)
                 lc = getattr(args_obj, 'ml_lite_channel', 32)
-                lt = getattr(args_obj, 'ml_lite_tau', 0.5)
+                lt = getattr(args_obj, 'ml_lite_tau', 0.1)
+                rho = getattr(args_obj, 'ml_main_rho', 0.0)
                 for j in range(parti_num):
                     nets_list.append(resnet10_dc_pg_ml_digits(num_classes=FedLeaDigits.N_CLASS,
                                                               gum_tau=FedLeaDigits.model_args.gum_tau,
                                                               proto_weight=pw,
                                                               attn_temperature=tau_attn,
                                                               ml_lite_channel=lc,
-                                                              ml_lite_tau=lt))
+                                                              ml_lite_tau=lt,
+                                                              ml_main_rho=rho))
             elif model_name=='fdse':
                 from backbone.ResNet_FDSE import resnet10_fdse_digits
                 for j in range(parti_num):

@@ -148,7 +148,7 @@ class ResNet_PG_ML(ResNet_PG):
     """
     def __init__(self, block, num_blocks, num_classes=10, tau=0.1, image_size=(32, 32),
                  name='f2dc_pg_ml', proto_weight=0.3, attn_temperature=0.3,
-                 ml_lite_channel=32, ml_lite_tau=0.1):
+                 ml_lite_channel=32, ml_lite_tau=0.1, ml_main_rho=0.0):
         super().__init__(block, num_blocks, num_classes=num_classes, tau=tau,
                          image_size=image_size, name=name,
                          proto_weight=proto_weight, attn_temperature=attn_temperature)
@@ -159,6 +159,9 @@ class ResNet_PG_ML(ResNet_PG):
         self.dfd_lite = DFD_lite(size=(C3, H3, W3), num_channel=ml_lite_channel, tau=ml_lite_tau)
         self.dfc_lite = DFC_lite(size=(C3, H3, W3), num_channel=ml_lite_channel)
         self.aux3 = nn.Linear(C3, num_classes)
+        # ml_main_rho: feat3_clean 注入主路比例 (0=不注入 等价旧 design, 0.1-0.2 弱注入,
+        # 让 mask3 接通 main loss 梯度. EXP-141 v3 验证 tau ablation 失败后启用)
+        self.ml_main_rho = ml_main_rho
         # transient attributes — 不存 state_dict, 训练时被 trainer 读取
         self._last_aux3_logits = None
         self._last_mask3 = None
@@ -182,8 +185,12 @@ class ResNet_PG_ML(ResNet_PG):
         self._last_aux3_logits = self.aux3(feat3_pooled)
         self._last_mask3 = mask3
 
-        # ★ layer4 主路 — 完全等价 ResNet_PG.forward, 用原 feat3 (非 cleaned)
-        out = self.layer4(feat3)
+        # ★ layer4 主路 — rho=0 等价旧 design, rho>0 弱注入 cleaned 让 mask3 接通 main loss 梯度
+        if self.ml_main_rho > 0:
+            feat3_main = feat3 + self.ml_main_rho * (feat3_clean - feat3)
+        else:
+            feat3_main = feat3
+        out = self.layer4(feat3_main)
 
         r_feat, nr_feat, mask = self.dfd_module(out, is_eval=is_eval)
         ro_flat = nn.AdaptiveAvgPool2d(1)(r_feat).reshape(r_feat.shape[0], -1)
@@ -206,26 +213,29 @@ class ResNet_PG_ML(ResNet_PG):
 
 def resnet10_dc_pg_ml(num_classes=7, gum_tau=0.1,
                       proto_weight=0.3, attn_temperature=0.3,
-                      ml_lite_channel=32, ml_lite_tau=0.1):
+                      ml_lite_channel=32, ml_lite_tau=0.1, ml_main_rho=0.0):
     return ResNet_PG_ML(BasicBlock, [1, 1, 1, 1], num_classes=num_classes,
                         tau=gum_tau, image_size=(128, 128),
                         proto_weight=proto_weight, attn_temperature=attn_temperature,
-                        ml_lite_channel=ml_lite_channel, ml_lite_tau=ml_lite_tau)
+                        ml_lite_channel=ml_lite_channel, ml_lite_tau=ml_lite_tau,
+                        ml_main_rho=ml_main_rho)
 
 
 def resnet10_dc_pg_ml_office(num_classes=10, gum_tau=0.1,
                              proto_weight=0.3, attn_temperature=0.3,
-                             ml_lite_channel=32, ml_lite_tau=0.1):
+                             ml_lite_channel=32, ml_lite_tau=0.1, ml_main_rho=0.0):
     return ResNet_PG_ML(BasicBlock, [1, 1, 1, 1], num_classes=num_classes,
                         tau=gum_tau, image_size=(32, 32),
                         proto_weight=proto_weight, attn_temperature=attn_temperature,
-                        ml_lite_channel=ml_lite_channel, ml_lite_tau=ml_lite_tau)
+                        ml_lite_channel=ml_lite_channel, ml_lite_tau=ml_lite_tau,
+                        ml_main_rho=ml_main_rho)
 
 
 def resnet10_dc_pg_ml_digits(num_classes=10, gum_tau=0.1,
                              proto_weight=0.3, attn_temperature=0.3,
-                             ml_lite_channel=32, ml_lite_tau=0.1):
+                             ml_lite_channel=32, ml_lite_tau=0.1, ml_main_rho=0.0):
     return ResNet_PG_ML(BasicBlock, [1, 1, 1, 1], num_classes=num_classes,
                         tau=gum_tau, image_size=(32, 32),
                         proto_weight=proto_weight, attn_temperature=attn_temperature,
-                        ml_lite_channel=ml_lite_channel, ml_lite_tau=ml_lite_tau)
+                        ml_lite_channel=ml_lite_channel, ml_lite_tau=ml_lite_tau,
+                        ml_main_rho=ml_main_rho)

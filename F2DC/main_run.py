@@ -148,6 +148,8 @@ def parse_args():
                         help="ML DFD/DFC lite 内部 channel 数 (vs PG-DFC 原 64)")
     parser.add_argument("--ml_lite_tau", type=float, default=0.1,
                         help="ML lite gumbel tau (跟 layer4 DFD 一致 0.1 / 旧默认 0.5 mask3 学不动 EXP-141 v2)")
+    parser.add_argument("--ml_main_rho", type=float, default=0.0,
+                        help="ML lite cleaned 注入主路 rho (0=旧 design 不注入, 0.1-0.2=弱注入让 mask3 接通 main loss 梯度)")
 
     parser.add_argument("--ma_select", type=str, default="resnet", help="backbone")
 
