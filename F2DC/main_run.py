@@ -151,6 +151,31 @@ def parse_args():
     parser.add_argument("--ml_main_rho", type=float, default=0.0,
                         help="ML lite cleaned 注入主路 rho (0=旧 design 不注入, 0.1-0.2=弱注入让 mask3 接通 main loss 梯度)")
 
+    # ===== Pure F2DC + DSE_Rescue3 (Progressive Shift Rescue, f2dc_dse) =====
+    parser.add_argument("--dse_reduction", type=int, default=8,
+                        help="DSE bottleneck reduction (256 -> 256/8=32 hidden)")
+    parser.add_argument("--dse_rho_max", type=float, default=0.1,
+                        help="DSE rho upper bound (修正强度上限, ramp 后达到)")
+    parser.add_argument("--dse_lambda_cc", type=float, default=0.1,
+                        help="DSE class-conditional consistency loss weight")
+    parser.add_argument("--dse_lambda_mag", type=float, default=0.01,
+                        help="DSE magnitude safety guard loss weight")
+    parser.add_argument("--dse_r_max", type=float, default=0.15,
+                        help="DSE magnitude trigger threshold (||rho*delta||/||feat|| 上限)")
+    parser.add_argument("--dse_cc_warmup_rounds", type=int, default=5,
+                        help="DSE CCC warmup rounds (R0..warmup-1: lambda_cc=0, server EMA proto3)")
+    parser.add_argument("--dse_cc_ramp_rounds", type=int, default=10,
+                        help="DSE CCC ramp rounds (warmup..warmup+ramp-1: lambda_cc 0→max)")
+    parser.add_argument("--dse_rho_warmup_rounds", type=int, default=5,
+                        help="DSE rho warmup rounds (跟 cc_warmup 同步)")
+    parser.add_argument("--dse_rho_ramp_rounds", type=int, default=10,
+                        help="DSE rho ramp rounds (跟 cc_ramp 同步)")
+    parser.add_argument("--dse_proto3_ema_beta", type=float, default=0.85,
+                        help="DSE server proto3 EMA momentum (大=稳, 小=随新 batch 飘)")
+    parser.add_argument("--dse_ccc_fixed_batches", type=int, default=2,
+                        help="CCC raw/rescued cos 诊断: 每 (client, epoch) 固定前 N batch 记录"
+                             " (改自 10% 随机采样, 保证短跑也有数据)")
+
     parser.add_argument("--ma_select", type=str, default="resnet", help="backbone")
 
     # CPU core intra-op parallelism

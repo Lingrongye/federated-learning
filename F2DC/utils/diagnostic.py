@@ -28,6 +28,39 @@ import numpy as np
 import torch
 
 
+def _json_default(obj):
+    if torch.is_tensor(obj):
+        if obj.numel() == 1:
+            return obj.detach().cpu().item()
+        return obj.detach().cpu().tolist()
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        return float(obj)
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    return str(obj)
+
+
+def _as_float_scalar(value):
+    try:
+        if torch.is_tensor(value):
+            if value.numel() != 1:
+                return None
+            value = value.detach().cpu().item()
+        if isinstance(value, np.ndarray):
+            if value.size != 1:
+                return None
+            value = value.item()
+        if isinstance(value, (int, float, bool, np.integer, np.floating, np.bool_)):
+            return float(value)
+    except Exception:
+        return None
+    return None
+
+
 # ============================================================
 # Light dump: 每 round 元数据 (50 KB, ~10 ms)
 # ============================================================
@@ -98,6 +131,19 @@ def dump_round_metadata(model, round_idx, eval_results, all_dataset_names, args)
                 global_proto_arr = proto_obj.detach().cpu().numpy().astype(np.float16)
         except Exception as e:
             print(f"[diag] global_proto dump failed: {e}")
+
+    # === global_proto3 (F2DCDSE: layer3 cross-client class proto, EMA L2-norm) ===
+    # 跟上面 global_proto 不同的是:
+    #   - global_proto = layer4 final pooled proto (PG-DFC / FedProto / 等)
+    #   - global_proto3 = layer3 mid-stage proto (DSE 用作 CCC target)
+    # 落盘可做 proto3 drift / class center 轨迹 / CCC target 可视化
+    global_proto3_arr = None
+    proto3_obj = getattr(model, 'global_proto3_unit', None)
+    if proto3_obj is not None and torch.is_tensor(proto3_obj):
+        try:
+            global_proto3_arr = proto3_obj.detach().cpu().numpy().astype(np.float16)
+        except Exception as e:
+            print(f"[diag] global_proto3 dump failed: {e}")
 
     # === local protos (per-client per-class) ===
     # 兼容 3 种 model 形式:
@@ -183,6 +229,18 @@ def dump_round_metadata(model, round_idx, eval_results, all_dataset_names, args)
     # === per-domain test acc + per-class confusion (eval_results 里的) ===
     per_domain_acc = np.array(eval_results, dtype=np.float32)
 
+    # === PG-DFC runtime diagnostics (mask/attention/prototype signal) ===
+    # f2dc_pg / f2dc_pgv33 / f2dc_pg_ml append one dict per round to
+    # model.proto_logs. Persist the latest dict here; otherwise these values
+    # only live in memory and disappear after training.
+    proto_diag = None
+    proto_logs = getattr(model, 'proto_logs', None)
+    if isinstance(proto_logs, list) and proto_logs:
+        latest = proto_logs[-1]
+        if isinstance(latest, dict):
+            proto_diag = dict(latest)
+            proto_diag['dump_round'] = int(round_idx)
+
     # === save ===
     save_kwargs = dict(
         round=int(round_idx),
@@ -196,8 +254,25 @@ def dump_round_metadata(model, round_idx, eval_results, all_dataset_names, args)
     )
     if global_proto_arr is not None:
         save_kwargs['global_proto'] = global_proto_arr
+    if global_proto3_arr is not None:
+        # F2DCDSE 专属: layer3 EMA proto (CCC target)
+        save_kwargs['global_proto3'] = global_proto3_arr
     if local_protos_arr is not None:
         save_kwargs['local_protos'] = local_protos_arr
+    if proto_diag is not None:
+        try:
+            proto_diag_json = json.dumps(proto_diag, default=_json_default, sort_keys=True)
+            save_kwargs['proto_diag_json'] = np.array([proto_diag_json], dtype=object)
+            for k, v in proto_diag.items():
+                scalar = _as_float_scalar(v)
+                if scalar is not None:
+                    safe_key = ''.join(ch if (ch.isalnum() or ch == '_') else '_' for ch in str(k))
+                    save_kwargs[f'proto_diag_{safe_key}'] = np.array(scalar, dtype=np.float32)
+
+            with open(os.path.join(diag_dir, 'proto_logs.jsonl'), 'a') as f:
+                f.write(proto_diag_json + '\n')
+        except Exception as e:
+            print(f"[diag] proto diagnostic dump failed: {e}")
     # layer_l2 是 nested dict, 用 pickle (np.savez 不支持 dict)
     save_kwargs['layer_l2_pickle'] = np.array([json.dumps(layer_l2)], dtype=object)
 
@@ -266,7 +341,7 @@ def dump_heavy_snapshot(model, test_loaders, prefix, round_idx, current_acc, arg
         domain_names = [f"d{i}" for i in range(len(test_loaders))]
 
     NC = int(args.num_classes)
-    use_tuple = model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml")
+    use_tuple = model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml", "f2dc_dse")
 
     with torch.no_grad():
         for di, dl in enumerate(test_loaders):

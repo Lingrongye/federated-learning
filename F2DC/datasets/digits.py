@@ -195,6 +195,15 @@ class FedLeaDigits(FederatedDataset):
                                                               ml_lite_channel=lc,
                                                               ml_lite_tau=lt,
                                                               ml_main_rho=rho))
+            elif model_name == 'f2dc_dse':
+                from backbone.ResNet_DC_F2DC_DSE import resnet10_f2dc_dse_digits
+                args_obj = FedLeaDigits.model_args
+                dse_red = getattr(args_obj, 'dse_reduction', 8)
+                for j in range(parti_num):
+                    nets_list.append(resnet10_f2dc_dse_digits(
+                        num_classes=FedLeaDigits.N_CLASS,
+                        gum_tau=FedLeaDigits.model_args.gum_tau,
+                        dse_reduction=dse_red))
             elif model_name=='fdse':
                 from backbone.ResNet_FDSE import resnet10_fdse_digits
                 for j in range(parti_num):

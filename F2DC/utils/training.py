@@ -32,7 +32,7 @@ def global_evaluate(
                 # 将数据集加载到device上
                 images, labels = images.to(model.device), labels.to(model.device)
                 # 如果模型是f2dc，f2dc_pg，f2dc_pgv33, f2dc_pg_ml,则需要传 is_eval=True 走 deterministic gumbel
-                if model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml"):
+                if model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml", "f2dc_dse"):
                     # patch (2026-04-29): 必须传 is_eval=True 走 deterministic gumbel
                     # (gumbel_sigmoid.py:17 在 is_eval=False 时随机采样, 同 model 同 input
                     #  两次 eval 输出不一致, max_abs_diff ~0.0004, 引入 acc 噪声)
@@ -51,36 +51,48 @@ def global_evaluate(
     net.train(status)
     return accs
 
-
+# 计算原型，硬编码为10 
 def get_prototypes(features, labels):
     centers = []
     for i in range(10):
         idx = labels == i
         class_feat = features[idx]
+        # 计算每个类的平均特征
         center = np.mean(class_feat, axis=0)
         centers.append(center)
+    # 转换为numpy数组
     centers = np.array(centers)
     return centers
 
 
 def get_features(net, dataloader, device):
+    # 设置为评估模式
     net.eval()
+    # 特征和标签列表
     features, labels = [], []
     with torch.no_grad():
         for x, y in dataloader:
+            # 将数据集加载到device上
             x, y = x.to(device), y.to(device)
+            # 获取特征
             feat = net.features(x)  # 512
             features.append(feat.cpu())
             labels.append(y.cpu())
+    # 将特征和标签拼接起来
     features = torch.cat(features, dim=0).numpy()
+    # 将标签拼接起来
     labels = torch.cat(labels, dim=0).numpy()
     return features, labels
 
-
+# 主要是获取全局模型的特征和标签
 def extract_features(model, dataloader):
+    # 获取全局模型
     net = model.global_net
+    # 设置为评估模式
     net.eval()
+    # 特征和标签列表
     features, labels = [], []
+    # 遍历数据集
     with torch.no_grad():
         for x, y in dataloader:
             x, y = x.to(model.device), y.to(model.device)
@@ -98,9 +110,13 @@ def train(
     if args.csv_log:
         csv_writer = CsvWriter(args, private_dataset)
     model.N_CLASS = private_dataset.N_CLASS
+    # 同步 args.num_classes (默认 7 是 PACS 值, Office/Digits 是 10)
+    # 之前 main_run.py 注册 --num_classes 默认 7, 但 dataset 知道真值, 这里覆盖一下
+    # 让所有依赖 args.num_classes 的诊断/proto buffer 都拿对值
+    args.num_classes = private_dataset.N_CLASS
     domains_list = private_dataset.DOMAINS_LIST
     domains_len = len(domains_list)
-
+    # 本实验都是固定客户端进行分配
     if args.rand_dataset:
         max_num = 10
         is_ok = False
@@ -158,14 +174,18 @@ def train(
     # print(result)
     print(f"selected_domain_list for {args.parti_num} clients as:")
     print(selected_domain_list)
+    # 创建每个clinent的dataloader
     pri_train_loaders, test_loaders = private_dataset.get_data_loaders(
         selected_domain_list
     )
+    # 保存到dataloader里面
     model.trainloaders = pri_train_loaders
     model.testlodaers = test_loaders
+
     # 暴露给 diagnostic hook (per-client domain id, for cold path 按 domain 分组)
     model._selected_domain_list = list(selected_domain_list)
 
+    # 创建一个初始化模型 把所有的client 网络初始化为统一的权重 
     if hasattr(model, "ini"):
         model.ini()
 
@@ -188,11 +208,14 @@ def train(
 
     Epoch = args.communication_epoch
     all_epoch_loss = []
+
     for epoch_index in range(Epoch):
+        # 先记录一下当前的epoch
         model.epoch_index = epoch_index
 
         start_time = time.time()
         if hasattr(model, "loc_update"):
+            # 进行一次本地的训练
             epoch_loss = model.loc_update(pri_train_loaders)
             all_epoch_loss.append(epoch_loss)
         end_time = time.time()
@@ -202,7 +225,7 @@ def train(
         )
 
         # all_dis = 0.0
-
+        # 测试model.global_net,
         accs = global_evaluate(
             model, test_loaders, private_dataset.SETTING, private_dataset.NAME
         )
@@ -224,16 +247,18 @@ def train(
         )
         print(accs)
         print()
-
+        # 每一轮先dump一下结果
         # === diagnostic hook: light dump per round + heavy on best/final ===
         try:
             dump_round_metadata(model, epoch_index + 1, accs, all_dataset_names, args)
+            # 保存best数据
             if mean_acc > best_mean_acc + 1e-6:
                 if should_dump_heavy_best(epoch_index + 1, mean_acc, args, diag_state):
                     dump_heavy_snapshot(model, test_loaders,
                                         f"best_R{epoch_index+1:03d}",
                                         epoch_index + 1, mean_acc, args, diag_state)
                 best_mean_acc = mean_acc
+            # 保存最后一轮的模型数据
             if epoch_index == Epoch - 1:
                 dump_heavy_snapshot(model, test_loaders,
                                     f"final_R{epoch_index+1:03d}",
