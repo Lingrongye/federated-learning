@@ -146,8 +146,8 @@ def parse_args():
                         help="ML deep sup loss weight (aux3 CE), 0 = disable lite branch")
     parser.add_argument("--ml_lite_channel", type=int, default=32,
                         help="ML DFD/DFC lite 内部 channel 数 (vs PG-DFC 原 64)")
-    parser.add_argument("--ml_lite_tau", type=float, default=0.5,
-                        help="ML lite gumbel tau (浅层 mask 更软, vs 深层 0.1)")
+    parser.add_argument("--ml_lite_tau", type=float, default=0.1,
+                        help="ML lite gumbel tau (跟 layer4 DFD 一致 0.1 / 旧默认 0.5 mask3 学不动 EXP-141 v2)")
 
     parser.add_argument("--ma_select", type=str, default="resnet", help="backbone")
 
