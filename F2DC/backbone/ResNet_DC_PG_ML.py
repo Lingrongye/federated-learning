@@ -40,10 +40,15 @@ class DFD_lite(nn.Module):
     """layer3 mask 切分 lite 版.
 
     跟 ResNet_DC.DFD 同结构, 但 num_channel 默认 32 (vs DFD 的 64).
-    PACS 上 layer3 的 spatial 是 32×32, 比 layer4 的 16×16 大 4 倍, gumbel 学起来
-    更困难 → tau 默认调高到 0.5 (vs DFD 的 0.1) 让 mask 更软, 减少 collapse 风险.
+    PACS 上 layer3 的 spatial 是 32×32, 比 layer4 的 16×16 大 4 倍.
+
+    tau 历史:
+      - 旧版 tau=0.5 (软 GumbelSigmoid, 怕 collapse) → 实测 pre_mask3 hard% < 1%,
+        mid% > 80%, 完全卡 0.5, mask3 没真学 (EXP-141 v2 R0/R1 验证)
+      - 新版 tau=0.1 (跟 layer4 DFD tau 一致, 强 push 0/1) → 预期 pre_mask3 真二值化
+        (EXP-141 v3 验证)
     """
-    def __init__(self, size, num_channel=32, tau=0.5, diag_sample_rate=0.1):
+    def __init__(self, size, num_channel=32, tau=0.1, diag_sample_rate=0.1):
         super().__init__()
         C, H, W = size
         self.C, self.H, self.W = C, H, W
@@ -143,7 +148,7 @@ class ResNet_PG_ML(ResNet_PG):
     """
     def __init__(self, block, num_blocks, num_classes=10, tau=0.1, image_size=(32, 32),
                  name='f2dc_pg_ml', proto_weight=0.3, attn_temperature=0.3,
-                 ml_lite_channel=32, ml_lite_tau=0.5):
+                 ml_lite_channel=32, ml_lite_tau=0.1):
         super().__init__(block, num_blocks, num_classes=num_classes, tau=tau,
                          image_size=image_size, name=name,
                          proto_weight=proto_weight, attn_temperature=attn_temperature)
@@ -201,7 +206,7 @@ class ResNet_PG_ML(ResNet_PG):
 
 def resnet10_dc_pg_ml(num_classes=7, gum_tau=0.1,
                       proto_weight=0.3, attn_temperature=0.3,
-                      ml_lite_channel=32, ml_lite_tau=0.5):
+                      ml_lite_channel=32, ml_lite_tau=0.1):
     return ResNet_PG_ML(BasicBlock, [1, 1, 1, 1], num_classes=num_classes,
                         tau=gum_tau, image_size=(128, 128),
                         proto_weight=proto_weight, attn_temperature=attn_temperature,
@@ -210,7 +215,7 @@ def resnet10_dc_pg_ml(num_classes=7, gum_tau=0.1,
 
 def resnet10_dc_pg_ml_office(num_classes=10, gum_tau=0.1,
                              proto_weight=0.3, attn_temperature=0.3,
-                             ml_lite_channel=32, ml_lite_tau=0.5):
+                             ml_lite_channel=32, ml_lite_tau=0.1):
     return ResNet_PG_ML(BasicBlock, [1, 1, 1, 1], num_classes=num_classes,
                         tau=gum_tau, image_size=(32, 32),
                         proto_weight=proto_weight, attn_temperature=attn_temperature,
@@ -219,7 +224,7 @@ def resnet10_dc_pg_ml_office(num_classes=10, gum_tau=0.1,
 
 def resnet10_dc_pg_ml_digits(num_classes=10, gum_tau=0.1,
                              proto_weight=0.3, attn_temperature=0.3,
-                             ml_lite_channel=32, ml_lite_tau=0.5):
+                             ml_lite_channel=32, ml_lite_tau=0.1):
     return ResNet_PG_ML(BasicBlock, [1, 1, 1, 1], num_classes=num_classes,
                         tau=gum_tau, image_size=(32, 32),
                         proto_weight=proto_weight, attn_temperature=attn_temperature,

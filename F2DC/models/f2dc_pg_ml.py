@@ -14,7 +14,7 @@ PG-DFC v3.3 + Multi-Layer (f2dc_pg_ml)
 新超参 (从 args 读取, 默认值见 main_run.py):
   - ml_aux_alpha:    deep sup loss 权重, 默认 0.1 (R10 smoke 起始值, 设 0 退化)
   - ml_lite_channel: DFD/DFC lite 内部 channel, 默认 32 (backbone 用)
-  - ml_lite_tau:     lite gumbel tau, 默认 0.5 (backbone 用, 比 layer4 的 0.1 大避免坍塌)
+  - ml_lite_tau:     lite gumbel tau, 默认 0.1 (跟 layer4 DFD 一致, EXP-141 v2 验证 tau=0.5 mask3 学不动)
 
 诊断字段 (round summary 里):
   - mask3_sparsity_mean / mask3_sparsity_std: layer3 mask 平均稠密度, 健康 0.3-0.7
