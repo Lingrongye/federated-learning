@@ -1,0 +1,46 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_dse_20_fl_digits_100_10
+selected_domain_list for 20 clients as:
+['mnist' 'mnist' 'mnist' 'usps' 'usps' 'usps' 'usps' 'usps' 'usps' 'svhn'
+ 'svhn' 'svhn' 'svhn' 'svhn' 'svhn' 'syn' 'syn' 'syn' 'syn' 'syn']
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/test_32x32.mat
+[DSE diag] {'round': 0, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.175047874450684, 'proto3_valid_mean_norm': 8.175047874450684, 'proto3_ema_delta_norm': 0.0}
+The 0 Communcation Time: 52.595
+The 0 Communcation Accuracy: 13.542 Method: f2dc_dse epoch loss: 13.553
+[11.35, 13.15, 19.59, 10.08]
+
+[DSE diag] {'round': 1, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.249994277954102, 'proto3_valid_mean_norm': 8.249994277954102, 'proto3_ema_delta_norm': 0.18646593391895294, 'raw_to_target_cos_mean': 0.9538400366902351, 'rescued_to_target_cos_mean': 0.9538400366902351, 'ccc_improvement': 0.0}
+The 1 Communcation Time: 52.172
+The 1 Communcation Accuracy: 11.832 Method: f2dc_dse epoch loss: 8.716
+[9.82, 8.02, 19.44, 10.05]
+
+[DSE diag] {'round': 2, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.324764251708984, 'proto3_valid_mean_norm': 8.324764251708984, 'proto3_ema_delta_norm': 0.19928890466690063, 'raw_to_target_cos_mean': 0.9545264329016209, 'rescued_to_target_cos_mean': 0.9545264329016209, 'ccc_improvement': 0.0}
+The 2 Communcation Time: 51.433
+The 2 Communcation Accuracy: 22.548 Method: f2dc_dse epoch loss: 7.503
+[24.34, 26.76, 20.37, 18.72]
+
+[DSE diag] {'round': 3, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.423157691955566, 'proto3_valid_mean_norm': 8.423157691955566, 'proto3_ema_delta_norm': 0.18506638705730438, 'raw_to_target_cos_mean': 0.954245329797268, 'rescued_to_target_cos_mean': 0.954245329797268, 'ccc_improvement': 0.0}
+The 3 Communcation Time: 52.642
+The 3 Communcation Accuracy: 34.36 Method: f2dc_dse epoch loss: 6.316
+[46.39, 36.47, 25.51, 29.07]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-146_f2dc_dse_digits_rho_scan/diag/rho02_s15/best_R004.npz (acc=34.360)
+[DSE diag] {'round': 4, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.533860206604004, 'proto3_valid_mean_norm': 8.533860206604004, 'proto3_ema_delta_norm': 0.19770242273807526, 'raw_to_target_cos_mean': 0.963237919062376, 'rescued_to_target_cos_mean': 0.963237919062376, 'ccc_improvement': 0.0}
+The 4 Communcation Time: 51.178
+The 4 Communcation Accuracy: 45.092 Method: f2dc_dse epoch loss: 5.18
+[47.55, 50.87, 40.07, 41.88]
+
+[DSE diag] {'round': 5, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.606854438781738, 'proto3_valid_mean_norm': 8.606854438781738, 'proto3_ema_delta_norm': 0.16933086514472961, 'raw_to_target_cos_mean': 0.9642975182831287, 'rescued_to_target_cos_mean': 0.9642975182831287, 'ccc_improvement': 0.0}
+The 5 Communcation Time: 52.355
+The 5 Communcation Accuracy: 49.848 Method: f2dc_dse epoch loss: 4.219
+[49.09, 50.47, 49.94, 49.89]
+
+[DSE diag] {'round': 6, 'rho_t': 0.02, 'lambda_cc_t': 0.01, 'dse_delta_raw_ratio_mean': 3.560874756970411e-05, 'dse_delta_scaled_ratio_mean': 7.121749297976264e-07, 'dse_delta_cos_feat_mean': -0.006777970238873871, 'cc_loss_mean': 0.03208714087725683, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 1.0049739529506955e-06, 'mag_ratio_max_mean': 1.0695013375497476e-06, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.642969131469727, 'proto3_valid_mean_norm': 8.642969131469727, 'proto3_ema_delta_norm': 0.14296695590019226, 'raw_to_target_cos_mean': 0.9667034649848938, 'rescued_to_target_cos_mean': 0.9667034564912319, 'ccc_improvement': -8.493661884934056e-09}
+The 6 Communcation Time: 56.942
