@@ -71,11 +71,11 @@ class DSE_Rescue3(nn.Module):
     """
     def __init__(self, channels=256, reduction=8, dw_size=3):
         super().__init__()
-        # 至少 16 channel 给 GN 留点 capacity
+        # 至少 16 channel 给 GN 留点 capacity，计算bottleneck channel,防止中间层太窄了，至少保留16个channel 
         mid = max(channels // reduction, 16)
         self.channels = channels
         self.mid = mid
-        # 1×1 reduce (无 bias, GN 自带 affine)
+        # 1×1 reduce (无 bias, GN 自带 affine),reduce 防止dse模块太强 先压到32，只能学一个低维度低修正方向 
         self.reduce = nn.Conv2d(channels, mid, 1, bias=False)
         # GroupNorm: num_groups 取 min(8, mid) 保证 mid % num_groups == 0
         num_groups = min(8, mid)
@@ -85,7 +85,7 @@ class DSE_Rescue3(nn.Module):
         # depthwise 3×3 (groups=mid, per-channel spatial 修正)
         self.dw = nn.Conv2d(mid, mid, dw_size, padding=dw_size // 2,
                              groups=mid, bias=False)
-        # 1×1 expand (zero-init weight, 训练初始 delta=0)
+        # 1×1 expand (zero-init weight, 训练初始 delta=0)，把原来的[B, 32, H, W] -> [B, 256, H, W]
         self.expand = nn.Conv2d(mid, channels, 1, bias=False)
         nn.init.zeros_(self.expand.weight)
 
@@ -124,9 +124,9 @@ class ResNet_F2DC_DSE(ResNet):
                              torch.zeros(num_classes, C3),
                              persistent=False)
         # transient (forward 时写, trainer 抓走)
-        self._last_feat3_raw = None
-        self._last_feat3_rescued = None
-        self._last_delta3 = None
+        self._last_feat3_raw = None # trainer 用来聚合prototype3 
+        self._last_feat3_rescued = None  # trainer用来计算ccc loss
+        self._last_delta3 = None # 用来计算magnituide loss
         # 诊断 buffer (round 内 10% sample 累积)
         self._diag_dse_stats = []
 

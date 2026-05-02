@@ -95,6 +95,48 @@ wait
 
 **8/8 PASS** — 设计层面无 bug,可上 GPU 跑实测验证 mask collapse 和 deep sup 收益。
 
-## 结论 (待回填)
+## 结论 (R10 完成,2026-04-30 v100)
 
-(R10 smoke 完成后填)
+**Smoke 6/6 全过 ✅**
+
+### R10 完整数据 (s2 alpha=0.1, ml_lite_tau=0.5, ml_lite_channel=32)
+
+| Round | acc | epoch_loss | mask3_sparsity | mask3_std | aux3/main |
+|---|:---:|:---:|:---:|:---:|:---:|
+| R0 | 10.42 | 7.921 | 0.498 | 0.00015 | 0.22 |
+| R1 | 22.89 | 5.576 | 0.498 | 0.00017 | 0.30 |
+| R2 | 21.40 | 5.093 | 0.498 | 0.00015 | 0.32 |
+| R3 | 24.86 | 4.756 | 0.497 | 0.00018 | 0.33 |
+| R4 | 27.72 | 4.477 | 0.497 | 0.00018 | 0.34 |
+| R5 | 29.00 | 4.233 | 0.496 | 0.00020 | 0.35 |
+| R6 | 35.28 | 4.030 | 0.495 | 0.000276 | 0.35 |
+| R7 | 35.47 | 3.747 | 0.494 | 0.00031 | 0.36 |
+| **R8** | **40.57** | 3.629 | 0.493 | 0.00034 | 0.37 |
+| R9 | 38.99 | 3.428 | 0.492 | 0.000369 | 0.38 |
+
+R0-R9 acc 累计涨 +28.57pp (10.42 → 38.99). Best R8=40.57.
+
+### 关键发现
+
+1. **mask3 std 跟 PG-DFC ramp 同步 spread**: R0-R5 (warmup, proto_weight=0) std≈0.00015-0.00020 几乎不动; R6 ramp 第一步 +38% → R9 翻倍至 0.000369. **layer3 mask 的 spread 是被 layer4 PG-DFC ramp 通过 backward 间接拉动, 不是 deep sup loss 直接驱动**
+2. **aux3/main ratio 全程 0.22-0.38**, 远低于 1.5 安全线. ml_aux_alpha=0.1 默认值合理, 不需调
+3. **mask3_sparsity stuck near 0.5** 是 PG-DFC v3.3 系统级现象 (layer4 mask4=0.505 同样平), 不是 ML 引入 bug. DFD 网络 BN 强制 logit mean=0 → sigmoid≈0.5 → mask 没真切, 但不影响 acc
+4. **进程自然退出**, 无 GPU memory 残留
+
+### vs PG-DFC vanilla (跨 seed 对比, 非严格 seed-controlled)
+
+| Round | EXP-138 ML s2 | EXP-137 vanilla s15 | EXP-137 vanilla s333 |
+|---|:---:|:---:|:---:|
+| R7 | **35.47** | 29.52 | 34.01 / 34.72 |
+| R8 | **40.57** | (TBD) | (TBD) |
+| R9 | **38.99** | (TBD) | (TBD) |
+
+R7 ML 比 s15 vanilla **+5.95pp**, 跟 s333 vanilla 持平 (+0.75 ~ +1.46pp). 跨 seed 看在区间内偏高.
+
+### 后续
+
+✅ 通过 → 启动 EXP-139 (PG-DFC-ML R100 正式 4 run: PACS s15+s333 + Office s15+s333)
+- 等 sc3 EXP-137 PACS s333 R100 完成 → sc3 跑 ML PACS s15+s333
+- 等 v100 EXP-137 PACS s15 R100 完成 → v100 跑 ML Office s15+s333
+
+**没必要再做 alpha=0 退化对照** (T7 unit test 已 bit-identical 验证), 不浪费 GPU.
