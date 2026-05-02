@@ -169,7 +169,7 @@ class FedLeaDigits(FederatedDataset):
                 for j in range(parti_num):
                     nets_list.append(resnet10_dc_digits(num_classes=FedLeaDigits.N_CLASS,
                                                  gum_tau=FedLeaDigits.model_args.gum_tau))
-            elif model_name in ('f2dc_pg', 'f2dc_pgv33'):
+            elif model_name in ('f2dc_pg', 'f2dc_pgv33', 'f2dc_pg_lab'):
                 from backbone.ResNet_DC_PG import resnet10_dc_pg_digits
                 args_obj = FedLeaDigits.model_args
                 pw = getattr(args_obj, 'pg_proto_weight', 0.3)

@@ -32,7 +32,7 @@ def global_evaluate(
                 # 将数据集加载到device上
                 images, labels = images.to(model.device), labels.to(model.device)
                 # 如果模型是f2dc，f2dc_pg，f2dc_pgv33, f2dc_pg_ml,则需要传 is_eval=True 走 deterministic gumbel
-                if model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml", "f2dc_dse"):
+                if model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml", "f2dc_dse", "f2dc_pg_lab"):
                     # patch (2026-04-29): 必须传 is_eval=True 走 deterministic gumbel
                     # (gumbel_sigmoid.py:17 在 is_eval=False 时随机采样, 同 model 同 input
                     #  两次 eval 输出不一致, max_abs_diff ~0.0004, 引入 acc 噪声)
@@ -229,6 +229,13 @@ def train(
         accs = global_evaluate(
             model, test_loaders, private_dataset.SETTING, private_dataset.NAME
         )
+        # LAB hook: 把 per-domain test acc 喂给 LabState (供 ROI/waste 诊断)
+        # 仅 f2dc_pg_lab 实现了 lab_record_test_acc; 其它 model 没这个 method 静默跳过.
+        if hasattr(model, "lab_record_test_acc"):
+            try:
+                model.lab_record_test_acc(epoch_index + 1, accs, all_dataset_names)
+            except Exception as _lab_err:
+                print(f"[LAB acc hook ERR] {_lab_err}")
         mean_acc = round(np.mean(accs, axis=0), 3)
         mean_accs_list.append(mean_acc)
         for i in range(len(accs)):

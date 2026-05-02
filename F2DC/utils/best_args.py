@@ -167,6 +167,11 @@ for _ds in best_args:
     if 'f2dc_pg_ml' not in best_args[_ds]:
         best_args[_ds]['f2dc_pg_ml'] = dict(best_args[_ds].get('f2dc_pgv33', {'local_lr': 0.01, 'local_batch_size': 64}))
 
+# Inject f2dc_pg_lab (EXP-144 LAB v4.2 — mirror f2dc_pg defaults, LAB 替代 DaA 聚合)
+for _ds in best_args:
+    if 'f2dc_pg_lab' not in best_args[_ds]:
+        best_args[_ds]['f2dc_pg_lab'] = dict(best_args[_ds].get('f2dc_pg', {'local_lr': 0.01, 'local_batch_size': 64}))
+
 # Inject f2dc_dse (mirror f2dc defaults: 纯 F2DC base + layer3 DSE_Rescue3)
 for _ds in best_args:
     if 'f2dc_dse' not in best_args[_ds]:

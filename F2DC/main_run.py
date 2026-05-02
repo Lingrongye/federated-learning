@@ -98,6 +98,29 @@ def parse_args():
                         help="enable F2DC paper Domain-Aware Aggregation (Eq 10/11)")
     parser.add_argument("--num_domains_q", type=int, default=4,
                         help="domain 数 Q (PACS=4, Office=4, Digits=4)")
+    # ===== LAB v4.2 (EXP-144 Loss-Aware Boost) 超参 =====
+    parser.add_argument("--lab_lambda", type=float, default=0.15,
+                        help="LAB λ-mix coefficient (PROPOSAL §10 预注册)")
+    parser.add_argument("--lab_ratio_min", type=float, default=0.80,
+                        help="LAB bounded simplex 强域保护下界")
+    parser.add_argument("--lab_ratio_max", type=float, default=2.00,
+                        help="LAB bounded simplex 弱域上界")
+    parser.add_argument("--lab_ema_alpha", type=float, default=0.30,
+                        help="LAB val_loss EMA 平滑系数")
+    parser.add_argument("--lab_val_size_per_dom", type=int, default=50,
+                        help="LAB 每域 val 大小上限 (Office dslr 自动 cap min(50, unused))")
+    parser.add_argument("--lab_val_per_class", type=int, default=5,
+                        help="LAB stratified per-class val 数")
+    parser.add_argument("--lab_val_seed", type=int, default=42,
+                        help="LAB val partition seed (跟 train seed 解耦)")
+    parser.add_argument("--lab_window_size", type=int, default=20,
+                        help="LAB ROI window size for waste detection")
+    parser.add_argument("--lab_waste_roi_threshold", type=float, default=0.5,
+                        help="LAB window_roi 阈值, < threshold = wasted")
+    parser.add_argument("--lab_print_diag", type=lambda x: x.lower()=="true", default=True,
+                        help="LAB stdout 实时诊断打印 (每 round 3-4 行)")
+    parser.add_argument("--lab_warn_interval", type=int, default=10,
+                        help="LAB waste warning 检查间隔 (round)")
     # ===== Diagnostic hook =====
     parser.add_argument("--dump_diag", type=str, default=None,
                         help="diagnostic dump dir (None=disabled). 启用后每 round dump 元数据 + best/final dump heavy snapshot")

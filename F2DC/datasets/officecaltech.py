@@ -114,7 +114,7 @@ class FedLeaOfficeCaltech(FederatedDataset):
                 for j in range(parti_num):
                     nets_list.append(resnet10_dc_office(num_classes=FedLeaOfficeCaltech.N_CLASS,
                                                  gum_tau=FedLeaOfficeCaltech.model_args.gum_tau))
-            elif model_name in ('f2dc_pg', 'f2dc_pgv33'):
+            elif model_name in ('f2dc_pg', 'f2dc_pgv33', 'f2dc_pg_lab'):
                 from backbone.ResNet_DC_PG import resnet10_dc_pg_office
                 args_obj = FedLeaOfficeCaltech.model_args
                 pw = getattr(args_obj, 'pg_proto_weight', 0.3)

@@ -341,7 +341,7 @@ def dump_heavy_snapshot(model, test_loaders, prefix, round_idx, current_acc, arg
         domain_names = [f"d{i}" for i in range(len(test_loaders))]
 
     NC = int(args.num_classes)
-    use_tuple = model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml", "f2dc_dse")
+    use_tuple = model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml", "f2dc_dse", "f2dc_pg_lab")
 
     with torch.no_grad():
         for di, dl in enumerate(test_loaders):
