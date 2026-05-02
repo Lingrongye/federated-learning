@@ -1,0 +1,30 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+Traceback (most recent call last):
+  File "/root/autodl-tmp/federated-learning/F2DC/main_run.py", line 239, in <module>
+    main_F2DC()
+  File "/root/autodl-tmp/federated-learning/F2DC/main_run.py", line 210, in main_F2DC
+    model = get_model(backbones_list, args, priv_dataset.get_transform())
+  File "/root/autodl-tmp/federated-learning/F2DC/models/__init__.py", line 15, in get_model
+    return names[args.model](nets_list,args,transform)
+  File "/root/autodl-tmp/federated-learning/F2DC/models/f2dc_dse.py", line 88, in __init__
+    super().__init__(nets_list, args, transform)
+  File "/root/autodl-tmp/federated-learning/F2DC/models/f2dc.py", line 31, in __init__
+    super(F2DC, self).__init__(nets_list, args, transform)
+  File "/root/autodl-tmp/federated-learning/F2DC/models/utils/federated_model.py", line 42, in __init__
+    self.net_to_device()
+  File "/root/autodl-tmp/federated-learning/F2DC/models/utils/federated_model.py", line 46, in net_to_device
+    net.to(self.device)
+  File "/root/miniconda3/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1160, in to
+    return self._apply(convert)
+  File "/root/miniconda3/lib/python3.10/site-packages/torch/nn/modules/module.py", line 810, in _apply
+    module._apply(fn)
+  File "/root/miniconda3/lib/python3.10/site-packages/torch/nn/modules/module.py", line 833, in _apply
+    param_applied = fn(param)
+  File "/root/miniconda3/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1158, in convert
+    return t.to(device, dtype if t.is_floating_point() or t.is_complex() else None, non_blocking)
+RuntimeError: CUDA error: out of memory
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1.
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
