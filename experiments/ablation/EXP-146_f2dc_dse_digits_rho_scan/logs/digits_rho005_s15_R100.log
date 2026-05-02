@@ -1,0 +1,523 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_dse_20_fl_digits_100_10
+selected_domain_list for 20 clients as:
+['mnist' 'mnist' 'mnist' 'usps' 'usps' 'usps' 'usps' 'usps' 'usps' 'svhn'
+ 'svhn' 'svhn' 'svhn' 'svhn' 'svhn' 'syn' 'syn' 'syn' 'syn' 'syn']
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/test_32x32.mat
+[DSE diag] {'round': 0, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.285407066345215, 'proto3_valid_mean_norm': 8.285407066345215, 'proto3_ema_delta_norm': 0.0}
+The 0 Communcation Time: 55.583
+The 0 Communcation Accuracy: 13.542 Method: f2dc_dse epoch loss: 13.605
+[11.35, 13.15, 19.59, 10.08]
+
+[DSE diag] {'round': 1, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.3087739944458, 'proto3_valid_mean_norm': 8.3087739944458, 'proto3_ema_delta_norm': 0.18459534645080566, 'raw_to_target_cos_mean': 0.9500401921570301, 'rescued_to_target_cos_mean': 0.9500401921570301, 'ccc_improvement': 0.0}
+The 1 Communcation Time: 57.308
+The 1 Communcation Accuracy: 13.45 Method: f2dc_dse epoch loss: 8.62
+[9.82, 14.35, 19.55, 10.08]
+
+[DSE diag] {'round': 2, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.324823379516602, 'proto3_valid_mean_norm': 8.324823379516602, 'proto3_ema_delta_norm': 0.19387929141521454, 'raw_to_target_cos_mean': 0.9455134259164333, 'rescued_to_target_cos_mean': 0.9455134259164333, 'ccc_improvement': 0.0}
+The 2 Communcation Time: 58.063
+The 2 Communcation Accuracy: 19.39 Method: f2dc_dse epoch loss: 7.484
+[19.04, 21.33, 19.11, 18.08]
+
+[DSE diag] {'round': 3, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.384139060974121, 'proto3_valid_mean_norm': 8.384139060974121, 'proto3_ema_delta_norm': 0.17581894993782043, 'raw_to_target_cos_mean': 0.9470122262835503, 'rescued_to_target_cos_mean': 0.9470122262835503, 'ccc_improvement': 0.0}
+The 3 Communcation Time: 57.449
+The 3 Communcation Accuracy: 34.165 Method: f2dc_dse epoch loss: 6.298
+[40.23, 32.79, 32.6, 31.04]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-146_f2dc_dse_digits_rho_scan/diag/rho005_s15/best_R004.npz (acc=34.165)
+[DSE diag] {'round': 4, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.458751678466797, 'proto3_valid_mean_norm': 8.458751678466797, 'proto3_ema_delta_norm': 0.18360941112041473, 'raw_to_target_cos_mean': 0.95502694606781, 'rescued_to_target_cos_mean': 0.95502694606781, 'ccc_improvement': 0.0}
+The 4 Communcation Time: 55.207
+The 4 Communcation Accuracy: 48.05 Method: f2dc_dse epoch loss: 5.2
+[47.22, 53.61, 45.41, 45.96]
+
+[DSE diag] {'round': 5, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.515748977661133, 'proto3_valid_mean_norm': 8.515748977661133, 'proto3_ema_delta_norm': 0.16740211844444275, 'raw_to_target_cos_mean': 0.9601188884675502, 'rescued_to_target_cos_mean': 0.9601188884675502, 'ccc_improvement': 0.0}
+The 5 Communcation Time: 58.993
+The 5 Communcation Accuracy: 53.048 Method: f2dc_dse epoch loss: 4.347
+[53.91, 55.71, 49.81, 52.76]
+
+[DSE diag] {'round': 6, 'rho_t': 0.005, 'lambda_cc_t': 0.01, 'dse_delta_raw_ratio_mean': 1.1403286070692417e-05, 'dse_delta_scaled_ratio_mean': 5.70164286114942e-08, 'dse_delta_cos_feat_mean': -0.012649216278222542, 'cc_loss_mean': 0.03385019031072859, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 9.749638438572375e-08, 'mag_ratio_max_mean': 1.064512682105096e-07, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.54539680480957, 'proto3_valid_mean_norm': 8.54539680480957, 'proto3_ema_delta_norm': 0.14284464716911316, 'raw_to_target_cos_mean': 0.9642631934583187, 'rescued_to_target_cos_mean': 0.9642631930112838, 'ccc_improvement': -4.470348535789981e-10}
+The 6 Communcation Time: 64.114
+The 6 Communcation Accuracy: 62.6 Method: f2dc_dse epoch loss: 3.54
+[60.19, 60.44, 60.87, 68.9]
+
+[DSE diag] {'round': 7, 'rho_t': 0.01, 'lambda_cc_t': 0.02, 'dse_delta_raw_ratio_mean': 3.582221864750412e-05, 'dse_delta_scaled_ratio_mean': 3.5822217721782405e-07, 'dse_delta_cos_feat_mean': -0.059519472908817185, 'cc_loss_mean': 0.031001425773802316, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 5.648703847782599e-07, 'mag_ratio_max_mean': 6.113305808356479e-07, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.551023483276367, 'proto3_valid_mean_norm': 8.551023483276367, 'proto3_ema_delta_norm': 0.12354902923107147, 'raw_to_target_cos_mean': 0.9677085231244564, 'rescued_to_target_cos_mean': 0.9677085177600384, 'ccc_improvement': -5.364418020903372e-09}
+The 7 Communcation Time: 65.288
+The 7 Communcation Accuracy: 75.422 Method: f2dc_dse epoch loss: 2.966
+[75.7, 73.49, 71.37, 81.13]
+
+[DSE diag] {'round': 8, 'rho_t': 0.015000000000000003, 'lambda_cc_t': 0.030000000000000006, 'dse_delta_raw_ratio_mean': 7.757609225365757e-05, 'dse_delta_scaled_ratio_mean': 1.1636413633203205e-06, 'dse_delta_cos_feat_mean': -0.06197107467497215, 'cc_loss_mean': 0.029411171623424423, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 1.7042253010722855e-06, 'mag_ratio_max_mean': 1.849526750808925e-06, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.534622192382812, 'proto3_valid_mean_norm': 8.534622192382812, 'proto3_ema_delta_norm': 0.11151955276727676, 'raw_to_target_cos_mean': 0.9692576041817665, 'rescued_to_target_cos_mean': 0.9692575968801975, 'ccc_improvement': -7.301569016071596e-09}
+The 8 Communcation Time: 65.471
+The 8 Communcation Accuracy: 80.78 Method: f2dc_dse epoch loss: 2.647
+[81.1, 76.83, 78.3, 86.89]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-146_f2dc_dse_digits_rho_scan/diag/rho005_s15/best_R009.npz (acc=80.780)
+[DSE diag] {'round': 9, 'rho_t': 0.02, 'lambda_cc_t': 0.04, 'dse_delta_raw_ratio_mean': 0.00013710566102566384, 'dse_delta_scaled_ratio_mean': 2.7421131649901598e-06, 'dse_delta_cos_feat_mean': -0.04610661920988697, 'cc_loss_mean': 0.02771336154201038, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 3.644251767714342e-06, 'mag_ratio_max_mean': 3.933043541887708e-06, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.497713088989258, 'proto3_valid_mean_norm': 8.497713088989258, 'proto3_ema_delta_norm': 0.10456663370132446, 'raw_to_target_cos_mean': 0.971854637414217, 'rescued_to_target_cos_mean': 0.9718546265363693, 'ccc_improvement': -1.0877847622658976e-08}
+The 9 Communcation Time: 60.422
+The 9 Communcation Accuracy: 82.138 Method: f2dc_dse epoch loss: 2.367
+[80.73, 79.52, 80.44, 87.86]
+
+[DSE diag] {'round': 10, 'rho_t': 0.025, 'lambda_cc_t': 0.05, 'dse_delta_raw_ratio_mean': 0.00020323827144820984, 'dse_delta_scaled_ratio_mean': 5.080956862245099e-06, 'dse_delta_cos_feat_mean': -0.032251980681494874, 'cc_loss_mean': 0.0269028564990696, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 6.845014593181986e-06, 'mag_ratio_max_mean': 7.395713429735723e-06, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.446027755737305, 'proto3_valid_mean_norm': 8.446027755737305, 'proto3_ema_delta_norm': 0.10032127797603607, 'raw_to_target_cos_mean': 0.9728781253099441, 'rescued_to_target_cos_mean': 0.9728781141340732, 'ccc_improvement': -1.1175870895385742e-08}
+The 10 Communcation Time: 61.626
+The 10 Communcation Accuracy: 83.985 Method: f2dc_dse epoch loss: 2.239
+[84.97, 80.52, 81.2, 89.25]
+
+[DSE diag] {'round': 11, 'rho_t': 0.030000000000000006, 'lambda_cc_t': 0.06000000000000001, 'dse_delta_raw_ratio_mean': 0.000277351856697772, 'dse_delta_scaled_ratio_mean': 8.320555512960706e-06, 'dse_delta_cos_feat_mean': -0.01791133903477095, 'cc_loss_mean': 0.026410036527253166, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 1.1190001069486067e-05, 'mag_ratio_max_mean': 1.2063982350971328e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.384325981140137, 'proto3_valid_mean_norm': 8.384325981140137, 'proto3_ema_delta_norm': 0.10000848770141602, 'raw_to_target_cos_mean': 0.9731505200266838, 'rescued_to_target_cos_mean': 0.9731505604088306, 'ccc_improvement': 4.0382146848649825e-08}
+The 11 Communcation Time: 64.144
+The 11 Communcation Accuracy: 85.86 Method: f2dc_dse epoch loss: 2.147
+[87.08, 81.91, 84.03, 90.42]
+
+[DSE diag] {'round': 12, 'rho_t': 0.035, 'lambda_cc_t': 0.07, 'dse_delta_raw_ratio_mean': 0.00037031697869348464, 'dse_delta_scaled_ratio_mean': 1.2961094201314823e-05, 'dse_delta_cos_feat_mean': -0.003910325961081813, 'cc_loss_mean': 0.025917480841187415, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 1.7041864452215622e-05, 'mag_ratio_max_mean': 1.8419556574606818e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.314518928527832, 'proto3_valid_mean_norm': 8.314518928527832, 'proto3_ema_delta_norm': 0.09900297969579697, 'raw_to_target_cos_mean': 0.9734003083407878, 'rescued_to_target_cos_mean': 0.9734004111588002, 'ccc_improvement': 1.0281801232636667e-07}
+The 12 Communcation Time: 63.324
+The 12 Communcation Accuracy: 87.053 Method: f2dc_dse epoch loss: 2.018
+[89.67, 83.81, 83.47, 91.26]
+
+[DSE diag] {'round': 13, 'rho_t': 0.04, 'lambda_cc_t': 0.08, 'dse_delta_raw_ratio_mean': 0.0004786961563924886, 'dse_delta_scaled_ratio_mean': 1.9147845705183446e-05, 'dse_delta_cos_feat_mean': 0.0033150970114612026, 'cc_loss_mean': 0.025536932123088312, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 2.5002178614569504e-05, 'mag_ratio_max_mean': 2.7060616429803156e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.239439964294434, 'proto3_valid_mean_norm': 8.239439964294434, 'proto3_ema_delta_norm': 0.09831055253744125, 'raw_to_target_cos_mean': 0.9747125796973706, 'rescued_to_target_cos_mean': 0.9747127631306648, 'ccc_improvement': 1.8343329422076948e-07}
+The 13 Communcation Time: 62.172
+The 13 Communcation Accuracy: 87.485 Method: f2dc_dse epoch loss: 1.866
+[90.15, 83.21, 84.81, 91.77]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-146_f2dc_dse_digits_rho_scan/diag/rho005_s15/best_R014.npz (acc=87.485)
+[DSE diag] {'round': 14, 'rho_t': 0.045, 'lambda_cc_t': 0.09, 'dse_delta_raw_ratio_mean': 0.0005781760556215703, 'dse_delta_scaled_ratio_mean': 2.6017923627892923e-05, 'dse_delta_cos_feat_mean': 0.012517272702271395, 'cc_loss_mean': 0.025672408923387426, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 3.378150617678447e-05, 'mag_ratio_max_mean': 3.659168955451723e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.159784317016602, 'proto3_valid_mean_norm': 8.159784317016602, 'proto3_ema_delta_norm': 0.09899488836526871, 'raw_to_target_cos_mean': 0.9742527244985104, 'rescued_to_target_cos_mean': 0.9742529912292958, 'ccc_improvement': 2.667307853476686e-07}
+The 14 Communcation Time: 56.756
+The 14 Communcation Accuracy: 88.148 Method: f2dc_dse epoch loss: 1.8
+[90.9, 84.65, 85.15, 91.89]
+
+[DSE diag] {'round': 15, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0007132861178419493, 'dse_delta_scaled_ratio_mean': 3.5664306293576164e-05, 'dse_delta_cos_feat_mean': 0.012294419682951413, 'cc_loss_mean': 0.02556266721592636, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 4.433569568449926e-05, 'mag_ratio_max_mean': 4.801306948050502e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.079544067382812, 'proto3_valid_mean_norm': 8.079544067382812, 'proto3_ema_delta_norm': 0.09627104550600052, 'raw_to_target_cos_mean': 0.9743168145418167, 'rescued_to_target_cos_mean': 0.9743171486258507, 'ccc_improvement': 3.340840339927098e-07}
+The 15 Communcation Time: 56.945
+The 15 Communcation Accuracy: 88.2 Method: f2dc_dse epoch loss: 1.855
+[91.11, 84.35, 85.66, 91.68]
+
+[DSE diag] {'round': 16, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0008086706146767994, 'dse_delta_scaled_ratio_mean': 4.043353144755427e-05, 'dse_delta_cos_feat_mean': 0.01637584176758799, 'cc_loss_mean': 0.025239977331537503, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 5.033867858313193e-05, 'mag_ratio_max_mean': 5.407436152205675e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.997045040130615, 'proto3_valid_mean_norm': 7.997045040130615, 'proto3_ema_delta_norm': 0.0957108736038208, 'raw_to_target_cos_mean': 0.9745821937918663, 'rescued_to_target_cos_mean': 0.9745826706290245, 'ccc_improvement': 4.76837158203125e-07}
+The 16 Communcation Time: 56.086
+The 16 Communcation Accuracy: 88.43 Method: f2dc_dse epoch loss: 1.668
+[92.02, 84.65, 85.33, 91.72]
+
+[DSE diag] {'round': 17, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0008880227681488011, 'dse_delta_scaled_ratio_mean': 4.440113948334651e-05, 'dse_delta_cos_feat_mean': 0.028447248094042626, 'cc_loss_mean': 0.025062352060378962, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 5.5466160172786215e-05, 'mag_ratio_max_mean': 5.960453193350282e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.914831638336182, 'proto3_valid_mean_norm': 7.914831638336182, 'proto3_ema_delta_norm': 0.09437894821166992, 'raw_to_target_cos_mean': 0.9748401813209057, 'rescued_to_target_cos_mean': 0.9748408830165863, 'ccc_improvement': 7.016956806715768e-07}
+The 17 Communcation Time: 55.259
+The 17 Communcation Accuracy: 89.038 Method: f2dc_dse epoch loss: 1.618
+[92.24, 84.5, 86.39, 93.02]
+
+[DSE diag] {'round': 18, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0009900603279758117, 'dse_delta_scaled_ratio_mean': 4.950301679168693e-05, 'dse_delta_cos_feat_mean': 0.03645723509561192, 'cc_loss_mean': 0.025323142837717052, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 6.293349174337627e-05, 'mag_ratio_max_mean': 6.780830163411485e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.829052925109863, 'proto3_valid_mean_norm': 7.829052925109863, 'proto3_ema_delta_norm': 0.09630168974399567, 'raw_to_target_cos_mean': 0.9746523298323154, 'rescued_to_target_cos_mean': 0.9746531924605369, 'ccc_improvement': 8.626282215207226e-07}
+The 18 Communcation Time: 54.824
+The 18 Communcation Accuracy: 89.758 Method: f2dc_dse epoch loss: 1.573
+[93.38, 85.8, 86.72, 93.13]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-146_f2dc_dse_digits_rho_scan/diag/rho005_s15/best_R019.npz (acc=89.758)
+[DSE diag] {'round': 19, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0011701154356534974, 'dse_delta_scaled_ratio_mean': 5.850577296995434e-05, 'dse_delta_cos_feat_mean': 0.044279350928759606, 'cc_loss_mean': 0.02510061215264161, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 7.297261253693104e-05, 'mag_ratio_max_mean': 7.862572694589729e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.744706153869629, 'proto3_valid_mean_norm': 7.744706153869629, 'proto3_ema_delta_norm': 0.09439884126186371, 'raw_to_target_cos_mean': 0.9749355387687683, 'rescued_to_target_cos_mean': 0.9749364787340165, 'ccc_improvement': 9.399652481922871e-07}
+The 19 Communcation Time: 55.852
+The 19 Communcation Accuracy: 89.78 Method: f2dc_dse epoch loss: 1.522
+[93.09, 85.9, 86.99, 93.14]
+
+[DSE diag] {'round': 20, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0013231712344240229, 'dse_delta_scaled_ratio_mean': 6.615856341195512e-05, 'dse_delta_cos_feat_mean': 0.0445148726346674, 'cc_loss_mean': 0.025291052774609003, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 8.179008448296959e-05, 'mag_ratio_max_mean': 8.824384596899166e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.660362243652344, 'proto3_valid_mean_norm': 7.660362243652344, 'proto3_ema_delta_norm': 0.09252189844846725, 'raw_to_target_cos_mean': 0.9744914922118187, 'rescued_to_target_cos_mean': 0.9744926536083222, 'ccc_improvement': 1.1613965034129592e-06}
+The 20 Communcation Time: 54.039
+The 20 Communcation Accuracy: 89.855 Method: f2dc_dse epoch loss: 1.525
+[92.89, 85.95, 87.55, 93.03]
+
+[DSE diag] {'round': 21, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0014398063761014881, 'dse_delta_scaled_ratio_mean': 7.199032074390006e-05, 'dse_delta_cos_feat_mean': 0.04788525829808298, 'cc_loss_mean': 0.025091917488818803, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 9.006663848624393e-05, 'mag_ratio_max_mean': 9.731709459071768e-05, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.576998710632324, 'proto3_valid_mean_norm': 7.576998710632324, 'proto3_ema_delta_norm': 0.09037190675735474, 'raw_to_target_cos_mean': 0.9752998834848404, 'rescued_to_target_cos_mean': 0.9753010185062885, 'ccc_improvement': 1.135021448050999e-06}
+The 21 Communcation Time: 54.998
+The 21 Communcation Accuracy: 89.77 Method: f2dc_dse epoch loss: 1.49
+[92.88, 85.9, 87.5, 92.8]
+
+[DSE diag] {'round': 22, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0015852816487598232, 'dse_delta_scaled_ratio_mean': 7.926408457998155e-05, 'dse_delta_cos_feat_mean': 0.045989454656191975, 'cc_loss_mean': 0.0251405492808999, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0001006503210338715, 'mag_ratio_max_mean': 0.0001088183194365082, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.495462894439697, 'proto3_valid_mean_norm': 7.495462894439697, 'proto3_ema_delta_norm': 0.08872295171022415, 'raw_to_target_cos_mean': 0.9750151008367538, 'rescued_to_target_cos_mean': 0.9750164291262626, 'ccc_improvement': 1.3282895088284619e-06}
+The 22 Communcation Time: 55.87
+The 22 Communcation Accuracy: 90.098 Method: f2dc_dse epoch loss: 1.387
+[93.78, 87.34, 86.61, 92.66]
+
+[DSE diag] {'round': 23, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0017540046486242598, 'dse_delta_scaled_ratio_mean': 8.770023432564938e-05, 'dse_delta_cos_feat_mean': 0.052645868592632886, 'cc_loss_mean': 0.025593676121651376, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00010886223779732151, 'mag_ratio_max_mean': 0.00011756331122371428, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.413790702819824, 'proto3_valid_mean_norm': 7.413790702819824, 'proto3_ema_delta_norm': 0.08794260025024414, 'raw_to_target_cos_mean': 0.9743861585855484, 'rescued_to_target_cos_mean': 0.9743876050412655, 'ccc_improvement': 1.4464557170912329e-06}
+The 23 Communcation Time: 56.655
+The 23 Communcation Accuracy: 90.31 Method: f2dc_dse epoch loss: 1.472
+[93.59, 86.25, 87.95, 93.45]
+
+[DSE diag] {'round': 24, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0019751978437545416, 'dse_delta_scaled_ratio_mean': 9.875989417035848e-05, 'dse_delta_cos_feat_mean': 0.05501377377351479, 'cc_loss_mean': 0.025272930482035456, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00011961530524258118, 'mag_ratio_max_mean': 0.00012883920891556866, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.336111545562744, 'proto3_valid_mean_norm': 7.336111545562744, 'proto3_ema_delta_norm': 0.0837540328502655, 'raw_to_target_cos_mean': 0.9749470594525337, 'rescued_to_target_cos_mean': 0.9749485072493553, 'ccc_improvement': 1.4477968216519699e-06}
+The 24 Communcation Time: 55.766
+The 24 Communcation Accuracy: 89.978 Method: f2dc_dse epoch loss: 1.337
+[92.91, 86.4, 87.12, 93.48]
+
+[DSE diag] {'round': 25, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0020737024269376634, 'dse_delta_scaled_ratio_mean': 0.00010368512435926611, 'dse_delta_cos_feat_mean': 0.05507574618161047, 'cc_loss_mean': 0.026049422160001917, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00013038593167420326, 'mag_ratio_max_mean': 0.00014092490631986538, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.258103370666504, 'proto3_valid_mean_norm': 7.258103370666504, 'proto3_ema_delta_norm': 0.08307884633541107, 'raw_to_target_cos_mean': 0.9728591786324978, 'rescued_to_target_cos_mean': 0.9728607894480228, 'ccc_improvement': 1.6108155249661138e-06}
+The 25 Communcation Time: 56.715
+The 25 Communcation Accuracy: 90.83 Method: f2dc_dse epoch loss: 1.519
+[94.38, 87.19, 88.28, 93.47]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-146_f2dc_dse_digits_rho_scan/diag/rho005_s15/best_R026.npz (acc=90.830)
+[DSE diag] {'round': 26, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0023056227715782312, 'dse_delta_scaled_ratio_mean': 0.00011528113986604249, 'dse_delta_cos_feat_mean': 0.05715179126079204, 'cc_loss_mean': 0.0258955348602637, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00014383065966784114, 'mag_ratio_max_mean': 0.00015531065604473923, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.178550720214844, 'proto3_valid_mean_norm': 7.178550720214844, 'proto3_ema_delta_norm': 0.08438412100076675, 'raw_to_target_cos_mean': 0.9738120061159133, 'rescued_to_target_cos_mean': 0.9738137829303741, 'ccc_improvement': 1.7768144607854808e-06}
+The 26 Communcation Time: 53.473
+The 26 Communcation Accuracy: 90.51 Method: f2dc_dse epoch loss: 1.338
+[93.49, 86.35, 88.72, 93.48]
+
+[DSE diag] {'round': 27, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0024510590856497844, 'dse_delta_scaled_ratio_mean': 0.00012255295537036927, 'dse_delta_cos_feat_mean': 0.060660793705859306, 'cc_loss_mean': 0.026054221732674545, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00015069332902414552, 'mag_ratio_max_mean': 0.00016313123987563285, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.100296974182129, 'proto3_valid_mean_norm': 7.100296974182129, 'proto3_ema_delta_norm': 0.08336638659238815, 'raw_to_target_cos_mean': 0.9737393169105053, 'rescued_to_target_cos_mean': 0.9737414479255676, 'ccc_improvement': 2.131015062301067e-06}
+The 27 Communcation Time: 55.836
+The 27 Communcation Accuracy: 90.85 Method: f2dc_dse epoch loss: 1.322
+[94.33, 87.24, 88.6, 93.23]
+
+[DSE diag] {'round': 28, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0025675510199903756, 'dse_delta_scaled_ratio_mean': 0.00012837755284351226, 'dse_delta_cos_feat_mean': 0.06013301599518971, 'cc_loss_mean': 0.026279810936852527, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0001588043282613545, 'mag_ratio_max_mean': 0.00017204790541244062, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.025937080383301, 'proto3_valid_mean_norm': 7.025937080383301, 'proto3_ema_delta_norm': 0.0791032686829567, 'raw_to_target_cos_mean': 0.9736779575049878, 'rescued_to_target_cos_mean': 0.9736804495751857, 'ccc_improvement': 2.492070197979146e-06}
+The 28 Communcation Time: 55.901
+The 28 Communcation Accuracy: 90.96 Method: f2dc_dse epoch loss: 1.322
+[94.24, 88.09, 88.09, 93.42]
+
+[DSE diag] {'round': 29, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0026976454197152507, 'dse_delta_scaled_ratio_mean': 0.0001348822725541251, 'dse_delta_cos_feat_mean': 0.06028154986895524, 'cc_loss_mean': 0.026609091224318784, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00016880910754421606, 'mag_ratio_max_mean': 0.00018298718722719294, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.952089786529541, 'proto3_valid_mean_norm': 6.952089786529541, 'proto3_ema_delta_norm': 0.07823418080806732, 'raw_to_target_cos_mean': 0.9727970305085182, 'rescued_to_target_cos_mean': 0.9727993611991406, 'ccc_improvement': 2.3306906223874435e-06}
+The 29 Communcation Time: 56.17
+The 29 Communcation Accuracy: 91.125 Method: f2dc_dse epoch loss: 1.388
+[94.47, 87.54, 88.57, 93.92]
+
+[DSE diag] {'round': 30, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0029434055387388804, 'dse_delta_scaled_ratio_mean': 0.0001471702781496484, 'dse_delta_cos_feat_mean': 0.05878289294350654, 'cc_loss_mean': 0.026369334200132412, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00017998514385028338, 'mag_ratio_max_mean': 0.00019393058874195578, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.8781256675720215, 'proto3_valid_mean_norm': 6.8781256675720215, 'proto3_ema_delta_norm': 0.07820765674114227, 'raw_to_target_cos_mean': 0.9735362298786641, 'rescued_to_target_cos_mean': 0.9735387597978115, 'ccc_improvement': 2.5299191473981963e-06}
+The 30 Communcation Time: 56.281
+The 30 Communcation Accuracy: 91.723 Method: f2dc_dse epoch loss: 1.219
+[95.75, 88.59, 88.62, 93.93]
+
+[DSE diag] {'round': 31, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0031241412027746863, 'dse_delta_scaled_ratio_mean': 0.00015620706512026614, 'dse_delta_cos_feat_mean': 0.06047503618195118, 'cc_loss_mean': 0.02677966714371928, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00019156888435733685, 'mag_ratio_max_mean': 0.00020707625749750034, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.805706024169922, 'proto3_valid_mean_norm': 6.805706024169922, 'proto3_ema_delta_norm': 0.07657505571842194, 'raw_to_target_cos_mean': 0.973028599023819, 'rescued_to_target_cos_mean': 0.973031319975853, 'ccc_improvement': 2.7209520340187865e-06}
+The 31 Communcation Time: 55.902
+The 31 Communcation Accuracy: 91.442 Method: f2dc_dse epoch loss: 1.27
+[94.77, 88.04, 88.71, 94.25]
+
+[DSE diag] {'round': 32, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.003352586514981772, 'dse_delta_scaled_ratio_mean': 0.00016762932926391158, 'dse_delta_cos_feat_mean': 0.06418410463424595, 'cc_loss_mean': 0.027008404176973054, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00020743175532956113, 'mag_ratio_max_mean': 0.00022453079266509328, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.733026027679443, 'proto3_valid_mean_norm': 6.733026027679443, 'proto3_ema_delta_norm': 0.07666837424039841, 'raw_to_target_cos_mean': 0.973004416525364, 'rescued_to_target_cos_mean': 0.9730078326165676, 'ccc_improvement': 3.416091203689575e-06}
+The 32 Communcation Time: 54.564
+The 32 Communcation Accuracy: 91.8 Method: f2dc_dse epoch loss: 1.173
+[95.36, 89.19, 88.84, 93.81]
+
+[DSE diag] {'round': 33, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0035182914470982423, 'dse_delta_scaled_ratio_mean': 0.00017591457593254807, 'dse_delta_cos_feat_mean': 0.06333341440364147, 'cc_loss_mean': 0.02699637446703785, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0002196087698393967, 'mag_ratio_max_mean': 0.00023838848131661858, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.66442346572876, 'proto3_valid_mean_norm': 6.66442346572876, 'proto3_ema_delta_norm': 0.07293354719877243, 'raw_to_target_cos_mean': 0.9724330665171146, 'rescued_to_target_cos_mean': 0.9724365872144699, 'ccc_improvement': 3.5206973553192356e-06}
+The 33 Communcation Time: 57.783
+The 33 Communcation Accuracy: 91.598 Method: f2dc_dse epoch loss: 1.199
+[95.53, 88.79, 88.62, 93.45]
+
+[DSE diag] {'round': 34, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.003774609940983702, 'dse_delta_scaled_ratio_mean': 0.00018873050123310465, 'dse_delta_cos_feat_mean': 0.06250377518669244, 'cc_loss_mean': 0.02722776838383071, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00023367368107316114, 'mag_ratio_max_mean': 0.0002538633110464528, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.596670627593994, 'proto3_valid_mean_norm': 6.596670627593994, 'proto3_ema_delta_norm': 0.07201918214559555, 'raw_to_target_cos_mean': 0.9728856307268142, 'rescued_to_target_cos_mean': 0.9728896053135395, 'ccc_improvement': 3.974586725297158e-06}
+The 34 Communcation Time: 56.99
+The 34 Communcation Accuracy: 92.11 Method: f2dc_dse epoch loss: 1.17
+[96.29, 90.23, 88.53, 93.39]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-146_f2dc_dse_digits_rho_scan/diag/rho005_s15/best_R035.npz (acc=92.110)
+[DSE diag] {'round': 35, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.003979613768112196, 'dse_delta_scaled_ratio_mean': 0.0001989806905887255, 'dse_delta_cos_feat_mean': 0.06870409357458843, 'cc_loss_mean': 0.027712456311115477, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0002474644269245947, 'mag_ratio_max_mean': 0.0002678114363187624, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.529480934143066, 'proto3_valid_mean_norm': 6.529480934143066, 'proto3_ema_delta_norm': 0.0712025985121727, 'raw_to_target_cos_mean': 0.9723175638914108, 'rescued_to_target_cos_mean': 0.9723223085701466, 'ccc_improvement': 4.744678735790764e-06}
+The 35 Communcation Time: 58.242
+The 35 Communcation Accuracy: 91.278 Method: f2dc_dse epoch loss: 1.093
+[94.8, 87.99, 88.79, 93.53]
+
+[DSE diag] {'round': 36, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.004310729452725636, 'dse_delta_scaled_ratio_mean': 0.00021553647651829873, 'dse_delta_cos_feat_mean': 0.06360280709447337, 'cc_loss_mean': 0.02761399750761562, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00026848964426467466, 'mag_ratio_max_mean': 0.00029074822674785185, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.464444160461426, 'proto3_valid_mean_norm': 6.464444160461426, 'proto3_ema_delta_norm': 0.06921758502721786, 'raw_to_target_cos_mean': 0.9720865233242512, 'rescued_to_target_cos_mean': 0.9720910052955151, 'ccc_improvement': 4.481971263903262e-06}
+The 36 Communcation Time: 58.706
+The 36 Communcation Accuracy: 91.892 Method: f2dc_dse epoch loss: 1.118
+[95.65, 89.84, 88.53, 93.55]
+
+[DSE diag] {'round': 37, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.004511927759629716, 'dse_delta_scaled_ratio_mean': 0.00022559639238174816, 'dse_delta_cos_feat_mean': 0.0625104845233327, 'cc_loss_mean': 0.02798974203153026, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00027841076008635647, 'mag_ratio_max_mean': 0.00030175513407636076, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.399781703948975, 'proto3_valid_mean_norm': 6.399781703948975, 'proto3_ema_delta_norm': 0.06862243264913559, 'raw_to_target_cos_mean': 0.971643286794424, 'rescued_to_target_cos_mean': 0.9716477906703949, 'ccc_improvement': 4.503875970840454e-06}
+The 37 Communcation Time: 60.126
+The 37 Communcation Accuracy: 91.47 Method: f2dc_dse epoch loss: 1.213
+[95.17, 88.24, 88.86, 93.61]
+
+[DSE diag] {'round': 38, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.004547684380721583, 'dse_delta_scaled_ratio_mean': 0.00022738422293992525, 'dse_delta_cos_feat_mean': 0.06778733635880374, 'cc_loss_mean': 0.027828369675108815, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0002861747122228882, 'mag_ratio_max_mean': 0.00031084783081643117, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.33972692489624, 'proto3_valid_mean_norm': 6.33972692489624, 'proto3_ema_delta_norm': 0.06475968658924103, 'raw_to_target_cos_mean': 0.9715851710736751, 'rescued_to_target_cos_mean': 0.9715895339846611, 'ccc_improvement': 4.362910985933333e-06}
+The 38 Communcation Time: 60.547
+The 38 Communcation Accuracy: 91.935 Method: f2dc_dse epoch loss: 1.134
+[95.82, 89.04, 89.06, 93.82]
+
+[DSE diag] {'round': 39, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.004870154722366318, 'dse_delta_scaled_ratio_mean': 0.00024350774101821165, 'dse_delta_cos_feat_mean': 0.06745669703221487, 'cc_loss_mean': 0.027943380149217174, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0003024937094925272, 'mag_ratio_max_mean': 0.000328242342126736, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.280698299407959, 'proto3_valid_mean_norm': 6.280698299407959, 'proto3_ema_delta_norm': 0.06354279071092606, 'raw_to_target_cos_mean': 0.9712814843654632, 'rescued_to_target_cos_mean': 0.9712864238023758, 'ccc_improvement': 4.939436912598794e-06}
+The 39 Communcation Time: 57.797
+The 39 Communcation Accuracy: 91.76 Method: f2dc_dse epoch loss: 1.089
+[95.63, 88.69, 88.98, 93.74]
+
+[DSE diag] {'round': 40, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.005161552507102248, 'dse_delta_scaled_ratio_mean': 0.00025807763304798464, 'dse_delta_cos_feat_mean': 0.07230470673966408, 'cc_loss_mean': 0.028320065143653705, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0003201331970499708, 'mag_ratio_max_mean': 0.0003471196503772761, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.219819068908691, 'proto3_valid_mean_norm': 6.219819068908691, 'proto3_ema_delta_norm': 0.06461502611637115, 'raw_to_target_cos_mean': 0.9711140951514244, 'rescued_to_target_cos_mean': 0.9711191658675671, 'ccc_improvement': 5.070716142641096e-06}
+The 40 Communcation Time: 58.645
+The 40 Communcation Accuracy: 92.052 Method: f2dc_dse epoch loss: 1.137
+[96.12, 88.39, 89.43, 94.27]
+
+[DSE diag] {'round': 41, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.00533681486824727, 'dse_delta_scaled_ratio_mean': 0.0002668407476038925, 'dse_delta_cos_feat_mean': 0.07150190169302126, 'cc_loss_mean': 0.02859810203194516, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0003369002475782538, 'mag_ratio_max_mean': 0.00036620126568689764, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.161678314208984, 'proto3_valid_mean_norm': 6.161678314208984, 'proto3_ema_delta_norm': 0.06217150762677193, 'raw_to_target_cos_mean': 0.9712349727749825, 'rescued_to_target_cos_mean': 0.9712405537068843, 'ccc_improvement': 5.580931901838504e-06}
+The 41 Communcation Time: 58.677
+The 41 Communcation Accuracy: 92.502 Method: f2dc_dse epoch loss: 1.051
+[96.29, 89.94, 89.46, 94.32]
+
+[DSE diag] {'round': 42, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.005656211434500318, 'dse_delta_scaled_ratio_mean': 0.00028281057708224683, 'dse_delta_cos_feat_mean': 0.06969523326424254, 'cc_loss_mean': 0.02827627040879374, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0003531057613145094, 'mag_ratio_max_mean': 0.0003835073534226526, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.1014723777771, 'proto3_valid_mean_norm': 6.1014723777771, 'proto3_ema_delta_norm': 0.0638827383518219, 'raw_to_target_cos_mean': 0.971834372729063, 'rescued_to_target_cos_mean': 0.9718404233455658, 'ccc_improvement': 6.050616502717432e-06}
+The 42 Communcation Time: 60.237
+The 42 Communcation Accuracy: 91.845 Method: f2dc_dse epoch loss: 0.984
+[95.79, 88.24, 89.58, 93.77]
+
+[DSE diag] {'round': 43, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.005943021531670911, 'dse_delta_scaled_ratio_mean': 0.0002971510868901549, 'dse_delta_cos_feat_mean': 0.06551346492712855, 'cc_loss_mean': 0.028999478361322467, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00037594504690552583, 'mag_ratio_max_mean': 0.00040874480506435275, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.040619850158691, 'proto3_valid_mean_norm': 6.040619850158691, 'proto3_ema_delta_norm': 0.06445666402578354, 'raw_to_target_cos_mean': 0.9702435064315796, 'rescued_to_target_cos_mean': 0.9702493467926979, 'ccc_improvement': 5.840361118281123e-06}
+The 43 Communcation Time: 53.401
+The 43 Communcation Accuracy: 91.795 Method: f2dc_dse epoch loss: 1.088
+[96.07, 88.04, 89.3, 93.77]
+
+[DSE diag] {'round': 44, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.006171937729047226, 'dse_delta_scaled_ratio_mean': 0.00030859689437738054, 'dse_delta_cos_feat_mean': 0.0680679874440468, 'cc_loss_mean': 0.02937895284024458, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0003876706980302134, 'mag_ratio_max_mean': 0.000422025093928002, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.98203182220459, 'proto3_valid_mean_norm': 5.98203182220459, 'proto3_ema_delta_norm': 0.06197235733270645, 'raw_to_target_cos_mean': 0.970102042555809, 'rescued_to_target_cos_mean': 0.9701083388924598, 'ccc_improvement': 6.296336650835066e-06}
+The 44 Communcation Time: 58.198
+The 44 Communcation Accuracy: 92.07 Method: f2dc_dse epoch loss: 1.11
+[96.19, 88.94, 89.07, 94.08]
+
+[DSE diag] {'round': 45, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.00628727236706951, 'dse_delta_scaled_ratio_mean': 0.0003143636249877777, 'dse_delta_cos_feat_mean': 0.0659879418213204, 'cc_loss_mean': 0.029155659087189766, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00039742436938761404, 'mag_ratio_max_mean': 0.00043241829372427966, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.929539203643799, 'proto3_valid_mean_norm': 5.929539203643799, 'proto3_ema_delta_norm': 0.0562378391623497, 'raw_to_target_cos_mean': 0.970444501042366, 'rescued_to_target_cos_mean': 0.9704513561725616, 'ccc_improvement': 6.855130195604353e-06}
+The 45 Communcation Time: 58.467
+The 45 Communcation Accuracy: 92.26 Method: f2dc_dse epoch loss: 1.058
+[96.14, 88.79, 89.7, 94.41]
+
+[DSE diag] {'round': 46, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.00659720996172774, 'dse_delta_scaled_ratio_mean': 0.0003298605030159292, 'dse_delta_cos_feat_mean': 0.06856024780981461, 'cc_loss_mean': 0.02968536604489851, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00041412009001848466, 'mag_ratio_max_mean': 0.0004514539437584444, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.875119686126709, 'proto3_valid_mean_norm': 5.875119686126709, 'proto3_ema_delta_norm': 0.05823752284049988, 'raw_to_target_cos_mean': 0.9696391423046589, 'rescued_to_target_cos_mean': 0.9696463434398175, 'ccc_improvement': 7.201135158618754e-06}
+The 46 Communcation Time: 58.519
+The 46 Communcation Accuracy: 92.378 Method: f2dc_dse epoch loss: 1.037
+[96.0, 89.34, 90.05, 94.12]
+
+[DSE diag] {'round': 47, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.006855046146994006, 'dse_delta_scaled_ratio_mean': 0.00034275231546928913, 'dse_delta_cos_feat_mean': 0.06635572829907666, 'cc_loss_mean': 0.02986799939249264, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0004362954734167415, 'mag_ratio_max_mean': 0.00047592500751864373, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.822775840759277, 'proto3_valid_mean_norm': 5.822775840759277, 'proto3_ema_delta_norm': 0.05605817958712578, 'raw_to_target_cos_mean': 0.9693969452381134, 'rescued_to_target_cos_mean': 0.969404760748148, 'ccc_improvement': 7.815510034592243e-06}
+The 47 Communcation Time: 59.108
+The 47 Communcation Accuracy: 92.305 Method: f2dc_dse epoch loss: 1.135
+[96.43, 89.44, 89.23, 94.12]
+
+[DSE diag] {'round': 48, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0072450728534014085, 'dse_delta_scaled_ratio_mean': 0.0003622536496697075, 'dse_delta_cos_feat_mean': 0.06648270180048706, 'cc_loss_mean': 0.02997946819950461, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00045431004219872485, 'mag_ratio_max_mean': 0.0004941172608889775, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.768321990966797, 'proto3_valid_mean_norm': 5.768321990966797, 'proto3_ema_delta_norm': 0.05773881822824478, 'raw_to_target_cos_mean': 0.9694784954190254, 'rescued_to_target_cos_mean': 0.9694863210618496, 'ccc_improvement': 7.825642824199619e-06}
+The 48 Communcation Time: 58.227
+The 48 Communcation Accuracy: 92.275 Method: f2dc_dse epoch loss: 1.034
+[96.13, 89.04, 89.59, 94.34]
+
+[DSE diag] {'round': 49, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.007424357091627283, 'dse_delta_scaled_ratio_mean': 0.0003712178635719748, 'dse_delta_cos_feat_mean': 0.06249531170691336, 'cc_loss_mean': 0.030427607475021736, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00046782301766553806, 'mag_ratio_max_mean': 0.0005103354431236268, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.7152605056762695, 'proto3_valid_mean_norm': 5.7152605056762695, 'proto3_ema_delta_norm': 0.05618169158697128, 'raw_to_target_cos_mean': 0.9697381775081158, 'rescued_to_target_cos_mean': 0.9697459569573402, 'ccc_improvement': 7.779449224476487e-06}
+The 49 Communcation Time: 58.976
+The 49 Communcation Accuracy: 92.41 Method: f2dc_dse epoch loss: 0.963
+[96.39, 88.94, 89.94, 94.37]
+
+[DSE diag] {'round': 50, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.00762424223342095, 'dse_delta_scaled_ratio_mean': 0.0003812121150300581, 'dse_delta_cos_feat_mean': 0.06840210226568862, 'cc_loss_mean': 0.03031375387452877, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0004816140297700786, 'mag_ratio_max_mean': 0.0005264556136793427, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.661957740783691, 'proto3_valid_mean_norm': 5.661957740783691, 'proto3_ema_delta_norm': 0.05670449882745743, 'raw_to_target_cos_mean': 0.9691192871332168, 'rescued_to_target_cos_mean': 0.9691280356049538, 'ccc_improvement': 8.748471736930163e-06}
+The 50 Communcation Time: 58.649
+The 50 Communcation Accuracy: 92.227 Method: f2dc_dse epoch loss: 0.924
+[95.93, 88.89, 89.75, 94.34]
+
+[DSE diag] {'round': 51, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.00796000551393566, 'dse_delta_scaled_ratio_mean': 0.00039800028038534843, 'dse_delta_cos_feat_mean': 0.07059772428366598, 'cc_loss_mean': 0.030148943000059488, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0004954192760182665, 'mag_ratio_max_mean': 0.0005388157656500791, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.616817951202393, 'proto3_valid_mean_norm': 5.616817951202393, 'proto3_ema_delta_norm': 0.04925396293401718, 'raw_to_target_cos_mean': 0.9686668898165226, 'rescued_to_target_cos_mean': 0.9686750020086765, 'ccc_improvement': 8.11219215390846e-06}
+The 51 Communcation Time: 58.315
+The 51 Communcation Accuracy: 92.455 Method: f2dc_dse epoch loss: 1.068
+[96.74, 88.49, 90.06, 94.53]
+
+[DSE diag] {'round': 52, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.008148112624117404, 'dse_delta_scaled_ratio_mean': 0.0004074056392620364, 'dse_delta_cos_feat_mean': 0.07166439205575635, 'cc_loss_mean': 0.030958411207676683, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.000519119679877129, 'mag_ratio_max_mean': 0.0005650844353611671, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.567317485809326, 'proto3_valid_mean_norm': 5.567317485809326, 'proto3_ema_delta_norm': 0.05298450589179993, 'raw_to_target_cos_mean': 0.9685201610624791, 'rescued_to_target_cos_mean': 0.9685292899608612, 'ccc_improvement': 9.128898382115835e-06}
+The 52 Communcation Time: 59.988
+The 52 Communcation Accuracy: 92.32 Method: f2dc_dse epoch loss: 1.001
+[95.96, 88.84, 90.06, 94.42]
+
+[DSE diag] {'round': 53, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.008412339669899752, 'dse_delta_scaled_ratio_mean': 0.00042061699362676416, 'dse_delta_cos_feat_mean': 0.07163198924664027, 'cc_loss_mean': 0.030490203755770558, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0005369300175046983, 'mag_ratio_max_mean': 0.0005830542143103817, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.520801067352295, 'proto3_valid_mean_norm': 5.520801067352295, 'proto3_ema_delta_norm': 0.05043918639421463, 'raw_to_target_cos_mean': 0.9692130506038665, 'rescued_to_target_cos_mean': 0.9692226040363312, 'ccc_improvement': 9.553432464670664e-06}
+The 53 Communcation Time: 60.233
+The 53 Communcation Accuracy: 92.532 Method: f2dc_dse epoch loss: 0.911
+[96.63, 89.84, 89.51, 94.15]
+
+[DSE diag] {'round': 54, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.008858085665127914, 'dse_delta_scaled_ratio_mean': 0.0004429042947695566, 'dse_delta_cos_feat_mean': 0.06968314880195442, 'cc_loss_mean': 0.03074399323216252, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0005570123946639679, 'mag_ratio_max_mean': 0.0006074702978366986, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.472493648529053, 'proto3_valid_mean_norm': 5.472493648529053, 'proto3_ema_delta_norm': 0.05188499018549919, 'raw_to_target_cos_mean': 0.9686645771563053, 'rescued_to_target_cos_mean': 0.9686749792098999, 'ccc_improvement': 1.0402053594593674e-05}
+The 54 Communcation Time: 62.038
+The 54 Communcation Accuracy: 92.828 Method: f2dc_dse epoch loss: 0.893
+[97.02, 90.08, 90.04, 94.17]
+
+[DSE diag] {'round': 55, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.009124791963249104, 'dse_delta_scaled_ratio_mean': 0.00045623961041997313, 'dse_delta_cos_feat_mean': 0.06891646841278459, 'cc_loss_mean': 0.031026650314220094, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0005805810986672558, 'mag_ratio_max_mean': 0.0006311808499195914, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.430000305175781, 'proto3_valid_mean_norm': 5.430000305175781, 'proto3_ema_delta_norm': 0.04643534868955612, 'raw_to_target_cos_mean': 0.9681344883143902, 'rescued_to_target_cos_mean': 0.9681451669335366, 'ccc_improvement': 1.0678619146387014e-05}
+The 55 Communcation Time: 59.409
+The 55 Communcation Accuracy: 92.558 Method: f2dc_dse epoch loss: 0.995
+[96.76, 88.94, 90.05, 94.48]
+
+[DSE diag] {'round': 56, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.009792536204317404, 'dse_delta_scaled_ratio_mean': 0.0004896268246240181, 'dse_delta_cos_feat_mean': 0.07110106632846916, 'cc_loss_mean': 0.03168823560340288, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0006090252396637469, 'mag_ratio_max_mean': 0.0006621043543066574, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.385232448577881, 'proto3_valid_mean_norm': 5.385232448577881, 'proto3_ema_delta_norm': 0.048661403357982635, 'raw_to_target_cos_mean': 0.9682751348614693, 'rescued_to_target_cos_mean': 0.9682859474420548, 'ccc_improvement': 1.0812580585439768e-05}
+The 56 Communcation Time: 60.412
+The 56 Communcation Accuracy: 92.34 Method: f2dc_dse epoch loss: 0.873
+[96.3, 89.24, 89.74, 94.08]
+
+[DSE diag] {'round': 57, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.009980448534048468, 'dse_delta_scaled_ratio_mean': 0.0004990224288060145, 'dse_delta_cos_feat_mean': 0.07123332644632346, 'cc_loss_mean': 0.031576037105233594, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0006254999768110968, 'mag_ratio_max_mean': 0.0006791717932848711, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.337411403656006, 'proto3_valid_mean_norm': 5.337411403656006, 'proto3_ema_delta_norm': 0.051284946501255035, 'raw_to_target_cos_mean': 0.9686573469638824, 'rescued_to_target_cos_mean': 0.9686671605706215, 'ccc_improvement': 9.813606739128566e-06}
+The 57 Communcation Time: 60.15
+The 57 Communcation Accuracy: 92.155 Method: f2dc_dse epoch loss: 0.803
+[96.45, 88.79, 89.64, 93.74]
+
+[DSE diag] {'round': 58, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.010298215686532188, 'dse_delta_scaled_ratio_mean': 0.0005149107846974256, 'dse_delta_cos_feat_mean': 0.07367135680519049, 'cc_loss_mean': 0.032621626268240306, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0006482398029249687, 'mag_ratio_max_mean': 0.0007016394383108784, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.293654918670654, 'proto3_valid_mean_norm': 5.293654918670654, 'proto3_ema_delta_norm': 0.04743589460849762, 'raw_to_target_cos_mean': 0.9659268021583557, 'rescued_to_target_cos_mean': 0.965939220637083, 'ccc_improvement': 1.241847872734958e-05}
+The 58 Communcation Time: 52.251
+The 58 Communcation Accuracy: 92.645 Method: f2dc_dse epoch loss: 1.16
+[96.89, 89.59, 89.84, 94.26]
+
+[DSE diag] {'round': 59, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.010631921038006942, 'dse_delta_scaled_ratio_mean': 0.0005315960606822759, 'dse_delta_cos_feat_mean': 0.06736826833527328, 'cc_loss_mean': 0.0315656102910395, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0006696518296995501, 'mag_ratio_max_mean': 0.0007276952184545206, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.250844478607178, 'proto3_valid_mean_norm': 5.250844478607178, 'proto3_ema_delta_norm': 0.04659552127122879, 'raw_to_target_cos_mean': 0.9687869402766228, 'rescued_to_target_cos_mean': 0.9687970398366451, 'ccc_improvement': 1.0099560022291953e-05}
+The 59 Communcation Time: 58.389
+The 59 Communcation Accuracy: 92.87 Method: f2dc_dse epoch loss: 0.721
+[97.01, 90.23, 89.8, 94.44]
+
+[DSE diag] {'round': 60, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.011002025131932904, 'dse_delta_scaled_ratio_mean': 0.0005501012688368525, 'dse_delta_cos_feat_mean': 0.06783497762161494, 'cc_loss_mean': 0.03225255979851958, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0006977780140474468, 'mag_ratio_max_mean': 0.0007579061079717752, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.206643104553223, 'proto3_valid_mean_norm': 5.206643104553223, 'proto3_ema_delta_norm': 0.04767204076051712, 'raw_to_target_cos_mean': 0.9677677752077579, 'rescued_to_target_cos_mean': 0.9677806033194065, 'ccc_improvement': 1.2828111648599538e-05}
+The 60 Communcation Time: 58.669
+The 60 Communcation Accuracy: 92.762 Method: f2dc_dse epoch loss: 0.871
+[97.01, 90.23, 89.56, 94.25]
+
+[DSE diag] {'round': 61, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.011513263964659317, 'dse_delta_scaled_ratio_mean': 0.000575663213751706, 'dse_delta_cos_feat_mean': 0.07121479692902, 'cc_loss_mean': 0.03251180159929934, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0007243160040102779, 'mag_ratio_max_mean': 0.0007887617579751438, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.164498329162598, 'proto3_valid_mean_norm': 5.164498329162598, 'proto3_ema_delta_norm': 0.04568587616086006, 'raw_to_target_cos_mean': 0.9671767543256283, 'rescued_to_target_cos_mean': 0.9671900433301925, 'ccc_improvement': 1.3289004564209783e-05}
+The 61 Communcation Time: 58.146
+The 61 Communcation Accuracy: 92.628 Method: f2dc_dse epoch loss: 0.801
+[96.81, 89.44, 89.83, 94.43]
+
+[DSE diag] {'round': 62, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.011875031174577045, 'dse_delta_scaled_ratio_mean': 0.0005937515684741392, 'dse_delta_cos_feat_mean': 0.07145664741958965, 'cc_loss_mean': 0.03218098497132736, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0007486940769013018, 'mag_ratio_max_mean': 0.0008143456754623913, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.127974510192871, 'proto3_valid_mean_norm': 5.127974510192871, 'proto3_ema_delta_norm': 0.04040823131799698, 'raw_to_target_cos_mean': 0.9673020806908608, 'rescued_to_target_cos_mean': 0.9673148190975189, 'ccc_improvement': 1.2738406658163726e-05}
+The 62 Communcation Time: 52.902
+The 62 Communcation Accuracy: 92.52 Method: f2dc_dse epoch loss: 0.85
+[96.79, 89.19, 89.75, 94.35]
+
+[DSE diag] {'round': 63, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.012209072965993483, 'dse_delta_scaled_ratio_mean': 0.000610453656201964, 'dse_delta_cos_feat_mean': 0.07005083608599152, 'cc_loss_mean': 0.03287718486155881, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0007643931443453766, 'mag_ratio_max_mean': 0.0008329443736358606, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.0884833335876465, 'proto3_valid_mean_norm': 5.0884833335876465, 'proto3_ema_delta_norm': 0.043128013610839844, 'raw_to_target_cos_mean': 0.9674646340310573, 'rescued_to_target_cos_mean': 0.9674776957929134, 'ccc_improvement': 1.3061761856114629e-05}
+The 63 Communcation Time: 57.902
+The 63 Communcation Accuracy: 92.95 Method: f2dc_dse epoch loss: 0.757
+[97.16, 90.13, 89.77, 94.74]
+
+[DSE diag] {'round': 64, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.012067453214485832, 'dse_delta_scaled_ratio_mean': 0.0006033726673248288, 'dse_delta_cos_feat_mean': 0.07040585173104365, 'cc_loss_mean': 0.032646684548909455, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0007568850596022281, 'mag_ratio_max_mean': 0.0008266767706147456, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.049261569976807, 'proto3_valid_mean_norm': 5.049261569976807, 'proto3_ema_delta_norm': 0.043023791164159775, 'raw_to_target_cos_mean': 0.9670479974150658, 'rescued_to_target_cos_mean': 0.9670609331130982, 'ccc_improvement': 1.2935698032401355e-05}
+The 64 Communcation Time: 57.689
+The 64 Communcation Accuracy: 92.852 Method: f2dc_dse epoch loss: 0.896
+[97.08, 90.03, 89.85, 94.45]
+
+[DSE diag] {'round': 65, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.012327573850285142, 'dse_delta_scaled_ratio_mean': 0.0006163787054650541, 'dse_delta_cos_feat_mean': 0.07175768862732432, 'cc_loss_mean': 0.03291066694958895, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0007832759431274157, 'mag_ratio_max_mean': 0.0008545703901965622, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.013944149017334, 'proto3_valid_mean_norm': 5.013944149017334, 'proto3_ema_delta_norm': 0.039963871240615845, 'raw_to_target_cos_mean': 0.9667827439308166, 'rescued_to_target_cos_mean': 0.9667985254526138, 'ccc_improvement': 1.578152179715353e-05}
+The 65 Communcation Time: 56.953
+The 65 Communcation Accuracy: 92.673 Method: f2dc_dse epoch loss: 0.837
+[96.98, 89.69, 89.68, 94.34]
+
+[DSE diag] {'round': 66, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.012488862941816121, 'dse_delta_scaled_ratio_mean': 0.0006244431468860014, 'dse_delta_cos_feat_mean': 0.06930447776773663, 'cc_loss_mean': 0.03301391778798752, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0007938335825230986, 'mag_ratio_max_mean': 0.0008659040542683685, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.97955846786499, 'proto3_valid_mean_norm': 4.97955846786499, 'proto3_ema_delta_norm': 0.03895038366317749, 'raw_to_target_cos_mean': 0.9655704060196877, 'rescued_to_target_cos_mean': 0.9655847564339638, 'ccc_improvement': 1.4350414276109724e-05}
+The 66 Communcation Time: 56.738
+The 66 Communcation Accuracy: 92.865 Method: f2dc_dse epoch loss: 0.998
+[97.06, 89.49, 90.35, 94.56]
+
+[DSE diag] {'round': 67, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.012892690264609654, 'dse_delta_scaled_ratio_mean': 0.0006446345284933011, 'dse_delta_cos_feat_mean': 0.073091088859438, 'cc_loss_mean': 0.033029110449951375, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0008083796848715733, 'mag_ratio_max_mean': 0.0008781449611095952, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.948367118835449, 'proto3_valid_mean_norm': 4.948367118835449, 'proto3_ema_delta_norm': 0.035527199506759644, 'raw_to_target_cos_mean': 0.9663776159286499, 'rescued_to_target_cos_mean': 0.9663943932950496, 'ccc_improvement': 1.6777366399711724e-05}
+The 67 Communcation Time: 56.866
+The 67 Communcation Accuracy: 92.535 Method: f2dc_dse epoch loss: 0.931
+[97.32, 89.09, 89.7, 94.03]
+
+[DSE diag] {'round': 68, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.013226198013790132, 'dse_delta_scaled_ratio_mean': 0.0006613099179978821, 'dse_delta_cos_feat_mean': 0.07107351423746107, 'cc_loss_mean': 0.0330777174403557, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0008305206459255949, 'mag_ratio_max_mean': 0.0009004618167490398, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.9152398109436035, 'proto3_valid_mean_norm': 4.9152398109436035, 'proto3_ema_delta_norm': 0.03743770718574524, 'raw_to_target_cos_mean': 0.9665508434176445, 'rescued_to_target_cos_mean': 0.9665656949579716, 'ccc_improvement': 1.4851540327098789e-05}
+The 68 Communcation Time: 57.248
+The 68 Communcation Accuracy: 92.828 Method: f2dc_dse epoch loss: 0.828
+[97.19, 89.99, 89.87, 94.26]
+
+[DSE diag] {'round': 69, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.01332811052738434, 'dse_delta_scaled_ratio_mean': 0.0006664055385617259, 'dse_delta_cos_feat_mean': 0.06929478679517763, 'cc_loss_mean': 0.03371670693803599, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0008468998827964008, 'mag_ratio_max_mean': 0.0009213064750750369, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.880163192749023, 'proto3_valid_mean_norm': 4.880163192749023, 'proto3_ema_delta_norm': 0.038966428488492966, 'raw_to_target_cos_mean': 0.9660818833112716, 'rescued_to_target_cos_mean': 0.9660964366793633, 'ccc_improvement': 1.4553368091640984e-05}
+The 69 Communcation Time: 56.93
+The 69 Communcation Accuracy: 92.582 Method: f2dc_dse epoch loss: 0.889
+[96.75, 89.44, 89.63, 94.51]
+
+[DSE diag] {'round': 70, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.013789857479471876, 'dse_delta_scaled_ratio_mean': 0.000689492877849043, 'dse_delta_cos_feat_mean': 0.06944414353511671, 'cc_loss_mean': 0.0337689215031873, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0008687489071293854, 'mag_ratio_max_mean': 0.000947936064415356, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.844411849975586, 'proto3_valid_mean_norm': 4.844411849975586, 'proto3_ema_delta_norm': 0.04013830050826073, 'raw_to_target_cos_mean': 0.9659596441686154, 'rescued_to_target_cos_mean': 0.9659765940904618, 'ccc_improvement': 1.6949921846420857e-05}
+The 70 Communcation Time: 56.211
+The 70 Communcation Accuracy: 92.678 Method: f2dc_dse epoch loss: 0.809
+[96.81, 89.64, 89.67, 94.59]
+
+[DSE diag] {'round': 71, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.014065851669094494, 'dse_delta_scaled_ratio_mean': 0.000703292597680888, 'dse_delta_cos_feat_mean': 0.06705592059576788, 'cc_loss_mean': 0.033622163114816264, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0008999194311458738, 'mag_ratio_max_mean': 0.000980471317128714, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.808215141296387, 'proto3_valid_mean_norm': 4.808215141296387, 'proto3_ema_delta_norm': 0.039870623499155045, 'raw_to_target_cos_mean': 0.9660351893305779, 'rescued_to_target_cos_mean': 0.9660532121360302, 'ccc_improvement': 1.8022805452377888e-05}
+The 71 Communcation Time: 56.551
+The 71 Communcation Accuracy: 92.625 Method: f2dc_dse epoch loss: 0.701
+[96.77, 89.34, 90.15, 94.24]
+
+[DSE diag] {'round': 72, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.01451049073454362, 'dse_delta_scaled_ratio_mean': 0.0007255245452495589, 'dse_delta_cos_feat_mean': 0.0679631860188797, 'cc_loss_mean': 0.03405761109083925, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0009308386909505052, 'mag_ratio_max_mean': 0.0010175764867228515, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.776950836181641, 'proto3_valid_mean_norm': 4.776950836181641, 'proto3_ema_delta_norm': 0.03499627858400345, 'raw_to_target_cos_mean': 0.9655354788899422, 'rescued_to_target_cos_mean': 0.9655539101362228, 'ccc_improvement': 1.843124628064796e-05}
+The 72 Communcation Time: 56.711
+The 72 Communcation Accuracy: 92.95 Method: f2dc_dse epoch loss: 0.897
+[97.31, 90.18, 89.97, 94.34]
+
+[DSE diag] {'round': 73, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.015101059428663207, 'dse_delta_scaled_ratio_mean': 0.0007550529858805608, 'dse_delta_cos_feat_mean': 0.06784285772836947, 'cc_loss_mean': 0.03398987024000902, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0009552418675851978, 'mag_ratio_max_mean': 0.001040355527619531, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.745185852050781, 'proto3_valid_mean_norm': 4.745185852050781, 'proto3_ema_delta_norm': 0.03502999246120453, 'raw_to_target_cos_mean': 0.9657461278140544, 'rescued_to_target_cos_mean': 0.9657650804519653, 'ccc_improvement': 1.8952637910851777e-05}
+The 73 Communcation Time: 55.478
+The 73 Communcation Accuracy: 93.0 Method: f2dc_dse epoch loss: 0.71
+[97.17, 90.43, 90.1, 94.3]
+
+[DSE diag] {'round': 74, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.015221598911243882, 'dse_delta_scaled_ratio_mean': 0.0007610799554801696, 'dse_delta_cos_feat_mean': 0.067390132865979, 'cc_loss_mean': 0.03410310321592683, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.000966941503218315, 'mag_ratio_max_mean': 0.001055046480811847, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.714410305023193, 'proto3_valid_mean_norm': 4.714410305023193, 'proto3_ema_delta_norm': 0.03438769653439522, 'raw_to_target_cos_mean': 0.9656103774905205, 'rescued_to_target_cos_mean': 0.9656286630034446, 'ccc_improvement': 1.8285512924154368e-05}
+The 74 Communcation Time: 54.632
+The 74 Communcation Accuracy: 92.642 Method: f2dc_dse epoch loss: 0.728
+[96.91, 89.09, 90.3, 94.27]
+
+[DSE diag] {'round': 75, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.015395147271619484, 'dse_delta_scaled_ratio_mean': 0.0007697573729732475, 'dse_delta_cos_feat_mean': 0.06811009148646911, 'cc_loss_mean': 0.03449153238068547, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0009712239350905762, 'mag_ratio_max_mean': 0.001056552479595637, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.684995174407959, 'proto3_valid_mean_norm': 4.684995174407959, 'proto3_ema_delta_norm': 0.03365427255630493, 'raw_to_target_cos_mean': 0.9645459403097629, 'rescued_to_target_cos_mean': 0.9645634759962559, 'ccc_improvement': 1.7535686492986535e-05}
+The 75 Communcation Time: 56.199
+The 75 Communcation Accuracy: 92.79 Method: f2dc_dse epoch loss: 0.856
+[97.11, 88.94, 90.49, 94.62]
+
+[DSE diag] {'round': 76, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.01583774584941511, 'dse_delta_scaled_ratio_mean': 0.00079188730711142, 'dse_delta_cos_feat_mean': 0.0683457063646211, 'cc_loss_mean': 0.03484323319502565, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0010088276514227713, 'mag_ratio_max_mean': 0.0010983652945968413, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.658841609954834, 'proto3_valid_mean_norm': 4.658841609954834, 'proto3_ema_delta_norm': 0.03156813234090805, 'raw_to_target_cos_mean': 0.9652119527757168, 'rescued_to_target_cos_mean': 0.965228673517704, 'ccc_improvement': 1.6720741987219512e-05}
+The 76 Communcation Time: 57.625
+The 76 Communcation Accuracy: 92.855 Method: f2dc_dse epoch loss: 0.754
+[97.19, 89.74, 90.03, 94.46]
+
+[DSE diag] {'round': 77, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.016171352415912447, 'dse_delta_scaled_ratio_mean': 0.000808567635248084, 'dse_delta_cos_feat_mean': 0.07133649877774925, 'cc_loss_mean': 0.034430335803516156, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0010276217708803503, 'mag_ratio_max_mean': 0.0011166419509062242, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.631016731262207, 'proto3_valid_mean_norm': 4.631016731262207, 'proto3_ema_delta_norm': 0.03333113342523575, 'raw_to_target_cos_mean': 0.9649263201653957, 'rescued_to_target_cos_mean': 0.9649446788430214, 'ccc_improvement': 1.835867762567389e-05}
+The 77 Communcation Time: 56.172
+The 77 Communcation Accuracy: 92.66 Method: f2dc_dse epoch loss: 0.807
+[96.86, 89.34, 90.05, 94.39]
+
+[DSE diag] {'round': 78, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.016503510534020473, 'dse_delta_scaled_ratio_mean': 0.0008251755388400488, 'dse_delta_cos_feat_mean': 0.06616276697561063, 'cc_loss_mean': 0.034700593617306645, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.001058002288318089, 'mag_ratio_max_mean': 0.0011508919058307524, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.604732513427734, 'proto3_valid_mean_norm': 4.604732513427734, 'proto3_ema_delta_norm': 0.03123381733894348, 'raw_to_target_cos_mean': 0.9657711744308471, 'rescued_to_target_cos_mean': 0.9657879170775413, 'ccc_improvement': 1.6742646694156704e-05}
+The 78 Communcation Time: 55.522
+The 78 Communcation Accuracy: 92.575 Method: f2dc_dse epoch loss: 0.74
+[96.81, 89.34, 89.97, 94.18]
+
+[DSE diag] {'round': 79, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.016808386730881295, 'dse_delta_scaled_ratio_mean': 0.0008404193658804115, 'dse_delta_cos_feat_mean': 0.06646091377557077, 'cc_loss_mean': 0.03471458127569276, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0010947157669204076, 'mag_ratio_max_mean': 0.001191801373610243, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.571602821350098, 'proto3_valid_mean_norm': 4.571602821350098, 'proto3_ema_delta_norm': 0.037264466285705566, 'raw_to_target_cos_mean': 0.965399706363678, 'rescued_to_target_cos_mean': 0.9654156947135926, 'ccc_improvement': 1.5988349914564104e-05}
+The 79 Communcation Time: 57.122
+The 79 Communcation Accuracy: 92.485 Method: f2dc_dse epoch loss: 0.777
+[96.78, 89.39, 89.71, 94.06]
+
+[DSE diag] {'round': 80, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.01776688382147165, 'dse_delta_scaled_ratio_mean': 0.000888344198102033, 'dse_delta_cos_feat_mean': 0.06776249602375993, 'cc_loss_mean': 0.0352006233366798, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0011200333762380686, 'mag_ratio_max_mean': 0.0012233691118683876, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.5395917892456055, 'proto3_valid_mean_norm': 4.5395917892456055, 'proto3_ema_delta_norm': 0.03572113811969757, 'raw_to_target_cos_mean': 0.9645753167569637, 'rescued_to_target_cos_mean': 0.9645907880365848, 'ccc_improvement': 1.547127962109318e-05}
+The 80 Communcation Time: 55.182
+The 80 Communcation Accuracy: 92.675 Method: f2dc_dse epoch loss: 0.826
+[96.89, 89.44, 90.09, 94.28]
+
+[DSE diag] {'round': 81, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.018140487368492608, 'dse_delta_scaled_ratio_mean': 0.0009070243839436329, 'dse_delta_cos_feat_mean': 0.06555703709461179, 'cc_loss_mean': 0.0352951509211173, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0011579567238861213, 'mag_ratio_max_mean': 0.0012599186333377035, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.509877681732178, 'proto3_valid_mean_norm': 4.509877681732178, 'proto3_ema_delta_norm': 0.03426985442638397, 'raw_to_target_cos_mean': 0.9644082178175449, 'rescued_to_target_cos_mean': 0.9644274169206619, 'ccc_improvement': 1.9199103116984695e-05}
+The 81 Communcation Time: 57.134
+The 81 Communcation Accuracy: 92.7 Method: f2dc_dse epoch loss: 0.751
+[96.99, 89.59, 90.0, 94.22]
+
+[DSE diag] {'round': 82, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.018515598181700864, 'dse_delta_scaled_ratio_mean': 0.0009257799217353859, 'dse_delta_cos_feat_mean': 0.06551623204250934, 'cc_loss_mean': 0.035320219362443825, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.001177957999349136, 'mag_ratio_max_mean': 0.001279561864794232, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.48337984085083, 'proto3_valid_mean_norm': 4.48337984085083, 'proto3_ema_delta_norm': 0.03142476826906204, 'raw_to_target_cos_mean': 0.9635156840085983, 'rescued_to_target_cos_mean': 0.9635362572968006, 'ccc_improvement': 2.0573288202263562e-05}
+The 82 Communcation Time: 56.742
+The 82 Communcation Accuracy: 92.472 Method: f2dc_dse epoch loss: 0.828
+[96.77, 88.79, 90.07, 94.26]
+
+[DSE diag] {'round': 83, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.01882546104913973, 'dse_delta_scaled_ratio_mean': 0.0009412730793998376, 'dse_delta_cos_feat_mean': 0.06589293640227212, 'cc_loss_mean': 0.03521755265451761, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0012083249715355885, 'mag_ratio_max_mean': 0.0013116074761191773, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.461854457855225, 'proto3_valid_mean_norm': 4.461854457855225, 'proto3_ema_delta_norm': 0.0275166817009449, 'raw_to_target_cos_mean': 0.9635593454539776, 'rescued_to_target_cos_mean': 0.9635864236950874, 'ccc_improvement': 2.7078241109812495e-05}
+The 83 Communcation Time: 58.157
+The 83 Communcation Accuracy: 92.708 Method: f2dc_dse epoch loss: 0.827
+[97.22, 89.54, 89.95, 94.12]
+
+[DSE diag] {'round': 84, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.01937666435779155, 'dse_delta_scaled_ratio_mean': 0.0009688332373717552, 'dse_delta_cos_feat_mean': 0.06671654743184169, 'cc_loss_mean': 0.036084681350928495, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0012192642404472516, 'mag_ratio_max_mean': 0.0013214920469064024, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.439724922180176, 'proto3_valid_mean_norm': 4.439724922180176, 'proto3_ema_delta_norm': 0.027721095830202103, 'raw_to_target_cos_mean': 0.9629878228902817, 'rescued_to_target_cos_mean': 0.9630146773159504, 'ccc_improvement': 2.6854425668632054e-05}
+The 84 Communcation Time: 58.526
+The 84 Communcation Accuracy: 93.22 Method: f2dc_dse epoch loss: 0.761
+[97.41, 90.28, 90.46, 94.73]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-146_f2dc_dse_digits_rho_scan/diag/rho005_s15/best_R085.npz (acc=93.220)
+[DSE diag] {'round': 85, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.019317680649898875, 'dse_delta_scaled_ratio_mean': 0.0009658840531538355, 'dse_delta_cos_feat_mean': 0.06406898895279481, 'cc_loss_mean': 0.03554060355937793, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.001243027618094798, 'mag_ratio_max_mean': 0.0013500967514588527, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.417706489562988, 'proto3_valid_mean_norm': 4.417706489562988, 'proto3_ema_delta_norm': 0.027441347017884254, 'raw_to_target_cos_mean': 0.9640687996149063, 'rescued_to_target_cos_mean': 0.9640947806835175, 'ccc_improvement': 2.5981068611180547e-05}
+The 85 Communcation Time: 56.645
+The 85 Communcation Accuracy: 93.032 Method: f2dc_dse epoch loss: 0.76
+[97.27, 90.08, 90.09, 94.69]
+
+[DSE diag] {'round': 86, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.02000686922268131, 'dse_delta_scaled_ratio_mean': 0.0010003434767486884, 'dse_delta_cos_feat_mean': 0.0664527282275544, 'cc_loss_mean': 0.03525385415196964, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0012860945622143786, 'mag_ratio_max_mean': 0.0013962039147548738, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.394688606262207, 'proto3_valid_mean_norm': 4.394688606262207, 'proto3_ema_delta_norm': 0.02761632204055786, 'raw_to_target_cos_mean': 0.9652478724718094, 'rescued_to_target_cos_mean': 0.9652730721235275, 'ccc_improvement': 2.519965171809968e-05}
+The 86 Communcation Time: 55.844
+The 86 Communcation Accuracy: 93.225 Method: f2dc_dse epoch loss: 0.611
+[97.31, 90.68, 90.32, 94.59]
+
+[DSE diag] {'round': 87, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.02087787108457729, 'dse_delta_scaled_ratio_mean': 0.001043893578758343, 'dse_delta_cos_feat_mean': 0.06897614502709527, 'cc_loss_mean': 0.03637846068217861, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0013392026361543686, 'mag_ratio_max_mean': 0.001458145131548536, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.36868953704834, 'proto3_valid_mean_norm': 4.36868953704834, 'proto3_ema_delta_norm': 0.031017133966088295, 'raw_to_target_cos_mean': 0.9626134116947651, 'rescued_to_target_cos_mean': 0.962640391588211, 'ccc_improvement': 2.6979893445910896e-05}
+The 87 Communcation Time: 52.546
+The 87 Communcation Accuracy: 92.9 Method: f2dc_dse epoch loss: 0.933
+[97.15, 89.99, 89.9, 94.56]
+
+[DSE diag] {'round': 88, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.020848738925838512, 'dse_delta_scaled_ratio_mean': 0.0010424369506993572, 'dse_delta_cos_feat_mean': 0.06907668941052049, 'cc_loss_mean': 0.03629310069137517, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0013445402117213234, 'mag_ratio_max_mean': 0.001460125692181229, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.344331741333008, 'proto3_valid_mean_norm': 4.344331741333008, 'proto3_ema_delta_norm': 0.02940824069082737, 'raw_to_target_cos_mean': 0.9632770927250385, 'rescued_to_target_cos_mean': 0.9633052013814449, 'ccc_improvement': 2.810865640645588e-05}
+The 88 Communcation Time: 55.968
+The 88 Communcation Accuracy: 93.002 Method: f2dc_dse epoch loss: 0.749
+[97.26, 90.08, 90.22, 94.45]
+
+[DSE diag] {'round': 89, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.02215050384483539, 'dse_delta_scaled_ratio_mean': 0.0011075252116616468, 'dse_delta_cos_feat_mean': 0.07053184809727148, 'cc_loss_mean': 0.03659213948696596, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0014074679906292248, 'mag_ratio_max_mean': 0.0015295240758625309, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.31748104095459, 'proto3_valid_mean_norm': 4.31748104095459, 'proto3_ema_delta_norm': 0.03105161152780056, 'raw_to_target_cos_mean': 0.9627608434855938, 'rescued_to_target_cos_mean': 0.9627873292565345, 'ccc_improvement': 2.64857709407762e-05}
+The 89 Communcation Time: 55.624
+The 89 Communcation Accuracy: 93.237 Method: f2dc_dse epoch loss: 0.675
+[97.3, 90.33, 90.66, 94.66]
+
+[DSE diag] {'round': 90, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.02225480553268469, 'dse_delta_scaled_ratio_mean': 0.0011127402960178934, 'dse_delta_cos_feat_mean': 0.06971409866843732, 'cc_loss_mean': 0.036340840136771344, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0014341681790087492, 'mag_ratio_max_mean': 0.0015541144335950395, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.292114734649658, 'proto3_valid_mean_norm': 4.292114734649658, 'proto3_ema_delta_norm': 0.02972298488020897, 'raw_to_target_cos_mean': 0.9629692210257054, 'rescued_to_target_cos_mean': 0.9630016580224037, 'ccc_improvement': 3.243699669830402e-05}
+The 90 Communcation Time: 57.304
+The 90 Communcation Accuracy: 92.932 Method: f2dc_dse epoch loss: 0.738
+[97.34, 89.74, 90.38, 94.27]
+
+[DSE diag] {'round': 91, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.02281365888783228, 'dse_delta_scaled_ratio_mean': 0.0011406829739559884, 'dse_delta_cos_feat_mean': 0.06623306005590741, 'cc_loss_mean': 0.036222503289542, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.001434434135068929, 'mag_ratio_max_mean': 0.0015590124540106063, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.270201206207275, 'proto3_valid_mean_norm': 4.270201206207275, 'proto3_ema_delta_norm': 0.02714039944112301, 'raw_to_target_cos_mean': 0.963275596499443, 'rescued_to_target_cos_mean': 0.9633060814440251, 'ccc_improvement': 3.0484944582021e-05}
+The 91 Communcation Time: 55.928
+The 91 Communcation Accuracy: 93.392 Method: f2dc_dse epoch loss: 0.763
+[97.55, 91.28, 90.32, 94.42]
+
+[DSE diag] {'round': 92, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.022964500144689707, 'dse_delta_scaled_ratio_mean': 0.0011482250294892337, 'dse_delta_cos_feat_mean': 0.06720598230086319, 'cc_loss_mean': 0.036541846904649046, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0014689470174714862, 'mag_ratio_max_mean': 0.001590311654933518, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.251859664916992, 'proto3_valid_mean_norm': 4.251859664916992, 'proto3_ema_delta_norm': 0.02437029592692852, 'raw_to_target_cos_mean': 0.963669486194849, 'rescued_to_target_cos_mean': 0.9637013728916645, 'ccc_improvement': 3.188669681541967e-05}
+The 92 Communcation Time: 56.571
+The 92 Communcation Accuracy: 93.028 Method: f2dc_dse epoch loss: 0.71
+[97.11, 90.18, 90.13, 94.69]
+
+[DSE diag] {'round': 93, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.023491083722505156, 'dse_delta_scaled_ratio_mean': 0.001174554211462725, 'dse_delta_cos_feat_mean': 0.06536246351728385, 'cc_loss_mean': 0.0368763854795327, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0015193668679491948, 'mag_ratio_max_mean': 0.0016485697460255676, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.227940559387207, 'proto3_valid_mean_norm': 4.227940559387207, 'proto3_ema_delta_norm': 0.029352569952607155, 'raw_to_target_cos_mean': 0.9626480887830258, 'rescued_to_target_cos_mean': 0.9626818515360356, 'ccc_improvement': 3.3762753009813906e-05}
+The 93 Communcation Time: 57.367
+The 93 Communcation Accuracy: 93.145 Method: f2dc_dse epoch loss: 0.707
+[97.31, 90.13, 90.67, 94.47]
+
+[DSE diag] {'round': 94, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.02469833727269344, 'dse_delta_scaled_ratio_mean': 0.0012349168707504006, 'dse_delta_cos_feat_mean': 0.06665938630787253, 'cc_loss_mean': 0.037005701402992155, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0015759166718776068, 'mag_ratio_max_mean': 0.0017035570195613188, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.2044196128845215, 'proto3_valid_mean_norm': 4.2044196128845215, 'proto3_ema_delta_norm': 0.029032081365585327, 'raw_to_target_cos_mean': 0.9622909927368164, 'rescued_to_target_cos_mean': 0.9623188105225563, 'ccc_improvement': 2.7817785739903123e-05}
+The 94 Communcation Time: 56.897
+The 94 Communcation Accuracy: 93.065 Method: f2dc_dse epoch loss: 0.802
+[97.19, 89.84, 90.71, 94.52]
+
+[DSE diag] {'round': 95, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.025458189878445784, 'dse_delta_scaled_ratio_mean': 0.001272909520012143, 'dse_delta_cos_feat_mean': 0.06806264865936189, 'cc_loss_mean': 0.03740859505317494, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0016146821006494123, 'mag_ratio_max_mean': 0.001746389102810363, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.180427074432373, 'proto3_valid_mean_norm': 4.180427074432373, 'proto3_ema_delta_norm': 0.028184378519654274, 'raw_to_target_cos_mean': 0.9622590383887291, 'rescued_to_target_cos_mean': 0.9622928960621357, 'ccc_improvement': 3.385767340668977e-05}
+The 95 Communcation Time: 56.419
+The 95 Communcation Accuracy: 92.88 Method: f2dc_dse epoch loss: 0.713
+[97.08, 89.74, 90.27, 94.43]
+
+[DSE diag] {'round': 96, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.026250491434135128, 'dse_delta_scaled_ratio_mean': 0.0013125246055131752, 'dse_delta_cos_feat_mean': 0.06901368597307321, 'cc_loss_mean': 0.036964823434612465, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0016503204096807167, 'mag_ratio_max_mean': 0.0017829132716982595, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.153507232666016, 'proto3_valid_mean_norm': 4.153507232666016, 'proto3_ema_delta_norm': 0.031078848987817764, 'raw_to_target_cos_mean': 0.9625147061049938, 'rescued_to_target_cos_mean': 0.9625401191413403, 'ccc_improvement': 2.5413036346511042e-05}
+The 96 Communcation Time: 55.834
+The 96 Communcation Accuracy: 93.227 Method: f2dc_dse epoch loss: 0.713
+[97.31, 90.63, 90.27, 94.7]
+
+[DSE diag] {'round': 97, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.026104345983626886, 'dse_delta_scaled_ratio_mean': 0.0013052173215579242, 'dse_delta_cos_feat_mean': 0.06763497062765775, 'cc_loss_mean': 0.037575999981291484, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0016642513906493061, 'mag_ratio_max_mean': 0.0017968533973720285, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.131412982940674, 'proto3_valid_mean_norm': 4.131412982940674, 'proto3_ema_delta_norm': 0.026772702112793922, 'raw_to_target_cos_mean': 0.9614925438165665, 'rescued_to_target_cos_mean': 0.961523672491312, 'ccc_improvement': 3.1128674745528606e-05}
+The 97 Communcation Time: 58.086
+The 97 Communcation Accuracy: 93.22 Method: f2dc_dse epoch loss: 0.862
+[97.37, 90.68, 90.18, 94.65]
+
+[DSE diag] {'round': 98, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.026555154419635758, 'dse_delta_scaled_ratio_mean': 0.0013277577296865455, 'dse_delta_cos_feat_mean': 0.06696193735908758, 'cc_loss_mean': 0.037393202608057625, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.001698523606905984, 'mag_ratio_max_mean': 0.0018353620503706136, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.110042095184326, 'proto3_valid_mean_norm': 4.110042095184326, 'proto3_ema_delta_norm': 0.02658093348145485, 'raw_to_target_cos_mean': 0.96158955514431, 'rescued_to_target_cos_mean': 0.9616205748915673, 'ccc_improvement': 3.1019747257277075e-05}
+The 98 Communcation Time: 55.445
+The 98 Communcation Accuracy: 93.337 Method: f2dc_dse epoch loss: 0.724
+[97.63, 90.88, 90.45, 94.39]
+
+[DSE diag] {'round': 99, 'rho_t': 0.05, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.02655841202638945, 'dse_delta_scaled_ratio_mean': 0.0013279206235768184, 'dse_delta_cos_feat_mean': 0.06303647733236535, 'cc_loss_mean': 0.03741968943033562, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0017143203112702336, 'mag_ratio_max_mean': 0.0018540212090292405, 'proto3_valid_classes': 10, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.09330415725708, 'proto3_valid_mean_norm': 4.09330415725708, 'proto3_ema_delta_norm': 0.022563083097338676, 'raw_to_target_cos_mean': 0.9625058667361737, 'rescued_to_target_cos_mean': 0.9625390060245991, 'ccc_improvement': 3.313928842541003e-05}
+The 99 Communcation Time: 56.183
+The 99 Communcation Accuracy: 93.13 Method: f2dc_dse epoch loss: 0.676
+[97.29, 90.13, 90.48, 94.62]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-146_f2dc_dse_digits_rho_scan/diag/rho005_s15/final_R100.npz (acc=93.130)
+ALL Loss:  [13.605, 8.62, 7.484, 6.298, 5.2, 4.347, 3.54, 2.966, 2.647, 2.367, 2.239, 2.147, 2.018, 1.866, 1.8, 1.855, 1.668, 1.618, 1.573, 1.522, 1.525, 1.49, 1.387, 1.472, 1.337, 1.519, 1.338, 1.322, 1.322, 1.388, 1.219, 1.27, 1.173, 1.199, 1.17, 1.093, 1.118, 1.213, 1.134, 1.089, 1.137, 1.051, 0.984, 1.088, 1.11, 1.058, 1.037, 1.135, 1.034, 0.963, 0.924, 1.068, 1.001, 0.911, 0.893, 0.995, 0.873, 0.803, 1.16, 0.721, 0.871, 0.801, 0.85, 0.757, 0.896, 0.837, 0.998, 0.931, 0.828, 0.889, 0.809, 0.701, 0.897, 0.71, 0.728, 0.856, 0.754, 0.807, 0.74, 0.777, 0.826, 0.751, 0.828, 0.827, 0.761, 0.76, 0.611, 0.933, 0.749, 0.675, 0.738, 0.763, 0.71, 0.707, 0.802, 0.713, 0.713, 0.862, 0.724, 0.676]
+Accuracy List f2dc_dse (fl_digits): [13.542, 13.45, 19.39, 34.165, 48.05, 53.048, 62.6, 75.422, 80.78, 82.138, 83.985, 85.86, 87.053, 87.485, 88.148, 88.2, 88.43, 89.038, 89.758, 89.78, 89.855, 89.77, 90.098, 90.31, 89.978, 90.83, 90.51, 90.85, 90.96, 91.125, 91.723, 91.442, 91.8, 91.598, 92.11, 91.278, 91.892, 91.47, 91.935, 91.76, 92.052, 92.502, 91.845, 91.795, 92.07, 92.26, 92.378, 92.305, 92.275, 92.41, 92.227, 92.455, 92.32, 92.532, 92.828, 92.558, 92.34, 92.155, 92.645, 92.87, 92.762, 92.628, 92.52, 92.95, 92.852, 92.673, 92.865, 92.535, 92.828, 92.582, 92.678, 92.625, 92.95, 93.0, 92.642, 92.79, 92.855, 92.66, 92.575, 92.485, 92.675, 92.7, 92.472, 92.708, 93.22, 93.032, 93.225, 92.9, 93.002, 93.237, 92.932, 93.392, 93.028, 93.145, 93.065, 92.88, 93.227, 93.22, 93.337, 93.13]
