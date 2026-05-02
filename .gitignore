@@ -152,3 +152,7 @@ experiments/ablation/EXP-137_pg_rerun_after_fix/diag_*/
 experiments/ablation/EXP-143_f2dc_dse_rho_dump/diag/
 experiments/ablation/EXP-145_f2dc_dse_office_rho03/diag/
 experiments/ablation/EXP-146_f2dc_dse_digits_rho_scan/diag/
+---
+# === EXP-144 LAB digits heavy npz 单文件 144MB 超 GitHub 100MB 限制, 不入 git ===
+experiments/ablation/EXP-144_lab_v4_1/diag_*_digits_s15/best_*.npz
+experiments/ablation/EXP-144_lab_v4_1/diag_*_digits_s15/final_*.npz

@@ -1,0 +1,72 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_pg_lab_10_fl_pacs_10_2
+selected_domain_list for 10 clients as:
+['photo' 'photo' 'art' 'art' 'art' 'cartoon' 'cartoon' 'sketch' 'sketch'
+ 'sketch']
+[LAB setup] val partition: 140 samples across 10 clients, per-dom = {'photo': 35, 'art': 35, 'cartoon': 35, 'sketch': 35}
+           photo class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           art class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           cartoon class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           sketch class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+The 0 Communcation Time: 38.151
+The 0 Communcation Accuracy: 21.655 Method: f2dc_pg_lab epoch loss: 14.731
+[28.44, 24.26, 18.38, 15.54]
+
+[LAB R  1] loss_ema={sketch:1.948, cartoon:1.967, art:1.929, photo:1.940}
+          gap={sketch:0.002, cartoon:0.021, art:0.000, photo:0.000}  ratio={sketch×0.87, cartoon×1.62, art×0.85, photo×0.85}  clip={None}
+The 1 Communcation Time: 37.152
+The 1 Communcation Accuracy: 18.208 Method: f2dc_pg_lab epoch loss: 8.531
+[17.96, 17.16, 21.79, 15.92]
+
+[LAB R  2] loss_ema={photo:1.971, sketch:1.948, art:1.960, cartoon:1.960}
+          gap={photo:0.011, sketch:0.000, art:0.001, cartoon:0.000}  ratio={photo×1.91, sketch×0.85, art×0.89, cartoon×0.88}  clip={None}
+The 2 Communcation Time: 37.578
+The 2 Communcation Accuracy: 21.14 Method: f2dc_pg_lab epoch loss: 6.804
+[12.57, 14.95, 22.01, 35.03]
+
+[LAB R  3] loss_ema={sketch:1.902, art:2.286, cartoon:2.021, photo:2.260}
+          gap={sketch:0.000, art:0.169, cartoon:0.000, photo:0.143}  ratio={sketch×0.85, art×1.19, cartoon×0.85, photo×1.38}  clip={None}
+The 3 Communcation Time: 37.74
+The 3 Communcation Accuracy: 21.098 Method: f2dc_pg_lab epoch loss: 6.215
+[11.98, 13.48, 24.79, 34.14]
+
+[LAB R  4] loss_ema={art:2.758, sketch:1.861, cartoon:2.083, photo:2.982}
+          gap={art:0.336, sketch:0.000, cartoon:0.000, photo:0.561}  ratio={art×1.09, sketch×0.85, cartoon×0.85, photo×1.58}  clip={None}
+The 4 Communcation Time: 37.358
+The 4 Communcation Accuracy: 23.76 Method: f2dc_pg_lab epoch loss: 6.007
+[17.07, 14.71, 24.79, 38.47]
+
+[LAB R  5] loss_ema={art:2.971, sketch:1.822, photo:3.456, cartoon:2.046}
+          gap={art:0.397, sketch:0.000, photo:0.882, cartoon:0.000}  ratio={art×1.05, sketch×0.85, photo×1.66, cartoon×0.85}  clip={None}
+The 5 Communcation Time: 37.581
+The 5 Communcation Accuracy: 22.845 Method: f2dc_pg_lab epoch loss: 5.82
+[25.45, 15.93, 17.52, 32.48]
+
+[LAB R  6] loss_ema={sketch:1.816, cartoon:2.074, photo:3.488, art:3.147}
+          gap={sketch:0.000, cartoon:0.000, photo:0.856, art:0.516}  ratio={sketch×0.85, cartoon×0.85, photo×1.58, art×1.09}  clip={None}
+The 6 Communcation Time: 37.775
+The 6 Communcation Accuracy: 25.72 Method: f2dc_pg_lab epoch loss: 5.625
+[25.45, 18.63, 24.15, 34.65]
+
+[LAB R  7] loss_ema={art:3.089, sketch:1.804, cartoon:2.021, photo:3.553}
+          gap={art:0.473, sketch:0.000, cartoon:0.000, photo:0.936}  ratio={art×1.06, sketch×0.85, cartoon×0.85, photo×1.63}  clip={None}
+The 7 Communcation Time: 37.146
+The 7 Communcation Accuracy: 28.08 Method: f2dc_pg_lab epoch loss: 5.473
+[32.04, 22.79, 26.28, 31.21]
+
+[LAB R  8] loss_ema={photo:3.555, cartoon:1.985, art:3.094, sketch:1.817}
+          gap={photo:0.943, cartoon:0.000, art:0.482, sketch:0.000}  ratio={photo×1.62, cartoon×0.85, art×1.06, sketch×0.85}  clip={None}
+The 8 Communcation Time: 37.53
+The 8 Communcation Accuracy: 21.952 Method: f2dc_pg_lab epoch loss: 5.457
+[20.96, 17.89, 19.02, 29.94]
+
+[LAB R  9] loss_ema={cartoon:1.982, photo:3.426, sketch:1.844, art:2.998}
+          gap={cartoon:0.000, photo:0.864, sketch:0.000, art:0.435}  ratio={cartoon×0.85, photo×1.63, sketch×0.85, art×1.06}  clip={None}
+The 9 Communcation Time: 37.615
+The 9 Communcation Accuracy: 24.03 Method: f2dc_pg_lab epoch loss: 5.282
+[24.25, 20.1, 22.22, 29.55]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_smoke_pacs_s15/final_R010.npz (acc=24.030)
+ALL Loss:  [14.731, 8.531, 6.804, 6.215, 6.007, 5.82, 5.625, 5.473, 5.457, 5.282]
+Accuracy List f2dc_pg_lab (fl_pacs): [21.655, 18.208, 21.14, 21.098, 23.76, 22.845, 25.72, 28.08, 21.952, 24.03]

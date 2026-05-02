@@ -1,0 +1,54 @@
+{
+  "model": "f2dc_pg_lab",
+  "dataset": "fl_pacs",
+  "seed": 15,
+  "parti_num": 10,
+  "num_classes": 7,
+  "communication_epoch": 100,
+  "use_daa": false,
+  "agg_a": 1.0,
+  "agg_b": 0.4,
+  "final_acc": 73.578,
+  "heavy_dumps": [
+    [
+      "best_R030",
+      30,
+      63.545
+    ],
+    [
+      "best_R035",
+      35,
+      64.998
+    ],
+    [
+      "best_R041",
+      41,
+      67.99
+    ],
+    [
+      "best_R048",
+      48,
+      70.465
+    ],
+    [
+      "best_R062",
+      62,
+      72.135
+    ],
+    [
+      "best_R078",
+      78,
+      73.158
+    ],
+    [
+      "best_R094",
+      94,
+      74.447
+    ],
+    [
+      "final_R100",
+      100,
+      73.578
+    ]
+  ]
+}

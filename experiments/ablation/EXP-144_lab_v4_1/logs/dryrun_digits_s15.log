@@ -1,0 +1,31 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_pg_lab_20_fl_digits_2_1
+selected_domain_list for 20 clients as:
+['mnist' 'mnist' 'mnist' 'usps' 'usps' 'usps' 'usps' 'usps' 'usps' 'svhn'
+ 'svhn' 'svhn' 'svhn' 'svhn' 'svhn' 'syn' 'syn' 'syn' 'syn' 'syn']
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/test_32x32.mat
+[LAB setup] val partition: 200 samples across 20 clients, per-dom = {'mnist': 50, 'usps': 50, 'svhn': 50, 'syn': 50}
+           mnist class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           usps class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           svhn class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           syn class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+The 0 Communcation Time: 5.305
+The 0 Communcation Accuracy: 13.538 Method: f2dc_pg_lab epoch loss: 17.778
+[11.35, 13.15, 19.57, 10.08]
+
+[LAB R  1] loss_ema={usps:2.308, mnist:2.307, syn:2.308, svhn:2.306}
+          gap={usps:0.001, mnist:0.000, syn:0.001, svhn:0.000}  ratio={usps×1.90, mnist×0.90, syn×2.00, svhn×0.87}  clip={syn@max}
+The 1 Communcation Time: 4.17
+The 1 Communcation Accuracy: 13.455 Method: f2dc_pg_lab epoch loss: 15.932
+[11.37, 13.15, 19.21, 10.09]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_dryrun_digits_s15/final_R002.npz (acc=13.455)
+ALL Loss:  [17.778, 15.932]
+Accuracy List f2dc_pg_lab (fl_digits): [13.538, 13.455]

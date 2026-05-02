@@ -1,0 +1,625 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_pg_lab_10_fl_pacs_100_10
+selected_domain_list for 10 clients as:
+['photo' 'photo' 'art' 'art' 'art' 'cartoon' 'cartoon' 'sketch' 'sketch'
+ 'sketch']
+[LAB setup] val partition: 140 samples across 10 clients, per-dom = {'photo': 35, 'art': 35, 'cartoon': 35, 'sketch': 35}
+           photo class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           art class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           cartoon class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           sketch class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+The 0 Communcation Time: 187.679
+The 0 Communcation Accuracy: 12.348 Method: f2dc_pg_lab epoch loss: 7.705
+[11.38, 10.29, 12.18, 15.54]
+
+[LAB R  1] loss_ema={art:1.985, cartoon:2.010, sketch:1.993, photo:1.994}
+          gap={art:0.000, cartoon:0.015, sketch:0.000, photo:0.000}  ratio={art×0.85, cartoon×1.68, sketch×0.85, photo×0.85}  clip={None}
+The 1 Communcation Time: 186.181
+The 1 Communcation Accuracy: 22.91 Method: f2dc_pg_lab epoch loss: 5.404
+[30.54, 23.77, 21.79, 15.54]
+
+[LAB R  2] loss_ema={art:2.044, cartoon:2.029, sketch:2.120, photo:2.082}
+          gap={art:0.000, cartoon:0.000, sketch:0.051, photo:0.013}  ratio={art×0.85, cartoon×0.85, sketch×1.11, photo×1.09}  clip={None}
+The 2 Communcation Time: 186.8
+The 2 Communcation Accuracy: 21.312 Method: f2dc_pg_lab epoch loss: 4.868
+[29.04, 21.32, 17.95, 16.94]
+
+[LAB R  3] loss_ema={photo:2.609, sketch:2.260, cartoon:2.221, art:2.381}
+          gap={photo:0.241, sketch:0.000, cartoon:0.000, art:0.013}  ratio={photo×1.96, sketch×0.85, cartoon×0.85, art×0.88}  clip={None}
+The 3 Communcation Time: 186.446
+The 3 Communcation Accuracy: 22.83 Method: f2dc_pg_lab epoch loss: 4.616
+[27.84, 22.3, 25.0, 16.18]
+
+[LAB R  4] loss_ema={cartoon:2.111, photo:2.499, art:2.333, sketch:2.330}
+          gap={cartoon:0.000, photo:0.181, art:0.015, sketch:0.011}  ratio={cartoon×0.85, photo×1.87, art×0.90, sketch×0.87}  clip={None}
+The 4 Communcation Time: 186.596
+The 4 Communcation Accuracy: 19.252 Method: f2dc_pg_lab epoch loss: 4.347
+[26.95, 14.95, 19.44, 15.67]
+
+[LAB R  5] loss_ema={cartoon:2.039, sketch:2.358, art:2.480, photo:2.609}
+          gap={cartoon:0.000, sketch:0.000, art:0.109, photo:0.238}  ratio={cartoon×0.85, sketch×0.85, art×1.05, photo×1.65}  clip={None}
+The 5 Communcation Time: 187.956
+The 5 Communcation Accuracy: 27.41 Method: f2dc_pg_lab epoch loss: 4.125
+[35.63, 23.77, 33.55, 16.69]
+
+[LAB R  6] loss_ema={sketch:2.398, art:2.446, photo:2.561, cartoon:1.930}
+          gap={sketch:0.064, art:0.113, photo:0.227, cartoon:0.000}  ratio={sketch×0.90, art×1.03, photo×1.51, cartoon×0.85}  clip={None}
+The 6 Communcation Time: 189.771
+The 6 Communcation Accuracy: 28.88 Method: f2dc_pg_lab epoch loss: 3.951
+[31.74, 28.19, 34.83, 20.76]
+
+[LAB R  7] loss_ema={photo:2.568, art:2.470, sketch:2.347, cartoon:1.867}
+          gap={photo:0.255, art:0.157, sketch:0.034, cartoon:0.000}  ratio={photo×1.52, art×1.07, sketch×0.88, cartoon×0.85}  clip={None}
+The 7 Communcation Time: 182.605
+The 7 Communcation Accuracy: 30.502 Method: f2dc_pg_lab epoch loss: 3.74
+[32.04, 27.94, 38.46, 23.57]
+
+[LAB R  8] loss_ema={cartoon:1.828, photo:2.521, sketch:2.244, art:2.463}
+          gap={cartoon:0.000, photo:0.257, sketch:0.000, art:0.199}  ratio={cartoon×0.85, photo×1.51, sketch×0.85, art×1.13}  clip={None}
+The 8 Communcation Time: 177.445
+The 8 Communcation Accuracy: 35.412 Method: f2dc_pg_lab epoch loss: 3.537
+[39.82, 28.92, 40.17, 32.74]
+
+[LAB R  9] loss_ema={photo:2.364, sketch:2.051, art:2.366, cartoon:1.743}
+          gap={photo:0.232, sketch:0.000, art:0.235, cartoon:0.000}  ratio={photo×1.43, sketch×0.85, art×1.17, cartoon×0.85}  clip={None}
+The 9 Communcation Time: 178.618
+The 9 Communcation Accuracy: 37.175 Method: f2dc_pg_lab epoch loss: 3.373
+[37.13, 31.62, 45.3, 34.65]
+
+[LAB R 10] loss_ema={sketch:1.999, cartoon:1.664, art:2.422, photo:2.350}
+          gap={sketch:0.000, cartoon:0.000, art:0.313, photo:0.241}  ratio={sketch×0.85, cartoon×0.85, art×1.21, photo×1.36}  clip={None}
+The 10 Communcation Time: 175.895
+The 10 Communcation Accuracy: 41.927 Method: f2dc_pg_lab epoch loss: 3.147
+[44.91, 35.78, 48.29, 38.73]
+
+[LAB R 11] loss_ema={art:2.284, photo:2.233, cartoon:1.537, sketch:1.922}
+          gap={art:0.290, photo:0.239, cartoon:0.000, sketch:0.000}  ratio={art×1.20, photo×1.38, cartoon×0.85, sketch×0.85}  clip={None}
+The 11 Communcation Time: 167.801
+The 11 Communcation Accuracy: 43.01 Method: f2dc_pg_lab epoch loss: 3.044
+[43.71, 35.78, 51.28, 41.27]
+
+[LAB R 12] loss_ema={art:2.169, cartoon:1.458, sketch:1.830, photo:2.173}
+          gap={art:0.262, cartoon:0.000, sketch:0.000, photo:0.265}  ratio={art×1.16, cartoon×0.85, sketch×0.85, photo×1.44}  clip={None}
+The 12 Communcation Time: 169.449
+The 12 Communcation Accuracy: 47.32 Method: f2dc_pg_lab epoch loss: 2.877
+[50.0, 39.22, 48.72, 51.34]
+
+[LAB R 13] loss_ema={cartoon:1.403, art:2.052, photo:2.057, sketch:1.742}
+          gap={cartoon:0.000, art:0.239, photo:0.244, sketch:0.000}  ratio={cartoon×0.85, art×1.16, photo×1.44, sketch×0.85}  clip={None}
+The 13 Communcation Time: 169.125
+The 13 Communcation Accuracy: 49.172 Method: f2dc_pg_lab epoch loss: 2.836
+[47.9, 38.24, 56.41, 54.14]
+
+[LAB R 14] loss_ema={sketch:1.633, art:1.959, cartoon:1.334, photo:1.984}
+          gap={sketch:0.000, art:0.232, cartoon:0.000, photo:0.256}  ratio={sketch×0.85, art×1.15, cartoon×0.85, photo×1.46}  clip={None}
+The 14 Communcation Time: 167.137
+The 14 Communcation Accuracy: 50.128 Method: f2dc_pg_lab epoch loss: 2.643
+[52.1, 41.67, 51.71, 55.03]
+
+[LAB R 15] loss_ema={art:1.877, cartoon:1.319, sketch:1.496, photo:1.974}
+          gap={art:0.211, cartoon:0.000, sketch:0.000, photo:0.307}  ratio={art×1.11, cartoon×0.85, sketch×0.85, photo×1.54}  clip={None}
+The 15 Communcation Time: 168.846
+The 15 Communcation Accuracy: 50.322 Method: f2dc_pg_lab epoch loss: 2.599
+[53.29, 39.71, 54.91, 53.38]
+
+[LAB R 16] loss_ema={photo:1.943, sketch:1.453, art:1.886, cartoon:1.317}
+          gap={photo:0.293, sketch:0.000, art:0.236, cartoon:0.000}  ratio={photo×1.50, sketch×0.85, art×1.13, cartoon×0.85}  clip={None}
+The 16 Communcation Time: 166.782
+The 16 Communcation Accuracy: 52.468 Method: f2dc_pg_lab epoch loss: 2.483
+[56.89, 42.16, 51.71, 59.11]
+
+[LAB R 17] loss_ema={cartoon:1.351, photo:1.888, sketch:1.405, art:1.813}
+          gap={cartoon:0.000, photo:0.274, sketch:0.000, art:0.199}  ratio={cartoon×0.85, photo×1.53, sketch×0.85, art×1.12}  clip={None}
+The 17 Communcation Time: 166.999
+The 17 Communcation Accuracy: 54.62 Method: f2dc_pg_lab epoch loss: 2.448
+[61.08, 45.1, 50.64, 61.66]
+
+[LAB R 18] loss_ema={art:1.774, cartoon:1.336, sketch:1.364, photo:1.811}
+          gap={art:0.203, cartoon:0.000, sketch:0.000, photo:0.240}  ratio={art×1.14, cartoon×0.85, sketch×0.85, photo×1.48}  clip={None}
+The 18 Communcation Time: 166.593
+The 18 Communcation Accuracy: 55.285 Method: f2dc_pg_lab epoch loss: 2.322
+[62.57, 43.87, 54.7, 60.0]
+
+[LAB R 19] loss_ema={photo:1.728, art:1.679, sketch:1.339, cartoon:1.326}
+          gap={photo:0.210, art:0.161, sketch:0.000, cartoon:0.000}  ratio={photo×1.51, art×1.13, sketch×0.85, cartoon×0.85}  clip={None}
+The 19 Communcation Time: 167.566
+The 19 Communcation Accuracy: 58.915 Method: f2dc_pg_lab epoch loss: 2.244
+[63.47, 47.06, 58.76, 66.37]
+
+[LAB R 20] loss_ema={sketch:1.243, art:1.616, cartoon:1.277, photo:1.657}
+          gap={sketch:0.000, art:0.168, cartoon:0.000, photo:0.209}  ratio={sketch×0.85, art×1.13, cartoon×0.85, photo×1.50}  clip={None}
+The 20 Communcation Time: 166.452
+The 20 Communcation Accuracy: 59.065 Method: f2dc_pg_lab epoch loss: 2.128
+[65.27, 46.57, 59.83, 64.59]
+
+[LAB R 21] loss_ema={sketch:1.226, art:1.603, cartoon:1.264, photo:1.619}
+          gap={sketch:0.000, art:0.175, cartoon:0.000, photo:0.191}  ratio={sketch×0.85, art×1.15, cartoon×0.85, photo×1.46}  clip={None}
+The 21 Communcation Time: 165.777
+The 21 Communcation Accuracy: 60.972 Method: f2dc_pg_lab epoch loss: 2.06
+[63.17, 50.98, 62.61, 67.13]
+
+[LAB R 22] loss_ema={art:1.568, cartoon:1.198, photo:1.606, sketch:1.180}
+          gap={art:0.180, cartoon:0.000, photo:0.218, sketch:0.000}  ratio={art×1.14, cartoon×0.85, photo×1.49, sketch×0.85}  clip={None}
+The 22 Communcation Time: 166.765
+The 22 Communcation Accuracy: 58.772 Method: f2dc_pg_lab epoch loss: 2.065
+[65.27, 43.63, 57.91, 68.28]
+
+[LAB R 23] loss_ema={cartoon:1.256, art:1.622, sketch:1.099, photo:1.607}
+          gap={cartoon:0.000, art:0.226, sketch:0.000, photo:0.211}  ratio={cartoon×0.85, art×1.18, sketch×0.85, photo×1.41}  clip={None}
+The 23 Communcation Time: 168.234
+The 23 Communcation Accuracy: 61.658 Method: f2dc_pg_lab epoch loss: 2.03
+[67.37, 50.0, 60.47, 68.79]
+
+[LAB R 24] loss_ema={cartoon:1.196, art:1.631, photo:1.575, sketch:1.062}
+          gap={cartoon:0.000, art:0.265, photo:0.209, sketch:0.000}  ratio={cartoon×0.85, art×1.20, photo×1.37, sketch×0.85}  clip={None}
+The 24 Communcation Time: 167.039
+The 24 Communcation Accuracy: 62.84 Method: f2dc_pg_lab epoch loss: 1.987
+[67.07, 50.49, 66.03, 67.77]
+
+[LAB R 25] loss_ema={photo:1.598, sketch:1.034, cartoon:1.134, art:1.574}
+          gap={photo:0.263, sketch:0.000, cartoon:0.000, art:0.239}  ratio={photo×1.46, sketch×0.85, cartoon×0.85, art×1.15}  clip={None}
+The 25 Communcation Time: 167.755
+The 25 Communcation Accuracy: 61.975 Method: f2dc_pg_lab epoch loss: 1.89
+[66.47, 50.25, 63.03, 68.15]
+
+[LAB R 26] loss_ema={photo:1.574, art:1.514, sketch:1.037, cartoon:1.134}
+          gap={photo:0.259, art:0.200, sketch:0.000, cartoon:0.000}  ratio={photo×1.51, art×1.13, sketch×0.85, cartoon×0.85}  clip={None}
+The 26 Communcation Time: 166.033
+The 26 Communcation Accuracy: 60.67 Method: f2dc_pg_lab epoch loss: 1.854
+[67.66, 50.98, 60.47, 63.57]
+
+[LAB R 27] loss_ema={sketch:1.050, photo:1.492, art:1.492, cartoon:1.111}
+          gap={sketch:0.000, photo:0.205, art:0.206, cartoon:0.000}  ratio={sketch×0.85, photo×1.43, art×1.17, cartoon×0.85}  clip={None}
+The 27 Communcation Time: 167.081
+The 27 Communcation Accuracy: 61.015 Method: f2dc_pg_lab epoch loss: 1.815
+[67.37, 45.59, 62.82, 68.28]
+
+[LAB R 28] loss_ema={photo:1.508, sketch:1.009, cartoon:1.140, art:1.547}
+          gap={photo:0.207, sketch:0.000, cartoon:0.000, art:0.246}  ratio={photo×1.38, sketch×0.85, cartoon×0.85, art×1.19}  clip={None}
+The 28 Communcation Time: 166.471
+The 28 Communcation Accuracy: 59.66 Method: f2dc_pg_lab epoch loss: 1.826
+[63.77, 47.06, 59.4, 68.41]
+
+[LAB R 29] loss_ema={art:1.560, cartoon:1.241, sketch:0.981, photo:1.510}
+          gap={art:0.237, cartoon:0.000, sketch:0.000, photo:0.187}  ratio={art×1.20, cartoon×0.85, sketch×0.85, photo×1.37}  clip={None}
+The 29 Communcation Time: 166.444
+The 29 Communcation Accuracy: 63.545 Method: f2dc_pg_lab epoch loss: 1.749
+[67.37, 54.17, 64.1, 68.54]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_pacs_s15/best_R030.npz (acc=63.545)
+[LAB R 30] loss_ema={cartoon:1.229, photo:1.429, art:1.511, sketch:0.952}
+          gap={cartoon:0.000, photo:0.149, art:0.231, sketch:0.000}  ratio={cartoon×0.85, photo×1.31, art×1.24, sketch×0.85}  clip={None}
+The 30 Communcation Time: 169.11
+The 30 Communcation Accuracy: 64.498 Method: f2dc_pg_lab epoch loss: 1.672
+[68.86, 50.74, 67.31, 71.08]
+
+[LAB R 31] loss_ema={art:1.495, photo:1.380, sketch:0.924, cartoon:1.168}
+          gap={art:0.253, photo:0.138, sketch:0.000, cartoon:0.000}  ratio={art×1.26, photo×1.26, sketch×0.85, cartoon×0.85}  clip={None}
+The 31 Communcation Time: 179.263
+The 31 Communcation Accuracy: 63.942 Method: f2dc_pg_lab epoch loss: 1.728
+[67.07, 54.9, 66.67, 67.13]
+
+[LAB R 32] loss_ema={photo:1.474, sketch:0.944, cartoon:1.159, art:1.488}
+          gap={photo:0.208, sketch:0.000, cartoon:0.000, art:0.222}  ratio={photo×1.42, sketch×0.85, cartoon×0.85, art×1.18}  clip={None}
+The 32 Communcation Time: 184.344
+The 32 Communcation Accuracy: 63.915 Method: f2dc_pg_lab epoch loss: 1.689
+[69.46, 53.43, 65.38, 67.39]
+
+[LAB R 33] loss_ema={sketch:0.925, cartoon:1.149, photo:1.438, art:1.503}
+          gap={sketch:0.000, cartoon:0.000, photo:0.184, art:0.249}  ratio={sketch×0.85, cartoon×0.85, photo×1.35, art×1.21}  clip={None}
+The 33 Communcation Time: 184.433
+The 33 Communcation Accuracy: 64.27 Method: f2dc_pg_lab epoch loss: 1.642
+[66.47, 54.9, 66.03, 69.68]
+
+[LAB R 34] loss_ema={cartoon:1.121, art:1.465, photo:1.394, sketch:0.903}
+          gap={cartoon:0.000, art:0.244, photo:0.173, sketch:0.000}  ratio={cartoon×0.85, art×1.22, photo×1.34, sketch×0.85}  clip={None}
+The 34 Communcation Time: 184.249
+The 34 Communcation Accuracy: 64.998 Method: f2dc_pg_lab epoch loss: 1.616
+[69.76, 55.88, 66.45, 67.9]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_pacs_s15/best_R035.npz (acc=64.998)
+[LAB R 35] loss_ema={photo:1.358, art:1.438, sketch:0.910, cartoon:1.134}
+          gap={photo:0.148, art:0.228, sketch:0.000, cartoon:0.000}  ratio={photo×1.31, art×1.23, sketch×0.85, cartoon×0.85}  clip={None}
+The 35 Communcation Time: 186.175
+The 35 Communcation Accuracy: 64.422 Method: f2dc_pg_lab epoch loss: 1.555
+[68.86, 49.51, 67.09, 72.23]
+
+[LAB R 36] loss_ema={photo:1.317, sketch:0.906, art:1.476, cartoon:1.108}
+          gap={photo:0.115, sketch:0.000, art:0.274, cartoon:0.000}  ratio={photo×1.20, sketch×0.85, art×1.30, cartoon×0.85}  clip={None}
+The 36 Communcation Time: 182.566
+The 36 Communcation Accuracy: 67.152 Method: f2dc_pg_lab epoch loss: 1.571
+[69.46, 56.37, 69.66, 73.12]
+
+[LAB R 37] loss_ema={sketch:0.894, art:1.420, photo:1.300, cartoon:1.064}
+          gap={sketch:0.000, art:0.251, photo:0.131, cartoon:0.000}  ratio={sketch×0.85, art×1.27, photo×1.25, cartoon×0.85}  clip={None}
+The 37 Communcation Time: 183.173
+The 37 Communcation Accuracy: 66.898 Method: f2dc_pg_lab epoch loss: 1.531
+[70.66, 54.41, 69.02, 73.5]
+
+[LAB R 38] loss_ema={photo:1.209, sketch:0.866, cartoon:1.043, art:1.348}
+          gap={photo:0.093, sketch:0.000, cartoon:0.000, art:0.231}  ratio={photo×1.18, sketch×0.85, cartoon×0.85, art×1.30}  clip={None}
+The 38 Communcation Time: 184.496
+The 38 Communcation Accuracy: 66.878 Method: f2dc_pg_lab epoch loss: 1.511
+[67.96, 56.13, 70.94, 72.48]
+
+[LAB R 39] loss_ema={art:1.275, sketch:0.830, photo:1.254, cartoon:1.021}
+          gap={art:0.180, sketch:0.000, photo:0.159, cartoon:0.000}  ratio={art×1.19, sketch×0.85, photo×1.40, cartoon×0.85}  clip={None}
+The 39 Communcation Time: 184.736
+The 39 Communcation Accuracy: 66.035 Method: f2dc_pg_lab epoch loss: 1.482
+[70.96, 53.43, 67.52, 72.23]
+
+[LAB R 40] loss_ema={art:1.240, sketch:0.857, photo:1.201, cartoon:1.020}
+          gap={art:0.161, sketch:0.000, photo:0.122, cartoon:0.000}  ratio={art×1.21, sketch×0.85, photo×1.35, cartoon×0.85}  clip={None}
+The 40 Communcation Time: 184.495
+The 40 Communcation Accuracy: 67.99 Method: f2dc_pg_lab epoch loss: 1.471
+[71.56, 58.09, 69.44, 72.87]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_pacs_s15/best_R041.npz (acc=67.990)
+[LAB R 41] loss_ema={cartoon:1.055, sketch:0.877, art:1.254, photo:1.184}
+          gap={cartoon:0.000, sketch:0.000, art:0.161, photo:0.092}  ratio={cartoon×0.85, sketch×0.85, art×1.25, photo×1.27}  clip={None}
+The 41 Communcation Time: 184.238
+The 41 Communcation Accuracy: 65.695 Method: f2dc_pg_lab epoch loss: 1.478
+[69.46, 54.41, 68.59, 70.32]
+
+[LAB R 42] loss_ema={photo:1.157, cartoon:1.061, sketch:0.863, art:1.250}
+          gap={photo:0.074, cartoon:0.000, sketch:0.000, art:0.167}  ratio={photo×1.21, cartoon×0.85, sketch×0.85, art×1.29}  clip={None}
+The 42 Communcation Time: 184.933
+The 42 Communcation Accuracy: 67.79 Method: f2dc_pg_lab epoch loss: 1.462
+[71.86, 58.82, 69.02, 71.46]
+
+[LAB R 43] loss_ema={sketch:0.860, photo:1.135, cartoon:1.064, art:1.231}
+          gap={sketch:0.000, photo:0.063, cartoon:0.000, art:0.158}  ratio={sketch×0.85, photo×1.18, cartoon×0.85, art×1.30}  clip={None}
+The 43 Communcation Time: 182.758
+The 43 Communcation Accuracy: 67.272 Method: f2dc_pg_lab epoch loss: 1.443
+[70.66, 55.88, 68.16, 74.39]
+
+[LAB R 44] loss_ema={art:1.226, cartoon:1.058, photo:1.090, sketch:0.859}
+          gap={art:0.168, cartoon:0.000, photo:0.032, sketch:0.000}  ratio={art×1.38, cartoon×0.85, photo×1.04, sketch×0.85}  clip={None}
+The 44 Communcation Time: 180.022
+The 44 Communcation Accuracy: 67.192 Method: f2dc_pg_lab epoch loss: 1.445
+[66.77, 58.33, 69.02, 74.65]
+
+[LAB R 45] loss_ema={sketch:0.827, photo:1.150, cartoon:1.027, art:1.201}
+          gap={sketch:0.000, photo:0.099, cartoon:0.000, art:0.150}  ratio={sketch×0.85, photo×1.31, cartoon×0.85, art×1.23}  clip={None}
+The 45 Communcation Time: 180.452
+The 45 Communcation Accuracy: 66.75 Method: f2dc_pg_lab epoch loss: 1.38
+[70.66, 57.35, 68.8, 70.19]
+
+[LAB R 46] loss_ema={art:1.192, photo:1.084, cartoon:1.060, sketch:0.874}
+          gap={art:0.139, photo:0.032, cartoon:0.008, sketch:0.000}  ratio={art×1.34, photo×1.06, cartoon×0.89, sketch×0.85}  clip={None}
+The 46 Communcation Time: 185.08
+The 46 Communcation Accuracy: 68.855 Method: f2dc_pg_lab epoch loss: 1.375
+[70.06, 58.82, 72.65, 73.89]
+
+[LAB R 47] loss_ema={sketch:0.828, photo:1.131, cartoon:1.033, art:1.236}
+          gap={sketch:0.000, photo:0.074, cartoon:0.000, art:0.179}  ratio={sketch×0.85, photo×1.19, cartoon×0.85, art×1.30}  clip={None}
+The 47 Communcation Time: 183.661
+The 47 Communcation Accuracy: 70.465 Method: f2dc_pg_lab epoch loss: 1.314
+[72.46, 59.8, 75.21, 74.39]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_pacs_s15/best_R048.npz (acc=70.465)
+[LAB R 48] loss_ema={cartoon:0.952, art:1.260, sketch:0.843, photo:1.083}
+          gap={cartoon:0.000, art:0.226, sketch:0.000, photo:0.048}  ratio={cartoon×0.85, art×1.37, sketch×0.85, photo×1.06}  clip={None}
+The 48 Communcation Time: 183.475
+The 48 Communcation Accuracy: 66.982 Method: f2dc_pg_lab epoch loss: 1.359
+[69.76, 56.62, 70.09, 71.46]
+
+[LAB R 49] loss_ema={art:1.351, sketch:0.848, cartoon:0.981, photo:1.109}
+          gap={art:0.279, sketch:0.000, cartoon:0.000, photo:0.037}  ratio={art×1.41, sketch×0.85, cartoon×0.85, photo×0.99}  clip={None}
+The 49 Communcation Time: 182.76
+The 49 Communcation Accuracy: 68.477 Method: f2dc_pg_lab epoch loss: 1.389
+[71.86, 60.54, 70.94, 70.57]
+
+[LAB R 50] loss_ema={art:1.261, photo:1.085, sketch:0.870, cartoon:0.944}
+          gap={art:0.221, photo:0.045, sketch:0.000, cartoon:0.000}  ratio={art×1.38, photo×1.05, sketch×0.85, cartoon×0.85}  clip={None}
+The 50 Communcation Time: 184.602
+The 50 Communcation Accuracy: 67.602 Method: f2dc_pg_lab epoch loss: 1.289
+[64.97, 60.05, 72.65, 72.74]
+
+[LAB R 51] loss_ema={art:1.322, sketch:0.849, cartoon:0.927, photo:1.120}
+          gap={art:0.267, sketch:0.000, cartoon:0.000, photo:0.066}  ratio={art×1.36, sketch×0.85, cartoon×0.85, photo×1.08}  clip={None}
+The 51 Communcation Time: 184.275
+The 51 Communcation Accuracy: 68.495 Method: f2dc_pg_lab epoch loss: 1.298
+[70.06, 60.54, 71.79, 71.59]
+
+[LAB R 52] loss_ema={photo:1.161, cartoon:0.942, art:1.335, sketch:0.816}
+          gap={photo:0.098, cartoon:0.000, art:0.272, sketch:0.000}  ratio={photo×1.16, cartoon×0.85, art×1.32, sketch×0.85}  clip={None}
+The 52 Communcation Time: 183.41
+The 52 Communcation Accuracy: 68.952 Method: f2dc_pg_lab epoch loss: 1.301
+[72.16, 57.6, 70.51, 75.54]
+
+[LAB R 53] loss_ema={sketch:0.797, photo:1.160, cartoon:0.971, art:1.328}
+          gap={sketch:0.000, photo:0.096, cartoon:0.000, art:0.264}  ratio={sketch×0.85, photo×1.16, cartoon×0.85, art×1.31}  clip={None}
+The 53 Communcation Time: 185.067
+The 53 Communcation Accuracy: 70.548 Method: f2dc_pg_lab epoch loss: 1.292
+[68.56, 59.8, 77.14, 76.69]
+
+[LAB R 54] loss_ema={art:1.325, photo:1.220, cartoon:0.871, sketch:0.777}
+          gap={art:0.277, photo:0.172, cartoon:0.000, sketch:0.000}  ratio={art×1.24, photo×1.30, cartoon×0.85, sketch×0.85}  clip={None}
+The 54 Communcation Time: 182.393
+The 54 Communcation Accuracy: 68.818 Method: f2dc_pg_lab epoch loss: 1.318
+[69.76, 59.07, 71.79, 74.65]
+
+[LAB R 55] loss_ema={photo:1.202, sketch:0.764, cartoon:0.906, art:1.262}
+          gap={photo:0.168, sketch:0.000, cartoon:0.000, art:0.228}  ratio={photo×1.35, sketch×0.85, cartoon×0.85, art×1.21}  clip={None}
+The 55 Communcation Time: 183.645
+The 55 Communcation Accuracy: 69.815 Method: f2dc_pg_lab epoch loss: 1.285
+[71.56, 56.86, 74.79, 76.05]
+
+[LAB R 56] loss_ema={cartoon:0.888, sketch:0.743, art:1.357, photo:1.212}
+          gap={cartoon:0.000, sketch:0.000, art:0.307, photo:0.162}  ratio={cartoon×0.85, sketch×0.85, art×1.26, photo×1.25}  clip={None}
+The 56 Communcation Time: 183.744
+The 56 Communcation Accuracy: 71.005 Method: f2dc_pg_lab epoch loss: 1.269
+[72.75, 59.07, 75.0, 77.2]
+
+[LAB R 57] loss_ema={photo:1.201, sketch:0.751, cartoon:0.847, art:1.391}
+          gap={photo:0.153, sketch:0.000, cartoon:0.000, art:0.344}  ratio={photo×1.21, sketch×0.85, cartoon×0.85, art×1.29}  clip={None}
+The 57 Communcation Time: 185.048
+The 57 Communcation Accuracy: 70.358 Method: f2dc_pg_lab epoch loss: 1.265
+[72.75, 57.35, 72.22, 79.11]
+
+[LAB R 58] loss_ema={sketch:0.752, art:1.405, cartoon:0.893, photo:1.162}
+          gap={sketch:0.000, art:0.352, cartoon:0.000, photo:0.109}  ratio={sketch×0.85, art×1.33, cartoon×0.85, photo×1.13}  clip={None}
+The 58 Communcation Time: 181.377
+The 58 Communcation Accuracy: 69.635 Method: f2dc_pg_lab epoch loss: 1.234
+[68.86, 60.29, 73.08, 76.31]
+
+[LAB R 59] loss_ema={sketch:0.724, photo:1.227, cartoon:0.985, art:1.434}
+          gap={sketch:0.000, photo:0.134, cartoon:0.000, art:0.341}  ratio={sketch×0.85, photo×1.18, cartoon×0.85, art×1.30}  clip={None}
+The 59 Communcation Time: 178.008
+⚠️ [LAB WASTE WARN R 60] dom=photo cum_boost=257.9% window_roi=0.28 (< 0.5 = wasted)
+The 59 Communcation Accuracy: 71.372 Method: f2dc_pg_lab epoch loss: 1.257
+[72.16, 63.48, 73.29, 76.56]
+
+[LAB R 60] loss_ema={photo:1.201, sketch:0.707, art:1.423, cartoon:0.974}
+          gap={photo:0.125, sketch:0.000, art:0.347, cartoon:0.000}  ratio={photo×1.16, sketch×0.85, art×1.32, cartoon×0.85}  clip={None}
+The 60 Communcation Time: 179.082
+The 60 Communcation Accuracy: 70.548 Method: f2dc_pg_lab epoch loss: 1.225
+[69.46, 60.54, 74.36, 77.83]
+
+[LAB R 61] loss_ema={cartoon:0.931, sketch:0.695, photo:1.162, art:1.390}
+          gap={cartoon:0.000, sketch:0.000, photo:0.117, art:0.346}  ratio={cartoon×0.85, sketch×0.85, photo×1.15, art×1.32}  clip={None}
+The 61 Communcation Time: 179.961
+The 61 Communcation Accuracy: 72.135 Method: f2dc_pg_lab epoch loss: 1.172
+[73.05, 59.8, 76.71, 78.98]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_pacs_s15/best_R062.npz (acc=72.135)
+[LAB R 62] loss_ema={art:1.327, sketch:0.665, cartoon:0.907, photo:1.150}
+          gap={art:0.315, sketch:0.000, cartoon:0.000, photo:0.138}  ratio={art×1.29, sketch×0.85, cartoon×0.85, photo×1.21}  clip={None}
+The 62 Communcation Time: 181.545
+The 62 Communcation Accuracy: 71.308 Method: f2dc_pg_lab epoch loss: 1.211
+[73.05, 60.54, 73.93, 77.71]
+
+[LAB R 63] loss_ema={art:1.313, photo:1.091, cartoon:0.882, sketch:0.694}
+          gap={art:0.318, photo:0.096, cartoon:0.000, sketch:0.000}  ratio={art×1.34, photo×1.12, cartoon×0.85, sketch×0.85}  clip={None}
+The 63 Communcation Time: 178.931
+The 63 Communcation Accuracy: 69.722 Method: f2dc_pg_lab epoch loss: 1.244
+[73.05, 60.78, 73.72, 71.34]
+
+[LAB R 64] loss_ema={sketch:0.761, photo:1.038, art:1.404, cartoon:0.852}
+          gap={sketch:0.000, photo:0.025, art:0.390, cartoon:0.000}  ratio={sketch×0.85, photo×0.92, art×1.45, cartoon×0.85}  clip={None}
+The 64 Communcation Time: 180.878
+The 64 Communcation Accuracy: 70.835 Method: f2dc_pg_lab epoch loss: 1.193
+[73.05, 60.05, 73.93, 76.31]
+
+[LAB R 65] loss_ema={sketch:0.757, photo:1.076, art:1.358, cartoon:0.878}
+          gap={sketch:0.000, photo:0.058, art:0.341, cartoon:0.000}  ratio={sketch×0.85, photo×1.02, art×1.39, cartoon×0.85}  clip={None}
+The 65 Communcation Time: 180.493
+The 65 Communcation Accuracy: 71.5 Method: f2dc_pg_lab epoch loss: 1.128
+[72.75, 61.76, 77.35, 74.14]
+
+[LAB R 66] loss_ema={sketch:0.795, art:1.385, cartoon:0.866, photo:1.135}
+          gap={sketch:0.000, art:0.339, cartoon:0.000, photo:0.089}  ratio={sketch×0.85, art×1.35, cartoon×0.85, photo×1.09}  clip={None}
+The 66 Communcation Time: 179.782
+The 66 Communcation Accuracy: 70.592 Method: f2dc_pg_lab epoch loss: 1.143
+[69.76, 60.54, 75.0, 77.07]
+
+[LAB R 67] loss_ema={cartoon:0.825, art:1.355, sketch:0.738, photo:1.162}
+          gap={cartoon:0.000, art:0.335, sketch:0.000, photo:0.142}  ratio={cartoon×0.85, art×1.29, sketch×0.85, photo×1.20}  clip={None}
+The 67 Communcation Time: 179.342
+The 67 Communcation Accuracy: 70.725 Method: f2dc_pg_lab epoch loss: 1.171
+[70.06, 61.03, 74.36, 77.45]
+
+[LAB R 68] loss_ema={cartoon:0.849, art:1.414, sketch:0.680, photo:1.201}
+          gap={cartoon:0.000, art:0.378, sketch:0.000, photo:0.166}  ratio={cartoon×0.85, art×1.29, sketch×0.85, photo×1.21}  clip={None}
+The 68 Communcation Time: 178.166
+The 68 Communcation Accuracy: 71.772 Method: f2dc_pg_lab epoch loss: 1.139
+[73.65, 57.11, 76.71, 79.62]
+
+[LAB R 69] loss_ema={cartoon:0.819, art:1.468, sketch:0.660, photo:1.089}
+          gap={cartoon:0.000, art:0.459, sketch:0.000, photo:0.080}  ratio={cartoon×0.85, art×1.39, sketch×0.85, photo×1.02}  clip={None}
+The 69 Communcation Time: 180.105
+⚠️ [LAB WASTE WARN R 70] dom=art cum_boost=367.5% window_roi=0.19 (< 0.5 = wasted)
+The 69 Communcation Accuracy: 71.425 Method: f2dc_pg_lab epoch loss: 1.199
+[70.96, 61.52, 76.28, 76.94]
+
+[LAB R 70] loss_ema={art:1.420, photo:1.130, cartoon:0.747, sketch:0.641}
+          gap={art:0.436, photo:0.146, cartoon:0.000, sketch:0.000}  ratio={art×1.32, photo×1.14, cartoon×0.85, sketch×0.85}  clip={None}
+The 70 Communcation Time: 180.459
+The 70 Communcation Accuracy: 71.602 Method: f2dc_pg_lab epoch loss: 1.074
+[73.95, 61.03, 74.36, 77.07]
+
+[LAB R 71] loss_ema={sketch:0.661, cartoon:0.856, art:1.433, photo:1.137}
+          gap={sketch:0.000, cartoon:0.000, art:0.411, photo:0.115}  ratio={sketch×0.85, cartoon×0.85, art×1.34, photo×1.11}  clip={None}
+The 71 Communcation Time: 180.291
+The 71 Communcation Accuracy: 71.718 Method: f2dc_pg_lab epoch loss: 1.122
+[72.16, 61.03, 75.85, 77.83]
+
+[LAB R 72] loss_ema={sketch:0.648, cartoon:0.835, art:1.339, photo:1.162}
+          gap={sketch:0.000, cartoon:0.000, art:0.343, photo:0.166}  ratio={sketch×0.85, cartoon×0.85, art×1.28, photo×1.23}  clip={None}
+The 72 Communcation Time: 178.638
+The 72 Communcation Accuracy: 72.365 Method: f2dc_pg_lab epoch loss: 1.105
+[70.96, 63.24, 76.92, 78.34]
+
+[LAB R 73] loss_ema={art:1.289, sketch:0.620, cartoon:0.843, photo:1.211}
+          gap={art:0.298, sketch:0.000, cartoon:0.000, photo:0.220}  ratio={art×1.21, sketch×0.85, cartoon×0.85, photo×1.35}  clip={None}
+The 73 Communcation Time: 179.816
+The 73 Communcation Accuracy: 70.998 Method: f2dc_pg_lab epoch loss: 1.165
+[72.16, 61.03, 75.0, 75.8]
+
+[LAB R 74] loss_ema={sketch:0.651, art:1.287, photo:1.177, cartoon:0.856}
+          gap={sketch:0.000, art:0.295, photo:0.184, cartoon:0.000}  ratio={sketch×0.85, art×1.24, photo×1.30, cartoon×0.85}  clip={None}
+The 74 Communcation Time: 180.179
+The 74 Communcation Accuracy: 70.975 Method: f2dc_pg_lab epoch loss: 1.152
+[70.36, 61.03, 76.71, 75.8]
+
+[LAB R 75] loss_ema={art:1.344, cartoon:0.839, sketch:0.685, photo:1.156}
+          gap={art:0.338, cartoon:0.000, sketch:0.000, photo:0.150}  ratio={art×1.29, cartoon×0.85, sketch×0.85, photo×1.21}  clip={None}
+The 75 Communcation Time: 178.998
+The 75 Communcation Accuracy: 70.122 Method: f2dc_pg_lab epoch loss: 1.083
+[72.46, 60.78, 70.94, 76.31]
+
+[LAB R 76] loss_ema={art:1.428, photo:1.175, sketch:0.698, cartoon:1.023}
+          gap={art:0.347, photo:0.094, sketch:0.000, cartoon:0.000}  ratio={art×1.35, photo×1.10, sketch×0.85, cartoon×0.85}  clip={None}
+The 76 Communcation Time: 178.952
+The 76 Communcation Accuracy: 72.917 Method: f2dc_pg_lab epoch loss: 1.08
+[72.46, 62.25, 76.71, 80.25]
+
+[LAB R 77] loss_ema={photo:1.170, sketch:0.657, art:1.412, cartoon:0.978}
+          gap={photo:0.116, sketch:0.000, art:0.357, cartoon:0.000}  ratio={photo×1.14, sketch×0.85, art×1.33, cartoon×0.85}  clip={None}
+The 77 Communcation Time: 179.619
+The 77 Communcation Accuracy: 73.158 Method: f2dc_pg_lab epoch loss: 1.191
+[74.85, 62.25, 78.21, 77.32]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_pacs_s15/best_R078.npz (acc=73.158)
+[LAB R 78] loss_ema={art:1.343, photo:1.126, cartoon:0.882, sketch:0.720}
+          gap={art:0.325, photo:0.108, cartoon:0.000, sketch:0.000}  ratio={art×1.32, photo×1.14, cartoon×0.85, sketch×0.85}  clip={None}
+The 78 Communcation Time: 180.433
+The 78 Communcation Accuracy: 71.185 Method: f2dc_pg_lab epoch loss: 1.055
+[68.26, 60.54, 76.07, 79.87]
+
+[LAB R 79] loss_ema={photo:1.331, cartoon:0.888, sketch:0.708, art:1.434}
+          gap={photo:0.241, cartoon:0.000, sketch:0.000, art:0.344}  ratio={photo×1.33, cartoon×0.85, sketch×0.85, art×1.22}  clip={None}
+The 79 Communcation Time: 180.782
+⚠️ [LAB WASTE WARN R 80] dom=art cum_boost=436.5% window_roi=0.03 (< 0.5 = wasted)
+The 79 Communcation Accuracy: 72.282 Method: f2dc_pg_lab epoch loss: 1.113
+[73.65, 60.78, 75.85, 78.85]
+
+[LAB R 80] loss_ema={photo:1.222, cartoon:0.884, sketch:0.695, art:1.379}
+          gap={photo:0.177, cartoon:0.000, sketch:0.000, art:0.334}  ratio={photo×1.25, cartoon×0.85, sketch×0.85, art×1.26}  clip={None}
+The 80 Communcation Time: 180.33
+The 80 Communcation Accuracy: 70.59 Method: f2dc_pg_lab epoch loss: 1.052
+[72.75, 57.11, 74.79, 77.71]
+
+[LAB R 81] loss_ema={cartoon:0.896, sketch:0.687, art:1.359, photo:1.221}
+          gap={cartoon:0.000, sketch:0.000, art:0.318, photo:0.180}  ratio={cartoon×0.85, sketch×0.85, art×1.25, photo×1.27}  clip={None}
+The 81 Communcation Time: 173.323
+The 81 Communcation Accuracy: 72.125 Method: f2dc_pg_lab epoch loss: 1.012
+[72.16, 59.8, 76.92, 79.62]
+
+[LAB R 82] loss_ema={cartoon:0.861, art:1.320, sketch:0.647, photo:1.230}
+          gap={cartoon:0.000, art:0.305, sketch:0.000, photo:0.216}  ratio={cartoon×0.85, art×1.22, sketch×0.85, photo×1.33}  clip={None}
+The 82 Communcation Time: 169.278
+The 82 Communcation Accuracy: 72.75 Method: f2dc_pg_lab epoch loss: 1.071
+[73.95, 62.75, 77.99, 76.31]
+
+[LAB R 83] loss_ema={sketch:0.702, art:1.290, photo:1.221, cartoon:0.846}
+          gap={sketch:0.000, art:0.275, photo:0.206, cartoon:0.000}  ratio={sketch×0.85, art×1.21, photo×1.35, cartoon×0.85}  clip={None}
+The 83 Communcation Time: 169.586
+The 83 Communcation Accuracy: 72.348 Method: f2dc_pg_lab epoch loss: 1.051
+[73.95, 60.05, 76.28, 79.11]
+
+[LAB R 84] loss_ema={art:1.297, cartoon:0.841, sketch:0.665, photo:1.170}
+          gap={art:0.304, cartoon:0.000, sketch:0.000, photo:0.177}  ratio={art×1.25, cartoon×0.85, sketch×0.85, photo×1.28}  clip={None}
+The 84 Communcation Time: 169.391
+The 84 Communcation Accuracy: 72.502 Method: f2dc_pg_lab epoch loss: 1.1
+[73.05, 62.99, 79.7, 74.27]
+
+[LAB R 85] loss_ema={sketch:0.689, art:1.313, cartoon:0.847, photo:1.267}
+          gap={sketch:0.000, art:0.284, cartoon:0.000, photo:0.238}  ratio={sketch×0.85, art×1.19, cartoon×0.85, photo×1.38}  clip={None}
+The 85 Communcation Time: 167.543
+The 85 Communcation Accuracy: 72.658 Method: f2dc_pg_lab epoch loss: 1.015
+[74.25, 61.76, 76.28, 78.34]
+
+[LAB R 86] loss_ema={art:1.304, sketch:0.667, photo:1.202, cartoon:0.785}
+          gap={art:0.315, sketch:0.000, photo:0.212, cartoon:0.000}  ratio={art×1.23, sketch×0.85, photo×1.32, cartoon×0.85}  clip={None}
+The 86 Communcation Time: 169.628
+The 86 Communcation Accuracy: 74.012 Method: f2dc_pg_lab epoch loss: 1.105
+[73.35, 61.52, 79.91, 81.27]
+
+[LAB R 87] loss_ema={cartoon:0.760, art:1.252, photo:1.181, sketch:0.636}
+          gap={cartoon:0.000, art:0.295, photo:0.223, sketch:0.000}  ratio={cartoon×0.85, art×1.21, photo×1.35, sketch×0.85}  clip={None}
+The 87 Communcation Time: 169.08
+The 87 Communcation Accuracy: 72.41 Method: f2dc_pg_lab epoch loss: 1.055
+[72.16, 62.99, 75.0, 79.49]
+
+[LAB R 88] loss_ema={art:1.247, sketch:0.587, photo:1.185, cartoon:0.742}
+          gap={art:0.307, sketch:0.000, photo:0.245, cartoon:0.000}  ratio={art×1.20, sketch×0.85, photo×1.37, cartoon×0.85}  clip={None}
+The 88 Communcation Time: 169.183
+The 88 Communcation Accuracy: 71.502 Method: f2dc_pg_lab epoch loss: 1.017
+[73.65, 60.29, 74.36, 77.71]
+
+[LAB R 89] loss_ema={cartoon:0.845, art:1.326, sketch:0.595, photo:1.163}
+          gap={cartoon:0.000, art:0.344, sketch:0.000, photo:0.181}  ratio={cartoon×0.85, art×1.26, sketch×0.85, photo×1.25}  clip={None}
+The 89 Communcation Time: 169.916
+⚠️ [LAB WASTE WARN R 90] dom=art cum_boost=491.0% window_roi=0.28 (< 0.5 = wasted)
+⚠️ [LAB WASTE WARN R 90] dom=photo cum_boost=339.8% window_roi=-0.61 (< 0.5 = wasted)
+The 89 Communcation Accuracy: 73.192 Method: f2dc_pg_lab epoch loss: 1.085
+[71.86, 62.75, 77.78, 80.38]
+
+[LAB R 90] loss_ema={art:1.317, sketch:0.551, cartoon:0.820, photo:1.158}
+          gap={art:0.355, sketch:0.000, cartoon:0.000, photo:0.196}  ratio={art×1.26, sketch×0.85, cartoon×0.85, photo×1.27}  clip={None}
+The 90 Communcation Time: 169.129
+The 90 Communcation Accuracy: 73.445 Method: f2dc_pg_lab epoch loss: 1.048
+[74.85, 62.5, 78.21, 78.22]
+
+[LAB R 91] loss_ema={sketch:0.557, art:1.265, cartoon:0.757, photo:1.098}
+          gap={sketch:0.000, art:0.346, cartoon:0.000, photo:0.178}  ratio={sketch×0.85, art×1.27, cartoon×0.85, photo×1.25}  clip={None}
+The 91 Communcation Time: 169.453
+The 91 Communcation Accuracy: 73.058 Method: f2dc_pg_lab epoch loss: 0.928
+[71.56, 61.52, 79.91, 79.24]
+
+[LAB R 92] loss_ema={cartoon:0.736, sketch:0.582, art:1.287, photo:1.109}
+          gap={cartoon:0.000, sketch:0.000, art:0.359, photo:0.181}  ratio={cartoon×0.85, sketch×0.85, art×1.27, photo×1.24}  clip={None}
+The 92 Communcation Time: 168.796
+The 92 Communcation Accuracy: 71.32 Method: f2dc_pg_lab epoch loss: 0.998
+[74.25, 59.31, 73.5, 78.22]
+
+[LAB R 93] loss_ema={photo:1.087, art:1.308, cartoon:0.916, sketch:0.599}
+          gap={photo:0.109, art:0.331, cartoon:0.000, sketch:0.000}  ratio={photo×1.14, art×1.33, cartoon×0.85, sketch×0.85}  clip={None}
+The 93 Communcation Time: 169.183
+The 93 Communcation Accuracy: 74.447 Method: f2dc_pg_lab epoch loss: 0.996
+[71.56, 64.95, 80.13, 81.15]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_pacs_s15/best_R094.npz (acc=74.447)
+[LAB R 94] loss_ema={cartoon:0.799, art:1.304, photo:1.267, sketch:0.568}
+          gap={cartoon:0.000, art:0.319, photo:0.283, sketch:0.000}  ratio={cartoon×0.85, art×1.19, photo×1.40, sketch×0.85}  clip={None}
+The 94 Communcation Time: 169.419
+The 94 Communcation Accuracy: 73.355 Method: f2dc_pg_lab epoch loss: 0.988
+[76.05, 61.76, 77.78, 77.83]
+
+[LAB R 95] loss_ema={art:1.331, photo:1.244, sketch:0.561, cartoon:0.766}
+          gap={art:0.355, photo:0.269, sketch:0.000, cartoon:0.000}  ratio={art×1.21, photo×1.35, sketch×0.85, cartoon×0.85}  clip={None}
+The 95 Communcation Time: 169.489
+The 95 Communcation Accuracy: 71.858 Method: f2dc_pg_lab epoch loss: 0.993
+[73.95, 61.03, 75.0, 77.45]
+
+[LAB R 96] loss_ema={sketch:0.575, cartoon:0.792, art:1.336, photo:1.186}
+          gap={sketch:0.000, cartoon:0.000, art:0.364, photo:0.214}  ratio={sketch×0.85, cartoon×0.85, art×1.25, photo×1.28}  clip={None}
+The 96 Communcation Time: 169.781
+The 96 Communcation Accuracy: 73.665 Method: f2dc_pg_lab epoch loss: 0.994
+[77.25, 60.29, 75.21, 81.91]
+
+[LAB R 97] loss_ema={art:1.391, sketch:0.570, cartoon:0.765, photo:1.116}
+          gap={art:0.430, sketch:0.000, cartoon:0.000, photo:0.156}  ratio={art×1.31, sketch×0.85, cartoon×0.85, photo×1.16}  clip={None}
+The 97 Communcation Time: 168.946
+The 97 Communcation Accuracy: 74.578 Method: f2dc_pg_lab epoch loss: 0.989
+[74.85, 63.97, 79.49, 80.0]
+
+[LAB R 98] loss_ema={cartoon:0.729, photo:1.063, sketch:0.570, art:1.349}
+          gap={cartoon:0.000, photo:0.135, sketch:0.000, art:0.421}  ratio={cartoon×0.85, photo×1.13, sketch×0.85, art×1.33}  clip={None}
+The 98 Communcation Time: 168.856
+The 98 Communcation Accuracy: 73.49 Method: f2dc_pg_lab epoch loss: 1.001
+[73.35, 62.5, 77.35, 80.76]
+
+[LAB R 99] loss_ema={sketch:0.570, art:1.395, photo:1.093, cartoon:0.749}
+          gap={sketch:0.000, art:0.444, photo:0.141, cartoon:0.000}  ratio={sketch×0.85, art×1.33, photo×1.13, cartoon×0.85}  clip={None}
+The 99 Communcation Time: 170.377
+⚠️ [LAB WASTE WARN R100] dom=photo cum_boost=370.1% window_roi=-0.25 (< 0.5 = wasted)
+The 99 Communcation Accuracy: 73.578 Method: f2dc_pg_lab epoch loss: 0.987
+[71.86, 63.73, 78.21, 80.51]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_pacs_s15/final_R100.npz (acc=73.578)
+ALL Loss:  [7.705, 5.404, 4.868, 4.616, 4.347, 4.125, 3.951, 3.74, 3.537, 3.373, 3.147, 3.044, 2.877, 2.836, 2.643, 2.599, 2.483, 2.448, 2.322, 2.244, 2.128, 2.06, 2.065, 2.03, 1.987, 1.89, 1.854, 1.815, 1.826, 1.749, 1.672, 1.728, 1.689, 1.642, 1.616, 1.555, 1.571, 1.531, 1.511, 1.482, 1.471, 1.478, 1.462, 1.443, 1.445, 1.38, 1.375, 1.314, 1.359, 1.389, 1.289, 1.298, 1.301, 1.292, 1.318, 1.285, 1.269, 1.265, 1.234, 1.257, 1.225, 1.172, 1.211, 1.244, 1.193, 1.128, 1.143, 1.171, 1.139, 1.199, 1.074, 1.122, 1.105, 1.165, 1.152, 1.083, 1.08, 1.191, 1.055, 1.113, 1.052, 1.012, 1.071, 1.051, 1.1, 1.015, 1.105, 1.055, 1.017, 1.085, 1.048, 0.928, 0.998, 0.996, 0.988, 0.993, 0.994, 0.989, 1.001, 0.987]
+Accuracy List f2dc_pg_lab (fl_pacs): [12.348, 22.91, 21.312, 22.83, 19.252, 27.41, 28.88, 30.502, 35.412, 37.175, 41.927, 43.01, 47.32, 49.172, 50.128, 50.322, 52.468, 54.62, 55.285, 58.915, 59.065, 60.972, 58.772, 61.658, 62.84, 61.975, 60.67, 61.015, 59.66, 63.545, 64.498, 63.942, 63.915, 64.27, 64.998, 64.422, 67.152, 66.898, 66.878, 66.035, 67.99, 65.695, 67.79, 67.272, 67.192, 66.75, 68.855, 70.465, 66.982, 68.477, 67.602, 68.495, 68.952, 70.548, 68.818, 69.815, 71.005, 70.358, 69.635, 71.372, 70.548, 72.135, 71.308, 69.722, 70.835, 71.5, 70.592, 70.725, 71.772, 71.425, 71.602, 71.718, 72.365, 70.998, 70.975, 70.122, 72.917, 73.158, 71.185, 72.282, 70.59, 72.125, 72.75, 72.348, 72.502, 72.658, 74.012, 72.41, 71.502, 73.192, 73.445, 73.058, 71.32, 74.447, 73.355, 71.858, 73.665, 74.578, 73.49, 73.578]

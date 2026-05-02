@@ -1,0 +1,34 @@
+{
+  "model": "f2dc_pg_lab",
+  "dataset": "fl_digits",
+  "seed": 15,
+  "parti_num": 20,
+  "num_classes": 10,
+  "communication_epoch": 100,
+  "use_daa": false,
+  "agg_a": 1.0,
+  "agg_b": 0.4,
+  "final_acc": 93.51,
+  "heavy_dumps": [
+    [
+      "best_R030",
+      30,
+      90.918
+    ],
+    [
+      "best_R038",
+      38,
+      92.12
+    ],
+    [
+      "best_R072",
+      72,
+      93.168
+    ],
+    [
+      "final_R100",
+      100,
+      93.51
+    ]
+  ]
+}
