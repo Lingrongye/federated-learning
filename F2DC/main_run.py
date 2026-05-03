@@ -137,6 +137,8 @@ def parse_args():
                         help="diag: heavy dump warmup rounds (R 之前不 dump heavy)")
     parser.add_argument("--dump_min_gain", type=float, default=1.0,
                         help="diag: heavy dump 最小 acc gain (跟上次 dump 的 best 比)")
+    parser.add_argument("--dump_keep_best_n", type=int, default=5,
+                        help="diag: 只保留 top-N 个 best heavy snapshot (按 acc 排序), 0=keep all")
     parser.add_argument("--dump_min_interval", type=int, default=5,
                         help="diag: heavy dump 最小 round 间隔")
     parser.add_argument(

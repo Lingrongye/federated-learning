@@ -458,6 +458,31 @@ def dump_heavy_snapshot(model, test_loaders, prefix, round_idx, current_acc, arg
     n_proto_keys = sum(1 for k in save_kwargs if k.startswith('proto_diag_')) if proto_diag_to_save else 0
     print(f"[diag] heavy snapshot dumped: {save_path} (acc={current_acc:.3f}, proto_diag fields={n_proto_keys})")
 
+    # ★ 保留 top-N best snapshot (default 5): 只 keep best_R*.npz 中 acc 最高的 N 个
+    # final_R*.npz 不算入 top, 永远保留. 通过 args.dump_keep_best_n 控制.
+    keep_n = int(getattr(args, 'dump_keep_best_n', 5))
+    if keep_n > 0 and prefix.startswith('best_R'):
+        best_files = []  # [(acc, path)]
+        for fn in os.listdir(diag_dir):
+            if not fn.startswith('best_R') or not fn.endswith('.npz'):
+                continue
+            fp = os.path.join(diag_dir, fn)
+            try:
+                with np.load(fp, allow_pickle=True) as zf:
+                    a = float(zf['current_acc']) if 'current_acc' in zf.files else -1.0
+                best_files.append((a, fp))
+            except Exception:
+                continue
+        if len(best_files) > keep_n:
+            # 删除除 top-N 之外的所有 best_R*.npz (按 acc 升序排, 删前面 len-N 个)
+            best_files.sort(key=lambda x: x[0])
+            for a, fp in best_files[:len(best_files) - keep_n]:
+                try:
+                    os.remove(fp)
+                    print(f"[diag] removed lower-acc best snapshot: {os.path.basename(fp)} (acc={a:.3f})")
+                except Exception as e:
+                    print(f"[diag] failed to remove {fp}: {e}")
+
 
 def init_diag_state(args):
     """call once at start of train()."""
