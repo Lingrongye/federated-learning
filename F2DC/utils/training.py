@@ -32,7 +32,7 @@ def global_evaluate(
                 # 将数据集加载到device上
                 images, labels = images.to(model.device), labels.to(model.device)
                 # 如果模型是f2dc，f2dc_pg，f2dc_pgv33, f2dc_pg_ml,则需要传 is_eval=True 走 deterministic gumbel
-                if model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml", "f2dc_dse", "f2dc_pg_lab"):
+                if model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml", "f2dc_dse", "f2dc_pg_lab", "f2dc_dse_lab"):
                     # patch (2026-04-29): 必须传 is_eval=True 走 deterministic gumbel
                     # (gumbel_sigmoid.py:17 在 is_eval=False 时随机采样, 同 model 同 input
                     #  两次 eval 输出不一致, max_abs_diff ~0.0004, 引入 acc 噪声)

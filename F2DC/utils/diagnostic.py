@@ -341,7 +341,7 @@ def dump_heavy_snapshot(model, test_loaders, prefix, round_idx, current_acc, arg
         domain_names = [f"d{i}" for i in range(len(test_loaders))]
 
     NC = int(args.num_classes)
-    use_tuple = model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml", "f2dc_dse", "f2dc_pg_lab")
+    use_tuple = model.NAME in ("f2dc", "f2dc_pg", "f2dc_pgv33", "f2dc_pg_ml", "f2dc_dse", "f2dc_pg_lab", "f2dc_dse_lab")
 
     with torch.no_grad():
         for di, dl in enumerate(test_loaders):
@@ -415,12 +415,20 @@ def dump_heavy_snapshot(model, test_loaders, prefix, round_idx, current_acc, arg
             except Exception:
                 pass
 
-    save_path = os.path.join(diag_dir, f"{prefix}.npz")
-    np.savez_compressed(
-        save_path,
+    # === proto_diag_* (跟 dump_round_metadata 一致, best/final snapshot 也带 DSE+LAB 诊断) ===
+    # 之前 best/final npz 只有 features+state_dict, 没有 proto_diag_lab_*/proto_diag_dse_*
+    # 字段, 后处理时只能从对应 round_NNN.npz 读. 加上后 best/final 自包含两套指标.
+    proto_diag_to_save = None
+    proto_logs = getattr(model, 'proto_logs', None)
+    if isinstance(proto_logs, list) and proto_logs:
+        latest = proto_logs[-1]
+        if isinstance(latest, dict):
+            proto_diag_to_save = dict(latest)
+            proto_diag_to_save['dump_round'] = int(round_idx)
+
+    save_kwargs = dict(
         round=int(round_idx),
         current_acc=float(current_acc),
-        # features (dict 用 object array 保存)
         features=np.array([all_features], dtype=object),
         labels=np.array([all_labels], dtype=object),
         preds=np.array([all_preds], dtype=object),
@@ -429,11 +437,26 @@ def dump_heavy_snapshot(model, test_loaders, prefix, round_idx, current_acc, arg
         state_dict=np.array([state_dict_fp16], dtype=object),
         domain_names=np.array(domain_names, dtype='<U16'),
     )
+    if proto_diag_to_save is not None:
+        try:
+            proto_diag_json = json.dumps(proto_diag_to_save, default=_json_default, sort_keys=True)
+            save_kwargs['proto_diag_json'] = np.array([proto_diag_json], dtype=object)
+            for k, v in proto_diag_to_save.items():
+                scalar = _as_float_scalar(v)
+                if scalar is not None:
+                    safe_key = ''.join(ch if (ch.isalnum() or ch == '_') else '_' for ch in str(k))
+                    save_kwargs[f'proto_diag_{safe_key}'] = np.array(scalar, dtype=np.float32)
+        except Exception as e:
+            print(f"[diag] heavy snapshot proto_diag dump failed: {e}")
+
+    save_path = os.path.join(diag_dir, f"{prefix}.npz")
+    np.savez_compressed(save_path, **save_kwargs)
 
     state.last_dumped_round = round_idx
     state.last_dumped_best_acc = current_acc
     state.dumps_taken.append((prefix, round_idx, current_acc))
-    print(f"[diag] heavy snapshot dumped: {save_path} (acc={current_acc:.3f})")
+    n_proto_keys = sum(1 for k in save_kwargs if k.startswith('proto_diag_')) if proto_diag_to_save else 0
+    print(f"[diag] heavy snapshot dumped: {save_path} (acc={current_acc:.3f}, proto_diag fields={n_proto_keys})")
 
 
 def init_diag_state(args):

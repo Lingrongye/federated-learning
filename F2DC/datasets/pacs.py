@@ -141,7 +141,7 @@ class FedLeaPACS(FederatedDataset):
                                                        ml_lite_channel=lc,
                                                        ml_lite_tau=lt,
                                                        ml_main_rho=rho))
-            elif model_name == 'f2dc_dse':
+            elif model_name in ('f2dc_dse', 'f2dc_dse_lab'):
                 from backbone.ResNet_DC_F2DC_DSE import resnet10_f2dc_dse
                 args_obj = FedLeaPACS.model_args
                 dse_red = getattr(args_obj, 'dse_reduction', 8)

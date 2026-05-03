@@ -172,6 +172,11 @@ for _ds in best_args:
     if 'f2dc_pg_lab' not in best_args[_ds]:
         best_args[_ds]['f2dc_pg_lab'] = dict(best_args[_ds].get('f2dc_pg', {'local_lr': 0.01, 'local_batch_size': 64}))
 
+# Inject f2dc_dse_lab (EXP-149 — mirror f2dc_dse defaults, LAB 替代 DaA 聚合 + DSE adapter)
+for _ds in best_args:
+    if 'f2dc_dse_lab' not in best_args[_ds]:
+        best_args[_ds]['f2dc_dse_lab'] = dict(best_args[_ds].get('f2dc_dse', {'local_lr': 0.01, 'local_batch_size': 64}))
+
 # Inject f2dc_dse (mirror f2dc defaults: 纯 F2DC base + layer3 DSE_Rescue3)
 for _ds in best_args:
     if 'f2dc_dse' not in best_args[_ds]:
