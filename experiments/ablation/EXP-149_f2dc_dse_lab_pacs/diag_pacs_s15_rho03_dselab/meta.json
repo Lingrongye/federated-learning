@@ -1,0 +1,59 @@
+{
+  "model": "f2dc_dse_lab",
+  "dataset": "fl_pacs",
+  "seed": 15,
+  "parti_num": 10,
+  "num_classes": 7,
+  "communication_epoch": 100,
+  "use_daa": false,
+  "agg_a": 1.0,
+  "agg_b": 0.4,
+  "final_acc": 72.68,
+  "heavy_dumps": [
+    [
+      "best_R033",
+      33,
+      62.5
+    ],
+    [
+      "best_R039",
+      39,
+      65.845
+    ],
+    [
+      "best_R045",
+      45,
+      67.425
+    ],
+    [
+      "best_R054",
+      54,
+      69.642
+    ],
+    [
+      "best_R059",
+      59,
+      70.735
+    ],
+    [
+      "best_R070",
+      70,
+      72.292
+    ],
+    [
+      "best_R081",
+      81,
+      73.335
+    ],
+    [
+      "best_R089",
+      89,
+      74.51
+    ],
+    [
+      "final_R100",
+      100,
+      72.68
+    ]
+  ]
+}

@@ -1,0 +1,600 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_dse_lab_10_fl_pacs_100_10
+selected_domain_list for 10 clients as:
+['photo' 'photo' 'art' 'art' 'art' 'cartoon' 'cartoon' 'sketch' 'sketch'
+ 'sketch']
+[LAB setup] val partition: 140 samples across 10 clients, per-dom = {'photo': 35, 'art': 35, 'cartoon': 35, 'sketch': 35}
+           photo class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           art class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           cartoon class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           sketch class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+[DSE diag] {'round': 0, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.663034439086914, 'proto3_valid_mean_norm': 8.663034439086914, 'proto3_ema_delta_norm': 0.0}
+The 0 Communcation Time: 174.084
+The 0 Communcation Accuracy: 10.312 Method: f2dc_dse_lab epoch loss: 7.694
+[11.08, 9.07, 5.56, 15.54]
+
+[DSE diag] {'round': 1, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.66176700592041, 'proto3_valid_mean_norm': 8.66176700592041, 'proto3_ema_delta_norm': 0.18707823753356934, 'raw_to_target_cos_mean': 0.8344484743475914, 'rescued_to_target_cos_mean': 0.8344484743475914, 'ccc_improvement': 0.0}
+[LAB R  1] loss_ema={photo:2.041, sketch:2.021, cartoon:2.055, art:2.044}
+          gap={photo:0.001, sketch:0.000, cartoon:0.015, art:0.003}  ratio={photo×0.90, sketch×0.85, cartoon×1.50, art×0.96}  clip={None}
+The 1 Communcation Time: 179.065
+The 1 Communcation Accuracy: 22.845 Method: f2dc_dse_lab epoch loss: 5.431
+[27.25, 25.49, 19.02, 19.62]
+
+[DSE diag] {'round': 2, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.675554275512695, 'proto3_valid_mean_norm': 8.675554275512695, 'proto3_ema_delta_norm': 0.1907355785369873, 'raw_to_target_cos_mean': 0.8379432538151741, 'rescued_to_target_cos_mean': 0.8379432538151741, 'ccc_improvement': 0.0}
+[LAB R  2] loss_ema={cartoon:2.036, photo:2.105, art:2.027, sketch:2.124}
+          gap={cartoon:0.000, photo:0.032, art:0.000, sketch:0.051}  ratio={cartoon×0.85, photo×1.30, art×0.85, sketch×1.05}  clip={None}
+The 2 Communcation Time: 180.172
+The 2 Communcation Accuracy: 17.545 Method: f2dc_dse_lab epoch loss: 4.878
+[14.67, 11.27, 17.74, 26.5]
+
+[DSE diag] {'round': 3, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.696357727050781, 'proto3_valid_mean_norm': 8.696357727050781, 'proto3_ema_delta_norm': 0.17844067513942719, 'raw_to_target_cos_mean': 0.8432127681374549, 'rescued_to_target_cos_mean': 0.8432127681374549, 'ccc_improvement': 0.0}
+[LAB R  3] loss_ema={sketch:2.303, art:2.488, cartoon:2.157, photo:2.957}
+          gap={sketch:0.000, art:0.012, cartoon:0.000, photo:0.481}  ratio={sketch×0.85, art×0.86, cartoon×0.85, photo×1.99}  clip={None}
+The 3 Communcation Time: 182.315
+The 3 Communcation Accuracy: 18.9 Method: f2dc_dse_lab epoch loss: 4.662
+[22.75, 14.46, 20.94, 17.45]
+
+[DSE diag] {'round': 4, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.72335147857666, 'proto3_valid_mean_norm': 8.72335147857666, 'proto3_ema_delta_norm': 0.16704508662223816, 'raw_to_target_cos_mean': 0.8533757388591766, 'rescued_to_target_cos_mean': 0.8533757388591766, 'ccc_improvement': 0.0}
+[LAB R  4] loss_ema={photo:2.878, cartoon:2.072, sketch:2.401, art:2.391}
+          gap={photo:0.442, cartoon:0.000, sketch:0.000, art:0.000}  ratio={photo×2.00, cartoon×0.85, sketch×0.85, art×0.85}  clip={photo@max}
+The 4 Communcation Time: 181.451
+The 4 Communcation Accuracy: 16.772 Method: f2dc_dse_lab epoch loss: 4.372
+[15.27, 12.01, 23.5, 16.31]
+
+[DSE diag] {'round': 5, 'rho_t': 0.0, 'lambda_cc_t': 0.0, 'dse_delta_raw_ratio_mean': 0.0, 'dse_delta_scaled_ratio_mean': 0.0, 'dse_delta_cos_feat_mean': 0.0, 'cc_loss_mean': 0.0, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.74940299987793, 'proto3_valid_mean_norm': 8.74940299987793, 'proto3_ema_delta_norm': 0.1514991670846939, 'raw_to_target_cos_mean': 0.8635953631997109, 'rescued_to_target_cos_mean': 0.8635953631997109, 'ccc_improvement': 0.0}
+[LAB R  5] loss_ema={sketch:2.562, cartoon:2.129, art:2.750, photo:3.462}
+          gap={sketch:0.000, cartoon:0.000, art:0.025, photo:0.737}  ratio={sketch×0.85, cartoon×0.85, art×0.87, photo×1.98}  clip={None}
+The 5 Communcation Time: 181.038
+The 5 Communcation Accuracy: 19.855 Method: f2dc_dse_lab epoch loss: 4.095
+[28.44, 13.73, 21.58, 15.67]
+
+[DSE diag] {'round': 6, 'rho_t': 0.03, 'lambda_cc_t': 0.01, 'dse_delta_raw_ratio_mean': 0.0002690724020928491, 'dse_delta_scaled_ratio_mean': 8.072171888773118e-06, 'dse_delta_cos_feat_mean': 0.06568075483294303, 'cc_loss_mean': 0.11193830751637372, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 1.2152986765190937e-05, 'mag_ratio_max_mean': 1.3440920035071657e-05, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.77226734161377, 'proto3_valid_mean_norm': 8.77226734161377, 'proto3_ema_delta_norm': 0.1408451348543167, 'raw_to_target_cos_mean': 0.8696154722571373, 'rescued_to_target_cos_mean': 0.8696153250336647, 'ccc_improvement': -1.4722347263518287e-07}
+[LAB R  6] loss_ema={art:2.740, cartoon:2.094, sketch:2.717, photo:3.398}
+          gap={art:0.003, cartoon:0.000, sketch:0.000, photo:0.661}  ratio={art×0.85, cartoon×0.85, sketch×0.85, photo×2.00}  clip={photo@max}
+The 6 Communcation Time: 184.872
+The 6 Communcation Accuracy: 22.025 Method: f2dc_dse_lab epoch loss: 3.941
+[32.34, 15.69, 24.15, 15.92]
+
+[DSE diag] {'round': 7, 'rho_t': 0.06, 'lambda_cc_t': 0.02, 'dse_delta_raw_ratio_mean': 0.0008547444088109023, 'dse_delta_scaled_ratio_mean': 5.1284663526613176e-05, 'dse_delta_cos_feat_mean': 0.06383932478654496, 'cc_loss_mean': 0.1069802157586235, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 7.232400060788093e-05, 'mag_ratio_max_mean': 8.029565507950063e-05, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.78765869140625, 'proto3_valid_mean_norm': 8.78765869140625, 'proto3_ema_delta_norm': 0.13117466866970062, 'raw_to_target_cos_mean': 0.8755830025672913, 'rescued_to_target_cos_mean': 0.875581995844841, 'ccc_improvement': -1.0067224502918748e-06}
+[LAB R  7] loss_ema={sketch:2.827, art:2.698, cartoon:2.008, photo:3.267}
+          gap={sketch:0.127, art:0.000, cartoon:0.000, photo:0.567}  ratio={sketch×0.91, art×0.85, cartoon×0.85, photo×1.80}  clip={None}
+The 7 Communcation Time: 184.345
+The 7 Communcation Accuracy: 31.765 Method: f2dc_dse_lab epoch loss: 3.786
+[41.62, 28.43, 38.03, 18.98]
+
+[DSE diag] {'round': 8, 'rho_t': 0.09, 'lambda_cc_t': 0.030000000000000006, 'dse_delta_raw_ratio_mean': 0.0018191618157097755, 'dse_delta_scaled_ratio_mean': 0.00016372457017075468, 'dse_delta_cos_feat_mean': 0.0483777467877819, 'cc_loss_mean': 0.10310782397022063, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00022543443940028934, 'mag_ratio_max_mean': 0.00024803484123520606, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.796574592590332, 'proto3_valid_mean_norm': 8.796574592590332, 'proto3_ema_delta_norm': 0.12720797955989838, 'raw_to_target_cos_mean': 0.8809180402755737, 'rescued_to_target_cos_mean': 0.8809154826402664, 'ccc_improvement': -2.5576353073208935e-06}
+[LAB R  8] loss_ema={sketch:2.719, photo:2.953, cartoon:1.874, art:2.519}
+          gap={sketch:0.203, photo:0.437, cartoon:0.000, art:0.003}  ratio={sketch×0.95, photo×1.64, cartoon×0.85, art×0.85}  clip={None}
+The 8 Communcation Time: 184.426
+The 8 Communcation Accuracy: 35.755 Method: f2dc_dse_lab epoch loss: 3.591
+[44.31, 27.94, 38.03, 32.74]
+
+[DSE diag] {'round': 9, 'rho_t': 0.12, 'lambda_cc_t': 0.04, 'dse_delta_raw_ratio_mean': 0.0030365136994780296, 'dse_delta_scaled_ratio_mean': 0.00036438163646363456, 'dse_delta_cos_feat_mean': 0.04548337563855538, 'cc_loss_mean': 0.09763523852603645, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0004943046074805523, 'mag_ratio_max_mean': 0.0005445419662887932, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.79537296295166, 'proto3_valid_mean_norm': 8.79537296295166, 'proto3_ema_delta_norm': 0.12286996841430664, 'raw_to_target_cos_mean': 0.8866231596469879, 'rescued_to_target_cos_mean': 0.88661989569664, 'ccc_improvement': -3.263950347887068e-06}
+[LAB R  9] loss_ema={cartoon:1.754, photo:2.702, sketch:2.479, art:2.438}
+          gap={cartoon:0.000, photo:0.359, sketch:0.136, art:0.095}  ratio={cartoon×0.85, photo×1.56, sketch×0.93, art×0.95}  clip={None}
+The 9 Communcation Time: 184.198
+The 9 Communcation Accuracy: 37.48 Method: f2dc_dse_lab epoch loss: 3.402
+[39.82, 28.19, 39.74, 42.17]
+
+[DSE diag] {'round': 10, 'rho_t': 0.15, 'lambda_cc_t': 0.05, 'dse_delta_raw_ratio_mean': 0.004767904955388888, 'dse_delta_scaled_ratio_mean': 0.0007151857675787924, 'dse_delta_cos_feat_mean': 0.05215848095315982, 'cc_loss_mean': 0.09368843156081856, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0009168536615521085, 'mag_ratio_max_mean': 0.0010023854856752782, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.783218383789062, 'proto3_valid_mean_norm': 8.783218383789062, 'proto3_ema_delta_norm': 0.12068122625350952, 'raw_to_target_cos_mean': 0.8919472926855088, 'rescued_to_target_cos_mean': 0.8919452559947968, 'ccc_improvement': -2.0366907119706568e-06}
+[LAB R 10] loss_ema={art:2.403, sketch:2.342, photo:2.534, cartoon:1.711}
+          gap={art:0.155, sketch:0.095, photo:0.286, cartoon:0.000}  ratio={art×1.03, sketch×0.91, photo×1.47, cartoon×0.85}  clip={None}
+The 10 Communcation Time: 184.375
+The 10 Communcation Accuracy: 37.348 Method: f2dc_dse_lab epoch loss: 3.282
+[42.81, 29.17, 39.32, 38.09]
+
+[DSE diag] {'round': 11, 'rho_t': 0.18, 'lambda_cc_t': 0.06000000000000001, 'dse_delta_raw_ratio_mean': 0.006774052302270318, 'dse_delta_scaled_ratio_mean': 0.0012193294556225938, 'dse_delta_cos_feat_mean': 0.05106624254321849, 'cc_loss_mean': 0.08968927362205024, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0015735560713455745, 'mag_ratio_max_mean': 0.0017106593727124948, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.762350082397461, 'proto3_valid_mean_norm': 8.762350082397461, 'proto3_ema_delta_norm': 0.117743119597435, 'raw_to_target_cos_mean': 0.8958356153964996, 'rescued_to_target_cos_mean': 0.8958356496691704, 'ccc_improvement': 3.427267081246299e-08}
+[LAB R 11] loss_ema={art:2.361, cartoon:1.666, photo:2.421, sketch:2.330}
+          gap={art:0.166, cartoon:0.000, photo:0.226, sketch:0.136}  ratio={art×1.05, cartoon×0.85, photo×1.35, sketch×0.93}  clip={None}
+The 11 Communcation Time: 186.606
+The 11 Communcation Accuracy: 42.795 Method: f2dc_dse_lab epoch loss: 3.085
+[46.41, 33.58, 44.44, 46.75]
+
+[DSE diag] {'round': 12, 'rho_t': 0.21000000000000002, 'lambda_cc_t': 0.07, 'dse_delta_raw_ratio_mean': 0.010221519931108647, 'dse_delta_scaled_ratio_mean': 0.0021465191382847833, 'dse_delta_cos_feat_mean': 0.04825249774618613, 'cc_loss_mean': 0.08571761796120264, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0026331265665599985, 'mag_ratio_max_mean': 0.002845442789090373, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.730695724487305, 'proto3_valid_mean_norm': 8.730695724487305, 'proto3_ema_delta_norm': 0.11672209203243256, 'raw_to_target_cos_mean': 0.9018330219388008, 'rescued_to_target_cos_mean': 0.901829007267952, 'ccc_improvement': -4.014670848762059e-06}
+[LAB R 12] loss_ema={sketch:2.230, art:2.274, cartoon:1.615, photo:2.263}
+          gap={sketch:0.134, art:0.179, cartoon:0.000, photo:0.167}  ratio={sketch×0.94, art×1.09, cartoon×0.85, photo×1.26}  clip={None}
+The 12 Communcation Time: 185.999
+The 12 Communcation Accuracy: 40.118 Method: f2dc_dse_lab epoch loss: 2.963
+[47.9, 36.76, 41.67, 34.14]
+
+[DSE diag] {'round': 13, 'rho_t': 0.24, 'lambda_cc_t': 0.08, 'dse_delta_raw_ratio_mean': 0.01480310421997431, 'dse_delta_scaled_ratio_mean': 0.003552744925233117, 'dse_delta_cos_feat_mean': 0.047230966113558814, 'cc_loss_mean': 0.0831161192437847, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.00437380382468426, 'mag_ratio_max_mean': 0.00471635000909319, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.688477516174316, 'proto3_valid_mean_norm': 8.688477516174316, 'proto3_ema_delta_norm': 0.11510629206895828, 'raw_to_target_cos_mean': 0.9042573782801628, 'rescued_to_target_cos_mean': 0.9042481589317322, 'ccc_improvement': -9.219348430677954e-06}
+[LAB R 13] loss_ema={photo:2.200, sketch:2.221, art:2.235, cartoon:1.619}
+          gap={photo:0.131, sketch:0.152, art:0.166, cartoon:0.000}  ratio={photo×1.19, sketch×0.96, art×1.08, cartoon×0.85}  clip={None}
+The 13 Communcation Time: 183.653
+The 13 Communcation Accuracy: 40.385 Method: f2dc_dse_lab epoch loss: 2.911
+[45.21, 30.15, 43.38, 42.8]
+
+[DSE diag] {'round': 14, 'rho_t': 0.26999999999999996, 'lambda_cc_t': 0.09, 'dse_delta_raw_ratio_mean': 0.022005282477762667, 'dse_delta_scaled_ratio_mean': 0.005941426467594915, 'dse_delta_cos_feat_mean': 0.05079716773358035, 'cc_loss_mean': 0.0798260841888239, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0071681977277345, 'mag_ratio_max_mean': 0.007704572491163369, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.638649940490723, 'proto3_valid_mean_norm': 8.638649940490723, 'proto3_ema_delta_norm': 0.11226217448711395, 'raw_to_target_cos_mean': 0.9067827549576759, 'rescued_to_target_cos_mean': 0.9067344683408737, 'ccc_improvement': -4.82866168022289e-05}
+[LAB R 14] loss_ema={sketch:2.163, art:2.205, cartoon:1.562, photo:2.160}
+          gap={sketch:0.140, art:0.183, cartoon:0.000, photo:0.137}  ratio={sketch×0.95, art×1.10, cartoon×0.85, photo×1.20}  clip={None}
+The 14 Communcation Time: 185.236
+The 14 Communcation Accuracy: 44.397 Method: f2dc_dse_lab epoch loss: 2.782
+[49.1, 34.31, 46.79, 47.39]
+
+[DSE diag] {'round': 15, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.03172021808587876, 'dse_delta_scaled_ratio_mean': 0.00951606567606698, 'dse_delta_cos_feat_mean': 0.053825807755431346, 'cc_loss_mean': 0.07805019788082816, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.0119235673264628, 'mag_ratio_max_mean': 0.012822367224178398, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.577363967895508, 'proto3_valid_mean_norm': 8.577363967895508, 'proto3_ema_delta_norm': 0.11152229458093643, 'raw_to_target_cos_mean': 0.9092949223518372, 'rescued_to_target_cos_mean': 0.9091709542274475, 'ccc_improvement': -0.00012396812438963956}
+[LAB R 15] loss_ema={art:2.174, sketch:2.077, cartoon:1.524, photo:2.125}
+          gap={art:0.199, sketch:0.102, cartoon:0.000, photo:0.149}  ratio={art×1.13, sketch×0.92, cartoon×0.85, photo×1.24}  clip={None}
+The 15 Communcation Time: 179.071
+The 15 Communcation Accuracy: 47.075 Method: f2dc_dse_lab epoch loss: 2.694
+[51.2, 37.25, 44.44, 55.41]
+
+[DSE diag] {'round': 16, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.04699486422840328, 'dse_delta_scaled_ratio_mean': 0.014098459872646288, 'dse_delta_cos_feat_mean': 0.05480069427048817, 'cc_loss_mean': 0.07464793439677021, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.017833237536251545, 'mag_ratio_max_mean': 0.01921700966350808, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.50936508178711, 'proto3_valid_mean_norm': 8.50936508178711, 'proto3_ema_delta_norm': 0.1100437268614769, 'raw_to_target_cos_mean': 0.9136812141537667, 'rescued_to_target_cos_mean': 0.9134361383318901, 'ccc_improvement': -0.0002450758218766058}
+[LAB R 16] loss_ema={art:2.128, photo:2.049, sketch:1.945, cartoon:1.508}
+          gap={art:0.221, photo:0.141, sketch:0.037, cartoon:0.000}  ratio={art×1.20, photo×1.26, sketch×0.88, cartoon×0.85}  clip={None}
+The 16 Communcation Time: 174.521
+The 16 Communcation Accuracy: 46.088 Method: f2dc_dse_lab epoch loss: 2.564
+[53.59, 35.29, 49.36, 46.11]
+
+[DSE diag] {'round': 17, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.0702818519287658, 'dse_delta_scaled_ratio_mean': 0.021084556547285853, 'dse_delta_cos_feat_mean': 0.0462344757525212, 'cc_loss_mean': 0.07379183665370674, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.025976572150714916, 'mag_ratio_max_mean': 0.027994480950407463, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.43698787689209, 'proto3_valid_mean_norm': 8.43698787689209, 'proto3_ema_delta_norm': 0.11074813455343246, 'raw_to_target_cos_mean': 0.9153012040257454, 'rescued_to_target_cos_mean': 0.9147800496220588, 'ccc_improvement': -0.0005211544036866078}
+[LAB R 17] loss_ema={cartoon:1.464, photo:1.964, art:2.080, sketch:1.904}
+          gap={cartoon:0.000, photo:0.111, art:0.227, sketch:0.051}  ratio={cartoon×0.85, photo×1.18, art×1.22, sketch×0.89}  clip={None}
+The 17 Communcation Time: 173.607
+The 17 Communcation Accuracy: 47.13 Method: f2dc_dse_lab epoch loss: 2.474
+[53.29, 33.58, 45.73, 55.92]
+
+[DSE diag] {'round': 18, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.10181166319914832, 'dse_delta_scaled_ratio_mean': 0.030543500142842427, 'dse_delta_cos_feat_mean': 0.042423842944663295, 'cc_loss_mean': 0.07151079730418247, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.037183928438047374, 'mag_ratio_max_mean': 0.04013438319584521, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.358980178833008, 'proto3_valid_mean_norm': 8.358980178833008, 'proto3_ema_delta_norm': 0.11086024343967438, 'raw_to_target_cos_mean': 0.918027451634407, 'rescued_to_target_cos_mean': 0.9171028649806976, 'ccc_improvement': -0.0009245866537094249}
+[LAB R 18] loss_ema={art:2.052, photo:1.943, sketch:1.829, cartoon:1.495}
+          gap={art:0.222, photo:0.113, sketch:0.000, cartoon:0.000}  ratio={art×1.27, photo×1.24, sketch×0.85, cartoon×0.85}  clip={None}
+The 18 Communcation Time: 173.694
+The 18 Communcation Accuracy: 49.828 Method: f2dc_dse_lab epoch loss: 2.407
+[57.49, 37.5, 51.71, 52.61]
+
+[DSE diag] {'round': 19, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.14411954494083629, 'dse_delta_scaled_ratio_mean': 0.04323586530265173, 'dse_delta_cos_feat_mean': 0.03409930621066094, 'cc_loss_mean': 0.07036403537028017, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.05195808091966232, 'mag_ratio_max_mean': 0.0561488879088423, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.277243614196777, 'proto3_valid_mean_norm': 8.277243614196777, 'proto3_ema_delta_norm': 0.11038528382778168, 'raw_to_target_cos_mean': 0.9214437052607536, 'rescued_to_target_cos_mean': 0.9197357311844826, 'ccc_improvement': -0.0017079740762709905}
+[LAB R 19] loss_ema={sketch:1.729, cartoon:1.481, art:2.016, photo:1.930}
+          gap={sketch:0.000, cartoon:0.000, art:0.227, photo:0.141}  ratio={sketch×0.85, cartoon×0.85, art×1.24, photo×1.30}  clip={None}
+The 19 Communcation Time: 174.992
+The 19 Communcation Accuracy: 50.248 Method: f2dc_dse_lab epoch loss: 2.282
+[55.99, 42.16, 51.5, 51.34]
+
+[DSE diag] {'round': 20, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.1863453493089903, 'dse_delta_scaled_ratio_mean': 0.05590360731063854, 'dse_delta_cos_feat_mean': 0.03494991669531113, 'cc_loss_mean': 0.07017977032209403, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.06794010215245261, 'mag_ratio_max_mean': 0.07321233361738153, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.193081855773926, 'proto3_valid_mean_norm': 8.193081855773926, 'proto3_ema_delta_norm': 0.1098557859659195, 'raw_to_target_cos_mean': 0.9221843352913857, 'rescued_to_target_cos_mean': 0.9194929078221321, 'ccc_improvement': -0.002691427469253549}
+[LAB R 20] loss_ema={sketch:1.730, photo:1.955, cartoon:1.487, art:1.969}
+          gap={sketch:0.000, photo:0.170, cartoon:0.000, art:0.183}  ratio={sketch×0.85, photo×1.41, cartoon×0.85, art×1.18}  clip={None}
+The 20 Communcation Time: 174.181
+The 20 Communcation Accuracy: 52.48 Method: f2dc_dse_lab epoch loss: 2.187
+[58.38, 42.4, 55.13, 54.01]
+
+[DSE diag] {'round': 21, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.227727547777104, 'dse_delta_scaled_ratio_mean': 0.0683182673207278, 'dse_delta_cos_feat_mean': 0.02905170494238573, 'cc_loss_mean': 0.07064761688439679, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.08319881714806698, 'mag_ratio_max_mean': 0.0896829108790596, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.103264808654785, 'proto3_valid_mean_norm': 8.103264808654785, 'proto3_ema_delta_norm': 0.11173106729984283, 'raw_to_target_cos_mean': 0.9225729897618293, 'rescued_to_target_cos_mean': 0.9187114787101746, 'ccc_improvement': -0.0038615110516547757}
+[LAB R 21] loss_ema={art:1.920, cartoon:1.439, sketch:1.684, photo:1.895}
+          gap={art:0.185, cartoon:0.000, sketch:0.000, photo:0.161}  ratio={art×1.19, cartoon×0.85, sketch×0.85, photo×1.39}  clip={None}
+The 21 Communcation Time: 173.066
+The 21 Communcation Accuracy: 49.59 Method: f2dc_dse_lab epoch loss: 2.207
+[56.59, 39.71, 50.21, 51.85]
+
+[DSE diag] {'round': 22, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.267740867643982, 'dse_delta_scaled_ratio_mean': 0.08032226275724227, 'dse_delta_cos_feat_mean': 0.02495393606640647, 'cc_loss_mean': 0.0701670180907215, 'mag_loss_mean': 0.0, 'mag_exceed_rate': 0.0, 'mag_ratio_p95_mean': 0.09669642559815161, 'mag_ratio_max_mean': 0.10404521372943822, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 8.011667251586914, 'proto3_valid_mean_norm': 8.011667251586914, 'proto3_ema_delta_norm': 0.11100288480520248, 'raw_to_target_cos_mean': 0.9243830677866935, 'rescued_to_target_cos_mean': 0.9194708162546158, 'ccc_improvement': -0.004912251532077749}
+[LAB R 22] loss_ema={cartoon:1.474, sketch:1.578, art:1.944, photo:1.876}
+          gap={cartoon:0.000, sketch:0.000, art:0.226, photo:0.158}  ratio={cartoon×0.85, sketch×0.85, art×1.22, photo×1.33}  clip={None}
+The 22 Communcation Time: 173.744
+The 22 Communcation Accuracy: 55.272 Method: f2dc_dse_lab epoch loss: 2.045
+[58.08, 42.89, 58.97, 61.15]
+
+[DSE diag] {'round': 23, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.3030202515392947, 'dse_delta_scaled_ratio_mean': 0.09090607849686187, 'dse_delta_cos_feat_mean': 0.027233773119756, 'cc_loss_mean': 0.07037780008753194, 'mag_loss_mean': 1.8320499934897361e-10, 'mag_exceed_rate': 4.816182372772516e-05, 'mag_ratio_p95_mean': 0.10831337841873122, 'mag_ratio_max_mean': 0.11659976596584415, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.923266410827637, 'proto3_valid_mean_norm': 7.923266410827637, 'proto3_ema_delta_norm': 0.10742563009262085, 'raw_to_target_cos_mean': 0.9252145454287529, 'rescued_to_target_cos_mean': 0.9194364076852799, 'ccc_improvement': -0.005778137743473022}
+[LAB R 23] loss_ema={photo:1.759, sketch:1.535, art:1.827, cartoon:1.364}
+          gap={photo:0.138, sketch:0.000, art:0.206, cartoon:0.000}  ratio={photo×1.32, sketch×0.85, art×1.23, cartoon×0.85}  clip={None}
+The 23 Communcation Time: 174.269
+The 23 Communcation Accuracy: 58.43 Method: f2dc_dse_lab epoch loss: 2.007
+[60.18, 48.53, 59.4, 65.61]
+
+[DSE diag] {'round': 24, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.3259308852308252, 'dse_delta_scaled_ratio_mean': 0.09777927010685031, 'dse_delta_cos_feat_mean': 0.029176781775815758, 'cc_loss_mean': 0.07008870823016077, 'mag_loss_mean': 4.5871628962728e-08, 'mag_exceed_rate': 0.0011237758869802536, 'mag_ratio_p95_mean': 0.11778553123816406, 'mag_ratio_max_mean': 0.12677006326099433, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.8335747718811035, 'proto3_valid_mean_norm': 7.8335747718811035, 'proto3_ema_delta_norm': 0.10682207345962524, 'raw_to_target_cos_mean': 0.9263093051314354, 'rescued_to_target_cos_mean': 0.9198738837242126, 'ccc_improvement': -0.006435421407222752}
+[LAB R 24] loss_ema={sketch:1.424, photo:1.766, art:1.745, cartoon:1.256}
+          gap={sketch:0.000, photo:0.218, art:0.197, cartoon:0.000}  ratio={sketch×0.85, photo×1.46, art×1.15, cartoon×0.85}  clip={None}
+The 24 Communcation Time: 174.484
+The 24 Communcation Accuracy: 56.0 Method: f2dc_dse_lab epoch loss: 1.922
+[60.18, 43.63, 56.62, 63.57]
+
+[DSE diag] {'round': 25, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.3531414755067182, 'dse_delta_scaled_ratio_mean': 0.10594244670063731, 'dse_delta_cos_feat_mean': 0.02871276336399624, 'cc_loss_mean': 0.0705164137434081, 'mag_loss_mean': 4.2590563106409934e-07, 'mag_exceed_rate': 0.004318510194252689, 'mag_ratio_p95_mean': 0.125536429786151, 'mag_ratio_max_mean': 0.13488924703238034, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.747727870941162, 'proto3_valid_mean_norm': 7.747727870941162, 'proto3_ema_delta_norm': 0.10149647295475006, 'raw_to_target_cos_mean': 0.9265493977069855, 'rescued_to_target_cos_mean': 0.9192872628569603, 'ccc_improvement': -0.007262134850025248}
+[LAB R 25] loss_ema={art:1.721, sketch:1.373, cartoon:1.254, photo:1.705}
+          gap={art:0.208, sketch:0.000, cartoon:0.000, photo:0.192}  ratio={art×1.18, sketch×0.85, cartoon×0.85, photo×1.41}  clip={None}
+The 25 Communcation Time: 174.316
+The 25 Communcation Accuracy: 57.038 Method: f2dc_dse_lab epoch loss: 1.915
+[59.58, 47.55, 59.62, 61.4]
+
+[DSE diag] {'round': 26, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.37546750206910906, 'dse_delta_scaled_ratio_mean': 0.11264025425151378, 'dse_delta_cos_feat_mean': 0.03161254484909505, 'cc_loss_mean': 0.07011406509557655, 'mag_loss_mean': 2.350507473250207e-06, 'mag_exceed_rate': 0.015973671536362175, 'mag_ratio_p95_mean': 0.13418249383126155, 'mag_ratio_max_mean': 0.14459968937358053, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.660797595977783, 'proto3_valid_mean_norm': 7.660797595977783, 'proto3_ema_delta_norm': 0.10143699496984482, 'raw_to_target_cos_mean': 0.928032355606556, 'rescued_to_target_cos_mean': 0.9203015658259391, 'ccc_improvement': -0.007730789780616809}
+[LAB R 26] loss_ema={sketch:1.304, photo:1.770, cartoon:1.215, art:1.669}
+          gap={sketch:0.000, photo:0.281, cartoon:0.000, art:0.180}  ratio={sketch×0.85, photo×1.56, cartoon×0.85, art×1.10}  clip={None}
+The 26 Communcation Time: 173.231
+The 26 Communcation Accuracy: 56.618 Method: f2dc_dse_lab epoch loss: 1.915
+[63.17, 45.59, 54.27, 63.44]
+
+[DSE diag] {'round': 27, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.38964703612273033, 'dse_delta_scaled_ratio_mean': 0.11689411522564934, 'dse_delta_cos_feat_mean': 0.030575478423380726, 'cc_loss_mean': 0.07000360842211076, 'mag_loss_mean': 2.831494510646523e-06, 'mag_exceed_rate': 0.027018783111253813, 'mag_ratio_p95_mean': 0.1393229642716965, 'mag_ratio_max_mean': 0.15002504096615432, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.578746795654297, 'proto3_valid_mean_norm': 7.578746795654297, 'proto3_ema_delta_norm': 0.09573275595903397, 'raw_to_target_cos_mean': 0.9284877872467041, 'rescued_to_target_cos_mean': 0.9200953754782677, 'ccc_improvement': -0.008392411768436414}
+[LAB R 27] loss_ema={cartoon:1.247, sketch:1.239, art:1.647, photo:1.701}
+          gap={cartoon:0.000, sketch:0.000, art:0.188, photo:0.243}  ratio={cartoon×0.85, sketch×0.85, art×1.13, photo×1.51}  clip={None}
+The 27 Communcation Time: 174.601
+The 27 Communcation Accuracy: 59.662 Method: f2dc_dse_lab epoch loss: 1.831
+[65.27, 48.53, 60.26, 64.59]
+
+[DSE diag] {'round': 28, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.39686669796132124, 'dse_delta_scaled_ratio_mean': 0.11906001564680446, 'dse_delta_cos_feat_mean': 0.032939335134737444, 'cc_loss_mean': 0.06990884490512092, 'mag_loss_mean': 3.891087423051029e-06, 'mag_exceed_rate': 0.03405040937550169, 'mag_ratio_p95_mean': 0.14118685481866988, 'mag_ratio_max_mean': 0.1519802319236321, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.4995646476745605, 'proto3_valid_mean_norm': 7.4995646476745605, 'proto3_ema_delta_norm': 0.09206710755825043, 'raw_to_target_cos_mean': 0.9294174894690513, 'rescued_to_target_cos_mean': 0.92096390157938, 'ccc_improvement': -0.008453587889671321}
+[LAB R 28] loss_ema={art:1.624, cartoon:1.190, photo:1.638, sketch:1.198}
+          gap={art:0.212, cartoon:0.000, photo:0.225, sketch:0.000}  ratio={art×1.16, cartoon×0.85, photo×1.45, sketch×0.85}  clip={None}
+The 28 Communcation Time: 174.502
+The 28 Communcation Accuracy: 60.508 Method: f2dc_dse_lab epoch loss: 1.777
+[64.97, 48.77, 61.54, 66.75]
+
+[DSE diag] {'round': 29, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.4138928481144505, 'dse_delta_scaled_ratio_mean': 0.1241678593178078, 'dse_delta_cos_feat_mean': 0.030033974896595712, 'cc_loss_mean': 0.07024146244204969, 'mag_loss_mean': 1.108954086168546e-05, 'mag_exceed_rate': 0.0673141756301172, 'mag_ratio_p95_mean': 0.14711947739124298, 'mag_ratio_max_mean': 0.15815495816197725, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.423698902130127, 'proto3_valid_mean_norm': 7.423698902130127, 'proto3_ema_delta_norm': 0.08786231279373169, 'raw_to_target_cos_mean': 0.9289212992787361, 'rescued_to_target_cos_mean': 0.9196522742509842, 'ccc_improvement': -0.009269025027751954}
+[LAB R 29] loss_ema={sketch:1.131, photo:1.590, art:1.553, cartoon:1.120}
+          gap={sketch:0.000, photo:0.242, art:0.204, cartoon:0.000}  ratio={sketch×0.85, photo×1.48, art×1.14, cartoon×0.85}  clip={None}
+The 29 Communcation Time: 175.107
+The 29 Communcation Accuracy: 58.595 Method: f2dc_dse_lab epoch loss: 1.772
+[63.17, 46.08, 58.12, 67.01]
+
+[DSE diag] {'round': 30, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.4262262888583872, 'dse_delta_scaled_ratio_mean': 0.1278678921517553, 'dse_delta_cos_feat_mean': 0.029689937397653986, 'cc_loss_mean': 0.07018114625743781, 'mag_loss_mean': 1.668011350696732e-05, 'mag_exceed_rate': 0.0991009792904158, 'mag_ratio_p95_mean': 0.15083860622184111, 'mag_ratio_max_mean': 0.16228027094413738, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.347208499908447, 'proto3_valid_mean_norm': 7.347208499908447, 'proto3_ema_delta_norm': 0.08805686980485916, 'raw_to_target_cos_mean': 0.9301077836751938, 'rescued_to_target_cos_mean': 0.9205764690041542, 'ccc_improvement': -0.009531314671039515}
+[LAB R 30] loss_ema={sketch:1.106, photo:1.519, art:1.561, cartoon:1.175}
+          gap={sketch:0.000, photo:0.179, art:0.221, cartoon:0.000}  ratio={sketch×0.85, photo×1.37, art×1.20, cartoon×0.85}  clip={None}
+The 30 Communcation Time: 174.155
+The 30 Communcation Accuracy: 61.985 Method: f2dc_dse_lab epoch loss: 1.755
+[64.37, 51.96, 63.46, 68.15]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-149_f2dc_dse_lab_pacs/diag_pacs_s333_rho03_dselab_rerun_sub1/best_R031.npz (acc=61.985, proto_diag fields=169)
+[DSE diag] {'round': 31, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.4377236431848909, 'dse_delta_scaled_ratio_mean': 0.131317098103168, 'dse_delta_cos_feat_mean': 0.028832366621003504, 'cc_loss_mean': 0.06961025272185505, 'mag_loss_mean': 2.6135336032303186e-05, 'mag_exceed_rate': 0.14764809760796274, 'mag_ratio_p95_mean': 0.15654829109069143, 'mag_ratio_max_mean': 0.16835022366578037, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.272623538970947, 'proto3_valid_mean_norm': 7.272623538970947, 'proto3_ema_delta_norm': 0.08554832637310028, 'raw_to_target_cos_mean': 0.9317401629686356, 'rescued_to_target_cos_mean': 0.9214712762832642, 'ccc_improvement': -0.010268886685371403}
+[LAB R 31] loss_ema={sketch:1.129, photo:1.533, cartoon:1.102, art:1.478}
+          gap={sketch:0.000, photo:0.223, cartoon:0.000, art:0.168}  ratio={sketch×0.85, photo×1.52, cartoon×0.85, art×1.12}  clip={None}
+The 31 Communcation Time: 174.623
+The 31 Communcation Accuracy: 62.412 Method: f2dc_dse_lab epoch loss: 1.661
+[68.86, 50.0, 60.47, 70.32]
+
+[DSE diag] {'round': 32, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.4401854008878613, 'dse_delta_scaled_ratio_mean': 0.13205562554263203, 'dse_delta_cos_feat_mean': 0.028747295687472675, 'cc_loss_mean': 0.07007484747541551, 'mag_loss_mean': 2.8435512045462676e-05, 'mag_exceed_rate': 0.17264408412265211, 'mag_ratio_p95_mean': 0.15755003192047082, 'mag_ratio_max_mean': 0.16925350415824664, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.199656963348389, 'proto3_valid_mean_norm': 7.199656963348389, 'proto3_ema_delta_norm': 0.0840081125497818, 'raw_to_target_cos_mean': 0.930598558485508, 'rescued_to_target_cos_mean': 0.9201450145244598, 'ccc_improvement': -0.01045354396104814}
+[LAB R 32] loss_ema={sketch:1.081, art:1.448, cartoon:1.072, photo:1.507}
+          gap={sketch:0.000, art:0.171, cartoon:0.000, photo:0.230}  ratio={sketch×0.85, art×1.12, cartoon×0.85, photo×1.52}  clip={None}
+The 32 Communcation Time: 175.579
+The 32 Communcation Accuracy: 61.32 Method: f2dc_dse_lab epoch loss: 1.663
+[65.57, 51.47, 59.83, 68.41]
+
+[DSE diag] {'round': 33, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.4520893016409941, 'dse_delta_scaled_ratio_mean': 0.13562679557199764, 'dse_delta_cos_feat_mean': 0.02677903030667994, 'cc_loss_mean': 0.07031498880114069, 'mag_loss_mean': 4.4059617396991014e-05, 'mag_exceed_rate': 0.23034194894846685, 'mag_ratio_p95_mean': 0.16134584693625423, 'mag_ratio_max_mean': 0.17336138832097006, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.130965232849121, 'proto3_valid_mean_norm': 7.130965232849121, 'proto3_ema_delta_norm': 0.0789104551076889, 'raw_to_target_cos_mean': 0.9305733054876327, 'rescued_to_target_cos_mean': 0.9196351701021195, 'ccc_improvement': -0.010938135385513248}
+[LAB R 33] loss_ema={cartoon:1.098, photo:1.511, art:1.451, sketch:1.040}
+          gap={cartoon:0.000, photo:0.236, art:0.176, sketch:0.000}  ratio={cartoon×0.85, photo×1.52, art×1.12, sketch×0.85}  clip={None}
+The 33 Communcation Time: 174.49
+The 33 Communcation Accuracy: 62.368 Method: f2dc_dse_lab epoch loss: 1.671
+[66.47, 52.21, 61.11, 69.68]
+
+[DSE diag] {'round': 34, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.45909808841881744, 'dse_delta_scaled_ratio_mean': 0.13772943240359312, 'dse_delta_cos_feat_mean': 0.025174270332541937, 'cc_loss_mean': 0.06978043373437923, 'mag_loss_mean': 6.688495250904712e-05, 'mag_exceed_rate': 0.27323807994862737, 'mag_ratio_p95_mean': 0.1641681957362902, 'mag_ratio_max_mean': 0.17677317062521924, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 7.059384346008301, 'proto3_valid_mean_norm': 7.059384346008301, 'proto3_ema_delta_norm': 0.08154674619436264, 'raw_to_target_cos_mean': 0.9324494487047196, 'rescued_to_target_cos_mean': 0.9211971154808998, 'ccc_improvement': -0.0112523332238198}
+[LAB R 34] loss_ema={cartoon:1.123, sketch:0.974, art:1.448, photo:1.489}
+          gap={cartoon:0.000, sketch:0.000, art:0.190, photo:0.231}  ratio={cartoon×0.85, sketch×0.85, art×1.14, photo×1.49}  clip={None}
+The 34 Communcation Time: 173.747
+The 34 Communcation Accuracy: 60.9 Method: f2dc_dse_lab epoch loss: 1.641
+[67.66, 45.1, 61.54, 69.3]
+
+[DSE diag] {'round': 35, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.4694714422169186, 'dse_delta_scaled_ratio_mean': 0.14084143978085312, 'dse_delta_cos_feat_mean': 0.02045127438131853, 'cc_loss_mean': 0.069743285208419, 'mag_loss_mean': 7.737774042906584e-05, 'mag_exceed_rate': 0.3016053941242575, 'mag_ratio_p95_mean': 0.16601097931956302, 'mag_ratio_max_mean': 0.17852737851957284, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.990990161895752, 'proto3_valid_mean_norm': 6.990990161895752, 'proto3_ema_delta_norm': 0.07821882516145706, 'raw_to_target_cos_mean': 0.9317620921134949, 'rescued_to_target_cos_mean': 0.9204702565073967, 'ccc_improvement': -0.011291835606098255}
+[LAB R 35] loss_ema={cartoon:1.097, sketch:0.930, art:1.452, photo:1.480}
+          gap={cartoon:0.000, sketch:0.000, art:0.212, photo:0.240}  ratio={cartoon×0.85, sketch×0.85, art×1.15, photo×1.47}  clip={None}
+The 35 Communcation Time: 173.067
+The 35 Communcation Accuracy: 63.772 Method: f2dc_dse_lab epoch loss: 1.583
+[67.07, 50.74, 66.45, 70.83]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-149_f2dc_dse_lab_pacs/diag_pacs_s333_rho03_dselab_rerun_sub1/best_R036.npz (acc=63.772, proto_diag fields=169)
+[DSE diag] {'round': 36, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.46536187518399197, 'dse_delta_scaled_ratio_mean': 0.13960856801578717, 'dse_delta_cos_feat_mean': 0.022372087538950747, 'cc_loss_mean': 0.0695390479247745, 'mag_loss_mean': 7.792734112460881e-05, 'mag_exceed_rate': 0.3077540536201637, 'mag_ratio_p95_mean': 0.1656917347028704, 'mag_ratio_max_mean': 0.17850055833264153, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.9256181716918945, 'proto3_valid_mean_norm': 6.9256181716918945, 'proto3_ema_delta_norm': 0.07471686601638794, 'raw_to_target_cos_mean': 0.9322185239195824, 'rescued_to_target_cos_mean': 0.9208545961976051, 'ccc_improvement': -0.011363927721977252}
+[LAB R 36] loss_ema={cartoon:1.047, sketch:0.873, photo:1.510, art:1.405}
+          gap={cartoon:0.000, sketch:0.000, photo:0.301, art:0.196}  ratio={cartoon×0.85, sketch×0.85, photo×1.56, art×1.10}  clip={None}
+The 36 Communcation Time: 171.182
+The 36 Communcation Accuracy: 63.96 Method: f2dc_dse_lab epoch loss: 1.543
+[67.66, 50.74, 64.32, 73.12]
+
+[DSE diag] {'round': 37, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.47010805201505407, 'dse_delta_scaled_ratio_mean': 0.14103242205492422, 'dse_delta_cos_feat_mean': 0.022090210625843938, 'cc_loss_mean': 0.07069800191469637, 'mag_loss_mean': 0.00012592426491963223, 'mag_exceed_rate': 0.39534435703965326, 'mag_ratio_p95_mean': 0.17018746614161104, 'mag_ratio_max_mean': 0.18342384195858888, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.861822605133057, 'proto3_valid_mean_norm': 6.861822605133057, 'proto3_ema_delta_norm': 0.0727485939860344, 'raw_to_target_cos_mean': 0.9325888913869858, 'rescued_to_target_cos_mean': 0.9199874645471573, 'ccc_improvement': -0.012601426839828456}
+[LAB R 37] loss_ema={sketch:0.823, photo:1.483, art:1.385, cartoon:1.028}
+          gap={sketch:0.000, photo:0.303, art:0.206, cartoon:0.000}  ratio={sketch×0.85, photo×1.55, art×1.11, cartoon×0.85}  clip={None}
+The 37 Communcation Time: 173.78
+The 37 Communcation Accuracy: 65.57 Method: f2dc_dse_lab epoch loss: 1.567
+[66.47, 54.66, 66.88, 74.27]
+
+[DSE diag] {'round': 38, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.4763799089070533, 'dse_delta_scaled_ratio_mean': 0.14291397688303129, 'dse_delta_cos_feat_mean': 0.019528431118146426, 'cc_loss_mean': 0.06965161835205728, 'mag_loss_mean': 0.00011312818244044537, 'mag_exceed_rate': 0.384170813934821, 'mag_ratio_p95_mean': 0.1693520478682943, 'mag_ratio_max_mean': 0.18208448808677125, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.800431251525879, 'proto3_valid_mean_norm': 6.800431251525879, 'proto3_ema_delta_norm': 0.07002630829811096, 'raw_to_target_cos_mean': 0.9333083552122116, 'rescued_to_target_cos_mean': 0.9215046191215515, 'ccc_improvement': -0.0118037360906601}
+[LAB R 38] loss_ema={cartoon:0.977, sketch:0.714, photo:1.504, art:1.354}
+          gap={cartoon:0.000, sketch:0.000, photo:0.367, art:0.217}  ratio={cartoon×0.85, sketch×0.85, photo×1.58, art×1.08}  clip={None}
+The 38 Communcation Time: 173.273
+The 38 Communcation Accuracy: 64.158 Method: f2dc_dse_lab epoch loss: 1.504
+[68.86, 52.21, 64.1, 71.46]
+
+[DSE diag] {'round': 39, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.48768268430842887, 'dse_delta_scaled_ratio_mean': 0.14630481071594953, 'dse_delta_cos_feat_mean': 0.0169175540460922, 'cc_loss_mean': 0.07079031573801989, 'mag_loss_mean': 0.0001845871586774197, 'mag_exceed_rate': 0.4955691122170493, 'mag_ratio_p95_mean': 0.17608100223069142, 'mag_ratio_max_mean': 0.18956879759484, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.738337516784668, 'proto3_valid_mean_norm': 6.738337516784668, 'proto3_ema_delta_norm': 0.07080865651369095, 'raw_to_target_cos_mean': 0.9335943946242332, 'rescued_to_target_cos_mean': 0.9202860325574875, 'ccc_improvement': -0.013308362066745683}
+[LAB R 39] loss_ema={art:1.336, photo:1.454, sketch:0.709, cartoon:1.058}
+          gap={art:0.197, photo:0.314, sketch:0.000, cartoon:0.000}  ratio={art×1.09, photo×1.57, sketch×0.85, cartoon×0.85}  clip={None}
+The 39 Communcation Time: 172.783
+The 39 Communcation Accuracy: 62.71 Method: f2dc_dse_lab epoch loss: 1.499
+[66.17, 53.19, 62.18, 69.3]
+
+[DSE diag] {'round': 40, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.49737895343196775, 'dse_delta_scaled_ratio_mean': 0.14921369345789148, 'dse_delta_cos_feat_mean': 0.016541128708600573, 'cc_loss_mean': 0.07147274820582884, 'mag_loss_mean': 0.000218143745657735, 'mag_exceed_rate': 0.5509712634451758, 'mag_ratio_p95_mean': 0.17825417543696884, 'mag_ratio_max_mean': 0.1915154479517795, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.68064022064209, 'proto3_valid_mean_norm': 6.68064022064209, 'proto3_ema_delta_norm': 0.06576018035411835, 'raw_to_target_cos_mean': 0.932781243622303, 'rescued_to_target_cos_mean': 0.9193595266342163, 'ccc_improvement': -0.013421716988086696}
+[LAB R 40] loss_ema={art:1.377, sketch:0.705, cartoon:1.124, photo:1.456}
+          gap={art:0.212, sketch:0.000, cartoon:0.000, photo:0.290}  ratio={art×1.12, sketch×0.85, cartoon×0.85, photo×1.53}  clip={None}
+The 40 Communcation Time: 173.678
+The 40 Communcation Accuracy: 63.755 Method: f2dc_dse_lab epoch loss: 1.548
+[68.86, 52.94, 62.39, 70.83]
+
+[DSE diag] {'round': 41, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.4968235644969073, 'dse_delta_scaled_ratio_mean': 0.14904707597479935, 'dse_delta_cos_feat_mean': 0.013598705155829213, 'cc_loss_mean': 0.07028014595040369, 'mag_loss_mean': 0.00022036933655686746, 'mag_exceed_rate': 0.5480333921977846, 'mag_ratio_p95_mean': 0.17802294567965044, 'mag_ratio_max_mean': 0.19175884266300958, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.6204352378845215, 'proto3_valid_mean_norm': 6.6204352378845215, 'proto3_ema_delta_norm': 0.06866554915904999, 'raw_to_target_cos_mean': 0.9338866439461708, 'rescued_to_target_cos_mean': 0.9208776199817658, 'ccc_improvement': -0.013009023964405064}
+[LAB R 41] loss_ema={cartoon:1.132, sketch:0.711, art:1.406, photo:1.475}
+          gap={cartoon:0.000, sketch:0.000, art:0.225, photo:0.295}  ratio={cartoon×0.85, sketch×0.85, art×1.12, photo×1.51}  clip={None}
+The 41 Communcation Time: 174.213
+The 41 Communcation Accuracy: 66.868 Method: f2dc_dse_lab epoch loss: 1.474
+[69.76, 54.17, 68.38, 75.16]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-149_f2dc_dse_lab_pacs/diag_pacs_s333_rho03_dselab_rerun_sub1/best_R042.npz (acc=66.868, proto_diag fields=169)
+[DSE diag] {'round': 42, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.496464552838441, 'dse_delta_scaled_ratio_mean': 0.14893937169209054, 'dse_delta_cos_feat_mean': 0.011437161706150384, 'cc_loss_mean': 0.07094734243373989, 'mag_loss_mean': 0.00020991573367159085, 'mag_exceed_rate': 0.517225878953283, 'mag_ratio_p95_mean': 0.17677852291576934, 'mag_ratio_max_mean': 0.1902010280011904, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.563899517059326, 'proto3_valid_mean_norm': 6.563899517059326, 'proto3_ema_delta_norm': 0.06460750848054886, 'raw_to_target_cos_mean': 0.9333377242088318, 'rescued_to_target_cos_mean': 0.9198945298790931, 'ccc_improvement': -0.013443194329738617}
+[LAB R 42] loss_ema={sketch:0.680, photo:1.488, cartoon:1.041, art:1.382}
+          gap={sketch:0.000, photo:0.340, cartoon:0.000, art:0.234}  ratio={sketch×0.85, photo×1.54, cartoon×0.85, art×1.11}  clip={None}
+The 42 Communcation Time: 172.172
+The 42 Communcation Accuracy: 65.498 Method: f2dc_dse_lab epoch loss: 1.457
+[67.96, 53.19, 64.53, 76.31]
+
+[DSE diag] {'round': 43, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.48905446541096476, 'dse_delta_scaled_ratio_mean': 0.1467163456355532, 'dse_delta_cos_feat_mean': 0.009834865950757549, 'cc_loss_mean': 0.06964968841383586, 'mag_loss_mean': 0.00020801163597305885, 'mag_exceed_rate': 0.5148017338256542, 'mag_ratio_p95_mean': 0.17649257127011175, 'mag_ratio_max_mean': 0.19023917740819477, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.506981372833252, 'proto3_valid_mean_norm': 6.506981372833252, 'proto3_ema_delta_norm': 0.06501882523298264, 'raw_to_target_cos_mean': 0.9344278463721275, 'rescued_to_target_cos_mean': 0.9213204279541969, 'ccc_improvement': -0.013107418417930616}
+[LAB R 43] loss_ema={art:1.430, photo:1.509, sketch:0.632, cartoon:1.094}
+          gap={art:0.264, photo:0.342, sketch:0.000, cartoon:0.000}  ratio={art×1.13, photo×1.51, sketch×0.85, cartoon×0.85}  clip={None}
+The 43 Communcation Time: 172.934
+The 43 Communcation Accuracy: 67.37 Method: f2dc_dse_lab epoch loss: 1.385
+[67.66, 57.11, 66.88, 77.83]
+
+[DSE diag] {'round': 44, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.4996378239262576, 'dse_delta_scaled_ratio_mean': 0.14989135374318865, 'dse_delta_cos_feat_mean': 0.007225063634511017, 'cc_loss_mean': 0.07065243980714082, 'mag_loss_mean': 0.00024335107795372466, 'mag_exceed_rate': 0.5498153796757104, 'mag_ratio_p95_mean': 0.17905777512800575, 'mag_ratio_max_mean': 0.19297509453084208, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.453177452087402, 'proto3_valid_mean_norm': 6.453177452087402, 'proto3_ema_delta_norm': 0.06155970320105553, 'raw_to_target_cos_mean': 0.9337387776374817, 'rescued_to_target_cos_mean': 0.9201030412316322, 'ccc_improvement': -0.013635736405849475}
+[LAB R 44] loss_ema={art:1.459, sketch:0.576, photo:1.634, cartoon:1.089}
+          gap={art:0.269, sketch:0.000, photo:0.445, cartoon:0.000}  ratio={art×1.09, sketch×0.85, photo×1.58, cartoon×0.85}  clip={None}
+The 44 Communcation Time: 172.507
+The 44 Communcation Accuracy: 66.928 Method: f2dc_dse_lab epoch loss: 1.459
+[66.47, 55.88, 69.44, 75.92]
+
+[DSE diag] {'round': 45, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.4991962209140713, 'dse_delta_scaled_ratio_mean': 0.1497588720830617, 'dse_delta_cos_feat_mean': 0.005719837998147742, 'cc_loss_mean': 0.07009623078140464, 'mag_loss_mean': 0.0002245683064638809, 'mag_exceed_rate': 0.54276769947022, 'mag_ratio_p95_mean': 0.17786786039867022, 'mag_ratio_max_mean': 0.19166852023341868, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.401508808135986, 'proto3_valid_mean_norm': 6.401508808135986, 'proto3_ema_delta_norm': 0.059416912496089935, 'raw_to_target_cos_mean': 0.9340332898497582, 'rescued_to_target_cos_mean': 0.9204774951934814, 'ccc_improvement': -0.013555794656276765}
+[LAB R 45] loss_ema={art:1.411, photo:1.638, sketch:0.585, cartoon:1.010}
+          gap={art:0.250, photo:0.477, sketch:0.000, cartoon:0.000}  ratio={art×1.07, photo×1.62, sketch×0.85, cartoon×0.85}  clip={None}
+The 45 Communcation Time: 172.805
+The 45 Communcation Accuracy: 67.1 Method: f2dc_dse_lab epoch loss: 1.359
+[68.26, 54.9, 69.44, 75.8]
+
+[DSE diag] {'round': 46, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5045720898301957, 'dse_delta_scaled_ratio_mean': 0.15137163368946638, 'dse_delta_cos_feat_mean': 0.0035574500253462886, 'cc_loss_mean': 0.0699444174226496, 'mag_loss_mean': 0.00027391733263577536, 'mag_exceed_rate': 0.584058436346123, 'mag_ratio_p95_mean': 0.18062271015478834, 'mag_ratio_max_mean': 0.19489859091763448, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.351783752441406, 'proto3_valid_mean_norm': 6.351783752441406, 'proto3_ema_delta_norm': 0.0569433756172657, 'raw_to_target_cos_mean': 0.9352481719851494, 'rescued_to_target_cos_mean': 0.9209701773524285, 'ccc_improvement': -0.014277994632720947}
+[LAB R 46] loss_ema={photo:1.649, sketch:0.551, cartoon:1.003, art:1.406}
+          gap={photo:0.497, sketch:0.000, cartoon:0.000, art:0.253}  ratio={photo×1.62, sketch×0.85, cartoon×0.85, art×1.06}  clip={None}
+The 46 Communcation Time: 175.699
+The 46 Communcation Accuracy: 67.59 Method: f2dc_dse_lab epoch loss: 1.422
+[68.86, 53.19, 70.09, 78.22]
+
+[DSE diag] {'round': 47, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5091476909336535, 'dse_delta_scaled_ratio_mean': 0.15274431358811508, 'dse_delta_cos_feat_mean': 0.0017379322441851506, 'cc_loss_mean': 0.07074649170756359, 'mag_loss_mean': 0.00028287469444906435, 'mag_exceed_rate': 0.5896933697222668, 'mag_ratio_p95_mean': 0.1809789258212146, 'mag_ratio_max_mean': 0.1941355234177986, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.3037543296813965, 'proto3_valid_mean_norm': 6.3037543296813965, 'proto3_ema_delta_norm': 0.054753225296735764, 'raw_to_target_cos_mean': 0.9347462594509125, 'rescued_to_target_cos_mean': 0.9203378301858902, 'ccc_improvement': -0.014408429265022282}
+[LAB R 47] loss_ema={art:1.347, sketch:0.528, photo:1.545, cartoon:0.907}
+          gap={art:0.265, sketch:0.000, photo:0.464, cartoon:0.000}  ratio={art×1.08, sketch×0.85, photo×1.59, cartoon×0.85}  clip={None}
+The 47 Communcation Time: 173.66
+The 47 Communcation Accuracy: 67.03 Method: f2dc_dse_lab epoch loss: 1.385
+[69.16, 52.7, 69.44, 76.82]
+
+[DSE diag] {'round': 48, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5055066688037108, 'dse_delta_scaled_ratio_mean': 0.1516520066260109, 'dse_delta_cos_feat_mean': -0.0025913936364795227, 'cc_loss_mean': 0.0705940992367327, 'mag_loss_mean': 0.00030817087204215883, 'mag_exceed_rate': 0.5874137100658211, 'mag_ratio_p95_mean': 0.18146721543651997, 'mag_ratio_max_mean': 0.19550003446269743, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.252727031707764, 'proto3_valid_mean_norm': 6.252727031707764, 'proto3_ema_delta_norm': 0.05725784972310066, 'raw_to_target_cos_mean': 0.9353893622756004, 'rescued_to_target_cos_mean': 0.9208636140823364, 'ccc_improvement': -0.014525748193264021}
+[LAB R 48] loss_ema={cartoon:0.901, art:1.340, photo:1.521, sketch:0.535}
+          gap={cartoon:0.000, art:0.265, photo:0.447, sketch:0.000}  ratio={cartoon×0.85, art×1.09, photo×1.58, sketch×0.85}  clip={None}
+The 48 Communcation Time: 174.26
+The 48 Communcation Accuracy: 69.025 Method: f2dc_dse_lab epoch loss: 1.391
+[70.66, 57.35, 69.87, 78.22]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-149_f2dc_dse_lab_pacs/diag_pacs_s333_rho03_dselab_rerun_sub1/best_R049.npz (acc=69.025, proto_diag fields=169)
+[DSE diag] {'round': 49, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.495919004282437, 'dse_delta_scaled_ratio_mean': 0.14877570709872126, 'dse_delta_cos_feat_mean': -0.0028464166101449247, 'cc_loss_mean': 0.07032868696520514, 'mag_loss_mean': 0.0002808927021971675, 'mag_exceed_rate': 0.5767538930807513, 'mag_ratio_p95_mean': 0.18003394153743688, 'mag_ratio_max_mean': 0.19416158696507463, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.204521179199219, 'proto3_valid_mean_norm': 6.204521179199219, 'proto3_ema_delta_norm': 0.054869718849658966, 'raw_to_target_cos_mean': 0.935657703280449, 'rescued_to_target_cos_mean': 0.9214190751314163, 'ccc_improvement': -0.01423862814903265}
+[LAB R 49] loss_ema={cartoon:0.903, art:1.282, photo:1.533, sketch:0.497}
+          gap={cartoon:0.000, art:0.228, photo:0.480, sketch:0.000}  ratio={cartoon×0.85, art×1.05, photo×1.64, sketch×0.85}  clip={None}
+The 49 Communcation Time: 172.195
+The 49 Communcation Accuracy: 67.635 Method: f2dc_dse_lab epoch loss: 1.326
+[69.76, 54.66, 68.8, 77.32]
+
+[DSE diag] {'round': 50, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5060290715380441, 'dse_delta_scaled_ratio_mean': 0.15180872699461942, 'dse_delta_cos_feat_mean': -0.002258071167809453, 'cc_loss_mean': 0.0704079246864639, 'mag_loss_mean': 0.00026874906380005995, 'mag_exceed_rate': 0.5745705570717611, 'mag_ratio_p95_mean': 0.1801065683364868, 'mag_ratio_max_mean': 0.19429418931503106, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.157708644866943, 'proto3_valid_mean_norm': 6.157708644866943, 'proto3_ema_delta_norm': 0.05347634479403496, 'raw_to_target_cos_mean': 0.9353445449471474, 'rescued_to_target_cos_mean': 0.920903442800045, 'ccc_improvement': -0.01444110214710237}
+[LAB R 50] loss_ema={photo:1.601, sketch:0.455, cartoon:0.943, art:1.314}
+          gap={photo:0.523, sketch:0.000, cartoon:0.000, art:0.236}  ratio={photo×1.66, sketch×0.85, cartoon×0.85, art×1.05}  clip={None}
+The 50 Communcation Time: 172.829
+The 50 Communcation Accuracy: 68.058 Method: f2dc_dse_lab epoch loss: 1.372
+[70.66, 55.15, 68.59, 77.83]
+
+[DSE diag] {'round': 51, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5013088640957174, 'dse_delta_scaled_ratio_mean': 0.15039266371413282, 'dse_delta_cos_feat_mean': -0.00407159359853247, 'cc_loss_mean': 0.07028310242164171, 'mag_loss_mean': 0.0002763921416767581, 'mag_exceed_rate': 0.5642960346765131, 'mag_ratio_p95_mean': 0.1799803055158936, 'mag_ratio_max_mean': 0.19475977956363472, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.109471797943115, 'proto3_valid_mean_norm': 6.109471797943115, 'proto3_ema_delta_norm': 0.05409416928887367, 'raw_to_target_cos_mean': 0.9357393264770508, 'rescued_to_target_cos_mean': 0.9212006220221519, 'ccc_improvement': -0.01453870445489891}
+[LAB R 51] loss_ema={art:1.335, photo:1.620, cartoon:0.948, sketch:0.501}
+          gap={art:0.234, photo:0.519, cartoon:0.000, sketch:0.000}  ratio={art×1.05, photo×1.66, cartoon×0.85, sketch×0.85}  clip={None}
+The 51 Communcation Time: 172.618
+The 51 Communcation Accuracy: 67.298 Method: f2dc_dse_lab epoch loss: 1.325
+[70.66, 54.66, 67.31, 76.56]
+
+[DSE diag] {'round': 52, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5090773880209963, 'dse_delta_scaled_ratio_mean': 0.15272322104079986, 'dse_delta_cos_feat_mean': -0.0074566312291948645, 'cc_loss_mean': 0.07068433585247932, 'mag_loss_mean': 0.0003802849769751128, 'mag_exceed_rate': 0.6349654840263285, 'mag_ratio_p95_mean': 0.18426223534463657, 'mag_ratio_max_mean': 0.19848547887684095, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.065036773681641, 'proto3_valid_mean_norm': 6.065036773681641, 'proto3_ema_delta_norm': 0.05062556639313698, 'raw_to_target_cos_mean': 0.9354467788338661, 'rescued_to_target_cos_mean': 0.920665346980095, 'ccc_improvement': -0.014781431853771121}
+[LAB R 52] loss_ema={cartoon:0.936, photo:1.615, sketch:0.481, art:1.345}
+          gap={cartoon:0.000, photo:0.521, sketch:0.000, art:0.251}  ratio={cartoon×0.85, photo×1.64, sketch×0.85, art×1.06}  clip={None}
+The 52 Communcation Time: 175.419
+The 52 Communcation Accuracy: 66.895 Method: f2dc_dse_lab epoch loss: 1.358
+[72.16, 51.72, 67.52, 76.18]
+
+[DSE diag] {'round': 53, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5153813391145187, 'dse_delta_scaled_ratio_mean': 0.154614408356166, 'dse_delta_cos_feat_mean': -0.015111055223756529, 'cc_loss_mean': 0.07040106407995399, 'mag_loss_mean': 0.00040810053222434755, 'mag_exceed_rate': 0.6473430727243539, 'mag_ratio_p95_mean': 0.18496923094043638, 'mag_ratio_max_mean': 0.1993404647796461, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 6.015636920928955, 'proto3_valid_mean_norm': 6.015636920928955, 'proto3_ema_delta_norm': 0.05563998967409134, 'raw_to_target_cos_mean': 0.9364177167415619, 'rescued_to_target_cos_mean': 0.9212472206354141, 'ccc_improvement': -0.015170496106147846}
+[LAB R 53] loss_ema={cartoon:0.968, sketch:0.513, photo:1.509, art:1.355}
+          gap={cartoon:0.000, sketch:0.000, photo:0.423, art:0.269}  ratio={cartoon×0.85, sketch×0.85, photo×1.56, art×1.10}  clip={None}
+The 53 Communcation Time: 186.63
+The 53 Communcation Accuracy: 68.125 Method: f2dc_dse_lab epoch loss: 1.271
+[70.96, 53.92, 69.66, 77.96]
+
+[DSE diag] {'round': 54, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5139594008585255, 'dse_delta_scaled_ratio_mean': 0.15418782575949752, 'dse_delta_cos_feat_mean': -0.014716529950104872, 'cc_loss_mean': 0.07159948833741285, 'mag_loss_mean': 0.00043255402303132704, 'mag_exceed_rate': 0.6467972387221063, 'mag_ratio_p95_mean': 0.18570434485036547, 'mag_ratio_max_mean': 0.20083183041303465, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.971765041351318, 'proto3_valid_mean_norm': 5.971765041351318, 'proto3_ema_delta_norm': 0.04947587847709656, 'raw_to_target_cos_mean': 0.9357752963900566, 'rescued_to_target_cos_mean': 0.9199331659078598, 'ccc_improvement': -0.015842130482196848}
+[LAB R 54] loss_ema={sketch:0.456, photo:1.504, art:1.330, cartoon:0.936}
+          gap={sketch:0.000, photo:0.447, art:0.273, cartoon:0.000}  ratio={sketch×0.85, photo×1.58, art×1.09, cartoon×0.85}  clip={None}
+The 54 Communcation Time: 187.79
+The 54 Communcation Accuracy: 68.298 Method: f2dc_dse_lab epoch loss: 1.316
+[70.06, 56.37, 68.8, 77.96]
+
+[DSE diag] {'round': 55, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5174877407717472, 'dse_delta_scaled_ratio_mean': 0.15524632980649034, 'dse_delta_cos_feat_mean': -0.014872318352870053, 'cc_loss_mean': 0.07210436053598007, 'mag_loss_mean': 0.0004274126483002923, 'mag_exceed_rate': 0.6444854711831755, 'mag_ratio_p95_mean': 0.1857232044091319, 'mag_ratio_max_mean': 0.20026264364766602, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.929938316345215, 'proto3_valid_mean_norm': 5.929938316345215, 'proto3_ema_delta_norm': 0.04816849157214165, 'raw_to_target_cos_mean': 0.9351285010576248, 'rescued_to_target_cos_mean': 0.9193333432078361, 'ccc_improvement': -0.015795157849788688}
+[LAB R 55] loss_ema={cartoon:0.931, art:1.357, sketch:0.459, photo:1.540}
+          gap={cartoon:0.000, art:0.286, sketch:0.000, photo:0.468}  ratio={cartoon×0.85, art×1.09, sketch×0.85, photo×1.58}  clip={None}
+The 55 Communcation Time: 187.33
+The 55 Communcation Accuracy: 68.498 Method: f2dc_dse_lab epoch loss: 1.31
+[73.05, 53.92, 69.44, 77.58]
+
+[DSE diag] {'round': 56, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5122386871721425, 'dse_delta_scaled_ratio_mean': 0.153671613449316, 'dse_delta_cos_feat_mean': -0.020705906911233814, 'cc_loss_mean': 0.07069429282112764, 'mag_loss_mean': 0.000398161696222606, 'mag_exceed_rate': 0.6344678118478086, 'mag_ratio_p95_mean': 0.18468717189118414, 'mag_ratio_max_mean': 0.19921177540085103, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.886057376861572, 'proto3_valid_mean_norm': 5.886057376861572, 'proto3_ema_delta_norm': 0.050137750804424286, 'raw_to_target_cos_mean': 0.9366291189193725, 'rescued_to_target_cos_mean': 0.9210410237312316, 'ccc_improvement': -0.01558809518814086}
+[LAB R 56] loss_ema={art:1.389, cartoon:0.951, photo:1.538, sketch:0.485}
+          gap={art:0.298, cartoon:0.000, photo:0.447, sketch:0.000}  ratio={art×1.10, cartoon×0.85, photo×1.55, sketch×0.85}  clip={None}
+The 56 Communcation Time: 187.468
+The 56 Communcation Accuracy: 68.192 Method: f2dc_dse_lab epoch loss: 1.239
+[68.86, 56.62, 70.09, 77.2]
+
+[DSE diag] {'round': 57, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.506451518557869, 'dse_delta_scaled_ratio_mean': 0.15193546149597476, 'dse_delta_cos_feat_mean': -0.019998255312203565, 'cc_loss_mean': 0.07019283313134936, 'mag_loss_mean': 0.00042670615624899736, 'mag_exceed_rate': 0.614015090704768, 'mag_ratio_p95_mean': 0.18417455061237412, 'mag_ratio_max_mean': 0.1988524303577914, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.842898845672607, 'proto3_valid_mean_norm': 5.842898845672607, 'proto3_ema_delta_norm': 0.04892909899353981, 'raw_to_target_cos_mean': 0.936846869289875, 'rescued_to_target_cos_mean': 0.9218056324124336, 'ccc_improvement': -0.01504123687744141}
+[LAB R 57] loss_ema={photo:1.624, art:1.320, sketch:0.427, cartoon:0.946}
+          gap={photo:0.545, art:0.241, sketch:0.000, cartoon:0.000}  ratio={photo×1.66, art×1.04, sketch×0.85, cartoon×0.85}  clip={None}
+The 57 Communcation Time: 187.236
+The 57 Communcation Accuracy: 68.458 Method: f2dc_dse_lab epoch loss: 1.227
+[71.26, 54.41, 68.8, 79.36]
+
+[DSE diag] {'round': 58, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5051651460145201, 'dse_delta_scaled_ratio_mean': 0.1515495516803293, 'dse_delta_cos_feat_mean': -0.016856853011053143, 'cc_loss_mean': 0.07187319531316722, 'mag_loss_mean': 0.00040967279454902963, 'mag_exceed_rate': 0.6218815219136298, 'mag_ratio_p95_mean': 0.18444239398335466, 'mag_ratio_max_mean': 0.19950537038321542, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.802784442901611, 'proto3_valid_mean_norm': 5.802784442901611, 'proto3_ema_delta_norm': 0.046751949936151505, 'raw_to_target_cos_mean': 0.9346251943707466, 'rescued_to_target_cos_mean': 0.9192060330510139, 'ccc_improvement': -0.015419161319732755}
+[LAB R 58] loss_ema={art:1.288, photo:1.656, sketch:0.484, cartoon:0.944}
+          gap={art:0.196, photo:0.563, sketch:0.000, cartoon:0.000}  ratio={art×1.01, photo×1.72, sketch×0.85, cartoon×0.85}  clip={None}
+The 58 Communcation Time: 188.172
+The 58 Communcation Accuracy: 70.732 Method: f2dc_dse_lab epoch loss: 1.29
+[74.25, 58.58, 72.01, 78.09]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-149_f2dc_dse_lab_pacs/diag_pacs_s333_rho03_dselab_rerun_sub1/best_R059.npz (acc=70.732, proto_diag fields=169)
+[DSE diag] {'round': 59, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5129456543292406, 'dse_delta_scaled_ratio_mean': 0.15388370246642635, 'dse_delta_cos_feat_mean': -0.020533934298006557, 'cc_loss_mean': 0.07063892619583566, 'mag_loss_mean': 0.00045463699376829494, 'mag_exceed_rate': 0.6392037245143682, 'mag_ratio_p95_mean': 0.1856718529421504, 'mag_ratio_max_mean': 0.20050067029672095, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.760260105133057, 'proto3_valid_mean_norm': 5.760260105133057, 'proto3_ema_delta_norm': 0.04852727800607681, 'raw_to_target_cos_mean': 0.9359968093037605, 'rescued_to_target_cos_mean': 0.9207537418603897, 'ccc_improvement': -0.015243067443370784}
+[LAB R 59] loss_ema={photo:1.559, sketch:0.488, cartoon:0.906, art:1.243}
+          gap={photo:0.510, sketch:0.000, cartoon:0.000, art:0.194}  ratio={photo×1.70, sketch×0.85, cartoon×0.85, art×1.02}  clip={None}
+The 59 Communcation Time: 186.909
+⚠️ [LAB WASTE WARN R 60] dom=photo cum_boost=391.2% window_roi=0.19 (< 0.5 = wasted)
+The 59 Communcation Accuracy: 68.955 Method: f2dc_dse_lab epoch loss: 1.224
+[70.36, 58.09, 70.94, 76.43]
+
+[DSE diag] {'round': 60, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5182887925011117, 'dse_delta_scaled_ratio_mean': 0.155486645275711, 'dse_delta_cos_feat_mean': -0.030748971703107513, 'cc_loss_mean': 0.07076404479323746, 'mag_loss_mean': 0.0005864002327538637, 'mag_exceed_rate': 0.6571520308235672, 'mag_ratio_p95_mean': 0.1889715662392059, 'mag_ratio_max_mean': 0.20437923954560025, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.714756488800049, 'proto3_valid_mean_norm': 5.714756488800049, 'proto3_ema_delta_norm': 0.05152249336242676, 'raw_to_target_cos_mean': 0.9371486401557922, 'rescued_to_target_cos_mean': 0.9216685464978218, 'ccc_improvement': -0.015480093657970428}
+[LAB R 60] loss_ema={art:1.257, photo:1.579, sketch:0.457, cartoon:0.919}
+          gap={art:0.204, photo:0.526, sketch:0.000, cartoon:0.000}  ratio={art×1.03, photo×1.69, sketch×0.85, cartoon×0.85}  clip={None}
+The 60 Communcation Time: 187.168
+The 60 Communcation Accuracy: 70.422 Method: f2dc_dse_lab epoch loss: 1.21
+[73.05, 58.09, 70.3, 80.25]
+
+[DSE diag] {'round': 61, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5255168550213177, 'dse_delta_scaled_ratio_mean': 0.15765506315148536, 'dse_delta_cos_feat_mean': -0.030121388293078376, 'cc_loss_mean': 0.07110294218239853, 'mag_loss_mean': 0.0006015028087170227, 'mag_exceed_rate': 0.6887301332477123, 'mag_ratio_p95_mean': 0.19070048096156356, 'mag_ratio_max_mean': 0.2059059816569385, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.674651145935059, 'proto3_valid_mean_norm': 5.674651145935059, 'proto3_ema_delta_norm': 0.04580225422978401, 'raw_to_target_cos_mean': 0.9369880819320678, 'rescued_to_target_cos_mean': 0.9208801323175431, 'ccc_improvement': -0.016107949614524775}
+[LAB R 61] loss_ema={photo:1.536, art:1.267, cartoon:0.931, sketch:0.396}
+          gap={photo:0.504, art:0.234, cartoon:0.000, sketch:0.000}  ratio={photo×1.65, art×1.05, cartoon×0.85, sketch×0.85}  clip={None}
+The 61 Communcation Time: 188.537
+The 61 Communcation Accuracy: 67.502 Method: f2dc_dse_lab epoch loss: 1.276
+[72.46, 54.41, 67.09, 76.05]
+
+[DSE diag] {'round': 62, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5217990606054391, 'dse_delta_scaled_ratio_mean': 0.15653972449133652, 'dse_delta_cos_feat_mean': -0.03294333274332062, 'cc_loss_mean': 0.07173204831569684, 'mag_loss_mean': 0.0006875007378564306, 'mag_exceed_rate': 0.6992615187028416, 'mag_ratio_p95_mean': 0.19252042203846545, 'mag_ratio_max_mean': 0.207974835876191, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.6325860023498535, 'proto3_valid_mean_norm': 5.6325860023498535, 'proto3_ema_delta_norm': 0.04782339185476303, 'raw_to_target_cos_mean': 0.9364303496479988, 'rescued_to_target_cos_mean': 0.9202251163125038, 'ccc_improvement': -0.01620523333549495}
+[LAB R 62] loss_ema={cartoon:1.008, sketch:0.434, art:1.400, photo:1.553}
+          gap={cartoon:0.000, sketch:0.000, art:0.301, photo:0.454}  ratio={cartoon×0.85, sketch×0.85, art×1.10, photo×1.55}  clip={None}
+The 62 Communcation Time: 188.665
+The 62 Communcation Accuracy: 69.848 Method: f2dc_dse_lab epoch loss: 1.192
+[72.75, 56.13, 70.51, 80.0]
+
+[DSE diag] {'round': 63, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5203393404624421, 'dse_delta_scaled_ratio_mean': 0.1561018098760692, 'dse_delta_cos_feat_mean': -0.033557221651108596, 'cc_loss_mean': 0.0717118832672804, 'mag_loss_mean': 0.0005967387732862711, 'mag_exceed_rate': 0.704382725959223, 'mag_ratio_p95_mean': 0.1907098751552034, 'mag_ratio_max_mean': 0.20617102015726638, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.5926008224487305, 'proto3_valid_mean_norm': 5.5926008224487305, 'proto3_ema_delta_norm': 0.045479219406843185, 'raw_to_target_cos_mean': 0.9365639364719391, 'rescued_to_target_cos_mean': 0.9202063953876496, 'ccc_improvement': -0.01635754108428955}
+[LAB R 63] loss_ema={photo:1.472, cartoon:1.017, art:1.427, sketch:0.421}
+          gap={photo:0.388, cartoon:0.000, art:0.342, sketch:0.000}  ratio={photo×1.47, cartoon×0.85, art×1.15, sketch×0.85}  clip={None}
+The 63 Communcation Time: 187.923
+The 63 Communcation Accuracy: 70.532 Method: f2dc_dse_lab epoch loss: 1.239
+[72.75, 56.86, 72.01, 80.51]
+
+[DSE diag] {'round': 64, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5259778704296416, 'dse_delta_scaled_ratio_mean': 0.1577933689088989, 'dse_delta_cos_feat_mean': -0.036931516247697485, 'cc_loss_mean': 0.07160169067993691, 'mag_loss_mean': 0.0006650144375106785, 'mag_exceed_rate': 0.7009311285920694, 'mag_ratio_p95_mean': 0.1919567509157823, 'mag_ratio_max_mean': 0.20771902036843914, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.5518388748168945, 'proto3_valid_mean_norm': 5.5518388748168945, 'proto3_ema_delta_norm': 0.04637840762734413, 'raw_to_target_cos_mean': 0.9367219087481499, 'rescued_to_target_cos_mean': 0.9198494625091552, 'ccc_improvement': -0.016872446238994643}
+[LAB R 64] loss_ema={photo:1.429, sketch:0.421, art:1.387, cartoon:0.938}
+          gap={photo:0.385, sketch:0.000, art:0.343, cartoon:0.000}  ratio={photo×1.47, sketch×0.85, art×1.15, cartoon×0.85}  clip={None}
+The 64 Communcation Time: 188.116
+The 64 Communcation Accuracy: 69.288 Method: f2dc_dse_lab epoch loss: 1.177
+[70.36, 53.68, 71.58, 81.53]
+
+[DSE diag] {'round': 65, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5264396722232022, 'dse_delta_scaled_ratio_mean': 0.15793190782182834, 'dse_delta_cos_feat_mean': -0.036747211411944425, 'cc_loss_mean': 0.07239523971772371, 'mag_loss_mean': 0.0007294394805040498, 'mag_exceed_rate': 0.7141114143522235, 'mag_ratio_p95_mean': 0.19333213743301902, 'mag_ratio_max_mean': 0.20945247690571417, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.512439250946045, 'proto3_valid_mean_norm': 5.512439250946045, 'proto3_ema_delta_norm': 0.045736175030469894, 'raw_to_target_cos_mean': 0.9360995981097221, 'rescued_to_target_cos_mean': 0.9193333345651626, 'ccc_improvement': -0.016766263544559457}
+[LAB R 65] loss_ema={cartoon:0.937, art:1.474, photo:1.471, sketch:0.392}
+          gap={cartoon:0.000, art:0.406, photo:0.402, sketch:0.000}  ratio={cartoon×0.85, art×1.17, photo×1.43, sketch×0.85}  clip={None}
+The 65 Communcation Time: 188.053
+The 65 Communcation Accuracy: 70.192 Method: f2dc_dse_lab epoch loss: 1.233
+[73.35, 58.09, 70.73, 78.6]
+
+[DSE diag] {'round': 66, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.533868563054894, 'dse_delta_scaled_ratio_mean': 0.16016057493849697, 'dse_delta_cos_feat_mean': -0.040019188584772006, 'cc_loss_mean': 0.07217916754252465, 'mag_loss_mean': 0.0008017849945088905, 'mag_exceed_rate': 0.7218012522074169, 'mag_ratio_p95_mean': 0.19452004276289797, 'mag_ratio_max_mean': 0.21095878959882378, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.475355625152588, 'proto3_valid_mean_norm': 5.475355625152588, 'proto3_ema_delta_norm': 0.04362793639302254, 'raw_to_target_cos_mean': 0.9366614598035813, 'rescued_to_target_cos_mean': 0.9198437783122063, 'ccc_improvement': -0.01681768149137497}
+[LAB R 66] loss_ema={cartoon:0.921, art:1.462, photo:1.452, sketch:0.450}
+          gap={cartoon:0.000, art:0.391, photo:0.381, sketch:0.000}  ratio={cartoon×0.85, art×1.17, photo×1.43, sketch×0.85}  clip={None}
+The 66 Communcation Time: 186.926
+The 66 Communcation Accuracy: 70.022 Method: f2dc_dse_lab epoch loss: 1.167
+[70.66, 56.86, 72.44, 80.13]
+
+[DSE diag] {'round': 67, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5348253559720147, 'dse_delta_scaled_ratio_mean': 0.16044761304861074, 'dse_delta_cos_feat_mean': -0.043328125963396795, 'cc_loss_mean': 0.07156004050731908, 'mag_loss_mean': 0.0008181791551573388, 'mag_exceed_rate': 0.7289613100016054, 'mag_ratio_p95_mean': 0.1950881393386586, 'mag_ratio_max_mean': 0.21126446017239353, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.435935974121094, 'proto3_valid_mean_norm': 5.435935974121094, 'proto3_ema_delta_norm': 0.04534277692437172, 'raw_to_target_cos_mean': 0.9377449622750282, 'rescued_to_target_cos_mean': 0.920666032731533, 'ccc_improvement': -0.017078929543495214}
+[LAB R 67] loss_ema={cartoon:0.937, photo:1.507, art:1.482, sketch:0.396}
+          gap={cartoon:0.000, photo:0.427, art:0.401, sketch:0.000}  ratio={cartoon×0.85, photo×1.45, art×1.16, sketch×0.85}  clip={None}
+The 67 Communcation Time: 173.144
+The 67 Communcation Accuracy: 70.29 Method: f2dc_dse_lab epoch loss: 1.129
+[70.36, 58.33, 71.58, 80.89]
+
+[DSE diag] {'round': 68, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5376196142253808, 'dse_delta_scaled_ratio_mean': 0.16128589014051023, 'dse_delta_cos_feat_mean': -0.04227901457706103, 'cc_loss_mean': 0.0732560139069886, 'mag_loss_mean': 0.0007874978566134959, 'mag_exceed_rate': 0.7424466206453685, 'mag_ratio_p95_mean': 0.1953007532375874, 'mag_ratio_max_mean': 0.21084146520288863, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.4004387855529785, 'proto3_valid_mean_norm': 5.4004387855529785, 'proto3_ema_delta_norm': 0.04108802601695061, 'raw_to_target_cos_mean': 0.9363141885399818, 'rescued_to_target_cos_mean': 0.9186794811487198, 'ccc_improvement': -0.01763470739126205}
+[LAB R 68] loss_ema={art:1.455, sketch:0.375, cartoon:0.929, photo:1.565}
+          gap={art:0.374, sketch:0.000, cartoon:0.000, photo:0.484}  ratio={art×1.13, sketch×0.85, cartoon×0.85, photo×1.51}  clip={None}
+The 68 Communcation Time: 174.536
+The 68 Communcation Accuracy: 71.658 Method: f2dc_dse_lab epoch loss: 1.147
+[72.46, 62.75, 73.08, 78.34]
+
+[DSE diag] {'round': 69, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5413240103848267, 'dse_delta_scaled_ratio_mean': 0.1623972091295395, 'dse_delta_cos_feat_mean': -0.044580207407137876, 'cc_loss_mean': 0.07329393357593494, 'mag_loss_mean': 0.0008732251014365178, 'mag_exceed_rate': 0.7571038689998395, 'mag_ratio_p95_mean': 0.19710918402317726, 'mag_ratio_max_mean': 0.21284652243156243, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.360295295715332, 'proto3_valid_mean_norm': 5.360295295715332, 'proto3_ema_delta_norm': 0.0455474928021431, 'raw_to_target_cos_mean': 0.9356954675912857, 'rescued_to_target_cos_mean': 0.9179650485515595, 'ccc_improvement': -0.017730419039726275}
+[LAB R 69] loss_ema={art:1.394, cartoon:0.889, photo:1.622, sketch:0.331}
+          gap={art:0.334, cartoon:0.000, photo:0.563, sketch:0.000}  ratio={art×1.09, cartoon×0.85, photo×1.58, sketch×0.85}  clip={None}
+The 69 Communcation Time: 173.23
+⚠️ [LAB WASTE WARN R 70] dom=photo cum_boost=458.4% window_roi=0.16 (< 0.5 = wasted)
+The 69 Communcation Accuracy: 69.08 Method: f2dc_dse_lab epoch loss: 1.181
+[71.86, 56.37, 71.15, 76.94]
+
+[DSE diag] {'round': 70, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5497321350908906, 'dse_delta_scaled_ratio_mean': 0.16491964691019506, 'dse_delta_cos_feat_mean': -0.046415662517043633, 'cc_loss_mean': 0.0743384369996912, 'mag_loss_mean': 0.0010627398027925354, 'mag_exceed_rate': 0.7997110290576337, 'mag_ratio_p95_mean': 0.20242126274226915, 'mag_ratio_max_mean': 0.21839631314915006, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.319613933563232, 'proto3_valid_mean_norm': 5.319613933563232, 'proto3_ema_delta_norm': 0.04546666517853737, 'raw_to_target_cos_mean': 0.9361007133126259, 'rescued_to_target_cos_mean': 0.9173754766583443, 'ccc_improvement': -0.018725236654281607}
+[LAB R 70] loss_ema={sketch:0.351, cartoon:0.866, art:1.322, photo:1.568}
+          gap={sketch:0.000, cartoon:0.000, art:0.295, photo:0.541}  ratio={sketch×0.85, cartoon×0.85, art×1.07, photo×1.61}  clip={None}
+The 70 Communcation Time: 172.567
+The 70 Communcation Accuracy: 67.99 Method: f2dc_dse_lab epoch loss: 1.135
+[71.86, 52.45, 68.16, 79.49]
+
+[DSE diag] {'round': 71, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5410092122349646, 'dse_delta_scaled_ratio_mean': 0.16230277054802036, 'dse_delta_cos_feat_mean': -0.049033333411545074, 'cc_loss_mean': 0.07398992844199863, 'mag_loss_mean': 0.00094500875433134, 'mag_exceed_rate': 0.7644084122652111, 'mag_ratio_p95_mean': 0.19882982156359325, 'mag_ratio_max_mean': 0.21523304851633487, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.281374931335449, 'proto3_valid_mean_norm': 5.281374931335449, 'proto3_ema_delta_norm': 0.04324621334671974, 'raw_to_target_cos_mean': 0.9360630995035172, 'rescued_to_target_cos_mean': 0.9179549181461334, 'ccc_improvement': -0.01810818135738379}
+[LAB R 71] loss_ema={art:1.470, sketch:0.269, photo:1.565, cartoon:0.999}
+          gap={art:0.394, sketch:0.000, photo:0.489, cartoon:0.000}  ratio={art×1.13, sketch×0.85, photo×1.50, cartoon×0.85}  clip={None}
+The 71 Communcation Time: 170.926
+The 71 Communcation Accuracy: 71.72 Method: f2dc_dse_lab epoch loss: 1.102
+[73.35, 59.31, 72.44, 81.78]
+
+[DSE diag] {'round': 72, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5454746370481028, 'dse_delta_scaled_ratio_mean': 0.16364239965462438, 'dse_delta_cos_feat_mean': -0.0522372760574039, 'cc_loss_mean': 0.07361592503375486, 'mag_loss_mean': 0.001058464762246309, 'mag_exceed_rate': 0.7821961791619843, 'mag_ratio_p95_mean': 0.2015450181494845, 'mag_ratio_max_mean': 0.21777164924262774, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.242834568023682, 'proto3_valid_mean_norm': 5.242834568023682, 'proto3_ema_delta_norm': 0.04384751245379448, 'raw_to_target_cos_mean': 0.9370157489180565, 'rescued_to_target_cos_mean': 0.9187731650471688, 'ccc_improvement': -0.01824258387088773}
+[LAB R 72] loss_ema={art:1.415, sketch:0.248, photo:1.519, cartoon:0.929}
+          gap={art:0.387, sketch:0.000, photo:0.491, cartoon:0.000}  ratio={art×1.13, sketch×0.85, photo×1.50, cartoon×0.85}  clip={None}
+The 72 Communcation Time: 171.911
+The 72 Communcation Accuracy: 70.84 Method: f2dc_dse_lab epoch loss: 1.137
+[72.16, 58.09, 72.22, 80.89]
+
+[DSE diag] {'round': 73, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5457032264729216, 'dse_delta_scaled_ratio_mean': 0.1637109721297263, 'dse_delta_cos_feat_mean': -0.04748858275818126, 'cc_loss_mean': 0.07365794539209984, 'mag_loss_mean': 0.0008973263407017419, 'mag_exceed_rate': 0.7698828062289292, 'mag_ratio_p95_mean': 0.1987010718719794, 'mag_ratio_max_mean': 0.21473580243268817, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.206564903259277, 'proto3_valid_mean_norm': 5.206564903259277, 'proto3_ema_delta_norm': 0.041636090725660324, 'raw_to_target_cos_mean': 0.9356695115566254, 'rescued_to_target_cos_mean': 0.9177931195497513, 'ccc_improvement': -0.017876392006874076}
+[LAB R 73] loss_ema={photo:1.544, sketch:0.245, cartoon:0.893, art:1.335}
+          gap={photo:0.540, sketch:0.000, cartoon:0.000, art:0.331}  ratio={photo×1.57, sketch×0.85, cartoon×0.85, art×1.09}  clip={None}
+The 73 Communcation Time: 172.917
+The 73 Communcation Accuracy: 73.192 Method: f2dc_dse_lab epoch loss: 1.155
+[73.95, 61.27, 75.64, 81.91]
+
+[diag] heavy snapshot dumped: /root/autodl-tmp/federated-learning/experiments/ablation/EXP-149_f2dc_dse_lab_pacs/diag_pacs_s333_rho03_dselab_rerun_sub1/best_R074.npz (acc=73.192, proto_diag fields=169)
+[DSE diag] {'round': 74, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5544825953179074, 'dse_delta_scaled_ratio_mean': 0.1663447859034596, 'dse_delta_cos_feat_mean': -0.050788901177853216, 'cc_loss_mean': 0.07375145647994759, 'mag_loss_mean': 0.0011382846189589087, 'mag_exceed_rate': 0.7962915395729652, 'mag_ratio_p95_mean': 0.20263619405208247, 'mag_ratio_max_mean': 0.21879560583003677, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.1651225090026855, 'proto3_valid_mean_norm': 5.1651225090026855, 'proto3_ema_delta_norm': 0.04645833000540733, 'raw_to_target_cos_mean': 0.9371140828728676, 'rescued_to_target_cos_mean': 0.9184453317523003, 'ccc_improvement': -0.018668751120567317}
+[LAB R 74] loss_ema={sketch:0.267, art:1.239, photo:1.491, cartoon:0.842}
+          gap={sketch:0.000, art:0.279, photo:0.531, cartoon:0.000}  ratio={sketch×0.85, art×1.07, photo×1.62, cartoon×0.85}  clip={None}
+The 74 Communcation Time: 172.987
+The 74 Communcation Accuracy: 72.918 Method: f2dc_dse_lab epoch loss: 1.093
+[73.95, 60.05, 73.72, 83.95]
+
+[DSE diag] {'round': 75, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5454535542753263, 'dse_delta_scaled_ratio_mean': 0.1636360737479204, 'dse_delta_cos_feat_mean': -0.054062653403215775, 'cc_loss_mean': 0.0733004083148543, 'mag_loss_mean': 0.001104579373721399, 'mag_exceed_rate': 0.7878311125381281, 'mag_ratio_p95_mean': 0.201836065062792, 'mag_ratio_max_mean': 0.21834970424966058, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.126211643218994, 'proto3_valid_mean_norm': 5.126211643218994, 'proto3_ema_delta_norm': 0.04424215480685234, 'raw_to_target_cos_mean': 0.9375837671756745, 'rescued_to_target_cos_mean': 0.9194232386350631, 'ccc_improvement': -0.018160528540611343}
+[LAB R 75] loss_ema={sketch:0.229, photo:1.491, cartoon:0.783, art:1.201}
+          gap={sketch:0.000, photo:0.565, cartoon:0.000, art:0.275}  ratio={sketch×0.85, photo×1.64, cartoon×0.85, art×1.06}  clip={None}
+The 75 Communcation Time: 171.838
+The 75 Communcation Accuracy: 73.338 Method: f2dc_dse_lab epoch loss: 1.076
+[73.95, 60.78, 76.71, 81.91]
+
+[DSE diag] {'round': 76, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5608705241804546, 'dse_delta_scaled_ratio_mean': 0.1682611675526218, 'dse_delta_cos_feat_mean': -0.05718203855844184, 'cc_loss_mean': 0.0747277810706131, 'mag_loss_mean': 0.0012820661599542078, 'mag_exceed_rate': 0.8208701236153476, 'mag_ratio_p95_mean': 0.2055409196874883, 'mag_ratio_max_mean': 0.22245086893291757, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.090931415557861, 'proto3_valid_mean_norm': 5.090931415557861, 'proto3_ema_delta_norm': 0.0411318838596344, 'raw_to_target_cos_mean': 0.9363052222132683, 'rescued_to_target_cos_mean': 0.917147866487503, 'ccc_improvement': -0.019157355725765268}
+[LAB R 76] loss_ema={sketch:0.232, art:1.158, photo:1.479, cartoon:0.746}
+          gap={sketch:0.000, art:0.255, photo:0.575, cartoon:0.000}  ratio={sketch×0.85, art×1.04, photo×1.66, cartoon×0.85}  clip={None}
+The 76 Communcation Time: 173.266
+The 76 Communcation Accuracy: 70.98 Method: f2dc_dse_lab epoch loss: 1.113
+[73.05, 60.05, 71.58, 79.24]
+
+[DSE diag] {'round': 77, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5540159177892294, 'dse_delta_scaled_ratio_mean': 0.1662047816593833, 'dse_delta_cos_feat_mean': -0.06193669633158333, 'cc_loss_mean': 0.07416651225398385, 'mag_loss_mean': 0.0012602170613747064, 'mag_exceed_rate': 0.8203242896131, 'mag_ratio_p95_mean': 0.2051249516777473, 'mag_ratio_max_mean': 0.22148116734063272, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.053208827972412, 'proto3_valid_mean_norm': 5.053208827972412, 'proto3_ema_delta_norm': 0.042941175401210785, 'raw_to_target_cos_mean': 0.9372768387198448, 'rescued_to_target_cos_mean': 0.9182406544685364, 'ccc_improvement': -0.019036184251308375}
+[LAB R 77] loss_ema={photo:1.507, art:1.188, sketch:0.215, cartoon:0.773}
+          gap={photo:0.586, art:0.267, sketch:0.000, cartoon:0.000}  ratio={photo×1.65, art×1.05, sketch×0.85, cartoon×0.85}  clip={None}
+The 77 Communcation Time: 172.682
+The 77 Communcation Accuracy: 73.47 Method: f2dc_dse_lab epoch loss: 1.066
+[74.85, 63.48, 74.79, 80.76]
+
+[DSE diag] {'round': 78, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5616462788032485, 'dse_delta_scaled_ratio_mean': 0.1684938902152374, 'dse_delta_cos_feat_mean': -0.06259399071156842, 'cc_loss_mean': 0.07317180995326887, 'mag_loss_mean': 0.0013142767990414151, 'mag_exceed_rate': 0.8301814095360411, 'mag_ratio_p95_mean': 0.2061671327983979, 'mag_ratio_max_mean': 0.22258861423423976, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 5.015685081481934, 'proto3_valid_mean_norm': 5.015685081481934, 'proto3_ema_delta_norm': 0.04346725344657898, 'raw_to_target_cos_mean': 0.9375902542471886, 'rescued_to_target_cos_mean': 0.9190723598003387, 'ccc_improvement': -0.018517894446849814}
+[LAB R 78] loss_ema={cartoon:0.743, photo:1.481, sketch:0.210, art:1.152}
+          gap={cartoon:0.000, photo:0.584, sketch:0.000, art:0.255}  ratio={cartoon×0.85, photo×1.66, sketch×0.85, art×1.04}  clip={None}
+The 78 Communcation Time: 172.989
+The 78 Communcation Accuracy: 72.098 Method: f2dc_dse_lab epoch loss: 0.998
+[72.75, 61.03, 74.36, 80.25]
+
+[DSE diag] {'round': 79, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5564668970525957, 'dse_delta_scaled_ratio_mean': 0.16694007609096403, 'dse_delta_cos_feat_mean': -0.063522933013578, 'cc_loss_mean': 0.07296445760639708, 'mag_loss_mean': 0.0013336674590829953, 'mag_exceed_rate': 0.8225076256220902, 'mag_ratio_p95_mean': 0.2061538203813062, 'mag_ratio_max_mean': 0.22255246168611073, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.981558322906494, 'proto3_valid_mean_norm': 4.981558322906494, 'proto3_ema_delta_norm': 0.04010600969195366, 'raw_to_target_cos_mean': 0.9371217554807663, 'rescued_to_target_cos_mean': 0.9187677454948425, 'ccc_improvement': -0.018354009985923736}
+[LAB R 79] loss_ema={sketch:0.165, art:1.255, cartoon:0.787, photo:1.594}
+          gap={sketch:0.000, art:0.305, cartoon:0.000, photo:0.644}  ratio={sketch×0.85, art×1.05, cartoon×0.85, photo×1.64}  clip={None}
+The 79 Communcation Time: 173.602
+⚠️ [LAB WASTE WARN R 80] dom=art cum_boost=183.8% window_roi=0.00 (< 0.5 = wasted)
+⚠️ [LAB WASTE WARN R 80] dom=photo cum_boost=536.1% window_roi=0.08 (< 0.5 = wasted)
+The 79 Communcation Accuracy: 70.875 Method: f2dc_dse_lab epoch loss: 1.046
+[73.65, 58.09, 72.01, 79.75]
+
+[DSE diag] {'round': 80, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5556155168231774, 'dse_delta_scaled_ratio_mean': 0.16668466245070165, 'dse_delta_cos_feat_mean': -0.060215108360245836, 'cc_loss_mean': 0.07357406023752826, 'mag_loss_mean': 0.0012668753160372482, 'mag_exceed_rate': 0.8148177877668967, 'mag_ratio_p95_mean': 0.20508839355246855, 'mag_ratio_max_mean': 0.22160092847477092, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.948784828186035, 'proto3_valid_mean_norm': 4.948784828186035, 'proto3_ema_delta_norm': 0.038171280175447464, 'raw_to_target_cos_mean': 0.9375234541296958, 'rescued_to_target_cos_mean': 0.919263965189457, 'ccc_improvement': -0.018259488940238877}
+[LAB R 80] loss_ema={sketch:0.143, art:1.340, photo:1.597, cartoon:0.852}
+          gap={sketch:0.000, art:0.357, photo:0.614, cartoon:0.000}  ratio={sketch×0.85, art×1.08, photo×1.59, cartoon×0.85}  clip={None}
+The 80 Communcation Time: 172.251
+The 80 Communcation Accuracy: 73.265 Method: f2dc_dse_lab epoch loss: 1.053
+[73.95, 62.25, 74.57, 82.29]
+
+[DSE diag] {'round': 81, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.5582024663171973, 'dse_delta_scaled_ratio_mean': 0.1674607486898258, 'dse_delta_cos_feat_mean': -0.06458803299414624, 'cc_loss_mean': 0.07429134345226628, 'mag_loss_mean': 0.0013556237626032826, 'mag_exceed_rate': 0.81658372130358, 'mag_ratio_p95_mean': 0.20641005955415198, 'mag_ratio_max_mean': 0.22357767358569816, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.914036273956299, 'proto3_valid_mean_norm': 4.914036273956299, 'proto3_ema_delta_norm': 0.03966844081878662, 'raw_to_target_cos_mean': 0.9370551776885986, 'rescued_to_target_cos_mean': 0.9181391528248787, 'ccc_improvement': -0.018916024863719905}
+[LAB R 81] loss_ema={art:1.328, photo:1.613, sketch:0.179, cartoon:0.853}
+          gap={art:0.334, photo:0.620, sketch:0.000, cartoon:0.000}  ratio={art×1.07, photo×1.61, sketch×0.85, cartoon×0.85}  clip={None}
+The 81 Communcation Time: 171.505
+The 81 Communcation Accuracy: 73.07 Method: f2dc_dse_lab epoch loss: 1.027
+[73.35, 60.54, 74.57, 83.82]
+
+[DSE diag] {'round': 82, 'rho_t': 0.3, 'lambda_cc_t': 0.1, 'dse_delta_raw_ratio_mean': 0.561551911058422, 'dse_delta_scaled_ratio_mean': 0.16846557957531838, 'dse_delta_cos_feat_mean': -0.0625040456946589, 'cc_loss_mean': 0.07502008981812554, 'mag_loss_mean': 0.0013541224084539674, 'mag_exceed_rate': 0.8210146090865308, 'mag_ratio_p95_mean': 0.2063365622322158, 'mag_ratio_max_mean': 0.22263466670076446, 'proto3_valid_classes': 7, 'proto3_valid_ratio': 1.0, 'proto3_mean_norm': 4.881680011749268, 'proto3_valid_mean_norm': 4.881680011749268, 'proto3_ema_delta_norm': 0.038413483649492264, 'raw_to_target_cos_mean': 0.937114582657814, 'rescued_to_target_cos_mean': 0.917561149597168, 'ccc_improvement': -0.019553433060646053}
+[LAB R 82] loss_ema={sketch:0.199, art:1.340, cartoon:0.863, photo:1.531}
+          gap={sketch:0.000, art:0.357, cartoon:0.000, photo:0.548}  ratio={sketch×0.85, art×1.10, cartoon×0.85, photo×1.56}  clip={None}
+The 82 Communcation Time: 173.088
+The 82 Communcation Accuracy: 72.23 Method: f2dc_dse_lab epoch loss: 1.036
+[71.26, 59.31, 74.15, 84.2]
+

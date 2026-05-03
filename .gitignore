@@ -71,6 +71,10 @@ wandb/
 *.pth
 *.pt
 *.ckpt
+
+# heavy snapshot npz (10-15MB each, 累计上 GB 不入 git, 但本地必须保留 — CLAUDE.md 零零零规则)
+experiments/ablation/EXP-1*/diag*/best_R*.npz
+experiments/ablation/EXP-1*/diag*/final_R*.npz
 # Log files with | in name (Windows incompatible)
 FDSE_CVPR25/task/*/log/*|*
 
