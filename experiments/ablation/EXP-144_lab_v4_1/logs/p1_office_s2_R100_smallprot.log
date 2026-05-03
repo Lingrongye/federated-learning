@@ -1,0 +1,510 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_pg_lab_10_fl_officecaltech_100_10
+selected_domain_list for 10 clients as:
+['caltech' 'caltech' 'caltech' 'amazon' 'amazon' 'webcam' 'webcam' 'dslr'
+ 'dslr' 'dslr']
+[LAB setup] val partition: 189 samples across 10 clients, per-dom = {'caltech': 50, 'amazon': 50, 'webcam': 50, 'dslr': 39}
+           caltech class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           amazon class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           webcam class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           dslr class counts: {0: 3, 1: 5, 2: 3, 3: 4, 4: 2, 5: 5, 6: 5, 7: 4, 8: 3, 9: 5}
+The 0 Communcation Time: 22.681
+The 0 Communcation Accuracy: 11.567 Method: f2dc_pg_lab epoch loss: 15.804
+[11.16, 13.16, 8.62, 13.33]
+
+[LAB R  1] loss_ema={amazon:2.298, webcam:2.303, dslr:2.304, caltech:2.302}
+          gap={amazon:0.000, webcam:0.001, dslr:0.003, caltech:0.000}  ratio={amazon×0.85, webcam×1.33, dslr×2.26, caltech×0.85}  clip={None}
+The 1 Communcation Time: 21.73
+The 1 Communcation Accuracy: 10.665 Method: f2dc_pg_lab epoch loss: 10.742
+[10.71, 10.0, 8.62, 13.33]
+
+[LAB R  2] loss_ema={caltech:2.302, webcam:2.307, amazon:2.294, dslr:2.305}
+          gap={caltech:0.000, webcam:0.005, amazon:0.000, dslr:0.003}  ratio={caltech×0.86, webcam×1.75, amazon×0.85, dslr×1.65}  clip={None}
+The 2 Communcation Time: 21.14
+The 2 Communcation Accuracy: 14.718 Method: f2dc_pg_lab epoch loss: 8.902
+[14.29, 22.63, 8.62, 13.33]
+
+[LAB R  3] loss_ema={dslr:2.304, caltech:2.293, webcam:2.307, amazon:2.266}
+          gap={dslr:0.011, caltech:0.000, webcam:0.015, amazon:0.000}  ratio={dslr×1.71, caltech×0.85, webcam×1.78, amazon×0.85}  clip={None}
+The 3 Communcation Time: 21.062
+The 3 Communcation Accuracy: 20.212 Method: f2dc_pg_lab epoch loss: 7.733
+[24.11, 27.89, 15.52, 13.33]
+
+[LAB R  4] loss_ema={amazon:2.163, dslr:2.276, webcam:2.270, caltech:2.232}
+          gap={amazon:0.000, dslr:0.041, webcam:0.035, caltech:0.000}  ratio={amazon×0.85, dslr×1.94, webcam×1.60, caltech×0.85}  clip={None}
+The 4 Communcation Time: 21.689
+The 4 Communcation Accuracy: 23.145 Method: f2dc_pg_lab epoch loss: 6.676
+[27.23, 33.16, 15.52, 16.67]
+
+[LAB R  5] loss_ema={amazon:2.060, webcam:2.250, caltech:2.173, dslr:2.261}
+          gap={amazon:0.000, webcam:0.064, caltech:0.000, dslr:0.075}  ratio={amazon×0.85, webcam×1.59, caltech×0.85, dslr×1.94}  clip={None}
+The 5 Communcation Time: 21.292
+The 5 Communcation Accuracy: 28.415 Method: f2dc_pg_lab epoch loss: 6.01
+[31.7, 36.32, 18.97, 26.67]
+
+[LAB R  6] loss_ema={caltech:2.085, dslr:2.198, amazon:1.943, webcam:2.182}
+          gap={caltech:0.000, dslr:0.096, amazon:0.000, webcam:0.080}  ratio={caltech×0.85, dslr×1.96, amazon×0.85, webcam×1.58}  clip={None}
+The 6 Communcation Time: 22.028
+The 6 Communcation Accuracy: 36.12 Method: f2dc_pg_lab epoch loss: 5.37
+[38.39, 50.0, 32.76, 23.33]
+
+[LAB R  7] loss_ema={amazon:1.809, dslr:2.192, caltech:2.003, webcam:2.108}
+          gap={amazon:0.000, dslr:0.164, caltech:0.000, webcam:0.080}  ratio={amazon×0.85, dslr×2.21, caltech×0.85, webcam×1.38}  clip={None}
+The 7 Communcation Time: 21.515
+The 7 Communcation Accuracy: 37.905 Method: f2dc_pg_lab epoch loss: 4.629
+[41.96, 53.68, 29.31, 26.67]
+
+[LAB R  8] loss_ema={webcam:2.027, dslr:2.196, caltech:1.950, amazon:1.709}
+          gap={webcam:0.056, dslr:0.226, caltech:0.000, amazon:0.000}  ratio={webcam×1.25, dslr×2.44, caltech×0.85, amazon×0.84}  clip={webcam@min}
+The 8 Communcation Time: 21.16
+The 8 Communcation Accuracy: 40.213 Method: f2dc_pg_lab epoch loss: 3.899
+[46.43, 53.16, 37.93, 23.33]
+
+[LAB R  9] loss_ema={dslr:2.269, caltech:1.875, webcam:1.931, amazon:1.579}
+          gap={dslr:0.355, caltech:0.000, webcam:0.018, amazon:0.000}  ratio={dslr×2.64, caltech×0.83, webcam×1.25, amazon×0.82}  clip={webcam@min}
+The 9 Communcation Time: 21.602
+The 9 Communcation Accuracy: 40.02 Method: f2dc_pg_lab epoch loss: 3.401
+[49.11, 53.16, 34.48, 23.33]
+
+[LAB R 10] loss_ema={dslr:2.271, caltech:1.840, amazon:1.579, webcam:1.903}
+          gap={dslr:0.373, caltech:0.000, amazon:0.000, webcam:0.005}  ratio={dslr×2.69, caltech×0.83, amazon×0.81, webcam×1.25}  clip={webcam@min}
+The 10 Communcation Time: 21.298
+The 10 Communcation Accuracy: 43.052 Method: f2dc_pg_lab epoch loss: 3.124
+[51.79, 54.21, 36.21, 30.0]
+
+[LAB R 11] loss_ema={dslr:2.366, amazon:1.472, caltech:1.805, webcam:1.807}
+          gap={dslr:0.503, amazon:0.000, caltech:0.000, webcam:0.000}  ratio={dslr×2.71, amazon×0.81, caltech×0.83, webcam×1.25}  clip={webcam@min}
+The 11 Communcation Time: 21.554
+The 11 Communcation Accuracy: 42.94 Method: f2dc_pg_lab epoch loss: 2.896
+[49.11, 56.32, 39.66, 26.67]
+
+[LAB R 12] loss_ema={webcam:1.771, caltech:1.812, dslr:2.415, amazon:1.513}
+          gap={webcam:0.000, caltech:0.000, dslr:0.537, amazon:0.000}  ratio={webcam×1.25, caltech×0.83, dslr×2.71, amazon×0.81}  clip={webcam@min}
+The 12 Communcation Time: 21.892
+The 12 Communcation Accuracy: 41.95 Method: f2dc_pg_lab epoch loss: 2.737
+[49.11, 54.21, 34.48, 30.0]
+
+[LAB R 13] loss_ema={amazon:1.548, dslr:2.378, webcam:1.801, caltech:1.790}
+          gap={amazon:0.000, dslr:0.499, webcam:0.000, caltech:0.000}  ratio={amazon×0.81, dslr×2.71, webcam×1.25, caltech×0.83}  clip={webcam@min}
+The 13 Communcation Time: 21.786
+The 13 Communcation Accuracy: 44.372 Method: f2dc_pg_lab epoch loss: 2.562
+[51.79, 57.89, 34.48, 33.33]
+
+[LAB R 14] loss_ema={dslr:2.339, amazon:1.529, caltech:1.782, webcam:1.791}
+          gap={dslr:0.479, amazon:0.000, caltech:0.000, webcam:0.000}  ratio={dslr×2.71, amazon×0.81, caltech×0.83, webcam×1.25}  clip={webcam@min}
+The 14 Communcation Time: 21.535
+The 14 Communcation Accuracy: 47.832 Method: f2dc_pg_lab epoch loss: 2.405
+[54.02, 64.21, 43.1, 30.0]
+
+[LAB R 15] loss_ema={caltech:1.790, dslr:2.403, amazon:1.476, webcam:1.842}
+          gap={caltech:0.000, dslr:0.525, amazon:0.000, webcam:0.000}  ratio={caltech×0.83, dslr×2.71, amazon×0.81, webcam×1.25}  clip={webcam@min}
+The 15 Communcation Time: 21.267
+The 15 Communcation Accuracy: 48.645 Method: f2dc_pg_lab epoch loss: 2.341
+[54.02, 58.95, 48.28, 33.33]
+
+[LAB R 16] loss_ema={caltech:1.857, amazon:1.450, dslr:2.434, webcam:1.810}
+          gap={caltech:0.000, amazon:0.000, dslr:0.547, webcam:0.000}  ratio={caltech×0.83, amazon×0.81, dslr×2.71, webcam×1.25}  clip={webcam@min}
+The 16 Communcation Time: 20.997
+The 16 Communcation Accuracy: 48.118 Method: f2dc_pg_lab epoch loss: 2.193
+[55.36, 62.63, 34.48, 40.0]
+
+[LAB R 17] loss_ema={dslr:2.439, caltech:1.843, amazon:1.524, webcam:1.860}
+          gap={dslr:0.522, caltech:0.000, amazon:0.000, webcam:0.000}  ratio={dslr×2.71, caltech×0.83, amazon×0.81, webcam×1.25}  clip={webcam@min}
+The 17 Communcation Time: 21.555
+The 17 Communcation Accuracy: 49.498 Method: f2dc_pg_lab epoch loss: 2.178
+[54.91, 61.58, 44.83, 36.67]
+
+[LAB R 18] loss_ema={caltech:1.915, webcam:1.922, amazon:1.549, dslr:2.458}
+          gap={caltech:0.000, webcam:0.000, amazon:0.000, dslr:0.497}  ratio={caltech×0.83, webcam×1.25, amazon×0.81, dslr×2.71}  clip={webcam@min}
+The 18 Communcation Time: 22.194
+The 18 Communcation Accuracy: 49.052 Method: f2dc_pg_lab epoch loss: 2.023
+[56.7, 61.58, 37.93, 40.0]
+
+[LAB R 19] loss_ema={caltech:1.868, webcam:1.921, dslr:2.349, amazon:1.532}
+          gap={caltech:0.000, webcam:0.003, dslr:0.431, amazon:0.000}  ratio={caltech×0.83, webcam×1.25, dslr×2.70, amazon×0.81}  clip={webcam@min}
+The 19 Communcation Time: 21.349
+The 19 Communcation Accuracy: 50.138 Method: f2dc_pg_lab epoch loss: 2.006
+[57.59, 61.58, 41.38, 40.0]
+
+[LAB R 20] loss_ema={webcam:1.916, amazon:1.576, caltech:1.909, dslr:2.424}
+          gap={webcam:0.000, amazon:0.000, caltech:0.000, dslr:0.467}  ratio={webcam×1.25, amazon×0.81, caltech×0.83, dslr×2.71}  clip={webcam@min}
+The 20 Communcation Time: 21.376
+The 20 Communcation Accuracy: 47.398 Method: f2dc_pg_lab epoch loss: 1.92
+[54.46, 60.53, 37.93, 36.67]
+
+[LAB R 21] loss_ema={dslr:2.472, amazon:1.616, caltech:1.932, webcam:2.012}
+          gap={dslr:0.464, amazon:0.000, caltech:0.000, webcam:0.004}  ratio={dslr×2.69, amazon×0.81, caltech×0.83, webcam×1.25}  clip={webcam@min}
+The 21 Communcation Time: 21.134
+The 21 Communcation Accuracy: 49.255 Method: f2dc_pg_lab epoch loss: 1.847
+[58.04, 61.05, 37.93, 40.0]
+
+[LAB R 22] loss_ema={dslr:2.383, amazon:1.639, webcam:1.994, caltech:1.874}
+          gap={dslr:0.411, amazon:0.000, webcam:0.021, caltech:0.000}  ratio={dslr×2.64, amazon×0.82, webcam×1.25, caltech×0.83}  clip={webcam@min}
+The 22 Communcation Time: 21.075
+The 22 Communcation Accuracy: 50.308 Method: f2dc_pg_lab epoch loss: 1.775
+[58.04, 65.26, 37.93, 40.0]
+
+[LAB R 23] loss_ema={dslr:2.478, amazon:1.681, webcam:2.048, caltech:1.910}
+          gap={dslr:0.449, amazon:0.000, webcam:0.019, caltech:0.000}  ratio={dslr×2.65, amazon×0.82, webcam×1.25, caltech×0.83}  clip={webcam@min}
+The 23 Communcation Time: 21.527
+The 23 Communcation Accuracy: 47.245 Method: f2dc_pg_lab epoch loss: 1.723
+[54.91, 59.47, 37.93, 36.67]
+
+[LAB R 24] loss_ema={dslr:2.336, amazon:1.737, webcam:2.032, caltech:1.937}
+          gap={dslr:0.326, amazon:0.000, webcam:0.022, caltech:0.000}  ratio={dslr×2.62, amazon×0.82, webcam×1.25, caltech×0.83}  clip={webcam@min}
+The 24 Communcation Time: 22.246
+The 24 Communcation Accuracy: 49.952 Method: f2dc_pg_lab epoch loss: 1.673
+[56.7, 63.68, 32.76, 46.67]
+
+[LAB R 25] loss_ema={dslr:2.177, caltech:1.984, webcam:2.098, amazon:1.754}
+          gap={dslr:0.173, caltech:0.000, webcam:0.095, amazon:0.000}  ratio={dslr×2.16, caltech×0.85, webcam×1.42, amazon×0.85}  clip={None}
+The 25 Communcation Time: 21.464
+The 25 Communcation Accuracy: 50.502 Method: f2dc_pg_lab epoch loss: 1.637
+[56.25, 61.05, 41.38, 43.33]
+
+[LAB R 26] loss_ema={dslr:2.421, caltech:2.046, amazon:1.734, webcam:2.035}
+          gap={dslr:0.362, caltech:0.000, amazon:0.000, webcam:0.000}  ratio={dslr×2.71, caltech×0.83, amazon×0.81, webcam×1.25}  clip={webcam@min}
+The 26 Communcation Time: 21.318
+The 26 Communcation Accuracy: 54.957 Method: f2dc_pg_lab epoch loss: 1.577
+[61.16, 65.79, 36.21, 56.67]
+
+[LAB R 27] loss_ema={webcam:2.026, amazon:1.753, caltech:2.023, dslr:2.223}
+          gap={webcam:0.020, amazon:0.000, caltech:0.017, dslr:0.217}  ratio={webcam×1.25, amazon×0.82, caltech×0.85, dslr×2.47}  clip={webcam@min}
+The 27 Communcation Time: 21.356
+The 27 Communcation Accuracy: 47.078 Method: f2dc_pg_lab epoch loss: 1.587
+[56.25, 62.63, 32.76, 36.67]
+
+[LAB R 28] loss_ema={caltech:2.064, amazon:1.681, dslr:2.493, webcam:2.150}
+          gap={caltech:0.000, amazon:0.000, dslr:0.396, webcam:0.053}  ratio={caltech×0.84, amazon×0.83, dslr×2.55, webcam×1.25}  clip={webcam@min}
+The 28 Communcation Time: 21.476
+The 28 Communcation Accuracy: 50.76 Method: f2dc_pg_lab epoch loss: 1.536
+[57.59, 65.79, 39.66, 40.0]
+
+[LAB R 29] loss_ema={dslr:2.404, webcam:2.158, caltech:2.041, amazon:1.673}
+          gap={dslr:0.335, webcam:0.089, caltech:0.000, amazon:0.000}  ratio={dslr×2.42, webcam×1.25, caltech×0.85, amazon×0.84}  clip={webcam@min}
+The 29 Communcation Time: 21.887
+⚠️ [LAB WASTE WARN R 30] dom=webcam cum_boost=89.9% window_roi=0.00 (< 0.5 = wasted)
+The 29 Communcation Accuracy: 50.743 Method: f2dc_pg_lab epoch loss: 1.463
+[60.27, 63.16, 36.21, 43.33]
+
+[LAB R 30] loss_ema={caltech:2.162, webcam:2.156, dslr:2.492, amazon:1.706}
+          gap={caltech:0.033, webcam:0.027, dslr:0.363, amazon:0.000}  ratio={caltech×0.85, webcam×1.25, dslr×2.46, amazon×0.82}  clip={webcam@min}
+The 30 Communcation Time: 21.909
+The 30 Communcation Accuracy: 51.86 Method: f2dc_pg_lab epoch loss: 1.484
+[59.82, 64.74, 36.21, 46.67]
+
+[LAB R 31] loss_ema={webcam:2.213, dslr:2.366, caltech:2.155, amazon:1.722}
+          gap={webcam:0.100, dslr:0.252, caltech:0.041, amazon:0.000}  ratio={webcam×1.26, dslr×2.15, caltech×0.88, amazon×0.85}  clip={None}
+The 31 Communcation Time: 22.045
+The 31 Communcation Accuracy: 50.848 Method: f2dc_pg_lab epoch loss: 1.41
+[59.38, 62.63, 41.38, 40.0]
+
+[LAB R 32] loss_ema={amazon:1.720, caltech:2.154, dslr:2.306, webcam:2.211}
+          gap={amazon:0.000, caltech:0.056, dslr:0.208, webcam:0.113}  ratio={amazon×0.85, caltech×0.89, dslr×1.97, webcam×1.33}  clip={None}
+The 32 Communcation Time: 22.149
+The 32 Communcation Accuracy: 54.132 Method: f2dc_pg_lab epoch loss: 1.392
+[61.61, 65.26, 39.66, 50.0]
+
+[LAB R 33] loss_ema={dslr:2.367, amazon:1.744, caltech:2.187, webcam:2.207}
+          gap={dslr:0.241, amazon:0.000, caltech:0.061, webcam:0.080}  ratio={dslr×2.10, amazon×0.84, caltech×0.89, webcam×1.25}  clip={webcam@min}
+The 33 Communcation Time: 21.869
+The 33 Communcation Accuracy: 56.922 Method: f2dc_pg_lab epoch loss: 1.329
+[59.82, 73.16, 41.38, 53.33]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_office_s2_smallprot/best_R034.npz (acc=56.922)
+[LAB R 34] loss_ema={dslr:2.291, amazon:1.580, caltech:2.240, webcam:2.220}
+          gap={dslr:0.208, amazon:0.000, caltech:0.157, webcam:0.137}  ratio={dslr×1.69, amazon×0.85, caltech×0.94, webcam×1.29}  clip={None}
+The 34 Communcation Time: 21.9
+The 34 Communcation Accuracy: 53.595 Method: f2dc_pg_lab epoch loss: 1.302
+[63.39, 67.89, 43.1, 40.0]
+
+[LAB R 35] loss_ema={amazon:1.641, webcam:2.234, dslr:2.374, caltech:2.181}
+          gap={amazon:0.000, webcam:0.126, dslr:0.266, caltech:0.074}  ratio={amazon×0.85, webcam×1.29, dslr×2.01, caltech×0.89}  clip={None}
+The 35 Communcation Time: 22.62
+The 35 Communcation Accuracy: 51.855 Method: f2dc_pg_lab epoch loss: 1.458
+[57.59, 66.84, 39.66, 43.33]
+
+[LAB R 36] loss_ema={caltech:2.189, dslr:2.418, webcam:2.298, amazon:1.642}
+          gap={caltech:0.052, dslr:0.281, webcam:0.162, amazon:0.000}  ratio={caltech×0.88, dslr×2.00, webcam×1.38, amazon×0.85}  clip={None}
+The 36 Communcation Time: 22.106
+The 36 Communcation Accuracy: 55.742 Method: f2dc_pg_lab epoch loss: 1.264
+[61.16, 65.26, 46.55, 50.0]
+
+[LAB R 37] loss_ema={dslr:2.420, caltech:2.206, amazon:1.669, webcam:2.217}
+          gap={dslr:0.292, caltech:0.078, amazon:0.000, webcam:0.089}  ratio={dslr×2.10, caltech×0.89, amazon×0.84, webcam×1.25}  clip={webcam@min}
+The 37 Communcation Time: 21.863
+The 37 Communcation Accuracy: 55.43 Method: f2dc_pg_lab epoch loss: 1.248
+[57.59, 62.63, 44.83, 56.67]
+
+[LAB R 38] loss_ema={dslr:2.259, caltech:2.211, amazon:1.710, webcam:2.153}
+          gap={dslr:0.176, caltech:0.127, amazon:0.000, webcam:0.070}  ratio={dslr×1.76, caltech×0.94, amazon×0.84, webcam×1.25}  clip={webcam@min}
+The 38 Communcation Time: 21.849
+The 38 Communcation Accuracy: 50.35 Method: f2dc_pg_lab epoch loss: 1.182
+[59.38, 64.21, 34.48, 43.33]
+
+[LAB R 39] loss_ema={amazon:1.749, dslr:2.324, webcam:2.202, caltech:2.235}
+          gap={amazon:0.000, dslr:0.197, webcam:0.075, caltech:0.107}  ratio={amazon×0.84, dslr×1.87, webcam×1.25, caltech×0.93}  clip={webcam@min}
+The 39 Communcation Time: 21.737
+The 39 Communcation Accuracy: 56.635 Method: f2dc_pg_lab epoch loss: 1.246
+[59.82, 66.84, 46.55, 53.33]
+
+[LAB R 40] loss_ema={webcam:2.121, dslr:2.354, caltech:2.246, amazon:1.756}
+          gap={webcam:0.002, dslr:0.234, caltech:0.126, amazon:0.000}  ratio={webcam×1.25, dslr×1.99, caltech×0.93, amazon×0.81}  clip={webcam@min}
+The 40 Communcation Time: 21.586
+The 40 Communcation Accuracy: 53.735 Method: f2dc_pg_lab epoch loss: 1.14
+[64.73, 68.95, 37.93, 43.33]
+
+[LAB R 41] loss_ema={dslr:2.457, caltech:2.213, amazon:1.747, webcam:2.309}
+          gap={dslr:0.276, caltech:0.032, amazon:0.000, webcam:0.127}  ratio={dslr×2.13, caltech×0.87, amazon×0.85, webcam×1.32}  clip={None}
+The 41 Communcation Time: 22.663
+The 41 Communcation Accuracy: 56.94 Method: f2dc_pg_lab epoch loss: 1.179
+[62.05, 64.21, 44.83, 56.67]
+
+[LAB R 42] loss_ema={caltech:2.198, webcam:2.205, amazon:1.810, dslr:2.405}
+          gap={caltech:0.044, webcam:0.050, amazon:0.000, dslr:0.250}  ratio={caltech×0.88, webcam×1.25, amazon×0.83, dslr×2.25}  clip={webcam@min}
+The 42 Communcation Time: 21.843
+The 42 Communcation Accuracy: 53.745 Method: f2dc_pg_lab epoch loss: 1.138
+[58.93, 67.89, 44.83, 43.33]
+
+[LAB R 43] loss_ema={webcam:2.311, dslr:2.327, caltech:2.225, amazon:1.751}
+          gap={webcam:0.157, dslr:0.173, caltech:0.072, amazon:0.000}  ratio={webcam×1.48, dslr×1.72, caltech×0.90, amazon×0.85}  clip={None}
+The 43 Communcation Time: 21.372
+The 43 Communcation Accuracy: 55.732 Method: f2dc_pg_lab epoch loss: 1.134
+[62.05, 67.89, 39.66, 53.33]
+
+[LAB R 44] loss_ema={caltech:2.221, dslr:2.210, amazon:1.740, webcam:2.264}
+          gap={caltech:0.112, dslr:0.102, amazon:0.000, webcam:0.155}  ratio={caltech×0.94, dslr×1.41, amazon×0.85, webcam×1.53}  clip={None}
+The 44 Communcation Time: 21.674
+The 44 Communcation Accuracy: 56.507 Method: f2dc_pg_lab epoch loss: 1.097
+[60.27, 71.05, 41.38, 53.33]
+
+[LAB R 45] loss_ema={amazon:1.785, dslr:2.248, caltech:2.221, webcam:2.222}
+          gap={amazon:0.000, dslr:0.129, caltech:0.102, webcam:0.103}  ratio={amazon×0.85, dslr×1.63, caltech×0.94, webcam×1.35}  clip={None}
+The 45 Communcation Time: 20.702
+The 45 Communcation Accuracy: 55.62 Method: f2dc_pg_lab epoch loss: 1.036
+[59.38, 70.0, 43.1, 50.0]
+
+[LAB R 46] loss_ema={amazon:1.767, caltech:2.282, dslr:2.148, webcam:2.285}
+          gap={amazon:0.000, caltech:0.161, dslr:0.027, webcam:0.165}  ratio={amazon×0.83, caltech×0.97, dslr×1.25, webcam×1.54}  clip={dslr@min}
+The 46 Communcation Time: 20.099
+The 46 Communcation Accuracy: 56.985 Method: f2dc_pg_lab epoch loss: 1.076
+[61.61, 70.0, 39.66, 56.67]
+
+[LAB R 47] loss_ema={caltech:2.294, webcam:2.221, dslr:2.197, amazon:1.794}
+          gap={caltech:0.168, webcam:0.094, dslr:0.070, amazon:0.000}  ratio={caltech×0.99, webcam×1.31, dslr×1.28, amazon×0.85}  clip={None}
+The 47 Communcation Time: 20.688
+The 47 Communcation Accuracy: 55.408 Method: f2dc_pg_lab epoch loss: 1.119
+[62.5, 69.47, 39.66, 50.0]
+
+[LAB R 48] loss_ema={dslr:2.308, caltech:2.230, webcam:2.267, amazon:1.746}
+          gap={dslr:0.170, caltech:0.092, webcam:0.129, amazon:0.000}  ratio={dslr×1.73, caltech×0.92, webcam×1.38, amazon×0.85}  clip={None}
+The 48 Communcation Time: 21.295
+The 48 Communcation Accuracy: 56.748 Method: f2dc_pg_lab epoch loss: 1.031
+[61.61, 68.95, 43.1, 53.33]
+
+[LAB R 49] loss_ema={caltech:2.368, dslr:2.356, webcam:2.259, amazon:1.783}
+          gap={caltech:0.176, dslr:0.165, webcam:0.067, amazon:0.000}  ratio={caltech×0.96, dslr×1.61, webcam×1.25, amazon×0.84}  clip={webcam@min}
+The 49 Communcation Time: 21.707
+⚠️ [LAB WASTE WARN R 50] dom=dslr cum_boost=441.1% window_roi=-0.55 (< 0.5 = wasted)
+The 49 Communcation Accuracy: 53.218 Method: f2dc_pg_lab epoch loss: 0.998
+[61.61, 70.0, 37.93, 43.33]
+
+[LAB R 50] loss_ema={caltech:2.427, amazon:1.766, webcam:2.321, dslr:2.590}
+          gap={caltech:0.150, amazon:0.000, webcam:0.045, dslr:0.314}  ratio={caltech×0.92, amazon×0.82, webcam×1.25, dslr×1.99}  clip={webcam@min}
+The 50 Communcation Time: 21.994
+The 50 Communcation Accuracy: 55.07 Method: f2dc_pg_lab epoch loss: 1.067
+[61.61, 65.79, 36.21, 56.67]
+
+[LAB R 51] loss_ema={caltech:2.348, webcam:2.255, dslr:2.581, amazon:1.785}
+          gap={caltech:0.106, webcam:0.013, dslr:0.338, amazon:0.000}  ratio={caltech×0.89, webcam×1.25, dslr×2.20, amazon×0.81}  clip={webcam@min}
+The 51 Communcation Time: 22.118
+The 51 Communcation Accuracy: 58.91 Method: f2dc_pg_lab epoch loss: 1.036
+[64.73, 72.63, 48.28, 50.0]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_office_s2_smallprot/best_R052.npz (acc=58.910)
+[LAB R 52] loss_ema={dslr:2.542, webcam:2.300, caltech:2.384, amazon:1.717}
+          gap={dslr:0.306, webcam:0.064, caltech:0.148, amazon:0.000}  ratio={dslr×1.96, webcam×1.25, caltech×0.92, amazon×0.83}  clip={webcam@min}
+The 52 Communcation Time: 22.421
+The 52 Communcation Accuracy: 57.985 Method: f2dc_pg_lab epoch loss: 0.967
+[62.05, 73.68, 36.21, 60.0]
+
+[LAB R 53] loss_ema={webcam:2.389, amazon:1.681, caltech:2.308, dslr:2.261}
+          gap={webcam:0.229, amazon:0.000, caltech:0.148, dslr:0.101}  ratio={webcam×1.62, amazon×0.85, caltech×0.94, dslr×1.28}  clip={None}
+The 53 Communcation Time: 22.555
+The 53 Communcation Accuracy: 59.675 Method: f2dc_pg_lab epoch loss: 0.933
+[65.62, 71.58, 44.83, 56.67]
+
+[LAB R 54] loss_ema={webcam:2.392, amazon:1.635, caltech:2.243, dslr:2.143}
+          gap={webcam:0.289, amazon:0.000, caltech:0.140, dslr:0.040}  ratio={webcam×1.78, amazon×0.83, caltech×0.92, dslr×1.25}  clip={dslr@min}
+The 54 Communcation Time: 22.131
+The 54 Communcation Accuracy: 58.342 Method: f2dc_pg_lab epoch loss: 1.011
+[62.05, 73.16, 44.83, 53.33]
+
+[LAB R 55] loss_ema={caltech:2.259, amazon:1.567, dslr:2.186, webcam:2.345}
+          gap={caltech:0.169, amazon:0.000, dslr:0.097, webcam:0.256}  ratio={caltech×0.94, amazon×0.85, dslr×1.25, webcam×1.64}  clip={dslr@min}
+The 55 Communcation Time: 22.032
+The 55 Communcation Accuracy: 59.21 Method: f2dc_pg_lab epoch loss: 0.9
+[63.39, 73.68, 43.1, 56.67]
+
+[LAB R 56] loss_ema={caltech:2.238, amazon:1.641, dslr:2.417, webcam:2.251}
+          gap={caltech:0.102, amazon:0.000, dslr:0.280, webcam:0.114}  ratio={caltech×0.91, amazon×0.85, dslr×1.98, webcam×1.25}  clip={webcam@min}
+The 56 Communcation Time: 22.061
+The 56 Communcation Accuracy: 58.6 Method: f2dc_pg_lab epoch loss: 0.958
+[63.84, 72.63, 37.93, 60.0]
+
+[LAB R 57] loss_ema={dslr:2.360, webcam:2.326, amazon:1.611, caltech:2.227}
+          gap={dslr:0.229, webcam:0.195, amazon:0.000, caltech:0.096}  ratio={dslr×1.74, webcam×1.46, amazon×0.85, caltech×0.90}  clip={None}
+The 57 Communcation Time: 21.742
+The 57 Communcation Accuracy: 58.155 Method: f2dc_pg_lab epoch loss: 0.89
+[63.84, 72.11, 50.0, 46.67]
+
+[LAB R 58] loss_ema={amazon:1.693, caltech:2.165, webcam:2.190, dslr:2.383}
+          gap={amazon:0.000, caltech:0.057, webcam:0.082, dslr:0.276}  ratio={amazon×0.84, caltech×0.88, webcam×1.25, dslr×2.16}  clip={webcam@min}
+The 58 Communcation Time: 22.833
+The 58 Communcation Accuracy: 56.648 Method: f2dc_pg_lab epoch loss: 0.878
+[65.18, 68.42, 39.66, 53.33]
+
+[LAB R 59] loss_ema={dslr:2.562, amazon:1.795, webcam:2.249, caltech:2.148}
+          gap={dslr:0.373, amazon:0.000, webcam:0.061, caltech:0.000}  ratio={dslr×2.52, amazon×0.83, webcam×1.25, caltech×0.84}  clip={webcam@min}
+The 59 Communcation Time: 22.816
+The 59 Communcation Accuracy: 55.28 Method: f2dc_pg_lab epoch loss: 0.929
+[60.27, 69.47, 41.38, 50.0]
+
+[LAB R 60] loss_ema={amazon:1.759, caltech:2.175, dslr:2.514, webcam:2.314}
+          gap={amazon:0.000, caltech:0.000, dslr:0.323, webcam:0.124}  ratio={amazon×0.85, caltech×0.85, dslr×2.31, webcam×1.30}  clip={None}
+The 60 Communcation Time: 21.983
+The 60 Communcation Accuracy: 56.485 Method: f2dc_pg_lab epoch loss: 0.821
+[62.95, 70.0, 39.66, 53.33]
+
+[LAB R 61] loss_ema={webcam:2.155, amazon:1.831, dslr:2.419, caltech:2.224}
+          gap={webcam:0.000, amazon:0.000, dslr:0.262, caltech:0.066}  ratio={webcam×1.25, amazon×0.81, dslr×2.30, caltech×0.88}  clip={webcam@min}
+The 61 Communcation Time: 22.0
+The 61 Communcation Accuracy: 56.603 Method: f2dc_pg_lab epoch loss: 0.807
+[63.39, 68.42, 37.93, 56.67]
+
+[LAB R 62] loss_ema={amazon:1.866, webcam:2.135, caltech:2.252, dslr:2.280}
+          gap={amazon:0.000, webcam:0.002, caltech:0.119, dslr:0.147}  ratio={amazon×0.81, webcam×1.25, caltech×0.95, dslr×1.80}  clip={webcam@min}
+The 62 Communcation Time: 22.009
+The 62 Communcation Accuracy: 56.0 Method: f2dc_pg_lab epoch loss: 0.846
+[62.5, 70.0, 44.83, 46.67]
+
+[LAB R 63] loss_ema={amazon:1.919, caltech:2.318, dslr:2.579, webcam:2.189}
+          gap={amazon:0.000, caltech:0.066, dslr:0.327, webcam:0.000}  ratio={amazon×0.81, caltech×0.87, dslr×2.37, webcam×1.25}  clip={webcam@min}
+The 63 Communcation Time: 21.819
+The 63 Communcation Accuracy: 56.567 Method: f2dc_pg_lab epoch loss: 0.893
+[62.05, 67.89, 39.66, 56.67]
+
+[LAB R 64] loss_ema={dslr:2.478, webcam:2.254, caltech:2.329, amazon:1.940}
+          gap={dslr:0.227, webcam:0.004, caltech:0.079, amazon:0.000}  ratio={dslr×2.18, webcam×1.25, caltech×0.90, amazon×0.81}  clip={webcam@min}
+The 64 Communcation Time: 22.302
+The 64 Communcation Accuracy: 57.098 Method: f2dc_pg_lab epoch loss: 0.823
+[63.39, 66.84, 44.83, 53.33]
+
+[LAB R 65] loss_ema={webcam:2.179, dslr:2.377, amazon:1.946, caltech:2.403}
+          gap={webcam:0.000, dslr:0.151, amazon:0.000, caltech:0.176}  ratio={webcam×1.25, dslr×1.62, amazon×0.81, caltech×0.98}  clip={webcam@min}
+The 65 Communcation Time: 22.2
+The 65 Communcation Accuracy: 58.815 Method: f2dc_pg_lab epoch loss: 0.71
+[64.73, 70.53, 50.0, 50.0]
+
+[LAB R 66] loss_ema={dslr:2.560, caltech:2.330, webcam:2.195, amazon:1.992}
+          gap={dslr:0.291, caltech:0.061, webcam:0.000, amazon:0.000}  ratio={dslr×2.36, caltech×0.88, webcam×1.25, amazon×0.81}  clip={webcam@min}
+The 66 Communcation Time: 21.899
+The 66 Communcation Accuracy: 61.778 Method: f2dc_pg_lab epoch loss: 0.752
+[67.41, 69.47, 56.9, 53.33]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_office_s2_smallprot/best_R067.npz (acc=61.778)
+[LAB R 67] loss_ema={webcam:2.066, amazon:1.886, caltech:2.350, dslr:2.632}
+          gap={webcam:0.000, amazon:0.000, caltech:0.116, dslr:0.398}  ratio={webcam×1.25, amazon×0.81, caltech×0.89, dslr×2.25}  clip={webcam@min}
+The 67 Communcation Time: 21.712
+The 67 Communcation Accuracy: 58.683 Method: f2dc_pg_lab epoch loss: 0.706
+[64.73, 70.0, 50.0, 50.0]
+
+[LAB R 68] loss_ema={caltech:2.406, webcam:2.031, amazon:1.888, dslr:2.592}
+          gap={caltech:0.177, webcam:0.000, amazon:0.000, dslr:0.363}  ratio={caltech×0.92, webcam×1.25, amazon×0.81, dslr×2.04}  clip={webcam@min}
+The 68 Communcation Time: 21.72
+The 68 Communcation Accuracy: 58.35 Method: f2dc_pg_lab epoch loss: 0.763
+[63.39, 73.68, 39.66, 56.67]
+
+[LAB R 69] loss_ema={webcam:2.203, amazon:1.852, dslr:2.546, caltech:2.466}
+          gap={webcam:0.000, amazon:0.000, dslr:0.279, caltech:0.200}  ratio={webcam×1.25, amazon×0.81, dslr×1.86, caltech×0.94}  clip={webcam@min}
+The 69 Communcation Time: 22.3
+⚠️ [LAB WASTE WARN R 70] dom=dslr cum_boost=584.9% window_roi=-1.39 (< 0.5 = wasted)
+The 69 Communcation Accuracy: 56.812 Method: f2dc_pg_lab epoch loss: 0.797
+[67.86, 67.89, 44.83, 46.67]
+
+[LAB R 70] loss_ema={amazon:1.919, dslr:2.456, caltech:2.384, webcam:2.243}
+          gap={amazon:0.000, dslr:0.205, caltech:0.133, webcam:0.000}  ratio={amazon×0.81, dslr×1.91, caltech×0.94, webcam×1.25}  clip={webcam@min}
+The 70 Communcation Time: 22.51
+The 70 Communcation Accuracy: 58.92 Method: f2dc_pg_lab epoch loss: 0.718
+[67.86, 76.32, 44.83, 46.67]
+
+[LAB R 71] loss_ema={dslr:2.553, caltech:2.329, webcam:2.308, amazon:1.734}
+          gap={dslr:0.322, caltech:0.098, webcam:0.077, amazon:0.000}  ratio={dslr×2.10, caltech×0.90, webcam×1.25, amazon×0.83}  clip={webcam@min}
+The 71 Communcation Time: 21.699
+The 71 Communcation Accuracy: 60.7 Method: f2dc_pg_lab epoch loss: 0.709
+[66.52, 67.89, 51.72, 56.67]
+
+[LAB R 72] loss_ema={caltech:2.318, dslr:2.558, webcam:2.242, amazon:1.697}
+          gap={caltech:0.114, dslr:0.354, webcam:0.038, amazon:0.000}  ratio={caltech×0.90, dslr×2.15, webcam×1.25, amazon×0.82}  clip={webcam@min}
+The 72 Communcation Time: 21.906
+The 72 Communcation Accuracy: 57.748 Method: f2dc_pg_lab epoch loss: 0.691
+[63.39, 71.05, 46.55, 50.0]
+
+[LAB R 73] loss_ema={caltech:2.261, webcam:2.198, dslr:2.551, amazon:1.809}
+          gap={caltech:0.056, webcam:0.000, dslr:0.347, amazon:0.000}  ratio={caltech×0.87, webcam×1.25, dslr×2.42, amazon×0.81}  clip={webcam@min}
+The 73 Communcation Time: 21.661
+The 73 Communcation Accuracy: 59.332 Method: f2dc_pg_lab epoch loss: 0.654
+[64.73, 74.21, 51.72, 46.67]
+
+[LAB R 74] loss_ema={dslr:2.558, amazon:1.752, caltech:2.283, webcam:2.196}
+          gap={dslr:0.361, amazon:0.000, caltech:0.086, webcam:0.000}  ratio={dslr×2.32, amazon×0.81, caltech×0.88, webcam×1.25}  clip={webcam@min}
+The 74 Communcation Time: 21.653
+The 74 Communcation Accuracy: 63.09 Method: f2dc_pg_lab epoch loss: 0.683
+[66.96, 73.68, 51.72, 60.0]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_office_s2_smallprot/best_R075.npz (acc=63.090)
+[LAB R 75] loss_ema={caltech:2.228, amazon:1.778, webcam:2.204, dslr:2.615}
+          gap={caltech:0.022, amazon:0.000, webcam:0.000, dslr:0.409}  ratio={caltech×0.84, amazon×0.81, webcam×1.25, dslr×2.60}  clip={webcam@min}
+The 75 Communcation Time: 22.359
+The 75 Communcation Accuracy: 54.94 Method: f2dc_pg_lab epoch loss: 0.818
+[62.5, 71.05, 36.21, 50.0]
+
+[LAB R 76] loss_ema={amazon:1.757, dslr:2.542, webcam:2.468, caltech:2.262}
+          gap={amazon:0.000, dslr:0.285, webcam:0.211, caltech:0.005}  ratio={amazon×0.85, dslr×2.00, webcam×1.53, caltech×0.85}  clip={None}
+The 76 Communcation Time: 22.573
+The 76 Communcation Accuracy: 56.92 Method: f2dc_pg_lab epoch loss: 0.664
+[67.41, 72.11, 44.83, 43.33]
+
+[LAB R 77] loss_ema={caltech:2.244, webcam:2.463, amazon:1.803, dslr:2.550}
+          gap={caltech:0.000, webcam:0.198, amazon:0.000, dslr:0.285}  ratio={caltech×0.85, webcam×1.51, amazon×0.85, dslr×2.04}  clip={None}
+The 77 Communcation Time: 22.044
+The 77 Communcation Accuracy: 59.482 Method: f2dc_pg_lab epoch loss: 0.636
+[68.3, 71.58, 41.38, 56.67]
+
+[LAB R 78] loss_ema={dslr:2.367, amazon:1.889, caltech:2.271, webcam:2.505}
+          gap={dslr:0.109, amazon:0.000, caltech:0.013, webcam:0.247}  ratio={dslr×1.45, amazon×0.85, caltech×0.86, webcam×1.93}  clip={None}
+The 78 Communcation Time: 21.871
+The 78 Communcation Accuracy: 62.322 Method: f2dc_pg_lab epoch loss: 0.688
+[66.52, 71.05, 51.72, 60.0]
+
+[LAB R 79] loss_ema={webcam:2.278, caltech:2.422, dslr:2.283, amazon:2.000}
+          gap={webcam:0.032, caltech:0.176, dslr:0.037, amazon:0.000}  ratio={webcam×1.25, caltech×1.03, dslr×1.25, amazon×0.81}  clip={webcam@min,dslr@min}
+The 79 Communcation Time: 21.872
+⚠️ [LAB WASTE WARN R 80] dom=dslr cum_boost=660.9% window_roi=-1.71 (< 0.5 = wasted)
+⚠️ [LAB WASTE WARN R 80] dom=webcam cum_boost=245.3% window_roi=0.00 (< 0.5 = wasted)
+The 79 Communcation Accuracy: 53.882 Method: f2dc_pg_lab epoch loss: 0.737
+[64.29, 71.58, 39.66, 40.0]
+
+[LAB R 80] loss_ema={dslr:2.578, caltech:2.351, webcam:2.474, amazon:2.007}
+          gap={dslr:0.225, caltech:0.000, webcam:0.121, amazon:0.000}  ratio={dslr×2.16, caltech×0.85, webcam×1.42, amazon×0.85}  clip={None}
+The 80 Communcation Time: 22.291
+The 80 Communcation Accuracy: 61.63 Method: f2dc_pg_lab epoch loss: 0.734
+[63.39, 74.74, 51.72, 56.67]
+
+[LAB R 81] loss_ema={dslr:2.367, webcam:2.487, caltech:2.219, amazon:1.987}
+          gap={dslr:0.102, webcam:0.222, caltech:0.000, amazon:0.000}  ratio={dslr×1.49, webcam×1.96, caltech×0.85, amazon×0.85}  clip={None}
+The 81 Communcation Time: 22.565
+The 81 Communcation Accuracy: 61.117 Method: f2dc_pg_lab epoch loss: 0.615
+[67.41, 72.11, 48.28, 56.67]
+

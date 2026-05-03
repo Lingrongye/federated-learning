@@ -1,0 +1,34 @@
+{
+  "model": "f2dc_pg_lab",
+  "dataset": "fl_officecaltech",
+  "seed": 2,
+  "parti_num": 10,
+  "num_classes": 10,
+  "communication_epoch": 100,
+  "use_daa": false,
+  "agg_a": 1.0,
+  "agg_b": 0.4,
+  "final_acc": 57.135,
+  "heavy_dumps": [
+    [
+      "best_R039",
+      39,
+      56.382
+    ],
+    [
+      "best_R046",
+      46,
+      57.812
+    ],
+    [
+      "best_R054",
+      54,
+      61.935
+    ],
+    [
+      "final_R100",
+      100,
+      57.135
+    ]
+  ]
+}

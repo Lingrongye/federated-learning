@@ -1,5 +1,49 @@
 # 面向跨域联邦学习的解耦原型学习 — 研究综述与方向指南
 
+## 零零零、原始诊断数据保留规则 (最高优先级,绝对禁止违反)
+
+**任何实验,任何参数扫描,任何重跑,都必须独立保留原始 diag npz 数据。这是不可妥协的硬规则。**
+
+### 必须做的:
+1. **每个实验用独立 dump_diag 路径**:
+   - 命名格式 `diag_<exp_id>_<dataset>_<seed>_<param_tag>` (例如 `diag_p1_office_s2_smallprot_v2_a_rmin15_rmax30`)
+   - 不同参数版本必须不同 dump_diag 路径,**绝不 overwrite 已有 diag 目录**
+2. **完整保留所有 npz**:
+   - `round_001.npz` ~ `round_100.npz` (per-round 元数据 + LAB 诊断字段)
+   - `best_R*.npz` (heavy snapshot, 含 model state_dict + features)
+   - `final_R*.npz` (终局 heavy snapshot)
+   - `meta.json` (实验配置)
+   - `proto_logs.jsonl` (per-round LAB diag JSONL)
+3. **服务器跑完必须 rsync 回本地**:
+   - `rsync -avzP sub3:experiments/ablation/EXP-XXX/diag_*/ local_path/`
+   - 包括所有 round/best/final npz, 不能只拉 log
+4. **每个实验在 NOTE.md / obsidian 笔记里必须明文记录 diag 路径**:
+   - 让任何后处理脚本(analyze_lab.py / cold path 分析)能直接 locate
+5. **commit 入 git 的 round_*.npz 必须保留**:
+   - `best_*.npz` / `final_*.npz` 单文件超 GitHub 100MB 时 .gitignore 排除,但**本地必须有**
+   - 排除规则要在 .gitignore 注释里写明原因
+
+### 绝对禁止:
+- ❌ **删除或 overwrite** 已跑实验的 diag 目录(即使是"失败"实验也不能删,可能后期分析有用)
+- ❌ **rsync 时只拉 log 不拉 npz**
+- ❌ **不同参数共用一个 dump_diag 路径**(例如 rmax=2.0 跟 rmax=4.0 都写到 `diag_p1_office_s2/`)
+- ❌ **跑完不 rsync 回本地**(只留服务器风险大,服务器实例可能被回收)
+- ❌ **commit 时 git rm 已有 diag 数据腾空间**
+
+### 触发场景:
+- 任何参数扫描实验(LAB ratio_min/max sweep, λ sweep, val_size sweep 等)
+- 任何 seed 扫描(P3 3-seed 主对照)
+- 任何重跑(同 config 重跑 = 新 dump_diag 路径加 `_rerun` 后缀)
+- 任何 P0/P1/P2/P3/P4 阶段实验
+
+### 为什么这条规则强制:
+- LAB 诊断字段 (lab_ratio / lab_boost / lab_clip / val_class_counts / cum_boost 等 132-174 个 / round npz) 是 paper-grade 分析数据来源
+- cold path 后处理脚本 (analyze_lab.py / 权重对比脚本) 必须读 round npz
+- 实验失败也是 paper finding(EXP-144 Office gate 失败暴露 LAB 设计缺陷,正是 paper 卖点),不能删除
+- 重新跑代价大(单 100 round 实验 30min~5h GPU),覆盖丢失数据成本远高于多占几 GB 磁盘
+
+---
+
 ## 零零、给数据的硬性规则 (强制,任何报告/对话都适用)
 
 **任何时候给用户数据 / 表格 / 数字之前,必须先解释 3 件事:**
