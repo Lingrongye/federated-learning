@@ -87,11 +87,13 @@ best_args = {
             'local_batch_size': 64
         },
         'fdse': {
+            # Office 专用 hyperparams: 跟 FDSE_CVPR25/task/office_caltech10_c4/log/*algopara_0.050.50.05*
+            # 文件名解码 (lmbd=0.05, tau=0.5, beta=0.05) 一致, 替代默认 lmbd=0.01/beta=0.1
             'local_lr': 0.01,
             'local_batch_size': 64,
-            'lmbd': 0.01,
+            'lmbd': 0.05,
             'fdse_tau': 0.5,
-            'fdse_beta': 0.1,
+            'fdse_beta': 0.05,
         }
     },
 
@@ -143,11 +145,14 @@ best_args = {
             'local_batch_size': 64
         },
         'fdse': {
+            # PACS 专用 hyperparams: 跟 FDSE_CVPR25/task/PACS_c4/log/*algopara_0.50.50.001*
+            # 文件名解码 (lmbd=0.5, tau=0.5, beta=0.001) 一致, 修复 lmbd=0.01/beta=0.1 默认值
+            # 在 PACS 上训崩 (R18 peak 53.40 → R99 33.58 collapse) 的 bug.
             'local_lr': 0.01,
             'local_batch_size': 64,
-            'lmbd': 0.01,
+            'lmbd': 0.5,
             'fdse_tau': 0.5,
-            'fdse_beta': 0.1,
+            'fdse_beta': 0.001,
         }
     }
 }
