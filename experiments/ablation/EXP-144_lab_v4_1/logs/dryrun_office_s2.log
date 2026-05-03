@@ -1,0 +1,24 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_pg_lab_10_fl_officecaltech_2_1
+selected_domain_list for 10 clients as:
+['caltech' 'caltech' 'caltech' 'amazon' 'amazon' 'webcam' 'webcam' 'dslr'
+ 'dslr' 'dslr']
+[LAB setup] val partition: 189 samples across 10 clients, per-dom = {'caltech': 50, 'amazon': 50, 'webcam': 50, 'dslr': 39}
+           caltech class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           amazon class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           webcam class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           dslr class counts: {0: 3, 1: 5, 2: 3, 3: 4, 4: 2, 5: 5, 6: 5, 7: 4, 8: 3, 9: 5}
+The 0 Communcation Time: 3.587
+The 0 Communcation Accuracy: 9.038 Method: f2dc_pg_lab epoch loss: 18.154
+[12.05, 10.53, 6.9, 6.67]
+
+[LAB R  1] loss_ema={caltech:2.302, dslr:2.303, webcam:2.303, amazon:2.301}
+          gap={caltech:0.000, dslr:0.001, webcam:0.001, amazon:0.000}  ratio={caltech×0.85, dslr×1.88, webcam×1.64, amazon×0.85}  clip={None}
+The 1 Communcation Time: 2.687
+The 1 Communcation Accuracy: 10.04 Method: f2dc_pg_lab epoch loss: 17.899
+[9.82, 10.0, 10.34, 10.0]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_dryrun_office_s2/final_R002.npz (acc=10.040)
+ALL Loss:  [18.154, 17.899]
+Accuracy List f2dc_pg_lab (fl_officecaltech): [9.038, 10.04]

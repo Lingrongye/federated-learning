@@ -27,8 +27,6 @@
   - lambda_align: float — alignment loss 权重, default 0.5
   - proto_ema: float in [0, 1) — EMA on prototype for smoothness, 0 = 不 smooth, 0.9 = 强平滑
   - warmup_rounds: int — 前 N round 不做 alignment (等模型有点形再对齐), default 5
-
-作者: Claude Code, 2026-04-22
 """
 import copy
 from collections import defaultdict

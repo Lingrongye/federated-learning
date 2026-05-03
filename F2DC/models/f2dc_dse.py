@@ -88,17 +88,24 @@ class F2DCDSE(F2DC):
         super().__init__(nets_list, args, transform)
         self.args = args
         # DSE 超参 (CLI default 见 main_run.py)
+        # dse修正强度上限
         self.dse_rho_max = float(getattr(args, 'dse_rho_max', 0.1))
+        # ccc loss 最大权重
         self.dse_lambda_cc = float(getattr(args, 'dse_lambda_cc', 0.1))
+        # magnitude loss权重
         self.dse_lambda_mag = float(getattr(args, 'dse_lambda_mag', 0.01))
+        # 允许的最大修正比例
         self.dse_r_max = float(getattr(args, 'dse_r_max', 0.15))
+        # ccc loss什么时候启动 怎么增大
         self.dse_cc_warmup = int(getattr(args, 'dse_cc_warmup_rounds', 5))
         self.dse_cc_ramp = int(getattr(args, 'dse_cc_ramp_rounds', 10))
+        # dse主的路注入强度什么时候启动 怎么增大
         self.dse_rho_warmup = int(getattr(args, 'dse_rho_warmup_rounds', 5))
         self.dse_rho_ramp = int(getattr(args, 'dse_rho_ramp_rounds', 10))
+        # 每个server的prototype 的ema平滑系数
         self.dse_proto3_ema_beta = float(getattr(args, 'dse_proto3_ema_beta', 0.85))
         # ★ Fix (codex 复审): CCC 诊断改成"每个 (client, epoch) 固定前 N batch", 不再 10% 随机
-        # 保证 R10 smoke / 小 batch / proto 还没 ready 时也总有诊断数据
+        # 保证 R10 smoke / 小 batch / proto 还没 ready 时也总有诊断数据，每个client 每个epoch固定前几个batch 记录ccc诊断
         self._ccc_fixed_batches = int(getattr(args, 'dse_ccc_fixed_batches', 2))
 
         # global proto3 (server 跨 round EMA buffer)
@@ -353,6 +360,7 @@ class F2DCDSE(F2DC):
                     target_norm = target_unit.norm(dim=-1)
                     valid = target_norm > 1e-8
                     if valid.any():
+                        # 把修正后的feat 拉向全局的同类prototype
                         cos_sim = (h3_rescued_unit[valid] * target_unit[valid]).sum(-1)
                         cc_loss = (1.0 - cos_sim).mean()
 
@@ -370,6 +378,7 @@ class F2DCDSE(F2DC):
                     # per-sample norm (B,) — flatten 后 norm
                     delta_norm_per = delta3.flatten(1).norm(dim=-1)
                     feat_norm_per = feat3_raw.flatten(1).norm(dim=-1) + 1e-8
+                    # 先计算每个样本的修正比例
                     ratio_per_t = self._cur_rho_t * delta_norm_per / feat_norm_per  # (B,)
                     # batch-level scalar (保留, 用于 ratio_scalar 兼容旧 diag)
                     feat_norm = feat3_raw.norm() + 1e-8
@@ -377,7 +386,7 @@ class F2DCDSE(F2DC):
                     ratio_t = self._cur_rho_t * delta_norm / feat_norm
                     ratio_scalar = ratio_t.item()
                     # mag_loss: 用 per-sample ratio max(0, ratio_per - r_max)^2 mean over batch
-                    # 让 outlier sample 真正受惩罚 (而非整 batch 平均拉低)
+                    # 让 outlier sample 真正受惩罚 (而非整 batch 平均拉低)，如果修正比例没有超过r_max
                     mag_loss = F.relu(ratio_per_t - self.dse_r_max).pow(2).mean()
                     # diag (no_grad 取值)
                     with torch.no_grad():
@@ -409,6 +418,7 @@ class F2DCDSE(F2DC):
                         # raw_to_target / rescued_to_target cos (★ Fix codex 复审: 改成
                         # 固定前 N batch 记录, 不再随机采样, 保证 R10 smoke / 前几轮 proto
                         # 没 ready 时也总有诊断数据)
+
                         if (batch_idx < getattr(self, '_ccc_fixed_batches', 2)
                                 and self.global_proto3_unit is not None):
                             target_unit = net.global_proto3_unit_buf[labels]
@@ -420,9 +430,11 @@ class F2DCDSE(F2DC):
                                     F.adaptive_avg_pool2d(net._last_feat3_rescued, 1).flatten(1),
                                     dim=-1, eps=1e-8
                                 )
+                                # raw的feat跟prototype的相似度
                                 self._round_raw_to_target_cos.append(
                                     (raw_unit[valid] * target_unit[valid]).sum(-1).mean().item()
                                 )
+                                # 修正后的
                                 self._round_rescued_to_target_cos.append(
                                     (rescued_unit[valid] * target_unit[valid]).sum(-1).mean().item()
                                 )

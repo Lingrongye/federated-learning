@@ -1,0 +1,628 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_pg_lab_20_fl_digits_100_10
+selected_domain_list for 20 clients as:
+['mnist' 'mnist' 'mnist' 'usps' 'usps' 'usps' 'usps' 'usps' 'usps' 'svhn'
+ 'svhn' 'svhn' 'svhn' 'svhn' 'svhn' 'syn' 'syn' 'syn' 'syn' 'syn']
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/train_32x32.mat
+Using downloaded and verified file: ./rundata/dataset/test_32x32.mat
+[LAB setup] val partition: 200 samples across 20 clients, per-dom = {'mnist': 50, 'usps': 50, 'svhn': 50, 'syn': 50}
+           mnist class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           usps class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           svhn class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+           syn class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5, 9: 5}
+The 0 Communcation Time: 47.74
+The 0 Communcation Accuracy: 13.542 Method: f2dc_pg_lab epoch loss: 13.501
+[11.35, 13.15, 19.59, 10.08]
+
+[LAB R  1] loss_ema={usps:2.315, mnist:2.315, svhn:2.315, syn:2.314}
+          gap={usps:0.000, mnist:0.000, svhn:0.000, syn:0.000}  ratio={usps×0.85, mnist×1.15, svhn×0.97, syn×0.85}  clip={None}
+The 1 Communcation Time: 45.97
+The 1 Communcation Accuracy: 11.862 Method: f2dc_pg_lab epoch loss: 8.54
+[9.82, 8.47, 19.06, 10.1]
+
+[LAB R  2] loss_ema={svhn:2.312, usps:2.317, mnist:2.317, syn:2.317}
+          gap={svhn:0.000, usps:0.001, mnist:0.001, syn:0.001}  ratio={svhn×0.85, usps×1.66, mnist×1.03, syn×1.85}  clip={None}
+The 2 Communcation Time: 46.727
+The 2 Communcation Accuracy: 18.148 Method: f2dc_pg_lab epoch loss: 7.564
+[15.54, 18.58, 22.29, 16.18]
+
+[LAB R  3] loss_ema={usps:2.279, svhn:2.298, mnist:2.271, syn:2.310}
+          gap={usps:0.000, svhn:0.008, mnist:0.000, syn:0.020}  ratio={usps×1.09, svhn×0.94, mnist×0.91, syn×2.00}  clip={syn@max}
+The 3 Communcation Time: 45.359
+The 3 Communcation Accuracy: 31.197 Method: f2dc_pg_lab epoch loss: 6.394
+[34.78, 33.53, 28.08, 28.4]
+
+[LAB R  4] loss_ema={svhn:2.271, mnist:2.212, syn:2.246, usps:2.203}
+          gap={svhn:0.038, mnist:0.000, syn:0.013, usps:0.000}  ratio={svhn×1.03, mnist×0.85, syn×1.56, usps×0.85}  clip={None}
+The 4 Communcation Time: 45.053
+The 4 Communcation Accuracy: 48.202 Method: f2dc_pg_lab epoch loss: 5.318
+[45.8, 54.96, 46.67, 45.38]
+
+[LAB R  5] loss_ema={svhn:2.102, mnist:2.054, syn:2.015, usps:2.027}
+          gap={svhn:0.053, mnist:0.004, syn:0.000, usps:0.000}  ratio={svhn×1.07, mnist×0.89, syn×0.85, usps×0.85}  clip={None}
+The 5 Communcation Time: 45.855
+The 5 Communcation Accuracy: 52.725 Method: f2dc_pg_lab epoch loss: 4.308
+[50.33, 54.96, 52.04, 53.57]
+
+[LAB R  6] loss_ema={usps:1.923, mnist:1.922, svhn:1.977, syn:1.782}
+          gap={usps:0.022, mnist:0.021, svhn:0.076, syn:0.000}  ratio={usps×1.29, mnist×0.95, svhn×1.00, syn×0.85}  clip={None}
+The 6 Communcation Time: 47.485
+The 6 Communcation Accuracy: 61.56 Method: f2dc_pg_lab epoch loss: 3.681
+[58.42, 60.64, 61.43, 65.75]
+
+[LAB R  7] loss_ema={svhn:1.846, mnist:1.756, usps:1.759, syn:1.543}
+          gap={svhn:0.120, mnist:0.030, usps:0.033, syn:0.000}  ratio={svhn×1.01, mnist×0.95, usps×1.29, syn×0.85}  clip={None}
+The 7 Communcation Time: 46.455
+The 7 Communcation Accuracy: 73.338 Method: f2dc_pg_lab epoch loss: 3.019
+[70.75, 74.24, 69.53, 78.83]
+
+[LAB R  8] loss_ema={usps:1.464, svhn:1.697, syn:1.211, mnist:1.522}
+          gap={usps:0.000, svhn:0.224, syn:0.000, mnist:0.048}  ratio={usps×0.85, svhn×1.05, syn×0.85, mnist×0.95}  clip={None}
+The 8 Communcation Time: 46.503
+The 8 Communcation Accuracy: 79.552 Method: f2dc_pg_lab epoch loss: 2.625
+[76.64, 78.18, 77.64, 85.75]
+
+[LAB R  9] loss_ema={syn:0.900, svhn:1.484, usps:1.246, mnist:1.330}
+          gap={syn:0.000, svhn:0.244, usps:0.006, mnist:0.090}  ratio={syn×0.85, svhn×1.02, usps×0.89, mnist×1.00}  clip={None}
+The 9 Communcation Time: 47.271
+The 9 Communcation Accuracy: 82.382 Method: f2dc_pg_lab epoch loss: 2.359
+[79.94, 79.77, 81.27, 88.55]
+
+[LAB R 10] loss_ema={usps:1.067, svhn:1.299, syn:0.663, mnist:1.169}
+          gap={usps:0.018, svhn:0.249, syn:0.000, mnist:0.119}  ratio={usps×0.96, svhn×1.00, syn×0.85, mnist×1.03}  clip={None}
+The 10 Communcation Time: 46.194
+The 10 Communcation Accuracy: 83.308 Method: f2dc_pg_lab epoch loss: 2.156
+[80.84, 81.07, 82.62, 88.7]
+
+[LAB R 11] loss_ema={svhn:1.154, mnist:1.047, syn:0.506, usps:0.936}
+          gap={svhn:0.244, mnist:0.136, syn:0.000, usps:0.026}  ratio={svhn×0.99, mnist×1.05, syn×0.85, usps×1.00}  clip={None}
+The 11 Communcation Time: 47.678
+The 11 Communcation Accuracy: 86.002 Method: f2dc_pg_lab epoch loss: 2.133
+[88.04, 83.76, 82.61, 89.6]
+
+[LAB R 12] loss_ema={mnist:0.901, svhn:1.053, syn:0.382, usps:0.787}
+          gap={mnist:0.120, svhn:0.272, syn:0.000, usps:0.006}  ratio={mnist×1.03, svhn×1.01, syn×0.85, usps×0.89}  clip={None}
+The 12 Communcation Time: 45.419
+The 12 Communcation Accuracy: 87.08 Method: f2dc_pg_lab epoch loss: 1.943
+[87.23, 84.45, 84.78, 91.86]
+
+[LAB R 13] loss_ema={usps:0.692, syn:0.280, mnist:0.799, svhn:0.949}
+          gap={usps:0.012, syn:0.000, mnist:0.119, svhn:0.269}  ratio={usps×0.92, syn×0.85, mnist×1.02, svhn×1.01}  clip={None}
+The 13 Communcation Time: 46.789
+The 13 Communcation Accuracy: 87.05 Method: f2dc_pg_lab epoch loss: 1.939
+[87.62, 83.51, 85.69, 91.38]
+
+[LAB R 14] loss_ema={syn:0.211, mnist:0.730, usps:0.634, svhn:0.872}
+          gap={syn:0.000, mnist:0.118, usps:0.022, svhn:0.260}  ratio={syn×0.85, mnist×1.02, usps×0.99, svhn×1.01}  clip={None}
+The 14 Communcation Time: 46.851
+The 14 Communcation Accuracy: 88.503 Method: f2dc_pg_lab epoch loss: 1.831
+[90.23, 85.3, 86.06, 92.42]
+
+[LAB R 15] loss_ema={syn:0.172, mnist:0.649, svhn:0.791, usps:0.565}
+          gap={syn:0.000, mnist:0.105, svhn:0.247, usps:0.021}  ratio={syn×0.85, mnist×1.01, svhn×1.01, usps×0.99}  clip={None}
+The 15 Communcation Time: 46.784
+The 15 Communcation Accuracy: 87.595 Method: f2dc_pg_lab epoch loss: 1.848
+[88.67, 84.26, 85.5, 91.95]
+
+[LAB R 16] loss_ema={syn:0.135, usps:0.527, svhn:0.758, mnist:0.613}
+          gap={syn:0.000, usps:0.019, svhn:0.250, mnist:0.104}  ratio={syn×0.85, usps×0.97, svhn×1.01, mnist×1.01}  clip={None}
+The 16 Communcation Time: 47.003
+The 16 Communcation Accuracy: 88.837 Method: f2dc_pg_lab epoch loss: 1.662
+[90.39, 85.3, 86.7, 92.96]
+
+[LAB R 17] loss_ema={svhn:0.699, syn:0.120, usps:0.492, mnist:0.569}
+          gap={svhn:0.229, syn:0.000, usps:0.022, mnist:0.099}  ratio={svhn×1.01, syn×0.85, usps×1.00, mnist×1.01}  clip={None}
+The 17 Communcation Time: 47.348
+The 17 Communcation Accuracy: 88.865 Method: f2dc_pg_lab epoch loss: 1.703
+[90.81, 85.3, 86.68, 92.67]
+
+[LAB R 18] loss_ema={svhn:0.682, usps:0.480, syn:0.100, mnist:0.528}
+          gap={svhn:0.234, usps:0.032, syn:0.000, mnist:0.081}  ratio={svhn×1.01, usps×1.07, syn×0.85, mnist×0.99}  clip={None}
+The 18 Communcation Time: 47.09
+The 18 Communcation Accuracy: 89.17 Method: f2dc_pg_lab epoch loss: 1.634
+[91.2, 85.8, 87.05, 92.63]
+
+[LAB R 19] loss_ema={svhn:0.688, usps:0.436, syn:0.097, mnist:0.512}
+          gap={svhn:0.255, usps:0.003, syn:0.000, mnist:0.079}  ratio={svhn×1.03, usps×0.87, syn×0.85, mnist×0.99}  clip={None}
+The 19 Communcation Time: 47.716
+The 19 Communcation Accuracy: 89.265 Method: f2dc_pg_lab epoch loss: 1.587
+[92.05, 85.75, 86.48, 92.78]
+
+[LAB R 20] loss_ema={mnist:0.475, svhn:0.696, syn:0.098, usps:0.419}
+          gap={mnist:0.053, svhn:0.274, syn:0.000, usps:0.000}  ratio={mnist×0.95, svhn×1.05, syn×0.85, usps×0.85}  clip={None}
+The 20 Communcation Time: 46.17
+The 20 Communcation Accuracy: 89.682 Method: f2dc_pg_lab epoch loss: 1.502
+[91.81, 86.95, 87.07, 92.9]
+
+[LAB R 21] loss_ema={svhn:0.688, mnist:0.463, usps:0.425, syn:0.093}
+          gap={svhn:0.271, mnist:0.046, usps:0.008, syn:0.000}  ratio={svhn×1.05, mnist×0.93, usps×0.91, syn×0.85}  clip={None}
+The 21 Communcation Time: 46.61
+The 21 Communcation Accuracy: 89.602 Method: f2dc_pg_lab epoch loss: 1.523
+[91.54, 85.5, 88.16, 93.21]
+
+[LAB R 22] loss_ema={mnist:0.450, svhn:0.683, syn:0.081, usps:0.434}
+          gap={mnist:0.038, svhn:0.271, syn:0.000, usps:0.022}  ratio={mnist×0.92, svhn×1.05, syn×0.85, usps×1.01}  clip={None}
+The 22 Communcation Time: 46.7
+The 22 Communcation Accuracy: 90.7 Method: f2dc_pg_lab epoch loss: 1.412
+[94.21, 87.94, 87.29, 93.36]
+
+[LAB R 23] loss_ema={usps:0.411, syn:0.080, svhn:0.667, mnist:0.401}
+          gap={usps:0.021, syn:0.000, svhn:0.277, mnist:0.012}  ratio={usps×1.02, syn×0.85, svhn×1.06, mnist×0.87}  clip={None}
+The 23 Communcation Time: 41.698
+The 23 Communcation Accuracy: 90.122 Method: f2dc_pg_lab epoch loss: 1.424
+[93.13, 86.2, 87.9, 93.26]
+
+[LAB R 24] loss_ema={syn:0.088, usps:0.416, svhn:0.624, mnist:0.383}
+          gap={syn:0.000, usps:0.039, svhn:0.246, mnist:0.005}  ratio={syn×0.85, usps×1.17, svhn×1.05, mnist×0.86}  clip={None}
+The 24 Communcation Time: 47.388
+The 24 Communcation Accuracy: 90.398 Method: f2dc_pg_lab epoch loss: 1.476
+[92.66, 86.7, 88.51, 93.72]
+
+[LAB R 25] loss_ema={syn:0.080, usps:0.401, svhn:0.621, mnist:0.378}
+          gap={syn:0.000, usps:0.031, svhn:0.251, mnist:0.008}  ratio={syn×0.85, usps×1.11, svhn×1.06, mnist×0.87}  clip={None}
+The 25 Communcation Time: 47.869
+The 25 Communcation Accuracy: 90.43 Method: f2dc_pg_lab epoch loss: 1.336
+[93.4, 86.05, 88.93, 93.34]
+
+[LAB R 26] loss_ema={syn:0.077, svhn:0.605, usps:0.387, mnist:0.359}
+          gap={syn:0.000, svhn:0.248, usps:0.030, mnist:0.002}  ratio={syn×0.85, svhn×1.06, usps×1.11, mnist×0.85}  clip={None}
+The 26 Communcation Time: 46.542
+The 26 Communcation Accuracy: 90.652 Method: f2dc_pg_lab epoch loss: 1.433
+[93.79, 86.65, 88.49, 93.68]
+
+[LAB R 27] loss_ema={svhn:0.610, mnist:0.347, usps:0.420, syn:0.088}
+          gap={svhn:0.244, mnist:0.000, usps:0.054, syn:0.000}  ratio={svhn×1.05, mnist×0.85, usps×1.29, syn×0.85}  clip={None}
+The 27 Communcation Time: 45.06
+The 27 Communcation Accuracy: 90.438 Method: f2dc_pg_lab epoch loss: 1.289
+[93.25, 86.3, 88.74, 93.46]
+
+[LAB R 28] loss_ema={usps:0.433, svhn:0.595, syn:0.084, mnist:0.357}
+          gap={usps:0.066, svhn:0.227, syn:0.000, mnist:0.000}  ratio={usps×1.40, svhn×1.04, syn×0.85, mnist×0.85}  clip={None}
+The 28 Communcation Time: 46.779
+The 28 Communcation Accuracy: 90.835 Method: f2dc_pg_lab epoch loss: 1.199
+[93.85, 86.85, 89.24, 93.4]
+
+[LAB R 29] loss_ema={svhn:0.574, usps:0.423, syn:0.102, mnist:0.369}
+          gap={svhn:0.207, usps:0.056, syn:0.000, mnist:0.002}  ratio={svhn×1.04, usps×1.37, syn×0.85, mnist×0.85}  clip={None}
+The 29 Communcation Time: 45.951
+The 29 Communcation Accuracy: 90.918 Method: f2dc_pg_lab epoch loss: 1.292
+[93.56, 88.24, 88.36, 93.51]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_digits_s15/best_R030.npz (acc=90.918)
+[LAB R 30] loss_ema={mnist:0.381, svhn:0.555, usps:0.440, syn:0.095}
+          gap={mnist:0.013, svhn:0.187, usps:0.073, syn:0.000}  ratio={mnist×0.88, svhn×1.01, usps×1.50, syn×0.85}  clip={None}
+The 30 Communcation Time: 47.017
+The 30 Communcation Accuracy: 90.708 Method: f2dc_pg_lab epoch loss: 1.252
+[93.84, 86.25, 89.1, 93.64]
+
+[LAB R 31] loss_ema={svhn:0.547, usps:0.476, mnist:0.383, syn:0.082}
+          gap={svhn:0.175, usps:0.104, mnist:0.011, syn:0.000}  ratio={svhn×0.99, usps×1.72, mnist×0.87, syn×0.85}  clip={None}
+The 31 Communcation Time: 51.578
+The 31 Communcation Accuracy: 91.8 Method: f2dc_pg_lab epoch loss: 1.304
+[94.5, 90.58, 88.49, 93.63]
+
+[LAB R 32] loss_ema={usps:0.435, syn:0.076, svhn:0.546, mnist:0.361}
+          gap={usps:0.081, syn:0.000, svhn:0.191, mnist:0.006}  ratio={usps×1.55, syn×0.85, svhn×1.01, mnist×0.86}  clip={None}
+The 32 Communcation Time: 51.333
+The 32 Communcation Accuracy: 91.522 Method: f2dc_pg_lab epoch loss: 1.065
+[94.79, 88.34, 88.88, 94.08]
+
+[LAB R 33] loss_ema={svhn:0.539, syn:0.073, usps:0.409, mnist:0.342}
+          gap={svhn:0.198, syn:0.000, usps:0.068, mnist:0.002}  ratio={svhn×1.03, syn×0.85, usps×1.47, mnist×0.85}  clip={None}
+The 33 Communcation Time: 52.098
+The 33 Communcation Accuracy: 91.915 Method: f2dc_pg_lab epoch loss: 1.217
+[94.5, 90.08, 89.3, 93.78]
+
+[LAB R 34] loss_ema={syn:0.072, svhn:0.548, usps:0.380, mnist:0.335}
+          gap={syn:0.000, svhn:0.214, usps:0.046, mnist:0.002}  ratio={syn×0.85, svhn×1.05, usps×1.28, mnist×0.85}  clip={None}
+The 34 Communcation Time: 52.493
+The 34 Communcation Accuracy: 91.872 Method: f2dc_pg_lab epoch loss: 1.102
+[94.99, 89.34, 89.38, 93.78]
+
+[LAB R 35] loss_ema={svhn:0.526, syn:0.076, mnist:0.325, usps:0.377}
+          gap={svhn:0.200, syn:0.000, mnist:0.000, usps:0.051}  ratio={svhn×1.04, syn×0.85, mnist×0.85, usps×1.34}  clip={None}
+The 35 Communcation Time: 52.212
+The 35 Communcation Accuracy: 91.875 Method: f2dc_pg_lab epoch loss: 1.145
+[95.07, 89.89, 89.24, 93.3]
+
+[LAB R 36] loss_ema={usps:0.366, svhn:0.561, mnist:0.321, syn:0.072}
+          gap={usps:0.036, svhn:0.231, mnist:0.000, syn:0.000}  ratio={usps×1.18, svhn×1.06, mnist×0.85, syn×0.85}  clip={None}
+The 36 Communcation Time: 50.16
+The 36 Communcation Accuracy: 91.622 Method: f2dc_pg_lab epoch loss: 0.961
+[94.46, 88.99, 89.28, 93.76]
+
+[LAB R 37] loss_ema={svhn:0.542, syn:0.066, usps:0.357, mnist:0.326}
+          gap={svhn:0.219, syn:0.000, usps:0.034, mnist:0.003}  ratio={svhn×1.05, syn×0.85, usps×1.17, mnist×0.86}  clip={None}
+The 37 Communcation Time: 52.389
+The 37 Communcation Accuracy: 92.12 Method: f2dc_pg_lab epoch loss: 1.133
+[95.33, 89.24, 89.77, 94.14]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_digits_s15/best_R038.npz (acc=92.120)
+[LAB R 38] loss_ema={svhn:0.569, syn:0.073, usps:0.363, mnist:0.322}
+          gap={svhn:0.237, syn:0.000, usps:0.031, mnist:0.000}  ratio={svhn×1.06, syn×0.85, usps×1.13, mnist×0.85}  clip={None}
+The 38 Communcation Time: 51.519
+The 38 Communcation Accuracy: 91.958 Method: f2dc_pg_lab epoch loss: 1.087
+[95.27, 89.94, 89.04, 93.58]
+
+[LAB R 39] loss_ema={usps:0.371, svhn:0.594, syn:0.069, mnist:0.316}
+          gap={usps:0.033, svhn:0.257, syn:0.000, mnist:0.000}  ratio={usps×1.13, svhn×1.06, syn×0.85, mnist×0.85}  clip={None}
+The 39 Communcation Time: 52.303
+The 39 Communcation Accuracy: 92.385 Method: f2dc_pg_lab epoch loss: 1.183
+[95.72, 90.03, 89.55, 94.24]
+
+[LAB R 40] loss_ema={svhn:0.591, usps:0.374, syn:0.070, mnist:0.305}
+          gap={svhn:0.256, usps:0.039, syn:0.000, mnist:0.000}  ratio={svhn×1.06, usps×1.17, syn×0.85, mnist×0.85}  clip={None}
+The 40 Communcation Time: 53.004
+The 40 Communcation Accuracy: 92.158 Method: f2dc_pg_lab epoch loss: 1.044
+[95.29, 89.64, 89.67, 94.03]
+
+[LAB R 41] loss_ema={svhn:0.587, usps:0.343, syn:0.070, mnist:0.300}
+          gap={svhn:0.262, usps:0.018, syn:0.000, mnist:0.000}  ratio={svhn×1.07, usps×1.00, syn×0.85, mnist×0.85}  clip={None}
+The 41 Communcation Time: 51.819
+The 41 Communcation Accuracy: 92.082 Method: f2dc_pg_lab epoch loss: 1.022
+[95.24, 89.09, 90.31, 93.69]
+
+[LAB R 42] loss_ema={usps:0.327, svhn:0.578, syn:0.106, mnist:0.303}
+          gap={usps:0.000, svhn:0.250, syn:0.000, mnist:0.000}  ratio={usps×0.85, svhn×1.09, syn×0.85, mnist×0.85}  clip={None}
+The 42 Communcation Time: 51.626
+The 42 Communcation Accuracy: 92.29 Method: f2dc_pg_lab epoch loss: 1.047
+[95.49, 89.79, 89.86, 94.02]
+
+[LAB R 43] loss_ema={svhn:0.611, syn:0.114, mnist:0.280, usps:0.315}
+          gap={svhn:0.281, syn:0.000, mnist:0.000, usps:0.000}  ratio={svhn×1.09, syn×0.85, mnist×0.85, usps×0.85}  clip={None}
+The 43 Communcation Time: 52.471
+The 43 Communcation Accuracy: 92.155 Method: f2dc_pg_lab epoch loss: 1.115
+[95.8, 88.29, 90.24, 94.29]
+
+[LAB R 44] loss_ema={svhn:0.615, mnist:0.280, syn:0.101, usps:0.330}
+          gap={svhn:0.283, mnist:0.000, syn:0.000, usps:0.000}  ratio={svhn×1.09, mnist×0.85, syn×0.85, usps×0.85}  clip={None}
+The 44 Communcation Time: 52.223
+The 44 Communcation Accuracy: 92.232 Method: f2dc_pg_lab epoch loss: 0.984
+[95.21, 89.24, 90.3, 94.18]
+
+[LAB R 45] loss_ema={svhn:0.614, usps:0.331, syn:0.122, mnist:0.295}
+          gap={svhn:0.273, usps:0.000, syn:0.000, mnist:0.000}  ratio={svhn×1.09, usps×0.85, syn×0.85, mnist×0.85}  clip={None}
+The 45 Communcation Time: 51.544
+The 45 Communcation Accuracy: 92.225 Method: f2dc_pg_lab epoch loss: 1.157
+[95.38, 89.84, 89.25, 94.43]
+
+[LAB R 46] loss_ema={usps:0.324, syn:0.096, svhn:0.602, mnist:0.296}
+          gap={usps:0.000, syn:0.000, svhn:0.272, mnist:0.000}  ratio={usps×0.85, syn×0.85, svhn×1.09, mnist×0.85}  clip={None}
+The 46 Communcation Time: 51.399
+The 46 Communcation Accuracy: 92.38 Method: f2dc_pg_lab epoch loss: 0.969
+[95.57, 89.79, 89.9, 94.26]
+
+[LAB R 47] loss_ema={mnist:0.313, usps:0.343, svhn:0.602, syn:0.098}
+          gap={mnist:0.000, usps:0.004, svhn:0.263, syn:0.000}  ratio={mnist×0.85, usps×0.89, svhn×1.08, syn×0.85}  clip={None}
+The 47 Communcation Time: 52.998
+The 47 Communcation Accuracy: 92.252 Method: f2dc_pg_lab epoch loss: 1.05
+[95.63, 88.79, 90.27, 94.32]
+
+[LAB R 48] loss_ema={usps:0.355, mnist:0.311, syn:0.095, svhn:0.619}
+          gap={usps:0.010, mnist:0.000, syn:0.000, svhn:0.274}  ratio={usps×0.94, mnist×0.85, syn×0.85, svhn×1.08}  clip={None}
+The 48 Communcation Time: 51.304
+The 48 Communcation Accuracy: 92.122 Method: f2dc_pg_lab epoch loss: 0.926
+[95.57, 88.84, 89.97, 94.11]
+
+[LAB R 49] loss_ema={syn:0.086, usps:0.373, svhn:0.636, mnist:0.319}
+          gap={syn:0.000, usps:0.020, svhn:0.282, mnist:0.000}  ratio={syn×0.85, usps×1.01, svhn×1.07, mnist×0.85}  clip={None}
+The 49 Communcation Time: 51.913
+⚠️ [LAB WASTE WARN R 50] dom=svhn cum_boost=123.2% window_roi=0.30 (< 0.5 = wasted)
+The 49 Communcation Accuracy: 92.13 Method: f2dc_pg_lab epoch loss: 0.945
+[95.77, 88.59, 90.26, 93.9]
+
+[LAB R 50] loss_ema={syn:0.104, mnist:0.328, svhn:0.596, usps:0.369}
+          gap={syn:0.000, mnist:0.000, svhn:0.247, usps:0.019}  ratio={syn×0.85, mnist×0.85, svhn×1.07, usps×1.03}  clip={None}
+The 50 Communcation Time: 52.104
+The 50 Communcation Accuracy: 92.74 Method: f2dc_pg_lab epoch loss: 1.029
+[96.45, 90.53, 89.73, 94.25]
+
+[LAB R 51] loss_ema={svhn:0.601, usps:0.342, syn:0.103, mnist:0.311}
+          gap={svhn:0.262, usps:0.002, syn:0.000, mnist:0.000}  ratio={svhn×1.09, usps×0.87, syn×0.85, mnist×0.85}  clip={None}
+The 51 Communcation Time: 52.872
+The 51 Communcation Accuracy: 92.512 Method: f2dc_pg_lab epoch loss: 0.844
+[96.61, 89.64, 89.67, 94.13]
+
+[LAB R 52] loss_ema={svhn:0.604, usps:0.325, mnist:0.293, syn:0.096}
+          gap={svhn:0.274, usps:0.000, mnist:0.000, syn:0.000}  ratio={svhn×1.09, usps×0.85, mnist×0.85, syn×0.85}  clip={None}
+The 52 Communcation Time: 50.63
+The 52 Communcation Accuracy: 92.363 Method: f2dc_pg_lab epoch loss: 1.064
+[96.22, 89.39, 89.37, 94.47]
+
+[LAB R 53] loss_ema={syn:0.090, mnist:0.277, svhn:0.551, usps:0.325}
+          gap={syn:0.000, mnist:0.000, svhn:0.240, usps:0.015}  ratio={syn×0.85, mnist×0.85, svhn×1.08, usps×0.99}  clip={None}
+The 53 Communcation Time: 51.633
+The 53 Communcation Accuracy: 92.36 Method: f2dc_pg_lab epoch loss: 0.808
+[96.1, 89.44, 89.59, 94.31]
+
+[LAB R 54] loss_ema={syn:0.093, svhn:0.581, usps:0.378, mnist:0.278}
+          gap={syn:0.000, svhn:0.248, usps:0.045, mnist:0.000}  ratio={syn×0.85, svhn×1.05, usps×1.23, mnist×0.85}  clip={None}
+The 54 Communcation Time: 52.022
+The 54 Communcation Accuracy: 92.462 Method: f2dc_pg_lab epoch loss: 0.953
+[96.28, 89.64, 89.66, 94.27]
+
+[LAB R 55] loss_ema={svhn:0.578, mnist:0.295, usps:0.371, syn:0.089}
+          gap={svhn:0.245, mnist:0.000, usps:0.038, syn:0.000}  ratio={svhn×1.06, mnist×0.85, usps×1.17, syn×0.85}  clip={None}
+The 55 Communcation Time: 51.728
+The 55 Communcation Accuracy: 92.648 Method: f2dc_pg_lab epoch loss: 0.919
+[96.26, 89.89, 90.0, 94.44]
+
+[LAB R 56] loss_ema={svhn:0.607, usps:0.364, syn:0.108, mnist:0.296}
+          gap={svhn:0.263, usps:0.020, syn:0.000, mnist:0.000}  ratio={svhn×1.07, usps×1.02, syn×0.85, mnist×0.85}  clip={None}
+The 56 Communcation Time: 50.814
+The 56 Communcation Accuracy: 92.855 Method: f2dc_pg_lab epoch loss: 0.895
+[96.82, 90.03, 90.3, 94.27]
+
+[LAB R 57] loss_ema={svhn:0.615, syn:0.135, mnist:0.296, usps:0.353}
+          gap={svhn:0.266, syn:0.000, mnist:0.000, usps:0.003}  ratio={svhn×1.09, syn×0.85, mnist×0.85, usps×0.88}  clip={None}
+The 57 Communcation Time: 52.037
+The 57 Communcation Accuracy: 92.345 Method: f2dc_pg_lab epoch loss: 0.948
+[95.72, 89.09, 90.1, 94.47]
+
+[LAB R 58] loss_ema={usps:0.357, svhn:0.662, syn:0.114, mnist:0.301}
+          gap={usps:0.000, svhn:0.303, syn:0.000, mnist:0.000}  ratio={usps×0.85, svhn×1.09, syn×0.85, mnist×0.85}  clip={None}
+The 58 Communcation Time: 51.612
+The 58 Communcation Accuracy: 92.34 Method: f2dc_pg_lab epoch loss: 0.937
+[95.69, 89.29, 90.49, 93.89]
+
+[LAB R 59] loss_ema={svhn:0.671, usps:0.369, mnist:0.323, syn:0.130}
+          gap={svhn:0.298, usps:0.000, mnist:0.000, syn:0.000}  ratio={svhn×1.09, usps×0.85, mnist×0.85, syn×0.85}  clip={None}
+The 59 Communcation Time: 51.542
+⚠️ [LAB WASTE WARN R 60] dom=svhn cum_boost=171.4% window_roi=0.17 (< 0.5 = wasted)
+The 59 Communcation Accuracy: 92.702 Method: f2dc_pg_lab epoch loss: 0.899
+[96.26, 89.84, 90.52, 94.19]
+
+[LAB R 60] loss_ema={syn:0.117, svhn:0.683, mnist:0.332, usps:0.374}
+          gap={syn:0.000, svhn:0.306, mnist:0.000, usps:0.000}  ratio={syn×0.85, svhn×1.09, mnist×0.85, usps×0.85}  clip={None}
+The 60 Communcation Time: 50.824
+The 60 Communcation Accuracy: 92.72 Method: f2dc_pg_lab epoch loss: 0.933
+[96.62, 89.79, 90.25, 94.22]
+
+[LAB R 61] loss_ema={usps:0.366, syn:0.110, svhn:0.666, mnist:0.304}
+          gap={usps:0.005, syn:0.000, svhn:0.305, mnist:0.000}  ratio={usps×0.89, syn×0.85, svhn×1.09, mnist×0.85}  clip={None}
+The 61 Communcation Time: 50.767
+The 61 Communcation Accuracy: 92.35 Method: f2dc_pg_lab epoch loss: 1.084
+[95.51, 89.49, 90.3, 94.1]
+
+[LAB R 62] loss_ema={svhn:0.679, usps:0.410, mnist:0.306, syn:0.096}
+          gap={svhn:0.306, usps:0.037, mnist:0.000, syn:0.000}  ratio={svhn×1.06, usps×1.11, mnist×0.85, syn×0.85}  clip={None}
+The 62 Communcation Time: 49.162
+The 62 Communcation Accuracy: 92.712 Method: f2dc_pg_lab epoch loss: 0.862
+[96.31, 89.99, 90.07, 94.48]
+
+[LAB R 63] loss_ema={usps:0.372, mnist:0.311, svhn:0.700, syn:0.082}
+          gap={usps:0.006, mnist:0.000, svhn:0.334, syn:0.000}  ratio={usps×0.89, mnist×0.85, svhn×1.08, syn×0.85}  clip={None}
+The 63 Communcation Time: 50.936
+The 63 Communcation Accuracy: 92.438 Method: f2dc_pg_lab epoch loss: 0.855
+[95.77, 89.29, 90.45, 94.24]
+
+[LAB R 64] loss_ema={usps:0.344, syn:0.066, svhn:0.666, mnist:0.319}
+          gap={usps:0.000, syn:0.000, svhn:0.317, mnist:0.000}  ratio={usps×0.85, syn×0.85, svhn×1.09, mnist×0.85}  clip={None}
+The 64 Communcation Time: 50.865
+The 64 Communcation Accuracy: 92.472 Method: f2dc_pg_lab epoch loss: 0.88
+[95.94, 89.44, 90.1, 94.41]
+
+[LAB R 65] loss_ema={syn:0.095, usps:0.354, mnist:0.314, svhn:0.700}
+          gap={syn:0.000, usps:0.000, mnist:0.000, svhn:0.334}  ratio={syn×0.85, usps×0.85, mnist×0.85, svhn×1.09}  clip={None}
+The 65 Communcation Time: 52.246
+The 65 Communcation Accuracy: 92.538 Method: f2dc_pg_lab epoch loss: 0.892
+[96.14, 89.34, 90.32, 94.35]
+
+[LAB R 66] loss_ema={syn:0.102, svhn:0.716, usps:0.394, mnist:0.312}
+          gap={syn:0.000, svhn:0.335, usps:0.013, mnist:0.000}  ratio={syn×0.85, svhn×1.08, usps×0.94, mnist×0.85}  clip={None}
+The 66 Communcation Time: 51.213
+The 66 Communcation Accuracy: 92.478 Method: f2dc_pg_lab epoch loss: 0.833
+[96.3, 89.44, 90.22, 93.95]
+
+[LAB R 67] loss_ema={svhn:0.735, usps:0.431, mnist:0.308, syn:0.103}
+          gap={svhn:0.341, usps:0.036, mnist:0.000, syn:0.000}  ratio={svhn×1.07, usps×1.08, mnist×0.85, syn×0.85}  clip={None}
+The 67 Communcation Time: 51.451
+The 67 Communcation Accuracy: 92.61 Method: f2dc_pg_lab epoch loss: 0.876
+[96.32, 90.13, 90.14, 93.85]
+
+[LAB R 68] loss_ema={usps:0.411, mnist:0.317, syn:0.118, svhn:0.696}
+          gap={usps:0.026, mnist:0.000, syn:0.000, svhn:0.311}  ratio={usps×1.03, mnist×0.85, syn×0.85, svhn×1.07}  clip={None}
+The 68 Communcation Time: 51.445
+The 68 Communcation Accuracy: 92.82 Method: f2dc_pg_lab epoch loss: 0.73
+[96.86, 90.63, 89.58, 94.21]
+
+[LAB R 69] loss_ema={mnist:0.303, syn:0.106, svhn:0.644, usps:0.405}
+          gap={mnist:0.000, syn:0.000, svhn:0.280, usps:0.041}  ratio={mnist×0.85, syn×0.85, svhn×1.06, usps×1.16}  clip={None}
+The 69 Communcation Time: 51.988
+⚠️ [LAB WASTE WARN R 70] dom=svhn cum_boost=220.0% window_roi=-0.04 (< 0.5 = wasted)
+The 69 Communcation Accuracy: 93.035 Method: f2dc_pg_lab epoch loss: 0.829
+[97.27, 90.83, 89.55, 94.49]
+
+[LAB R 70] loss_ema={svhn:0.619, syn:0.091, usps:0.378, mnist:0.265}
+          gap={svhn:0.281, syn:0.000, usps:0.040, mnist:0.000}  ratio={svhn×1.06, syn×0.85, usps×1.15, mnist×0.85}  clip={None}
+The 70 Communcation Time: 46.775
+The 70 Communcation Accuracy: 92.768 Method: f2dc_pg_lab epoch loss: 0.852
+[96.41, 90.48, 90.12, 94.06]
+
+[LAB R 71] loss_ema={usps:0.390, svhn:0.644, mnist:0.288, syn:0.091}
+          gap={usps:0.037, svhn:0.291, mnist:0.000, syn:0.000}  ratio={usps×1.12, svhn×1.06, mnist×0.85, syn×0.85}  clip={None}
+The 71 Communcation Time: 50.509
+The 71 Communcation Accuracy: 93.168 Method: f2dc_pg_lab epoch loss: 0.802
+[96.88, 91.28, 90.09, 94.42]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_digits_s15/best_R072.npz (acc=93.168)
+[LAB R 72] loss_ema={svhn:0.665, mnist:0.277, syn:0.088, usps:0.360}
+          gap={svhn:0.318, mnist:0.000, syn:0.000, usps:0.012}  ratio={svhn×1.08, mnist×0.85, syn×0.85, usps×0.94}  clip={None}
+The 72 Communcation Time: 51.153
+The 72 Communcation Accuracy: 92.775 Method: f2dc_pg_lab epoch loss: 0.743
+[96.56, 89.94, 90.21, 94.39]
+
+[LAB R 73] loss_ema={svhn:0.644, syn:0.065, mnist:0.272, usps:0.369}
+          gap={svhn:0.307, syn:0.000, mnist:0.000, usps:0.031}  ratio={svhn×1.07, syn×0.85, mnist×0.85, usps×1.07}  clip={None}
+The 73 Communcation Time: 51.539
+The 73 Communcation Accuracy: 93.117 Method: f2dc_pg_lab epoch loss: 0.847
+[96.99, 90.98, 90.23, 94.27]
+
+[LAB R 74] loss_ema={mnist:0.252, syn:0.050, svhn:0.625, usps:0.367}
+          gap={mnist:0.000, syn:0.000, svhn:0.302, usps:0.044}  ratio={mnist×0.85, syn×0.85, svhn×1.06, usps×1.16}  clip={None}
+The 74 Communcation Time: 51.937
+The 74 Communcation Accuracy: 93.108 Method: f2dc_pg_lab epoch loss: 0.838
+[97.13, 90.93, 90.25, 94.12]
+
+[LAB R 75] loss_ema={syn:0.057, svhn:0.622, usps:0.353, mnist:0.233}
+          gap={syn:0.000, svhn:0.306, usps:0.037, mnist:0.000}  ratio={syn×0.85, svhn×1.06, usps×1.11, mnist×0.85}  clip={None}
+The 75 Communcation Time: 46.063
+The 75 Communcation Accuracy: 93.102 Method: f2dc_pg_lab epoch loss: 0.777
+[96.93, 90.68, 90.23, 94.57]
+
+[LAB R 76] loss_ema={mnist:0.227, usps:0.380, syn:0.058, svhn:0.637}
+          gap={mnist:0.000, usps:0.054, syn:0.000, svhn:0.312}  ratio={mnist×0.85, usps×1.21, syn×0.85, svhn×1.05}  clip={None}
+The 76 Communcation Time: 50.931
+The 76 Communcation Accuracy: 92.985 Method: f2dc_pg_lab epoch loss: 0.784
+[97.02, 90.73, 90.01, 94.18]
+
+[LAB R 77] loss_ema={syn:0.057, mnist:0.244, svhn:0.673, usps:0.398}
+          gap={syn:0.000, mnist:0.000, svhn:0.330, usps:0.054}  ratio={syn×0.85, mnist×0.85, svhn×1.06, usps×1.19}  clip={None}
+The 77 Communcation Time: 52.477
+The 77 Communcation Accuracy: 93.25 Method: f2dc_pg_lab epoch loss: 0.799
+[97.17, 91.28, 90.19, 94.36]
+
+[LAB R 78] loss_ema={mnist:0.248, syn:0.063, usps:0.386, svhn:0.690}
+          gap={mnist:0.000, syn:0.000, usps:0.039, svhn:0.343}  ratio={mnist×0.85, syn×0.85, usps×1.10, svhn×1.06}  clip={None}
+The 78 Communcation Time: 51.299
+The 78 Communcation Accuracy: 93.045 Method: f2dc_pg_lab epoch loss: 0.719
+[97.08, 90.63, 90.22, 94.25]
+
+[LAB R 79] loss_ema={usps:0.370, syn:0.067, svhn:0.686, mnist:0.253}
+          gap={usps:0.026, syn:0.000, svhn:0.342, mnist:0.000}  ratio={usps×1.02, syn×0.85, svhn×1.07, mnist×0.85}  clip={None}
+The 79 Communcation Time: 51.329
+⚠️ [LAB WASTE WARN R 80] dom=svhn cum_boost=259.9% window_roi=0.02 (< 0.5 = wasted)
+The 79 Communcation Accuracy: 93.058 Method: f2dc_pg_lab epoch loss: 0.8
+[96.62, 90.78, 90.33, 94.5]
+
+[LAB R 80] loss_ema={usps:0.366, mnist:0.255, syn:0.087, svhn:0.670}
+          gap={usps:0.022, mnist:0.000, syn:0.000, svhn:0.326}  ratio={usps×1.00, mnist×0.85, syn×0.85, svhn×1.07}  clip={None}
+The 80 Communcation Time: 51.301
+The 80 Communcation Accuracy: 92.982 Method: f2dc_pg_lab epoch loss: 0.847
+[96.67, 89.99, 90.67, 94.6]
+
+[LAB R 81] loss_ema={mnist:0.270, svhn:0.735, usps:0.429, syn:0.102}
+          gap={mnist:0.000, svhn:0.351, usps:0.045, syn:0.000}  ratio={mnist×0.85, svhn×1.06, usps×1.12, syn×0.85}  clip={None}
+The 81 Communcation Time: 52.612
+The 81 Communcation Accuracy: 93.045 Method: f2dc_pg_lab epoch loss: 0.778
+[96.45, 90.38, 90.7, 94.65]
+
+[LAB R 82] loss_ema={syn:0.114, usps:0.407, svhn:0.733, mnist:0.299}
+          gap={syn:0.000, usps:0.018, svhn:0.345, mnist:0.000}  ratio={syn×0.85, usps×0.97, svhn×1.08, mnist×0.85}  clip={None}
+The 82 Communcation Time: 49.225
+The 82 Communcation Accuracy: 93.145 Method: f2dc_pg_lab epoch loss: 0.746
+[97.03, 90.83, 90.4, 94.32]
+
+[LAB R 83] loss_ema={mnist:0.298, syn:0.121, usps:0.371, svhn:0.710}
+          gap={mnist:0.000, syn:0.000, usps:0.000, svhn:0.335}  ratio={mnist×0.85, syn×0.85, usps×0.85, svhn×1.09}  clip={None}
+The 83 Communcation Time: 50.979
+The 83 Communcation Accuracy: 92.988 Method: f2dc_pg_lab epoch loss: 0.83
+[96.73, 90.18, 90.65, 94.39]
+
+[LAB R 84] loss_ema={mnist:0.295, svhn:0.668, usps:0.355, syn:0.123}
+          gap={mnist:0.000, svhn:0.308, usps:0.000, syn:0.000}  ratio={mnist×0.85, svhn×1.09, usps×0.85, syn×0.85}  clip={None}
+The 84 Communcation Time: 52.173
+The 84 Communcation Accuracy: 93.26 Method: f2dc_pg_lab epoch loss: 0.793
+[97.09, 91.43, 90.22, 94.3]
+
+[LAB R 85] loss_ema={syn:0.148, svhn:0.677, usps:0.315, mnist:0.293}
+          gap={syn:0.000, svhn:0.319, usps:0.000, mnist:0.000}  ratio={syn×0.85, svhn×1.09, usps×0.85, mnist×0.85}  clip={None}
+The 85 Communcation Time: 51.837
+The 85 Communcation Accuracy: 93.085 Method: f2dc_pg_lab epoch loss: 0.725
+[96.9, 90.73, 90.11, 94.6]
+
+[LAB R 86] loss_ema={usps:0.311, mnist:0.286, svhn:0.687, syn:0.168}
+          gap={usps:0.000, mnist:0.000, svhn:0.324, syn:0.000}  ratio={usps×0.85, mnist×0.85, svhn×1.09, syn×0.85}  clip={None}
+The 86 Communcation Time: 48.711
+The 86 Communcation Accuracy: 93.488 Method: f2dc_pg_lab epoch loss: 0.733
+[97.24, 91.73, 90.27, 94.71]
+
+[LAB R 87] loss_ema={usps:0.288, svhn:0.710, mnist:0.255, syn:0.147}
+          gap={usps:0.000, svhn:0.360, mnist:0.000, syn:0.000}  ratio={usps×0.85, svhn×1.09, mnist×0.85, syn×0.85}  clip={None}
+The 87 Communcation Time: 51.422
+The 87 Communcation Accuracy: 93.05 Method: f2dc_pg_lab epoch loss: 0.788
+[96.78, 90.63, 90.39, 94.4]
+
+[LAB R 88] loss_ema={usps:0.277, syn:0.155, svhn:0.680, mnist:0.253}
+          gap={usps:0.000, syn:0.000, svhn:0.339, mnist:0.000}  ratio={usps×0.85, syn×0.85, svhn×1.09, mnist×0.85}  clip={None}
+The 88 Communcation Time: 50.766
+The 88 Communcation Accuracy: 93.342 Method: f2dc_pg_lab epoch loss: 0.821
+[96.75, 91.68, 90.18, 94.76]
+
+[LAB R 89] loss_ema={usps:0.282, syn:0.150, svhn:0.671, mnist:0.265}
+          gap={usps:0.000, syn:0.000, svhn:0.329, mnist:0.000}  ratio={usps×0.85, syn×0.85, svhn×1.09, mnist×0.85}  clip={None}
+The 89 Communcation Time: 48.68
+⚠️ [LAB WASTE WARN R 90] dom=svhn cum_boost=312.3% window_roi=0.04 (< 0.5 = wasted)
+The 89 Communcation Accuracy: 93.282 Method: f2dc_pg_lab epoch loss: 0.706
+[96.92, 91.53, 90.3, 94.38]
+
+[LAB R 90] loss_ema={svhn:0.721, usps:0.276, syn:0.136, mnist:0.269}
+          gap={svhn:0.371, usps:0.000, syn:0.000, mnist:0.000}  ratio={svhn×1.09, usps×0.85, syn×0.85, mnist×0.85}  clip={None}
+The 90 Communcation Time: 50.815
+The 90 Communcation Accuracy: 93.29 Method: f2dc_pg_lab epoch loss: 0.756
+[97.26, 91.18, 90.5, 94.22]
+
+[LAB R 91] loss_ema={syn:0.111, svhn:0.745, usps:0.290, mnist:0.256}
+          gap={syn:0.000, svhn:0.394, usps:0.000, mnist:0.000}  ratio={syn×0.85, svhn×1.09, usps×0.85, mnist×0.85}  clip={None}
+The 91 Communcation Time: 51.799
+The 91 Communcation Accuracy: 93.298 Method: f2dc_pg_lab epoch loss: 0.823
+[97.09, 91.48, 90.14, 94.48]
+
+[LAB R 92] loss_ema={usps:0.286, mnist:0.242, syn:0.093, svhn:0.750}
+          gap={usps:0.000, mnist:0.000, syn:0.000, svhn:0.407}  ratio={usps×0.85, mnist×0.85, syn×0.85, svhn×1.09}  clip={None}
+The 92 Communcation Time: 50.984
+The 92 Communcation Accuracy: 93.14 Method: f2dc_pg_lab epoch loss: 0.682
+[96.45, 91.18, 90.5, 94.43]
+
+[LAB R 93] loss_ema={mnist:0.250, svhn:0.752, usps:0.272, syn:0.095}
+          gap={mnist:0.000, svhn:0.410, usps:0.000, syn:0.000}  ratio={mnist×0.85, svhn×1.09, usps×0.85, syn×0.85}  clip={None}
+The 93 Communcation Time: 49.998
+The 93 Communcation Accuracy: 93.035 Method: f2dc_pg_lab epoch loss: 0.715
+[96.85, 90.38, 90.43, 94.48]
+
+[LAB R 94] loss_ema={mnist:0.238, syn:0.079, svhn:0.764, usps:0.274}
+          gap={mnist:0.000, syn:0.000, svhn:0.425, usps:0.000}  ratio={mnist×0.85, syn×0.85, svhn×1.09, usps×0.85}  clip={None}
+The 94 Communcation Time: 49.765
+The 94 Communcation Accuracy: 93.4 Method: f2dc_pg_lab epoch loss: 0.826
+[97.42, 91.33, 90.45, 94.4]
+
+[LAB R 95] loss_ema={mnist:0.243, usps:0.271, svhn:0.747, syn:0.079}
+          gap={mnist:0.000, usps:0.000, svhn:0.412, syn:0.000}  ratio={mnist×0.85, usps×0.85, svhn×1.09, syn×0.85}  clip={None}
+The 95 Communcation Time: 51.913
+The 95 Communcation Accuracy: 93.45 Method: f2dc_pg_lab epoch loss: 0.861
+[97.49, 91.58, 90.53, 94.2]
+
+[LAB R 96] loss_ema={svhn:0.723, usps:0.275, mnist:0.245, syn:0.090}
+          gap={svhn:0.390, usps:0.000, mnist:0.000, syn:0.000}  ratio={svhn×1.09, usps×0.85, mnist×0.85, syn×0.85}  clip={None}
+The 96 Communcation Time: 51.426
+The 96 Communcation Accuracy: 93.278 Method: f2dc_pg_lab epoch loss: 0.731
+[97.32, 91.13, 90.25, 94.41]
+
+[LAB R 97] loss_ema={usps:0.286, svhn:0.706, mnist:0.248, syn:0.073}
+          gap={usps:0.000, svhn:0.378, mnist:0.000, syn:0.000}  ratio={usps×0.85, svhn×1.09, mnist×0.85, syn×0.85}  clip={None}
+The 97 Communcation Time: 50.551
+The 97 Communcation Accuracy: 93.315 Method: f2dc_pg_lab epoch loss: 0.722
+[97.22, 91.03, 90.53, 94.48]
+
+[LAB R 98] loss_ema={mnist:0.243, syn:0.069, usps:0.324, svhn:0.701}
+          gap={mnist:0.000, syn:0.000, usps:0.000, svhn:0.367}  ratio={mnist×0.85, syn×0.85, usps×0.85, svhn×1.09}  clip={None}
+The 98 Communcation Time: 51.145
+The 98 Communcation Accuracy: 93.265 Method: f2dc_pg_lab epoch loss: 0.716
+[96.98, 91.23, 90.2, 94.65]
+
+[LAB R 99] loss_ema={syn:0.070, usps:0.342, svhn:0.700, mnist:0.264}
+          gap={syn:0.000, usps:0.000, svhn:0.356, mnist:0.000}  ratio={syn×0.85, usps×0.85, svhn×1.09, mnist×0.85}  clip={None}
+The 99 Communcation Time: 51.006
+⚠️ [LAB WASTE WARN R100] dom=svhn cum_boost=368.1% window_roi=-0.09 (< 0.5 = wasted)
+The 99 Communcation Accuracy: 93.51 Method: f2dc_pg_lab epoch loss: 0.808
+[96.92, 92.23, 90.16, 94.73]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_p1_digits_s15/final_R100.npz (acc=93.510)
+ALL Loss:  [13.501, 8.54, 7.564, 6.394, 5.318, 4.308, 3.681, 3.019, 2.625, 2.359, 2.156, 2.133, 1.943, 1.939, 1.831, 1.848, 1.662, 1.703, 1.634, 1.587, 1.502, 1.523, 1.412, 1.424, 1.476, 1.336, 1.433, 1.289, 1.199, 1.292, 1.252, 1.304, 1.065, 1.217, 1.102, 1.145, 0.961, 1.133, 1.087, 1.183, 1.044, 1.022, 1.047, 1.115, 0.984, 1.157, 0.969, 1.05, 0.926, 0.945, 1.029, 0.844, 1.064, 0.808, 0.953, 0.919, 0.895, 0.948, 0.937, 0.899, 0.933, 1.084, 0.862, 0.855, 0.88, 0.892, 0.833, 0.876, 0.73, 0.829, 0.852, 0.802, 0.743, 0.847, 0.838, 0.777, 0.784, 0.799, 0.719, 0.8, 0.847, 0.778, 0.746, 0.83, 0.793, 0.725, 0.733, 0.788, 0.821, 0.706, 0.756, 0.823, 0.682, 0.715, 0.826, 0.861, 0.731, 0.722, 0.716, 0.808]
+Accuracy List f2dc_pg_lab (fl_digits): [13.542, 11.862, 18.148, 31.197, 48.202, 52.725, 61.56, 73.338, 79.552, 82.382, 83.308, 86.002, 87.08, 87.05, 88.503, 87.595, 88.837, 88.865, 89.17, 89.265, 89.682, 89.602, 90.7, 90.122, 90.398, 90.43, 90.652, 90.438, 90.835, 90.918, 90.708, 91.8, 91.522, 91.915, 91.872, 91.875, 91.622, 92.12, 91.958, 92.385, 92.158, 92.082, 92.29, 92.155, 92.232, 92.225, 92.38, 92.252, 92.122, 92.13, 92.74, 92.512, 92.363, 92.36, 92.462, 92.648, 92.855, 92.345, 92.34, 92.702, 92.72, 92.35, 92.712, 92.438, 92.472, 92.538, 92.478, 92.61, 92.82, 93.035, 92.768, 93.168, 92.775, 93.117, 93.108, 93.102, 92.985, 93.25, 93.045, 93.058, 92.982, 93.045, 93.145, 92.988, 93.26, 93.085, 93.488, 93.05, 93.342, 93.282, 93.29, 93.298, 93.14, 93.035, 93.4, 93.45, 93.278, 93.315, 93.265, 93.51]

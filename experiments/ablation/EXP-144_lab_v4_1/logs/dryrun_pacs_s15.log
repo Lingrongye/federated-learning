@@ -1,0 +1,24 @@
+/root/miniconda3/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+f2dc_pg_lab_10_fl_pacs_2_1
+selected_domain_list for 10 clients as:
+['photo' 'photo' 'art' 'art' 'art' 'cartoon' 'cartoon' 'sketch' 'sketch'
+ 'sketch']
+[LAB setup] val partition: 140 samples across 10 clients, per-dom = {'photo': 35, 'art': 35, 'cartoon': 35, 'sketch': 35}
+           photo class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           art class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           cartoon class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+           sketch class counts: {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5}
+The 0 Communcation Time: 18.102
+The 0 Communcation Accuracy: 16.932 Method: f2dc_pg_lab epoch loss: 17.581
+[11.68, 19.12, 17.31, 19.62]
+
+[LAB R  1] loss_ema={art:1.939, photo:1.940, cartoon:1.953, sketch:1.947}
+          gap={art:0.000, photo:0.000, cartoon:0.008, sketch:0.003}  ratio={art×0.85, photo×0.85, cartoon×1.48, sketch×0.93}  clip={None}
+The 1 Communcation Time: 17.491
+The 1 Communcation Accuracy: 13.992 Method: f2dc_pg_lab epoch loss: 12.957
+[11.38, 10.29, 12.39, 21.91]
+
+[diag] heavy snapshot dumped: ../experiments/ablation/EXP-144_lab_v4_1/diag_dryrun_pacs_s15/final_R002.npz (acc=13.992)
+ALL Loss:  [17.581, 12.957]
+Accuracy List f2dc_pg_lab (fl_pacs): [16.932, 13.992]

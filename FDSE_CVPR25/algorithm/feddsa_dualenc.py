@@ -25,9 +25,12 @@ import copy
 import numpy as np
 import torch
 import torch.nn as nn
+# 无状态函数
 import torch.nn.functional as F
+
 import flgo.algorithm.fedbase
 import flgo.utils.fmodule as fuf
+# 让网络层按照顺序排列 更加方便饮用
 from collections import OrderedDict
 
 
@@ -80,18 +83,24 @@ class AlexNetEncoder(nn.Module):
 # ============================================================
 # Style Reconstruction Module + AdaIN (CDDSA / MUNIT style)
 # ============================================================
-
+#  作用: 把 16 维的风格码 z_sty 变成 gamma 和 beta 两组向量 (每组长度 = 通道数 C)。这俩就是 AdaIN 用来"注入风格"的东西。
 class SRM(nn.Module):
     """16d z_sty -> per-channel (gamma, beta) for AdaIN modulation."""
     def __init__(self, style_dim, hidden, out_channels):
         super().__init__()
+        # 16->256
         self.fc1 = nn.Linear(style_dim, hidden)
+        # 256->2*out_channels
         self.fc2 = nn.Linear(hidden, 2 * out_channels)
+        # 输出通道数
         self.out_channels = out_channels
 
     def forward(self, z_sty):
+        # 16->256
         h = F.relu(self.fc1(z_sty))
+        # 256->2*out_channels
         gb = self.fc2(h)
+        # 2*out_channels->gamma, beta
         gamma, beta = gb.chunk(2, dim=-1)
         return gamma, beta
 
@@ -102,12 +111,15 @@ def adain(F_map, gamma, beta, eps=1e-5):
     """
     mean = F_map.mean(dim=(2, 3), keepdim=True)
     std = F_map.std(dim=(2, 3), keepdim=True, unbiased=False).clamp(min=eps)
+    # 标准化，洗掉原风格
     F_norm = (F_map - mean) / std
+  
     g = gamma.view(*gamma.shape, 1, 1)
+    # 注入新的风格
     b = beta.view(*beta.shape, 1, 1)
     return g * F_norm + b
 
-
+# 反卷积
 class AdaINBlock(nn.Module):
     """ConvTranspose -> AdaIN -> ReLU."""
     def __init__(self, in_c, out_c, style_dim, srm_hidden, kernel=4, stride=2, padding=1):

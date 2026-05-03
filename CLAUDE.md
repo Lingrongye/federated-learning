@@ -1,5 +1,42 @@
 # 面向跨域联邦学习的解耦原型学习 — 研究综述与方向指南
 
+## 零零、给数据的硬性规则 (强制,任何报告/对话都适用)
+
+**任何时候给用户数据 / 表格 / 数字之前,必须先解释 3 件事:**
+
+1. **这个数字是怎么算的** (用什么 input、用什么公式、用了多少 round/seed)
+2. **这个数字代表什么含义** (大值 = 好还是坏?边界值是什么?)
+3. **这个数字的边界 / 阈值** (range 5-10 = 健康,>10 = 异常,< 1 = 没意义,等等)
+
+**禁止做法:**
+- ❌ 直接甩一张表格不解释列名 / 单位
+- ❌ 用专业术语 (CKA / LOO cos sim / dispatch ratio / silhouette / drift) 不先翻译
+- ❌ 给"range = 0.02 ❌"但不告诉用户"这个 range 是什么变量算出来的"
+
+**正确做法:**
+- ✅ "X 是 daa_freqs_i / sample_shares_i 算出来的(每个 client 一个数),代表 DaA 给这个 client 升降权多少"
+- ✅ "range = 10 个 client 数字的 max − min,大 = 区分对待,小 = 几乎 uniform"
+- ✅ "Office range 0.2 = 健康差异化,PACS range 0.02 = 退化成 FedAvg"
+- ✅ 表格只放最重要的 3-5 个对比维度,其他细节省略或放折叠区
+
+**指标速查表 (常用诊断指标的解释,任何报告中第一次出现都要点出来):**
+
+| 指标 | 怎么算 | 大值 | 小值 | 健康范围 |
+|------|--------|:--:|:--:|:--:|
+| **AVG Best** | 100 轮中 4 域简单平均最大的那一轮的值 | 高=好 | — | 跟 FDSE 阈值比 |
+| **AVG Last** | R100 的 4 域简单平均 | 高=好 | — | 跟 Best gap < 3 = 稳定 |
+| **best→last drift** | last - best (per domain) | 接近 0 = 稳 | 大负 = 后期飘 | gap > 5 = 不健康 |
+| **dispatch ratio** | daa_freqs_i / sample_shares_i (每 client 一个) | >1 升权 | <1 降权 | 看 range |
+| **dispatch range** | 10 client ratio 的 max−min | 大 = 差异化 | 小 = uniform | 0.1+ 健康, < 0.05 失效 |
+| **effective contribution** | daa_freqs × grad_l2 (per client) | 高 = 这 client 真发声 | 低 = 被 wash | 看 4 域是不是 uniform |
+| **LOO cos sim** | client_proto vs leave-one-out 9 client 平均的 cos | >0.85 同化 | <0.5 outlier | **0.5-0.85 健康, >0.95 创新失效** |
+| **CKA cross-method** | 两个 method 的 feature matrix 的 linear CKA | >0.85 殊途同归 | <0.5 学得不一样 | **<0.7 才能拉开差距** |
+| **per-domain trajectory std** | 后 30 round per-domain acc 的 std | 大 = 训练晃动 | 小 = 稳 | < 3 稳定, > 5 不稳 |
+
+**适用范围**: 任何 cold path 诊断、obsidian 笔记、对话式实验汇报。
+
+---
+
 ## 零、实验胜负判定硬性要求 (强制,最高优先级)
 
 **实验成功的唯一标准**: 3-seed {2,15,333} mean AVG Best accuracy **必须超过 FDSE 本地复现 baseline** (不是论文数字,而是我们 env 下同 seed 同 config 的真实复现):
@@ -692,10 +729,16 @@ Windows 本地 (D:\桌面文件\联邦学习\)
   │   ├── Python: /root/miniconda3/bin/python
   │   └── GitHub 代理: 同上
   │
-  └── lab-lry (备用): 实验室共享服务器
-      ├── SSH: Host lab-lry (222.201.145.9:22, user lry)
-      ├── GPU: 双卡 RTX 3090 (各24GB, 常被 wjc 占用)
-      └── 项目: /home/lry/code/federated-learning
+  ├── lab-lry (备用): 实验室共享服务器
+  │   ├── SSH: Host lab-lry (222.201.145.9:22, user lry)
+  │   ├── GPU: 双卡 RTX 3090 (各24GB, 常被 wjc 占用)
+  │   └── 项目: /home/lry/code/federated-learning
+  │
+  └── scut-hpc (校级集群, 详见 17.9): SCUT HPC hpckapok1
+      ├── SSH: 202230040034@202.38.252.202 (login01-04 任选)
+      ├── GPU: gpuA800 队列 30 节点 × 4× A800-SXM4-80GB
+      ├── 调度器: Slurm 22.05.10 (必须 srun/sbatch, 不能直跑)
+      └── 项目: ~/projects/federated-learning (/share/home/202230040034/)
 ```
 
 ### 17.2 代码同步方式：Git 双向同步
@@ -892,6 +935,214 @@ wait
 #### 历史错误
 
 - EXP-119 Wave 3 原本写成 3 批 × 4 runs × 7h = 21h PACS wall。实际 Wave 2 Office 只用 13.5GB/24GB，Wave 3 的 PACS (~4GB each) 完全可以**立刻并行** 2-3 个到 Wave 2 里，不用等 Wave 2 完成。这个错误让实验 wall 多 5h。已改为 greedy launcher。
+
+### 17.8.1 ⚠️ 禁止用 `until ... done` wait-loop 触发 launcher (强制)
+
+**禁止的 launcher 模式** (会重复 fire 覆盖数据):
+```bash
+until ssh sub2 'pgrep f2dc_dse | wc -l' | grep -q '^0$'; do sleep 60; done
+ssh sub2 "...launch new runs..."
+```
+
+**问题**: until loop 在 procs=0 时退出 + launch。但当**新启的 runs 全部 R100 完成**时, sub2 procs 又变 0 → loop 容易被错误地再次触发 (background task 在某些情况下会被 retry / re-run), **launcher 会再 fire 一次, 同一组 runs 重启, 覆盖前几 round 数据**。
+
+**EXP-146 Digits 真实事故** (2026-05-02):
+- bagbb0xyq launcher 用上述模式, 等 PACS rho=0.2 完成触发 Digits high-rho 4 runs
+- high-rho R99 完后 sub2 procs=0 → launcher 再 fire 一次 (~12 min 后)
+- 新 high-rho 4 runs 写到 R5 才被人工 kill
+- **后果**: round_001-005.npz 被覆盖 (R6+ 跟 best_R0xx.npz / final_R100.npz 完整保留 saved 关键数据)
+- jsonl 多了 5-6 行新 R0-R5 数据, 后处理需 dedupe by `round` field
+
+**强制做法**: 单次 launcher 一次性 fire + verify 立刻 exit:
+```bash
+ssh sub2 "
+nohup bash -c 'cd $F2DC && $PY ...' > log1 2>&1 < /dev/null & echo p1=\$!
+sleep 12
+nohup bash -c '...' > log2 2>&1 < /dev/null & echo p2=\$!
+..."
+sleep 60
+ssh sub2 'pgrep ...; readlink /proc/$pid/fd/1; ...'  # verify 一次, 不 wait
+```
+
+如果需要"等前一组完再起后一组", 用 **TaskCreate / TaskUpdate** 标 in_progress, 人工监控完成后再手动起下一组, **不要让 script 自己 poll trigger**。
+
+### 17.9 SCUT HPC 集群 (hpckapok1)
+
+> **校级共享 HPC，跟 AutoDL/seetacloud 不同：必须经 Slurm 调度器申请节点才能跑代码。** 登录节点没 GPU、计算节点没外网，工作流要绕这两个限制。
+
+#### 17.9.1 基本信息
+
+| 项 | 值 |
+|---|---|
+| 门户 (web) | https://hpckapok1.scut.edu.cn |
+| 登录节点 | 202.38.252.202-205 (login01-04, 任选一台) |
+| **账号 / 密码** | `202230040034` / 学校密码 |
+| **课题组 (Slurm account)** | **`a_csxlzhang`** (扣费从这个组余额扣, 不是个人) |
+| 家目录 | `/share/home/202230040034/` (NFS, 9.1PB 共享盘, 暂无单用户配额) |
+| OS / 调度器 | Rocky Linux 8.6 / Slurm 22.05.10 |
+| 登录认证方式 | **账号密码** (集群 1) |
+
+#### 17.9.2 队列 + 计费 (单价 / 节点配置)
+
+| 队列 | 卡 / 资源 | 节点数 | 单价 | 备注 |
+|---|---|:--:|:--:|---|
+| **`gpuA800`** | **4× A800-SXM4-80GB** + 36C + 1TB RAM | 30 (10 idle) | **3.80 元/卡·h** + CPU 0.04/核·h | **首选, CUDA 原生** |
+| `cpuXeon6458` (默认) | Xeon 6458 64C + 500GB | 316 (194 idle) | 0.04 元/核·h | 准备数据/调试用, 极便宜 |
+| `cpuFatSR950` | 192C + 5.9TB RAM | 3 (2 idle) | 0.10 元/核·h | 大内存才用 |
+| `cpuHygon7380` | 海光 64C + 257GB | 16 | 0.01 元/核·h | 国产 CPU, **少数库可能编译失败, 慎用** |
+| `gpuMi210` | 8× **AMD MI210 64GB ROCm** | 3 | 2.00 元/卡·h | **避开** — ROCm 生态, torch+cu* 不通 |
+| `gpuHygonZ100` | 8× 国产 GPU | 5 | 1.00 元/卡·h | **避开** — 生态比 MI210 还差 |
+
+**关键计费规则**:
+- 登录节点**完全免费** (写代码 / git / pip install / rsync 全免费, 随便用)
+- **`salloc` / `sbatch` 一旦分到节点就开始扣**, 直到作业结束 / `scancel` / `--time` 到点
+- 扣费公式: `(GPU 卡数 × GPU 单价 + CPU 核数 × 0.04) × 实际秒数`, **从课题组 `a_csxlzhang` 余额扣**
+- 节省: `--cpus-per-task=4` 而不是默认 8, dataloader 4 worker 够用, CPU 部分省一半
+- 余额查询: 门户 https://hpckapok1.scut.edu.cn (没有命令行 `mybalance` 之类的工具)
+
+**实测**: g01n03 节点的 A800 driver 版本 = **550.78 (CUDA 12.4)**, **torch 2.1.2+cu121 完全兼容**, capability 8.0 (Ampere)。比 sc3 4090 显存大 3.3 倍 (80GB vs 24GB)。
+
+#### 17.9.3 网络拓扑 (重要 — 决定工作流)
+
+| 方向 | 状态 | 说明 |
+|---|---|---|
+| HPC 登录节点 → PyPI | ✅ 直通 | `pip install` 不需要代理 |
+| HPC 登录节点 → GitHub | ❌ 超时 | **必须开 clash 代理** |
+| HPC 登录节点 → AutoDL sc3 (out) | ✅ 通 | HPC 主动 `rsync sc3:...` 拉文件 OK |
+| AutoDL → HPC SSH:22 (in) | ❌ 封 | **sc3 不能反向推到 HPC**, 只能 HPC 主动拉 |
+| **计算节点** → 任何外网 | ❌ **完全无外网** | 装环境/git/pip **必须在登录节点完成**, 计算节点只能跑代码 |
+
+**铁律**: 所有需要外网的操作 (git pull / pip install / rsync 拉数据) **必须在登录节点做**, 然后再 srun/sbatch 到计算节点跑训练。
+
+#### 17.9.4 已部署环境 (`/share/home/202230040034/`)
+
+```
+~/miniconda3/                              # conda 24.1.2 (从清华源装)
+~/miniconda3/envs/f2dc/                    # Python 3.10
+   ├── torch 2.1.2+cu121 (注意: 不是 sc3 的 cu118, A800 driver 550 兼容)
+   ├── numpy 1.26.4 (强制 < 2, 否则 torch ABI 冲突)
+   ├── flgo 0.4.3 (sc3 是 0.4.4, 这是 PyPI 版本, 兼容)
+   ├── cvxopt 1.3.3, scipy 1.15.3, tqdm 4.64.1
+   └── pandas / matplotlib / seaborn / sklearn / pyyaml / networkx
+~/clashctl/                                # mihomo 后台运行, port 7890
+~/projects/federated-learning/             # shallow clone @ commit c31bfe3
+~/projects/federated-learning/FDSE_CVPR25/task/
+   ├── PACS_c4/                            # 404M, flgo 格式
+   ├── office_caltech10_c4/                # 117M
+   └── digit5_c5/                          # 7.4M
+~/.proxyrc                                 # source 后启用代理
+~/.bashrc                                  # alias proxyon / proxyoff
+~/.ssh/config                              # alias `sc3` (HPC → sc3 免密已配)
+```
+
+**别名**: `proxyon` 开代理 (export http_proxy + https_proxy), `proxyoff` 关。
+
+#### 17.9.5 操作模板
+
+**登录 (从 Mac/WSL)**:
+```bash
+ssh 202230040034@202.38.252.202   # 输密码进 login01
+# 或者本地 ~/.ssh/config 加 alias:
+# Host scut-login01
+#     HostName 202.38.252.202
+#     User 202230040034
+```
+
+**登录后激活环境** (每次新 shell):
+```bash
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate f2dc
+proxyon                            # 需要访问 GitHub 时才开
+cd ~/projects/federated-learning
+```
+
+**git pull (走代理)**:
+```bash
+proxyon && cd ~/projects/federated-learning && git pull
+# shallow clone 后第一次 push 前必须先解 shallow:
+# git fetch --unshallow
+```
+
+**从 sc3 拉新代码/数据 (不走代理, 已配免密)**:
+```bash
+rsync -azP sc3:/root/autodl-tmp/federated-learning/F2DC/ ~/projects/federated-learning/F2DC/
+```
+
+**交互式拿 GPU 调试 (短时长, 用 srun)**:
+```bash
+srun -p gpuA800 --gres=gpu:1 --cpus-per-task=4 --time=00:30:00 --pty bash
+# 进去后直接 nvidia-smi, python 等; --time 到点自动释放
+```
+
+**批量提交正式实验 (用 sbatch)**:
+```bash
+# 模板: ~/projects/federated-learning/scripts/scut/train.slurm
+#!/bin/bash
+#SBATCH --partition=gpuA800
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=4              # 不要默认 8, 省一半 CPU 费
+#SBATCH --mem=32G
+#SBATCH --time=08:00:00                 # 必填上限, 到点自动结束防漏跑
+#SBATCH --job-name=feddsa_pacs
+#SBATCH --output=logs/%j.out
+#SBATCH --error=logs/%j.err
+
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate f2dc
+cd ~/projects/federated-learning/FDSE_CVPR25
+python run_single.py --task PACS_c4 --algorithm feddsa --gpu 0 \
+    --config ./config/pacs/feddsa_xxx.yml --logger PerRunLogger --seed 2
+
+# 提交:
+sbatch train.slurm                  # 返回 job_id
+squeue -u $USER                     # 看自己作业 (PD=pending, R=running)
+scancel <job_id>                    # 取消
+tail -f logs/<job_id>.out           # 实时看输出
+```
+
+**多 config 扫参**:
+```bash
+for cfg in config/pacs/feddsa_*.yml; do
+    for seed in 2 15 333; do
+        sbatch --export=ALL,CFG=$cfg,SEED=$seed train.slurm
+    done
+done
+# 数十个 sbatch 一次投, Slurm 自动按 idle 节点排队
+```
+
+#### 17.9.6 Slurm 常用命令
+
+```bash
+sinfo -p gpuA800 -o "%P %a %t %D %N"    # 队列状态 (idle/alloc/drain)
+squeue -u $USER                         # 自己的作业列表
+scancel <job_id>                        # 取消单个作业
+scancel -u $USER                        # 取消自己所有作业 (慎用)
+sshare -U                               # 自己账户的 fair-share 使用
+sacct -u $USER --starttime=2026-04-01   # 历史作业 + 实际扣费
+```
+
+#### 17.9.7 跟 sc3 比的取舍
+
+| 维度 | sc3 (AutoDL 4090 24GB) | scut-hpc (A800 80GB) |
+|---|---|---|
+| 单卡价格 | ~1.6-2 元/h | 3.80 元/h + CPU 费 |
+| 显存 | 24GB | **80GB** (3.3 倍) |
+| 速度 (FP32 ResNet-18) | 略快 (Ada vs Ampere) | 略慢 (~70% 速度) |
+| 启动延迟 | 立即 | 排队 0-30 分钟 |
+| 并行控制 | greedy launcher 自由 | Slurm 调度, 每作业独占 |
+| 出网 | 完全自由 | 计算节点零外网 |
+| **适合场景** | 主力 / debug / greedy 扫参 | **大批量 ablation** (一次投十几个 sbatch 让 Slurm 排) / **大模型** (>24GB 显存时) |
+| **不适合** | 80GB 模型 | 实时 debug / 需要持续监控 |
+
+**当前策略**: 主力 sc3, **scut-hpc 当 ablation 扫参 + 大显存 fallback** (一次性投多个 sbatch)。**禁止把 scut-hpc 当主力**, 因为排队 + 计算节点无外网拖慢迭代节奏。
+
+#### 17.9.8 经验/坑
+
+- **shallow clone 不能直接 push**: 我们当前 `~/projects/federated-learning/` 是 `git clone --depth 1`, push 前必须先 `git fetch --unshallow` (走代理拉完整 git history)。如果只在 HPC 跑实验、不在 HPC commit, 可以无视。
+- **大仓库 git clone 走代理易失败**: 代理切节点会 RPC 中断, 用 `--depth 1` + `git config --global http.postBuffer 1048576000` 才稳。
+- **NumPy 必须 < 2.0**: torch 2.1.2 用 NumPy 1.x ABI 编译, 装 NumPy 2.x 会 crash。
+- **计算节点 `pip install` 不会通**: 网络全封, 必须登录节点装好。
+- **CUDA 版本**: A800 driver 550.78 = CUDA 12.4, **cu121/cu118 都兼容**, 没必要重装 cu118。
 
 ---
 
