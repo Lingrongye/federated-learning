@@ -936,6 +936,36 @@ wait
 
 - EXP-119 Wave 3 原本写成 3 批 × 4 runs × 7h = 21h PACS wall。实际 Wave 2 Office 只用 13.5GB/24GB，Wave 3 的 PACS (~4GB each) 完全可以**立刻并行** 2-3 个到 Wave 2 里，不用等 Wave 2 完成。这个错误让实验 wall 多 5h。已改为 greedy launcher。
 
+### 17.8.1 ⚠️ 禁止用 `until ... done` wait-loop 触发 launcher (强制)
+
+**禁止的 launcher 模式** (会重复 fire 覆盖数据):
+```bash
+until ssh sub2 'pgrep f2dc_dse | wc -l' | grep -q '^0$'; do sleep 60; done
+ssh sub2 "...launch new runs..."
+```
+
+**问题**: until loop 在 procs=0 时退出 + launch。但当**新启的 runs 全部 R100 完成**时, sub2 procs 又变 0 → loop 容易被错误地再次触发 (background task 在某些情况下会被 retry / re-run), **launcher 会再 fire 一次, 同一组 runs 重启, 覆盖前几 round 数据**。
+
+**EXP-146 Digits 真实事故** (2026-05-02):
+- bagbb0xyq launcher 用上述模式, 等 PACS rho=0.2 完成触发 Digits high-rho 4 runs
+- high-rho R99 完后 sub2 procs=0 → launcher 再 fire 一次 (~12 min 后)
+- 新 high-rho 4 runs 写到 R5 才被人工 kill
+- **后果**: round_001-005.npz 被覆盖 (R6+ 跟 best_R0xx.npz / final_R100.npz 完整保留 saved 关键数据)
+- jsonl 多了 5-6 行新 R0-R5 数据, 后处理需 dedupe by `round` field
+
+**强制做法**: 单次 launcher 一次性 fire + verify 立刻 exit:
+```bash
+ssh sub2 "
+nohup bash -c 'cd $F2DC && $PY ...' > log1 2>&1 < /dev/null & echo p1=\$!
+sleep 12
+nohup bash -c '...' > log2 2>&1 < /dev/null & echo p2=\$!
+..."
+sleep 60
+ssh sub2 'pgrep ...; readlink /proc/$pid/fd/1; ...'  # verify 一次, 不 wait
+```
+
+如果需要"等前一组完再起后一组", 用 **TaskCreate / TaskUpdate** 标 in_progress, 人工监控完成后再手动起下一组, **不要让 script 自己 poll trigger**。
+
 ### 17.9 SCUT HPC 集群 (hpckapok1)
 
 > **校级共享 HPC，跟 AutoDL/seetacloud 不同：必须经 Slurm 调度器申请节点才能跑代码。** 登录节点没 GPU、计算节点没外网，工作流要绕这两个限制。
