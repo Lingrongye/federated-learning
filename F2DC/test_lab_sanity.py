@@ -153,6 +153,56 @@ def t3_pacs_realistic():
     return passed, total
 
 
+def t3b_projection_mode_office_small_protect():
+    """T3b: projection_mode 显式控制; standard 不变, office_small_protect 保护小域."""
+    print("\n=== T3b: projection_mode office_small_protect ===")
+    passed = 0; total = 0
+
+    # PACS default path must remain unchanged.
+    pacs_share = {"photo": 0.1284, "art": 0.2370, "cartoon": 0.1804, "sketch": 0.4542}
+    pacs_loss = {"photo": 0.325, "art": 0.418, "cartoon": 0.215, "sketch": 0.162}
+    r_std = lab_step(pacs_loss, pacs_share, projection_mode="standard")
+    r_default = lab_step(pacs_loss, pacs_share)
+    total += 1
+    if all(abs(r_std["ratio"][d] - r_default["ratio"][d]) < 1e-12 for d in pacs_share):
+        passed += 1; print("  ✅ standard mode identical to default")
+    else:
+        print(f"  ❌ standard changed default: {r_std['ratio']} vs {r_default['ratio']}")
+
+    # Office-like final rmax=4 failure case: small webcam got 0.85 in standard.
+    office_share = {"caltech": 0.5306, "amazon": 0.3024, "webcam": 0.0929, "dslr": 0.0741}
+    office_loss = {"caltech": 2.489, "amazon": 1.893, "webcam": 1.787, "dslr": 3.057}
+    r_protect = lab_step(
+        office_loss, office_share,
+        projection_mode="office_small_protect",
+        small_share_threshold=0.125,
+        small_ratio_min=1.25,
+        small_ratio_max=4.0,
+    )
+    total += 1
+    if r_protect["ratio"]["webcam"] >= 1.25 - 1e-6 and r_protect["ratio"]["dslr"] >= 1.25 - 1e-6:
+        passed += 1
+        print(f"  ✅ small domains protected: webcam={r_protect['ratio']['webcam']:.3f}, "
+              f"dslr={r_protect['ratio']['dslr']:.3f}")
+    else:
+        print(f"  ❌ small domains not protected: ratios={r_protect['ratio']}")
+
+    total += 1
+    if abs(sum(r_protect["w_proj"].values()) - 1.0) < 1e-8:
+        passed += 1; print(f"  ✅ projection sum=1: {sum(r_protect['w_proj'].values()):.8f}")
+    else:
+        print(f"  ❌ projection sum={sum(r_protect['w_proj'].values())}")
+
+    total += 1
+    if r_protect["ratio"]["dslr"] > 2.0 and r_protect["ratio"]["webcam"] > 1.0:
+        passed += 1
+        print(f"  ✅ dslr can exceed 2.0 while webcam remains >1.0: ratios={r_protect['ratio']}")
+    else:
+        print(f"  ❌ balancing failed: ratios={r_protect['ratio']}")
+
+    return passed, total
+
+
 def t4_labstate_ema():
     """T4: LabState EMA 行为正确."""
     print("\n=== T4: LabState EMA correctness ===")
@@ -784,6 +834,7 @@ def main():
 
     all_passed = 0; all_total = 0
     for fn in [t1_projection_corners, t2_gap_zero_fedavg, t3_pacs_realistic,
+               t3b_projection_mode_office_small_protect,
                t4_labstate_ema, t5_labstate_compute_lab,
                t6_lab_partition_stratify, t7_eval_transform_deterministic,
                t8_f2dc_pg_lab_import,

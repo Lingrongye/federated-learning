@@ -89,6 +89,10 @@ def lab_step(
     lam: float = 0.15,
     ratio_min: float = 0.80,
     ratio_max: float = 2.00,
+    projection_mode: str = "standard",
+    small_share_threshold: float = 0.125,
+    small_ratio_min: float = 1.25,
+    small_ratio_max: float = 4.00,
     bisection_tol: float = 1e-9,
     bisection_max_iter: int = 64,
 ) -> Dict[str, Any]:
@@ -100,7 +104,11 @@ def lab_step(
         sample_share_dom: {dom_name: total_sample_share_in_this_domain},
                           sum to 1.0 over all domains
         lam: λ-mix coefficient (PROPOSAL default 0.15)
-        ratio_min, ratio_max: bounded simplex constraint
+        ratio_min, ratio_max: standard bounded simplex constraint
+        projection_mode:
+            - "standard": original LAB v4.2 bounds
+            - "office_small_protect": protect small Office domains by lifting their
+              lower bound and allowing underfit small domains a larger upper bound
         bisection_tol, bisection_max_iter: projection numerics
 
     Returns: dict with 11 keys (用于诊断 dump):
@@ -129,13 +137,36 @@ def lab_step(
             "converged": True,
             "clip_status": dict(zip(domains, [None] * len(domains))),
             "sum_check": float(shares.sum()),
+            "projection_mode": projection_mode,
+            "ratio_min_eff": dict(zip(domains, np.ones_like(shares))),
+            "ratio_max_eff": dict(zip(domains, np.ones_like(shares))),
+            "small_domain": dict(zip(domains, np.zeros_like(shares))),
         }
     # ========================================================
 
     q = gap / gap.sum()
     w_raw = (1.0 - lam) * shares + lam * q
-    w_min = ratio_min * shares
-    w_max = ratio_max * shares
+    if projection_mode == "standard":
+        ratio_min_arr = np.full_like(shares, ratio_min)
+        ratio_max_arr = np.full_like(shares, ratio_max)
+        small_domain = np.zeros_like(shares, dtype=bool)
+    elif projection_mode == "office_small_protect":
+        # Office has two very small domains (webcam/dslr).  If a small domain is
+        # allowed to donate weight, rmax=4 can rescue dslr while hurting webcam.
+        # Protect small domains by making them non-donors, and only enlarge the
+        # upper cap when the small domain is actually underfit (gap > 0).
+        small_domain = shares < float(small_share_threshold)
+        ratio_min_arr = np.where(small_domain, float(small_ratio_min), float(ratio_min))
+        ratio_max_arr = np.where(
+            small_domain & (gap > 1e-12),
+            float(small_ratio_max),
+            float(ratio_max),
+        )
+    else:
+        raise ValueError(f"Unknown LAB projection_mode: {projection_mode}")
+
+    w_min = ratio_min_arr * shares
+    w_max = ratio_max_arr * shares
 
     w_proj, n_iter, converged = bounded_simplex_projection(
         w_raw, w_min, w_max,
@@ -165,6 +196,10 @@ def lab_step(
         "converged": bool(converged),
         "clip_status": clip_status,
         "sum_check": float(w_proj.sum()),
+        "projection_mode": projection_mode,
+        "ratio_min_eff": dict(zip(domains, ratio_min_arr)),
+        "ratio_max_eff": dict(zip(domains, ratio_max_arr)),
+        "small_domain": dict(zip(domains, small_domain.astype(np.float64))),
     }
 
 
@@ -195,6 +230,10 @@ class LabState:
         ema_alpha: float = 0.30,
         window_size: int = 20,
         waste_roi_threshold: float = 0.5,
+        projection_mode: str = "standard",
+        small_share_threshold: float = 0.125,
+        small_ratio_min: float = 1.25,
+        small_ratio_max: float = 4.00,
     ):
         self.lam = float(lam)
         self.ratio_min = float(ratio_min)
@@ -202,6 +241,10 @@ class LabState:
         self.ema_alpha = float(ema_alpha)
         self.window_size = int(window_size)
         self.waste_roi_threshold = float(waste_roi_threshold)
+        self.projection_mode = str(projection_mode)
+        self.small_share_threshold = float(small_share_threshold)
+        self.small_ratio_min = float(small_ratio_min)
+        self.small_ratio_max = float(small_ratio_max)
 
         # 跨 round 状态
         self.val_loss_ema: Dict[str, float] = {}
@@ -278,6 +321,10 @@ class LabState:
                 "sum_check": float(shares.sum()),
                 "fallback_to_fedavg": True,
                 "fallback_reason": reason,
+                "projection_mode": self.projection_mode,
+                "ratio_min_eff": dict(zip(domains, np.ones_like(shares))),
+                "ratio_max_eff": dict(zip(domains, np.ones_like(shares))),
+                "small_domain": dict(zip(domains, np.zeros_like(shares))),
             }
 
         if not self.has_val_loss:
@@ -296,6 +343,10 @@ class LabState:
             lam=self.lam,
             ratio_min=self.ratio_min,
             ratio_max=self.ratio_max,
+            projection_mode=self.projection_mode,
+            small_share_threshold=self.small_share_threshold,
+            small_ratio_min=self.small_ratio_min,
+            small_ratio_max=self.small_ratio_max,
         )
         result["fallback_to_fedavg"] = False
         result["fallback_reason"] = None
@@ -382,6 +433,10 @@ class LabState:
             diag[f"lab_clip_min_count_{d}"] = float(self.clip_at_min_count[d])
             # sample share (固定不变, 但记录方便对比)
             diag[f"lab_sample_share_{d}"] = float(sample_share_dom[d])
+            # effective bounds for projection-mode diagnostics
+            diag[f"lab_ratio_min_eff_{d}"] = float(lab_result.get("ratio_min_eff", {}).get(d, self.ratio_min))
+            diag[f"lab_ratio_max_eff_{d}"] = float(lab_result.get("ratio_max_eff", {}).get(d, self.ratio_max))
+            diag[f"lab_small_domain_{d}"] = float(lab_result.get("small_domain", {}).get(d, 0.0))
 
         # ===== 全局元数据 =====
         diag["lab_round"] = int(round_idx)
@@ -389,6 +444,10 @@ class LabState:
         diag["lab_ratio_min"] = float(self.ratio_min)
         diag["lab_ratio_max"] = float(self.ratio_max)
         diag["lab_ema_alpha"] = float(self.ema_alpha)
+        diag["lab_projection_mode"] = str(self.projection_mode)
+        diag["lab_small_share_threshold"] = float(self.small_share_threshold)
+        diag["lab_small_ratio_min"] = float(self.small_ratio_min)
+        diag["lab_small_ratio_max"] = float(self.small_ratio_max)
         diag["lab_n_iter"] = int(lab_result["n_iter"])
         diag["lab_converged"] = 1.0 if lab_result["converged"] else 0.0
         diag["lab_sum_check"] = float(lab_result["sum_check"])

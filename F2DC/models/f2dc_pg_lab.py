@@ -20,6 +20,7 @@ sample-weighted 聚合 (FedAvg) / DaA Eq(10/11) 替换为 LAB v4.2:
     --lab_lambda 0.15 \                   # PROPOSAL 预注册
     --lab_ratio_min 0.80 \
     --lab_ratio_max 2.00 \
+    --lab_projection_mode standard \       # PACS/default 不变; Office 可显式用 office_small_protect
     --lab_ema_alpha 0.30 \
     --lab_val_size_per_dom 50 \
     --lab_val_per_class 5 \
@@ -45,19 +46,23 @@ class F2DCPgLab(F2DCPG):
         super().__init__(nets_list, args, transform)
 
         # ===== LAB 超参 (PROPOSAL §10) =====
-        self.lab_lambda = float(getattr(args, 'lab_lambda', 0.15))
-        self.lab_ratio_min = float(getattr(args, 'lab_ratio_min', 0.80))
-        self.lab_ratio_max = float(getattr(args, 'lab_ratio_max', 2.00))
-        self.lab_ema_alpha = float(getattr(args, 'lab_ema_alpha', 0.30))
-        self.lab_val_size_per_dom = int(getattr(args, 'lab_val_size_per_dom', 50))
-        self.lab_val_per_class = int(getattr(args, 'lab_val_per_class', 5))
+        self.lab_lambda = float(getattr(args, 'lab_lambda', 0.15)) # 0.15 表示先保留85% 的fedavg sample-size权重，再去拿15%来补高validation loss 的underfit domain
+        self.lab_ratio_min = float(getattr(args, 'lab_ratio_min', 0.80)) # 保护强的领域的下界，意思是是final_weight / sampleshare > 0.8 也就是每个domain最多被砍掉20%
+        self.lab_ratio_max = float(getattr(args, 'lab_ratio_max', 2.00)) # 弱域的boost 上界 最多升到原来的200%
+        self.lab_projection_mode = str(getattr(args, 'lab_projection_mode', 'standard'))
+        self.lab_small_share_threshold = float(getattr(args, 'lab_small_share_threshold', 0.125))
+        self.lab_small_ratio_min = float(getattr(args, 'lab_small_ratio_min', 1.25))
+        self.lab_small_ratio_max = float(getattr(args, 'lab_small_ratio_max', 4.00))
+        self.lab_ema_alpha = float(getattr(args, 'lab_ema_alpha', 0.30)) # validation loss的ema平滑
+        self.lab_val_size_per_dom = int(getattr(args, 'lab_val_size_per_dom', 50)) # 每个多domain 最多拿多少的数据集做验证集
+        self.lab_val_per_class = int(getattr(args, 'lab_val_per_class', 5)) # 每个类最多抽5张
         self.lab_val_seed = int(getattr(args, 'lab_val_seed', 42))
-        self.lab_window_size = int(getattr(args, 'lab_window_size', 20))
-        self.lab_waste_roi_threshold = float(getattr(args, 'lab_waste_roi_threshold', 0.5))
+        self.lab_window_size = int(getattr(args, 'lab_window_size', 20)) # roi/weights 的诊断的窗口 最近20个rounds里面 某个domain 被boost后accuracy有没有涨
+        self.lab_waste_roi_threshold = float(getattr(args, 'lab_waste_roi_threshold', 0.5)) # 浪费判断阈值，
         self.lab_print_diag = bool(getattr(args, 'lab_print_diag', True))
         self.lab_warn_interval = int(getattr(args, 'lab_warn_interval', 10))
 
-        # ===== LAB 跨 round 状态 =====
+        # ===== LAB 跨 round 状态 =====,用来保存上一轮的val loss ema,每轮的ration boost history,waste warning 所需的acc history
         self.lab_state = LabState(
             lam=self.lab_lambda,
             ratio_min=self.lab_ratio_min,
@@ -65,6 +70,10 @@ class F2DCPgLab(F2DCPG):
             ema_alpha=self.lab_ema_alpha,
             window_size=self.lab_window_size,
             waste_roi_threshold=self.lab_waste_roi_threshold,
+            projection_mode=self.lab_projection_mode,
+            small_share_threshold=self.lab_small_share_threshold,
+            small_ratio_min=self.lab_small_ratio_min,
+            small_ratio_max=self.lab_small_ratio_max,
         )
 
         # val_loaders 在 first round 才 setup (因为 trainloaders / selected_domain_list
@@ -87,6 +96,7 @@ class F2DCPgLab(F2DCPG):
     # ============================================================
     # Per-round test acc hook (utils/training.py 在 evaluate 之后调用)
     # ============================================================
+    # 把每轮 per-domain test acc 存进 lab_state.acc_history
     def lab_record_test_acc(self, round_idx: int, accs, all_dataset_names) -> None:
         """utils/training.py global_evaluate 完后调一次, 把 per-domain test acc 喂给 LabState.
 
@@ -151,6 +161,7 @@ class F2DCPgLab(F2DCPG):
         train_dataset_list = [dl.dataset for dl in self.trainloaders]
 
         try:
+            # 这一步从每个domain的train pool 里面反推回来unused index,然后 抽val
             val_loaders, val_meta = setup_lab_val_loaders(
                 trainloaders=self.trainloaders,
                 train_dataset_list=train_dataset_list,
@@ -185,6 +196,7 @@ class F2DCPgLab(F2DCPG):
     # ============================================================
     def loc_update(self, priloader_list):
         # First-round val setup
+        # 先准备这个val loader
         self._ensure_lab_setup()
 
         # === 计算本 round LAB freq (基于上一轮 val_loss EMA) ===
@@ -260,6 +272,7 @@ class F2DCPgLab(F2DCPG):
         val_n_per_cli = None
         if self._lab_setup_done and self.val_loaders is not None:
             try:
+                # 这里是在聚合之后，client用自己的val数据 测ce loss，然后这个loss给下一轮的lab用
                 eval_result = evaluate_val_per_client(
                     global_net=self.global_net,
                     val_loaders=self.val_loaders,
@@ -304,6 +317,7 @@ class F2DCPgLab(F2DCPG):
 
         # === 为下一 round 预算 LAB freq ===
         # (本 round 已经聚合完, 下一 round loc_update 进 aggregate_nets 前会用)
+        # 用刚刚更新的这个val loss ema 计算下一轮的聚合权重
         self._precompute_next_lab_freq()
 
         all_c_avg_loss = all_clients_loss / max(len(online_clients), 1)
@@ -326,7 +340,7 @@ class F2DCPgLab(F2DCPG):
             self._next_round_lab_freq = None
             self._next_round_lab_result = None
             return
-
+        # 真正开始计算的
         result = self.lab_state.compute_lab(
             round_idx=self.epoch_index + 1,
             sample_share_dom=sample_share_dom,
@@ -339,6 +353,7 @@ class F2DCPgLab(F2DCPG):
         # confidence 的: 每个 cli 持单一 domain, 域内等权.
         self._next_round_lab_freq = result   # 把 domain-level w_proj 存着, aggregate_nets 时再 cli 级展开
 
+    # 就是计算按照每个类的sample 数量来计算权重
     def _compute_sample_share_dom(self, online_clients):
         """从 online_clients 的 trainloader.sampler.indices 算 sample_share per domain."""
         if not hasattr(self, '_selected_domain_list') or self._selected_domain_list is None:
@@ -361,7 +376,7 @@ class F2DCPgLab(F2DCPG):
         except Exception as e:
             print(f"[LAB compute_sample_share_dom ERR] {e}")
             return {}
-
+    # 把domain的权重分给每一个client 比如说sketch的权重是0.39 然后有3个client 那么就是0.39➗3 得到，保证是域内等权的
     def _domain_level_to_cli_freq(self, w_proj_dom, online_clients):
         """把 domain-level w_proj 转成 cli-level freq (域内等权)."""
         if not hasattr(self, '_selected_domain_list'):

@@ -105,6 +105,15 @@ def parse_args():
                         help="LAB bounded simplex 强域保护下界")
     parser.add_argument("--lab_ratio_max", type=float, default=2.00,
                         help="LAB bounded simplex 弱域上界")
+    parser.add_argument("--lab_projection_mode", type=str, default="standard",
+                        choices=["standard", "office_small_protect"],
+                        help="LAB projection mode: standard=原 LAB; office_small_protect=Office 小域保护")
+    parser.add_argument("--lab_small_share_threshold", type=float, default=0.125,
+                        help="LAB small-domain threshold for office_small_protect (default 0.5/Q=0.125)")
+    parser.add_argument("--lab_small_ratio_min", type=float, default=1.25,
+                        help="LAB small-domain protected lower ratio")
+    parser.add_argument("--lab_small_ratio_max", type=float, default=4.00,
+                        help="LAB small underfit-domain upper ratio")
     parser.add_argument("--lab_ema_alpha", type=float, default=0.30,
                         help="LAB val_loss EMA 平滑系数")
     parser.add_argument("--lab_val_size_per_dom", type=int, default=50,
