@@ -900,12 +900,97 @@ if __name__ == '__main__':
     test_t10_integration_intervention_rho_zero()
     test_t11_n_classes_infer_no_force_label_9()
     test_t12_mag_exceed_per_sample()
+
+    # ===== T13: L_orth (Digits 专用, 验 lambda_orth>0 时 loss 真加 + 诊断输出 + lambda_orth=0 backward compat) =====
+    print("=== T13: L_orth lambda>0 加 loss + 诊断, lambda=0 完全跟原行为一致 ===")
+    from backbone.ResNet_DC_F2DC_DSE import resnet10_f2dc_dse
+    from models.f2dc_dse import F2DCDSE
+    import copy
+    torch.manual_seed(0)
+
+    def setup_trainer(lambda_orth):
+        nets = [resnet10_f2dc_dse(num_classes=7) for _ in range(2)]
+        for net in nets:
+            with torch.no_grad():
+                net.dse_rescue3.expand.weight.normal_(0, 0.5)  # 让 delta 非零
+        args = Namespace(
+            parti_num=2, num_classes=7, local_epoch=1, local_batch_size=4, local_lr=0.01,
+            lambda1=1.0, lambda2=1.0, tem=0.5, gum_tau=0.1,
+            dse_reduction=8, dse_rho_max=0.3, dse_lambda_cc=0.1, dse_lambda_mag=0.0,
+            dse_r_max=0.15,
+            dse_cc_warmup_rounds=0, dse_cc_ramp_rounds=0,
+            dse_rho_warmup_rounds=0, dse_rho_ramp_rounds=0, dse_proto3_ema_beta=0.85,
+            dse_lambda_orth=lambda_orth,
+            infoNCE=False, rand_dataset=False, seed=0, csv_log=False,
+            device_id=-1, dataset='fl_pacs', model='f2dc_dse',
+        )
+        trainer = F2DCDSE.__new__(F2DCDSE)
+        trainer.__dict__['nets_list'] = nets
+        trainer.__dict__['global_net'] = copy.deepcopy(nets[0])
+        trainer.args = args
+        trainer.tem = args.tem; trainer.local_lr = args.local_lr
+        trainer.local_epoch = args.local_epoch; trainer.online_num = 2
+        trainer.random_state = np.random.RandomState(0); trainer.device = torch.device('cpu')
+        trainer.dse_rho_max = 0.3; trainer.dse_lambda_cc = 0.1
+        trainer.dse_lambda_mag = 0.0; trainer.dse_r_max = 0.15
+        trainer.dse_cc_warmup = 0; trainer.dse_cc_ramp = 0
+        trainer.dse_rho_warmup = 0; trainer.dse_rho_ramp = 0
+        trainer.dse_proto3_ema_beta = 0.85
+        trainer.dse_lambda_orth = lambda_orth
+        trainer.global_proto3_raw = None; trainer.global_proto3_unit = None
+        trainer.epoch_index = 1
+        trainer._cur_rho_t = 0.0; trainer._cur_lambda_cc_t = 0.0
+        trainer._round_local_proto3_sum = None; trainer._round_local_proto3_count = None
+        trainer._round_cc_loss_sum = 0.0; trainer._round_mag_loss_sum = 0.0
+        trainer._round_mag_exceed_samples = 0; trainer._round_mag_eval_samples = 0
+        trainer._round_total_batches = 0
+        trainer._round_raw_to_target_cos = []; trainer._round_rescued_to_target_cos = []
+        trainer._round_mag_ratio_p95 = []; trainer._round_mag_ratio_max = []
+        trainer._round_proto3_ema_delta_norm = 0.0
+        trainer._round_orth_loss_sum = 0.0
+        trainer._round_orth_cos_abs_sum = 0.0
+        trainer._round_orth_eval_samples = 0
+        trainer.proto_logs = []
+        trainer.aggregate_nets = lambda freq: None
+        return trainer
+
+    class FakeLoader:
+        def __init__(self):
+            self.dataset = list(range(8))
+            self.sampler = type('S', (), {'indices': list(range(8))})()
+        def __iter__(self):
+            torch.manual_seed(42)
+            for _ in range(2):
+                yield torch.randn(4, 3, 128, 128), torch.randint(0, 7, (4,))
+
+    # Test 1: lambda_orth=0 (backward compat, 不应有 orth_loss diag 字段)
+    trainer_off = setup_trainer(lambda_orth=0.0)
+    trainer_off.loc_update([FakeLoader(), FakeLoader()])
+    diag_off = trainer_off.proto_logs[-1] if trainer_off.proto_logs else {}
+    assert 'orth_loss_mean' not in diag_off, \
+        f"lambda_orth=0 不应输出 orth_loss_mean diag, 但有: {diag_off.get('orth_loss_mean')}"
+    assert 'orth_cos_abs_mean' not in diag_off, "lambda_orth=0 不应输出 orth_cos_abs_mean diag"
+    print(f"  ✓ lambda_orth=0: 无 orth_loss diag (backward compat OK)")
+
+    # Test 2: lambda_orth=0.05 ON (诊断字段必须出现, orth_loss_mean > 0)
+    trainer_on = setup_trainer(lambda_orth=0.05)
+    trainer_on.loc_update([FakeLoader(), FakeLoader()])
+    diag_on = trainer_on.proto_logs[-1] if trainer_on.proto_logs else {}
+    assert 'orth_loss_mean' in diag_on, f"lambda_orth=0.05 应输出 orth_loss_mean, 实际 keys={list(diag_on.keys())}"
+    assert 'orth_cos_abs_mean' in diag_on, "应输出 orth_cos_abs_mean"
+    assert diag_on['orth_loss_mean'] > 0, f"orth_loss_mean 应 > 0, 实际 = {diag_on['orth_loss_mean']}"
+    assert 0 <= diag_on['orth_cos_abs_mean'] <= 1, f"orth_cos_abs_mean 应在 [0,1], 实际 = {diag_on['orth_cos_abs_mean']}"
+    assert diag_on['lambda_orth'] == 0.05
+    print(f"  ✓ lambda_orth=0.05: orth_loss_mean={diag_on['orth_loss_mean']:.4f}, orth_cos_abs={diag_on['orth_cos_abs_mean']:.4f}, lambda_orth=0.05")
+    print("T13 PASS\n")
+
     print("=" * 60)
-    print("ALL 13 TESTS PASS — F2DC + DSE_Rescue3 + CCC + Mag 实现验证完成")
+    print("ALL 14 TESTS PASS — F2DC + DSE_Rescue3 + CCC + Mag + L_orth 验证完成")
     print("  - T1-T8: unit test")
     print("  - T9:    integration test (full federated 7-round simulation)")
     print("  - T9b:   codex critical fixes (#1 eval whitelist / #2 global_net sync / #3 N_CLASSES infer)")
     print("  - T10:   intervention test (rho=0 vs rho>0 inference 干预)")
     print("  - T11:   N_CLASSES infer (10 类 batch 缺 label 不 crash) [codex 复审]")
     print("  - T12:   mag_exceed_rate per-sample (单 sample 爆 batch 不爆) [codex 复审]")
+    print("  - T13:   L_orth lambda>0 加 loss + diag, lambda=0 backward compat [Digits 专用]")
     print("=" * 60)

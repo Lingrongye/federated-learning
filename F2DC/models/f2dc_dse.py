@@ -104,6 +104,11 @@ class F2DCDSE(F2DC):
         self.dse_rho_ramp = int(getattr(args, 'dse_rho_ramp_rounds', 10))
         # 每个server的prototype 的ema平滑系数
         self.dse_proto3_ema_beta = float(getattr(args, 'dse_proto3_ema_beta', 0.85))
+        # ★ Digits 专用 (default 0 = off, backward compat 跟 PACS/Office 不传该参数完全一致):
+        # L_orth = cos(delta3, feat3)^2 mean, 强制 adapter delta 朝 feat 正交方向 (横向校正)
+        # 解决 Digits svhn 灾难根因: random init 让 R7 adapter delta 锁定同向 → svhn corrupt
+        # 仅 Digits 实验传非零值 (e.g., --dse_lambda_orth 0.05), PACS/Office 不传 = 0 = 关闭
+        self.dse_lambda_orth = float(getattr(args, 'dse_lambda_orth', 0.0))
         # ★ Fix (codex 复审): CCC 诊断改成"每个 (client, epoch) 固定前 N batch", 不再 10% 随机
         # 保证 R10 smoke / 小 batch / proto 还没 ready 时也总有诊断数据，每个client 每个epoch固定前几个batch 记录ccc诊断
         self._ccc_fixed_batches = int(getattr(args, 'dse_ccc_fixed_batches', 2))
@@ -137,6 +142,10 @@ class F2DCDSE(F2DC):
         self._round_mag_ratio_max = []
         # ★ Fix #7 (codex): proto3 EMA delta 真实更新幅度 (vs proto3_update_norm 只是 mean norm)
         self._round_proto3_ema_delta_norm = 0.0
+        # ★ L_orth 累计 (Digits 专用, lambda_orth=0 时不累, 也不影响 PACS/Office)
+        self._round_orth_loss_sum = 0.0
+        self._round_orth_cos_abs_sum = 0.0
+        self._round_orth_eval_samples = 0
 
         # 当前 round 的 ramp 值 (loc_update 算好, _train_net_dse 用)
         self._cur_rho_t = 0.0
@@ -198,6 +207,10 @@ class F2DCDSE(F2DC):
         self._round_mag_ratio_p95 = []
         self._round_mag_ratio_max = []
         self._round_proto3_ema_delta_norm = 0.0
+        # ★ L_orth reset (Digits 专用)
+        self._round_orth_loss_sum = 0.0
+        self._round_orth_cos_abs_sum = 0.0
+        self._round_orth_eval_samples = 0
 
         # === Step 4: 标准 F2DC loc_update (call _train_net_dse) ===
         total_clients = list(range(self.args.parti_num))
@@ -396,11 +409,30 @@ class F2DCDSE(F2DC):
                             (ratio_per_t > self.dse_r_max).sum().item()
                         )
 
+                # === Orthogonality loss (Digits 专用, default lambda=0 时完全不影响) ===
+                # 强制 adapter delta 朝 feat3 正交方向 (横向校正), 防止 random init 锁同向
+                # cos(delta3, feat3)^2 mean → 0 表示横向, → 1 表示同/反向
+                # PACS/Office 默认 lambda_orth=0, 完全 backward compat
+                orth_loss = torch.tensor(0.).to(self.device)
+                orth_cos_abs_batch = 0.0
+                if (getattr(self, 'dse_lambda_orth', 0.0) > 0
+                        and self._cur_rho_t > 0
+                        and net._last_delta3 is not None):
+                    delta3_for_orth = net._last_delta3
+                    feat3_for_orth = net._last_feat3_raw
+                    delta_flat = delta3_for_orth.flatten(1)  # (B, C*H*W)
+                    feat_flat = feat3_for_orth.flatten(1)
+                    cos_df = F.cosine_similarity(delta_flat, feat_flat, dim=1)  # (B,)
+                    orth_loss = cos_df.pow(2).mean()
+                    with torch.no_grad():
+                        orth_cos_abs_batch = cos_df.abs().mean().item()
+
                 # === total loss + backward ===
                 total_loss = (
                     main_loss
                     + self._cur_lambda_cc_t * cc_loss
                     + self.dse_lambda_mag * mag_loss
+                    + getattr(self, 'dse_lambda_orth', 0.0) * orth_loss  # Digits 专用 (default 0 时无影响)
                 )
                 total_loss.backward()
                 optimizer.step()
@@ -448,6 +480,11 @@ class F2DCDSE(F2DC):
                     c_mag_eval_samples += bs
                     self._round_mag_ratio_p95.append(ratio_p95)
                     self._round_mag_ratio_max.append(ratio_max)
+                # ★ L_orth 累计 (Digits 专用, lambda_orth=0 时不累)
+                if getattr(self, 'dse_lambda_orth', 0.0) > 0 and self._cur_rho_t > 0:
+                    self._round_orth_loss_sum += orth_loss.item() * bs
+                    self._round_orth_cos_abs_sum += orth_cos_abs_batch * bs
+                    self._round_orth_eval_samples += bs
                 c_batches += 1
                 global_loss += total_loss.item() * bs
                 global_samples += bs
@@ -532,14 +569,25 @@ class F2DCDSE(F2DC):
                 - merged['raw_to_target_cos_mean']
             )
 
+        # ★ L_orth 诊断 (Digits 专用, lambda_orth=0 时不输出)
+        if getattr(self, 'dse_lambda_orth', 0.0) > 0 and getattr(self, '_round_orth_eval_samples', 0) > 0:
+            merged['orth_loss_mean'] = (
+                getattr(self, '_round_orth_loss_sum', 0.0) / self._round_orth_eval_samples
+            )
+            merged['orth_cos_abs_mean'] = (
+                getattr(self, '_round_orth_cos_abs_sum', 0.0) / self._round_orth_eval_samples
+            )
+            merged['lambda_orth'] = getattr(self, 'dse_lambda_orth', 0.0)
+
         # 排序 print (key 顺序)
         order = [
-            'round', 'rho_t', 'lambda_cc_t',
+            'round', 'rho_t', 'lambda_cc_t', 'lambda_orth',
             'dse_delta_raw_ratio_mean', 'dse_delta_scaled_ratio_mean',
             'dse_delta_cos_feat_mean',
             'cc_loss_mean',
             'mag_loss_mean', 'mag_exceed_rate',
             'mag_ratio_p95_mean', 'mag_ratio_max_mean',  # ★ Fix #5
+            'orth_loss_mean', 'orth_cos_abs_mean',  # ★ L_orth (Digits 专用)
             'proto3_valid_classes', 'proto3_valid_ratio',
             'proto3_mean_norm', 'proto3_valid_mean_norm', 'proto3_ema_delta_norm',  # ★ Fix #7 + 复审
             'raw_to_target_cos_mean', 'rescued_to_target_cos_mean',

@@ -207,6 +207,10 @@ def parse_args():
     parser.add_argument("--dse_ccc_fixed_batches", type=int, default=2,
                         help="CCC raw/rescued cos 诊断: 每 (client, epoch) 固定前 N batch 记录"
                              " (改自 10% 随机采样, 保证短跑也有数据)")
+    parser.add_argument("--dse_lambda_orth", type=float, default=0.0,
+                        help="L_orth = cos(delta3, feat3)^2 mean 权重 (Digits 专用, default 0=off)."
+                             " Digits svhn 灾难根因是 adapter delta 锁同向, lambda_orth>0 强制横向校正."
+                             " PACS/Office 不传该参数 = 0 = 完全 backward compat")
 
     parser.add_argument("--ma_select", type=str, default="resnet", help="backbone")
 
