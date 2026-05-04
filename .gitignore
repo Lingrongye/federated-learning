@@ -161,3 +161,4 @@ experiments/ablation/EXP-148_f2dc_dse_office_high_rho/diag/
 # === EXP-144 LAB digits heavy npz 单文件 144MB 超 GitHub 100MB 限制, 不入 git ===
 experiments/ablation/EXP-144_lab_v4_1/diag_*_digits_s15/best_*.npz
 experiments/ablation/EXP-144_lab_v4_1/diag_*_digits_s15/final_*.npz
+experiments/ablation/EXP-153_baselines_for_tsne/diag/
