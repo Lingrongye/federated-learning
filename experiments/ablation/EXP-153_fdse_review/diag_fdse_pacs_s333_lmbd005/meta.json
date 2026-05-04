@@ -1,0 +1,19 @@
+{
+  "model": "fdse",
+  "dataset": "fl_pacs",
+  "seed": 333,
+  "parti_num": 10,
+  "num_classes": 7,
+  "communication_epoch": 100,
+  "use_daa": false,
+  "agg_a": 1.0,
+  "agg_b": 0.4,
+  "final_acc": 42.018,
+  "heavy_dumps": [
+    [
+      "final_R100",
+      100,
+      42.018
+    ]
+  ]
+}
