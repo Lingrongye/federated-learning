@@ -145,12 +145,13 @@ best_args = {
             'local_batch_size': 64
         },
         'fdse': {
-            # PACS 专用 hyperparams: 跟 FDSE_CVPR25/task/PACS_c4/log/*algopara_0.50.50.001*
-            # 文件名解码 (lmbd=0.5, tau=0.5, beta=0.001) 一致, 修复 lmbd=0.01/beta=0.1 默认值
-            # 在 PACS 上训崩 (R18 peak 53.40 → R99 33.58 collapse) 的 bug.
+            # PACS hyperparams (option B 调整):
+            # 原 FDSE_CVPR25 PACS 用 lmbd=0.5/beta=0.001/lr=5e-2 (10× 比例).
+            # 我们 lr=1e-2 (公平 baseline 协议), 同步降 lmbd=0.05 维持 5× 比例,
+            # 避免 lmbd=0.5/lr=0.01 = 50× 大 reg 压死 task loss (lmbd=0.5 实测 R5+ collapse 到 15%).
             'local_lr': 0.01,
             'local_batch_size': 64,
-            'lmbd': 0.5,
+            'lmbd': 0.05,
             'fdse_tau': 0.5,
             'fdse_beta': 0.001,
         }
