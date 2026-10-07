@@ -1,0 +1,20 @@
+{
+  "status": "completed",
+  "revision": "8a7f078ec549f89948d384ff01bce25ff15bf3b4",
+  "rounds": 2,
+  "seed": 2,
+  "domains": [
+    "MNIST",
+    "USPS",
+    "SVHN",
+    "SYN"
+  ],
+  "best_avg": 13.671875,
+  "last_avg": 13.623046875,
+  "last5_mean": null,
+  "elapsed_seconds": 30.144445906043984,
+  "paper_result_reproduced": false,
+  "peak_torch_gpu_bytes": 231144960,
+  "second_round_nonzero_dpa_cpcl_gradients_all_clients": true,
+  "diag": "/home/lry/code/feddap-exp155/experiments/sanity/EXP-156_feddap_raw_digits/diag_exp156_digits_s2_raw4_r2_e1_v1"
+}

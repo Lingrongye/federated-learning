@@ -1,0 +1,55 @@
+/home/lry/conda/envs/pfllib/lib/python3.11/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+{"file": "MNIST/train-images-idx3-ubyte.gz", "url": "https://ossci-datasets.s3.amazonaws.com/mnist/train-images-idx3-ubyte.gz", "status": "downloading"}
+{"relative": "MNIST/train-images-idx3-ubyte.gz", "requested_url": "https://ossci-datasets.s3.amazonaws.com/mnist/train-images-idx3-ubyte.gz", "resolved_url": "https://ossci-datasets.s3.amazonaws.com/mnist/train-images-idx3-ubyte.gz", "checksum_algorithm": "md5", "expected_checksum": "f68b3c2dcbeaaa9fbdd348bbdeb94873", "sha256": "440fcabf73cc546fa21475e81ea370265605f56be210a4024d2ca8f203523609", "bytes": 9912422, "status": "verified"}
+{"file": "MNIST/train-labels-idx1-ubyte.gz", "url": "https://ossci-datasets.s3.amazonaws.com/mnist/train-labels-idx1-ubyte.gz", "status": "downloading"}
+{"relative": "MNIST/train-labels-idx1-ubyte.gz", "requested_url": "https://ossci-datasets.s3.amazonaws.com/mnist/train-labels-idx1-ubyte.gz", "resolved_url": "https://ossci-datasets.s3.amazonaws.com/mnist/train-labels-idx1-ubyte.gz", "checksum_algorithm": "md5", "expected_checksum": "d53e105ee54ea40749a09fcbcd1e9432", "sha256": "3552534a0a558bbed6aed32b30c495cca23d567ec52cac8be1a0730e8010255c", "bytes": 28881, "status": "verified"}
+{"file": "MNIST/t10k-images-idx3-ubyte.gz", "url": "https://ossci-datasets.s3.amazonaws.com/mnist/t10k-images-idx3-ubyte.gz", "status": "downloading"}
+{"relative": "MNIST/t10k-images-idx3-ubyte.gz", "requested_url": "https://ossci-datasets.s3.amazonaws.com/mnist/t10k-images-idx3-ubyte.gz", "resolved_url": "https://ossci-datasets.s3.amazonaws.com/mnist/t10k-images-idx3-ubyte.gz", "checksum_algorithm": "md5", "expected_checksum": "9fb629c4189551a2d022fa330f9573f3", "sha256": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6", "bytes": 1648877, "status": "verified"}
+{"file": "MNIST/t10k-labels-idx1-ubyte.gz", "url": "https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz", "status": "downloading"}
+{"relative": "MNIST/t10k-labels-idx1-ubyte.gz", "requested_url": "https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz", "resolved_url": "https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz", "checksum_algorithm": "md5", "expected_checksum": "ec29112dd5afa0611ce80d1b7f02629c", "sha256": "f7ae60f92e00ec6debd23a6088c31dbd2371eca3ffa0defaefb259924204aec6", "bytes": 4542, "status": "verified"}
+{"file": "USPS/usps.bz2", "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/usps.bz2", "status": "downloading"}
+{"relative": "USPS/usps.bz2", "requested_url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/usps.bz2", "resolved_url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/usps.bz2", "checksum_algorithm": "md5", "expected_checksum": "ec16c51db3855ca6c91edd34d0e9b197", "sha256": "3771e9dd6ba685185f89867b6e249233dd74652389f263963b3b741e994b034f", "bytes": 6579383, "status": "verified"}
+{"file": "USPS/usps.t.bz2", "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/usps.t.bz2", "status": "downloading"}
+{"relative": "USPS/usps.t.bz2", "requested_url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/usps.t.bz2", "resolved_url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/usps.t.bz2", "checksum_algorithm": "md5", "expected_checksum": "8ea070ee2aca1ac39742fdd1ef5ed118", "sha256": "a9c0164e797d60142a50604917f0baa604f326e9a689698763793fa5d12ffc4e", "bytes": 1831726, "status": "verified"}
+{"file": "SVHN/train_32x32.mat", "url": "http://ufldl.stanford.edu/housenumbers/train_32x32.mat", "status": "downloading"}
+{"file": "SVHN/train_32x32.mat", "received_bytes": 33554432}
+{"file": "SVHN/train_32x32.mat", "received_bytes": 67108864}
+{"file": "SVHN/train_32x32.mat", "received_bytes": 100663296}
+{"file": "SVHN/train_32x32.mat", "received_bytes": 134217728}
+{"file": "SVHN/train_32x32.mat", "received_bytes": 167772160}
+{"relative": "SVHN/train_32x32.mat", "requested_url": "http://ufldl.stanford.edu/housenumbers/train_32x32.mat", "resolved_url": "http://ufldl.stanford.edu/housenumbers/train_32x32.mat", "checksum_algorithm": "md5", "expected_checksum": "e26dedcc434d2e4c54c9b2d4a06d8373", "sha256": "435e94d69a87fde4fd4d7f3dd208dfc32cb6ae8af2240d066de1df7508d083b8", "bytes": 182040794, "status": "verified"}
+{"file": "SVHN/test_32x32.mat", "url": "http://ufldl.stanford.edu/housenumbers/test_32x32.mat", "status": "downloading"}
+{"file": "SVHN/test_32x32.mat", "received_bytes": 33554432}
+{"relative": "SVHN/test_32x32.mat", "requested_url": "http://ufldl.stanford.edu/housenumbers/test_32x32.mat", "resolved_url": "http://ufldl.stanford.edu/housenumbers/test_32x32.mat", "checksum_algorithm": "md5", "expected_checksum": "eb5a983be6a315427106f1b164d9cef3", "sha256": "cdce80dfb2a2c4c6160906d0bd7c68ec5a99d7ca4831afa54f09182025b6a75b", "bytes": 64275384, "status": "verified"}
+{"file": "SYN/synth_train_32x32.mat", "url": "https://media.githubusercontent.com/media/domainadaptation/datasets/91ff02225a73db330883843bc41ee3aca59a19d9/synth/synth_train_32x32.mat", "status": "downloading"}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 33554432}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 67108864}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 100663296}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 134217728}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 167772160}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 201326592}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 234881024}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 268435456}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 301989888}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 335544320}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 369098752}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 402653184}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 436207616}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 469762048}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 503316480}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 536870912}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 570425344}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 603979776}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 637534208}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 671088640}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 704643072}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 738197504}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 771751936}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 805306368}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 838860800}
+{"file": "SYN/synth_train_32x32.mat", "received_bytes": 872415232}
+{"relative": "SYN/synth_train_32x32.mat", "requested_url": "https://media.githubusercontent.com/media/domainadaptation/datasets/91ff02225a73db330883843bc41ee3aca59a19d9/synth/synth_train_32x32.mat", "resolved_url": "https://media.githubusercontent.com/media/domainadaptation/datasets/91ff02225a73db330883843bc41ee3aca59a19d9/synth/synth_train_32x32.mat", "checksum_algorithm": "sha256", "expected_checksum": "e0e0924ecd0c0b5a55ed6485aaa7d39937af982397717b89a3d91777aca9433c", "sha256": "e0e0924ecd0c0b5a55ed6485aaa7d39937af982397717b89a3d91777aca9433c", "bytes": 895578032, "status": "verified"}
+{"file": "SYN/synth_test_32x32.mat", "url": "https://media.githubusercontent.com/media/domainadaptation/datasets/91ff02225a73db330883843bc41ee3aca59a19d9/synth/synth_test_32x32.mat", "status": "downloading"}
+{"relative": "SYN/synth_test_32x32.mat", "requested_url": "https://media.githubusercontent.com/media/domainadaptation/datasets/91ff02225a73db330883843bc41ee3aca59a19d9/synth/synth_test_32x32.mat", "resolved_url": "https://media.githubusercontent.com/media/domainadaptation/datasets/91ff02225a73db330883843bc41ee3aca59a19d9/synth/synth_test_32x32.mat", "checksum_algorithm": "sha256", "expected_checksum": "6285fe9a1c6f27b379a47263907a37899b59ce86948fd343a5b904435cde5bcc", "sha256": "6285fe9a1c6f27b379a47263907a37899b59ce86948fd343a5b904435cde5bcc", "bytes": 17851156, "status": "verified"}
+{"status": "DOWNLOAD_PASS", "splits": {"MNIST": {"train": {"count": 60000, "image_shape": [28, 28], "label_counts": [5923, 6742, 5958, 6131, 5842, 5421, 5918, 6265, 5851, 5949]}, "test": {"count": 10000, "image_shape": [28, 28], "label_counts": [980, 1135, 1032, 1010, 982, 892, 958, 1028, 974, 1009]}}, "USPS": {"train": {"count": 7291, "image_shape": [16, 16], "label_counts": [1194, 1005, 731, 658, 652, 556, 664, 645, 542, 644]}, "test": {"count": 2007, "image_shape": [16, 16], "label_counts": [359, 264, 198, 166, 200, 160, 170, 147, 166, 177]}}, "SVHN": {"train": {"count": 73257, "image_shape": [32, 32, 3], "label_counts": [4948, 13861, 10585, 8497, 7458, 6882, 5727, 5595, 5045, 4659]}, "test": {"count": 26032, "image_shape": [32, 32, 3], "label_counts": [1744, 5099, 4149, 2882, 2523, 2384, 1977, 2019, 1660, 1595]}}, "SYN": {"train": {"count": 479400, "image_shape": [32, 32, 3], "label_counts": [48180, 48315, 47611, 47960, 47473, 48034, 47874, 47965, 48047, 47941]}, "test": {"count": 9553, "image_shape": [32, 32, 3], "label_counts": [950, 968, 921, 883, 939, 955, 1016, 992, 979, 950]}}}}

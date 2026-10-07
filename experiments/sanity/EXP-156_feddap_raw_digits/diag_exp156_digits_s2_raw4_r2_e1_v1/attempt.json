@@ -1,0 +1,22 @@
+{
+  "args": {
+    "data_root": "/home/lry/data/feddap_digits_raw",
+    "data_format": "raw",
+    "experiment": "EXP-156",
+    "dump_diag": "/home/lry/code/feddap-exp155/experiments/sanity/EXP-156_feddap_raw_digits/diag_exp156_digits_s2_raw4_r2_e1_v1",
+    "device": "cuda:1",
+    "seed": 2,
+    "rounds": 2,
+    "local_epochs": 1,
+    "clients_per_domain": 3,
+    "train_samples": 256,
+    "test_samples": 512,
+    "batch_size": 32,
+    "lr": 0.01,
+    "lambda_dpa": 1.0,
+    "lambda_cpcl": 1.0,
+    "tau_cross": 0.02,
+    "tau_agg": 0.001
+  },
+  "experiment": "EXP-156"
+}

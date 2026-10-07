@@ -1,0 +1,10 @@
+{
+  "pid": 227361,
+  "command": [
+    "/home/lry/conda/envs/pfllib/bin/python",
+    "-u",
+    "/home/lry/code/feddap-exp155/FedDAP_reproduction/raw_data.py",
+    "--root",
+    "/home/lry/data/feddap_digits_raw"
+  ]
+}
