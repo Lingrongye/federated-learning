@@ -34,16 +34,23 @@
 ```bash
 cd /home/lry/code/feddap-exp155
 nice -n 10 /home/lry/conda/envs/pfllib/bin/python FedDAP_reproduction/raw_data.py --root /home/lry/data/feddap_digits_raw --background-log-dir experiments/sanity/EXP-156_feddap_raw_digits/download_v1
+/home/lry/conda/envs/pfllib/bin/python FedDAP_reproduction/wait_run.py --directory /home/lry/data/feddap_digits_raw --kind download --timeout 1200
+/home/lry/conda/envs/pfllib/bin/python FedDAP_reproduction/inspect_raw.py --root /home/lry/data/feddap_digits_raw --output experiments/sanity/EXP-156_feddap_raw_digits/download_v1
 ```
 
 只有 `download_manifest.json` 标记 completed 且所有校验一致才能启动：
 
 ```bash
 nice -n 10 /home/lry/conda/envs/pfllib/bin/python FedDAP_reproduction/launch.py --config experiments/sanity/EXP-156_feddap_raw_digits/config.json --output-dir experiments/sanity/EXP-156_feddap_raw_digits/run_v1
+/home/lry/conda/envs/pfllib/bin/python FedDAP_reproduction/wait_run.py --directory experiments/sanity/EXP-156_feddap_raw_digits/diag_exp156_digits_s2_raw4_r2_e1_v1 --timeout 300
 /home/lry/conda/envs/pfllib/bin/python FedDAP_reproduction/verify_artifacts.py experiments/sanity/EXP-156_feddap_raw_digits/diag_exp156_digits_s2_raw4_r2_e1_v1
 ```
 
 任何失败保留原目录；新下载目录或重跑诊断必须改新名称，不覆盖。
+
+以上命令应在 `set -e` 的 shell 顺序执行；完成门槛返回非零后不得继续验收。启动器只返回 PID，绝不是训练完成证明。完成门槛有超时，并优先检查 failure 文件；确认 summary.status=completed 后才可做产物验收。
+
+来源检查额外保存四域逐类预览 `download_v1/source_preview.png` 及包含原始像素和索引的 `source_samples.npz`；人工检查数字和标签是否一致。预览不是训练集抽样划分，不参与训练。
 
 ## 原始来源与协议边界
 

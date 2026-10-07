@@ -15,9 +15,43 @@ from raw_data import (DOMAINS, RESOURCES, RawDigits, digest, download,
                       read_arrays, resource_paths, verify_sources)
 from raw_loaders import loaders, transform
 from run_digits import evaluate, parser
+from wait_run import wait
+from inspect_raw import inspect
 
 
 class RawTests(unittest.TestCase):
+    def test_source_preview_keeps_pixels_indices_and_refuses_overwrite(self):
+        images = np.zeros((10, 32, 32, 3), dtype=np.uint8)
+        images[9, 0, 0, 0] = 255
+        labels = np.arange(10)
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch("inspect_raw.verify_sources", return_value={"splits": {}}), \
+             mock.patch("inspect_raw.read_arrays", return_value=(images, labels)):
+            inspect("/fixture", directory)
+            path = Path(directory)
+            with np.load(path / "source_samples.npz", allow_pickle=False) as item:
+                self.assertEqual(len(item.files), 80)
+                self.assertEqual(int(item["SYN_class9_index"]), 9)
+                self.assertTrue(np.array_equal(item["SYN_class9_pixels"], images[9]))
+            self.assertTrue((path / "source_preview.png").is_file())
+            with self.assertRaises(FileExistsError):
+                inspect("/fixture", directory)
+
+    def test_completion_gate_failure_success_timeout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaises(TimeoutError):
+                wait(root, timeout=.001, interval=.001)
+            with open(root / "summary.json", "x") as stream:
+                json.dump({"status": "completed"}, stream)
+            self.assertEqual(wait(root)["status"], "completed")
+            with open(root / "failure.json", "x") as stream:
+                json.dump({"error": "controlled failure"}, stream)
+            with self.assertRaisesRegex(RuntimeError, "controlled failure"):
+                wait(root)
+            with self.assertRaises(ValueError):
+                wait(root, timeout=0)
+
     def test_mnist_raw_idx_and_rgb_transform_once(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "MNIST"
