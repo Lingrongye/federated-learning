@@ -5,8 +5,8 @@
   "upstream_revision": "988211eb826d81251bd8b3b8ae53fbdcc7f3dc20",
   "arguments": {
     "data_root": "/home/lry/code/federated-learning/FedPLVM/data/digit/digit",
-    "dump_diag": "/home/lry/code/feddap-exp155/experiments/sanity/EXP-155_feddap_digits_smoke/diag_exp155_digits_s2_r2_e1_v1",
-    "device": "cuda:0",
+    "dump_diag": "/home/lry/code/feddap-exp155/experiments/sanity/EXP-155_feddap_digits_smoke/diag_exp155_digits_s2_r2_e1_gpu1_v2",
+    "device": "cuda:1",
     "seed": 2,
     "rounds": 2,
     "local_epochs": 1,

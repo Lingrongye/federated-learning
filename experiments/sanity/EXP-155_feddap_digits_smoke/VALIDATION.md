@@ -30,4 +30,12 @@
 - 审查只读判断与本地测试分别记录，不把任一个冒充服务器运行证明。
 
 ## 服务器验证
-待 Git 同步后执行同一测试及 preflight。真实 GPU smoke 与所有诊断回传另行记录。
+- Git clone（partial/sparse）与 `git pull --ff-only` 后，确认服务器初版 revision
+  bfe28d104f38db3c31b40c1a510c3ac80f8287d8 与本地一致。
+- pfllib 实际执行同一 test_core：13 项中 12 PASS，1 SKIP；
+  SKIP 为服务器没有额外上游 clone 的 AST 对比，该项本地实际 PASS。
+- 实际执行 preflight.py，三域6个真实缓存读取与三通道32×32单次变换均通过。
+  原始样本为 uint8，标签覆盖0–9；每域 train_part0 有743张，可容纳384张无重叠训练样本。
+- GPU1在启动前检查计算空闲，改选cuda:1并使用新diag参数版本路径；
+  配置同步完成后才启动，实际训练revision以后续meta为准。
+- 真实 GPU smoke 与所有诊断回传另行记录；不能将CPU单测冒充CUDA训练。

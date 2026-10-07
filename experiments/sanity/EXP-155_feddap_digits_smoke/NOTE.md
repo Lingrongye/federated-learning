@@ -2,7 +2,7 @@
 
 ## 基本信息
 - 创建日期：2026-10-07（Asia/Shanghai）。
-- 类型：sanity；状态：准备中，尚未启动训练。
+- 类型：sanity；状态：启动前检查通过，尚未启动训练。
 - 方法：FedDAP；目标服务器：lab-lry。
 - 上游源码：FedDAP_CVPR2026，起始 revision 988211eb826d81251bd8b3b8ae53fbdcc7f3dc20。
 
@@ -22,8 +22,10 @@ Digits 不是 FedDAP 论文正式实验数据集；本实验不能用于宣称�
 - 独立 dump_diag 目录，拒绝复用已有目录；完成或失败均完整回传。
 
 ## 诊断路径
-- 本地：本目录/diag_exp155_digits_s2_r2_e1_v1/。
-- 服务器：/home/lry/code/feddap-exp155/experiments/sanity/EXP-155_feddap_digits_smoke/diag_exp155_digits_s2_r2_e1_v1/。
+- 本地：本目录/diag_exp155_digits_s2_r2_e1_gpu1_v2/。
+- 服务器：/home/lry/code/feddap-exp155/experiments/sanity/EXP-155_feddap_digits_smoke/diag_exp155_digits_s2_r2_e1_gpu1_v2/。
+- 启动前发现GPU1计算空闲而GPU0繁忙，改为cuda:1并使用新参数版本路径。
+  原v1只是准备配置，从未启动或创建diag目录，不存在删除/覆盖。
 - 参数如有变动必须另用新路径，不覆盖旧数据。
 - 必须保留 round_*.npz、best_R*.npz、final_R*.npz、meta.json、proto_logs.jsonl。
 - 保存模型、原型、样本索引、逐域准确率和特征；heavy snapshot 本地保留。
@@ -35,7 +37,7 @@ AVG = 各测试域准确率的等权平均，不按域样本数加权。
 短程测试没有完整末五轮，不将其汇总冒充论文主表结果。
 
 ## 运行与结果
-待核查服务器环境与数据后填写。没有已验证的训练结果。
+服务器单测及真实数据接口检查通过；尚无真实训练结果。
 
 ## 已核查的环境、数据与配置
 - lab-lry pfllib：Python3.11，torch2.6.0+cu124，torchvision0.21.0+cu124，
@@ -46,4 +48,6 @@ AVG = 各测试域准确率的等权平均，不按域样本数加权。
 - seed2，2轮×1local_epoch，batch32，lr0.01，λDPA=λCPCL=1，
   τcross0.02，τagg0.001；详细参数保存在不可覆盖的 config.json。
 - GPU 两卡都存在其他任务；短程低显存单模型顺序执行，不终止他人进程。
+- 启动前最新检查GPU1利用率0%、可用显存足够；选择cuda:1，训练器另有显存门槛。
+- 独立精简Git checkout：/home/lry/code/feddap-exp155；不改变共享原目录及其修改。
 - 正式论文协议与未明确细节：FedDAP_reproduction/PROTOCOL.md。
