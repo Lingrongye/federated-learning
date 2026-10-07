@@ -18,11 +18,15 @@ def main():
     diag = Path(config["arguments"]["dump_diag"]).resolve()
     if diag.exists():
         raise FileExistsError(f"Refusing to reuse any diagnostic directory: {diag}")
-    for domain in ("MNIST", "MNIST_M", "SVHN"):
-        for relative in ("partitions/train_part0.pkl", "test.pkl"):
-            path = Path(config["arguments"]["data_root"]) / domain / relative
-            if not path.is_file():
-                raise FileNotFoundError(path)
+    if config["arguments"].get("data_format", "cached") == "raw":
+        from raw_data import verify_sources
+        verify_sources(config["arguments"]["data_root"])
+    else:
+        for domain in ("MNIST", "MNIST_M", "SVHN"):
+            for relative in ("partitions/train_part0.pkl", "test.pkl"):
+                path = Path(config["arguments"]["data_root"]) / domain / relative
+                if not path.is_file():
+                    raise FileNotFoundError(path)
     output = Path(args.output_dir).resolve()
     output.mkdir(parents=True, exist_ok=False)
     command = [sys.executable, "-u", str(root / "FedDAP_reproduction/run_digits.py")]

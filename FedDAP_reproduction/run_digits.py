@@ -81,6 +81,9 @@ class CachedDigits(Dataset):
 
 
 def loaders(args):
+    if getattr(args, "data_format", "cached") == "raw":
+        from raw_loaders import loaders as original_loaders
+        return original_loaders(args)
     """Seeded disjoint per-domain subsets; record every assigned raw index."""
     rng = np.random.default_rng(args.seed)
     train, proto, test, manifest = [], [], [], {"clients": [], "test": []}
@@ -144,10 +147,12 @@ def pack_prototypes(prototypes):
 
 
 @torch.no_grad()
-def evaluate(net, test, device):
+def evaluate(net, test, device, domain_names=DOMAINS):
     net.eval()
     correct, counts, features, labels, domains = [], [], [], [], []
-    for domain, loader in zip(DOMAINS, test):
+    if len(domain_names) != len(test):
+        raise ValueError("Domain names and test loaders disagree")
+    for domain, loader in zip(domain_names, test):
         hits = count = 0
         for images, target in loader:
             feature = net.features(images.to(device))
@@ -214,10 +219,14 @@ def _run_reserved(args, output):
     revision = subprocess.check_output(
         ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True
     ).strip()
+    if getattr(args, "data_format", "cached") == "raw":
+        from raw_data import DOMAINS as domain_names
+    else:
+        domain_names = DOMAINS
     meta = {
-        "experiment": "EXP-155", "status": "starting", "args": vars(args),
+        "experiment": getattr(args, "experiment", "EXP-155"), "status": "starting", "args": vars(args),
         "revision": revision, "protocol": "digits-engineering-smoke-NOT-paper-results",
-        "domains": DOMAINS, "backbone": "upstream-compatible ResNet10 nf64, scratch",
+        "domains": domain_names, "backbone": "upstream-compatible ResNet10 nf64, scratch",
         "backbone_source": str(source), "backbone_sha256": sha256(source),
         "torch": torch.__version__, "numpy": np.__version__,
         "python": platform.python_version(), "platform": platform.platform(),
@@ -300,11 +309,11 @@ def _run_reserved(args, output):
             prototypes, attention = attention_aggregate(local_prototypes, args.tau_agg)
             state, weights = aggregate_states(states, counts)
             net.load_state_dict(state)
-            accuracy, evaluated = evaluate(net, test, device)
+            accuracy, evaluated = evaluate(net, test, device, domain_names)
             average = float(accuracy.mean())
             record = {
                 "round": round_id, "avg_accuracy": average,
-                "domain_accuracy": dict(zip(DOMAINS, accuracy.tolist())),
+                "domain_accuracy": dict(zip(domain_names, accuracy.tolist())),
                 "global_prototype_count": len(prototypes),
                 "previous_prototype_count": len(old_prototypes),
                 "fedavg_weights": weights, "clients": client_records,
@@ -349,7 +358,7 @@ def _run_reserved(args, output):
             raise AssertionError("Second round did not exercise both losses/gradients")
         summary = {
             "status": "completed", "revision": revision,
-            "rounds": len(history), "seed": args.seed, "domains": DOMAINS,
+            "rounds": len(history), "seed": args.seed, "domains": domain_names,
             "best_avg": max(item["avg_accuracy"] for item in history),
             "last_avg": history[-1]["avg_accuracy"],
             "last5_mean": (float(np.mean([item["avg_accuracy"] for item in history[-5:]]))
@@ -375,7 +384,7 @@ def run(args):
     # No overwrite, including failures. Reserve before environment/data setup.
     output = Path(args.dump_diag).resolve()
     output.mkdir(parents=True, exist_ok=False)
-    json_write(output / "attempt.json", {"args": vars(args), "experiment": "EXP-155"})
+    json_write(output / "attempt.json", {"args": vars(args), "experiment": getattr(args, "experiment", "EXP-155")})
     try:
         _run_reserved(args, output)
     except BaseException as error:
@@ -390,6 +399,8 @@ def run(args):
 def parser():
     result = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     result.add_argument("--data-root", required=True)
+    result.add_argument("--data-format", choices=("cached", "raw"), default="cached")
+    result.add_argument("--experiment", default="EXP-155")
     result.add_argument("--dump-diag", required=True)
     result.add_argument("--device", default="cuda:0")
     result.add_argument("--seed", type=int, default=2)
