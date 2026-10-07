@@ -1,0 +1,20 @@
+{
+  "args": {
+    "data_root": "/home/lry/code/federated-learning/FedPLVM/data/digit/digit",
+    "dump_diag": "/home/lry/code/feddap-exp155/experiments/sanity/EXP-155_feddap_digits_smoke/diag_exp155_digits_s2_r2_e1_gpu1_v2",
+    "device": "cuda:1",
+    "seed": 2,
+    "rounds": 2,
+    "local_epochs": 1,
+    "clients_per_domain": 3,
+    "train_samples": 128,
+    "test_samples": 128,
+    "batch_size": 32,
+    "lr": 0.01,
+    "lambda_dpa": 1.0,
+    "lambda_cpcl": 1.0,
+    "tau_cross": 0.02,
+    "tau_agg": 0.001
+  },
+  "experiment": "EXP-155"
+}

@@ -38,4 +38,11 @@
   原始样本为 uint8，标签覆盖0–9；每域 train_part0 有743张，可容纳384张无重叠训练样本。
 - GPU1在启动前检查计算空闲，改选cuda:1并使用新diag参数版本路径；
   配置同步完成后才启动，实际训练revision以后续meta为准。
-- 真实 GPU smoke 与所有诊断回传另行记录；不能将CPU单测冒充CUDA训练。
+- 真实GPU smoke revision：e761a05ded977b16a020b93e5cdf5b59b94013b1。
+- 真实CUDA训练完成2轮，summary.status=completed，日志末尾SMOKE_PASS。
+- 所有模型梯度/损失有限，R2所有9客户端两项损失均具有有效锚点及非零独立特征梯度。
+- 服务器verify_artifacts实际PASS：所有round、无重叠索引、样本权重与原型、
+  所有best/final模型和对应特征的分类结果逐域一致。
+- 完整rsync了全部诊断和日志；本地机械SHA256核对9个诊断文件全部一致。
+- 回传后的本地verify_artifacts实际PASS；CPU受控验证与真实CUDA验证明确分开记录。
+- 仍不声称论文数字完全复现；未做fresh agent逐字文档环境验收。

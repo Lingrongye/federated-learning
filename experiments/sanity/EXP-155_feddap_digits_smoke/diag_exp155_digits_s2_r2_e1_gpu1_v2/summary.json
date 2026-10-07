@@ -1,0 +1,19 @@
+{
+  "status": "completed",
+  "revision": "e761a05ded977b16a020b93e5cdf5b59b94013b1",
+  "rounds": 2,
+  "seed": 2,
+  "domains": [
+    "MNIST",
+    "MNIST_M",
+    "SVHN"
+  ],
+  "best_avg": 11.979166666666666,
+  "last_avg": 11.979166666666666,
+  "last5_mean": null,
+  "elapsed_seconds": 10.450126496027224,
+  "paper_result_reproduced": false,
+  "peak_torch_gpu_bytes": 231124480,
+  "second_round_nonzero_dpa_cpcl_gradients_all_clients": true,
+  "diag": "/home/lry/code/feddap-exp155/experiments/sanity/EXP-155_feddap_digits_smoke/diag_exp155_digits_s2_r2_e1_gpu1_v2"
+}

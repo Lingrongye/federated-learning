@@ -2,7 +2,7 @@
 
 ## 基本信息
 - 创建日期：2026-10-07（Asia/Shanghai）。
-- 类型：sanity；状态：启动前检查通过，尚未启动训练。
+- 类型：sanity；状态：真实GPU smoke完成，服务器与本地诊断验收通过。
 - 方法：FedDAP；目标服务器：lab-lry。
 - 上游源码：FedDAP_CVPR2026，起始 revision 988211eb826d81251bd8b3b8ae53fbdcc7f3dc20。
 
@@ -37,7 +37,53 @@ AVG = 各测试域准确率的等权平均，不按域样本数加权。
 短程测试没有完整末五轮，不将其汇总冒充论文主表结果。
 
 ## 运行与结果
-服务器单测及真实数据接口检查通过；尚无真实训练结果。
+服务器真实训练完成；已完整回传并机械核对全部诊断文件SHA256。
+- 训练 source revision：e761a05ded977b16a020b93e5cdf5b59b94013b1。
+- 服务器进程 PID：226177（只证明启动，不证明完成）。
+- 启动：nice -n 10，独立会话，由 launch.py 保存实际命令。
+- 服务器日志：本实验目录/run_gpu1_v2/train.log。
+- 启动命令记录：本实验目录/run_gpu1_v2/launch.json。
+- config.json 已用于此 run，之后不可变；任何重跑必须新配置/新diag路径。
+
+## 结果与解释
+- 域准确率 = 该域预测正确数 / 128个固定真实测试样本 ×100%，范围0–100%，
+  越高越好；AVG是3个域准确率等权平均，不按训练样本量加权。
+- 这里只跑seed2的2轮×1local_epoch，不是收敛实验，没有论文准确率达标阈值；
+  必须以链路/有限梯度/产物可还原验收，不能比较FDSE或论文正式主表。
+
+| 轮次 | MNIST | MNIST-M | SVHN | AVG |
+|---|---:|---:|---:|---:|
+| R1 | 8.59375% | 7.81250% | 19.53125% | 11.97917% |
+| R2 | 8.59375% | 10.15625% | 17.18750% | 11.97917% |
+
+- R2各域正确数为11/13/22，每域分母128；准确率低只说明短程模型尚不能作为效果证据。
+- R1没有全局原型，DPA/CPCL为0，符合明确记录的公开实现冷启动约定。
+- R2的9个客户端，两项损失均有128/128个有效锚点；两项独立特征梯度均非零。
+- 全局原型数是字典 `(class,domain)` 的键数，本次10类×3域=30；
+  两轮都覆盖30个键，表示本次类别/域覆盖齐全，不代表准确率好。
+- 用summary的单调时钟差计算运行耗时10.450秒，含数据读取、训练、评估和快照，
+  不含本地编码、Git同步和服务器前置检查；它不是正式实验的耗时预测。
+- torch allocator峰值=231124480字节÷1024²=220.417MiB，仅本进程张量分配，
+  不含CUDA上下文或其他用户任务；不能当作nvidia-smi整卡占用。
+- 本实验没有完整末五轮，summary.last5_mean=null，paper_result_reproduced=false。
+
+## 留存与验收
+- 服务器及本地原始诊断目录均保留；未覆盖、未删除任何已有实验。
+- 包含round_001/002.npz、best_R001.npz、final_R002.npz、meta.json、
+  proto_logs.jsonl、data_manifest.json、attempt.json、summary.json。
+- best与final保存完整全局state_dict及对应384个真实测试特征、标签、域，
+  还保存所有客户端本地原型。两个AVG相同，因此只保存首次best，不重复造best_R002。
+- verify_artifacts.py在服务器与回传后的本地分别PASS，严格加载各snapshot并用
+  保存特征通过对应全局分类器重新计算，逐域正确数与npz完全一致。
+- 9个诊断文件SHA256机械比对服务器输出与本地回传一致，详见ACCEPTANCE.md。
+- 实际train.log与launch.json完整回传至本目录/run_gpu1_v2/。
+- 两个heavy npz各约39MB，均低于GitHub单文件限制，本次全部入Git，不添加忽略规则。
+
+## 尚未复现的部分
+新入口目前只支持这次Digits smoke；没有启动Office/PACS/DomainNet正式主表、
+消融、未见域泛化、隐私噪声或多seed实验。严格完整复现还必须澄清
+PROTOCOL.md中DPA reduction、原型遍历模式、精确超参和PACS分配冲突等细节，
+不能由“smoke PASS”推断论文所有结果已复现。
 
 ## 已核查的环境、数据与配置
 - lab-lry pfllib：Python3.11，torch2.6.0+cu124，torchvision0.21.0+cu124，
