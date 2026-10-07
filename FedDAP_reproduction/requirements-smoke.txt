@@ -1,0 +1,6 @@
+# Existing lab-lry pfllib stack; do NOT blindly upgrade the shared environment.
+# For CUDA use PyTorch's matching cu124 distribution. Python >=3.11.
+torch==2.6.0
+torchvision==0.21.0
+numpy==2.4.3
+Pillow==12.1.1
